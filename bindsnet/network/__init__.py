@@ -72,9 +72,6 @@ class Network:
 		for key in self.layers:
 			spikes[key] = torch.zeros(self.layers[key].n, timesteps)
 
-		for monitor in self.monitors:
-			self.monitors[monitor].reset()
-
 		# Get input to all layers.
 		inpts.update(self.get_inputs())
 		
@@ -118,3 +115,6 @@ class Network:
 
 		for connection in self.connections:
 			self.connections[connection].reset()
+
+		for monitor in self.monitors:
+			self.monitors[monitor].reset()
