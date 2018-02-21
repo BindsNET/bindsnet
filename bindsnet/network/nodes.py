@@ -24,11 +24,46 @@ class Nodes(ABC):
 		return self.x
 
 
+class Input(Nodes):
+	'''
+	Layer of nodes with user-specified spiking behavior.
+	'''
+	def __init__(self, n, traces=False, trace_tc=5e-2):
+		super().__init__()
+
+		self.n = n  # No. of neurons.
+		self.traces = traces  # Whether to record synpatic traces.
+		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+		
+		if self.traces:
+			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.
+			self.trace_tc = trace_tc  # Rate of decay of spike trace time constant.
+
+	def step(self, inpts, dt):
+		'''
+		On each simulation step, set the spikes of the
+		population equal to the inputs.
+		'''
+		# Set spike occurrences to input values.
+		self.s = inpts
+
+		if self.traces:
+			# Decay and set spike traces.
+			self.x -= dt * self.trace_tc * self.x
+			self.x[self.s] = 1
+
+	def reset(self):
+		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+
+		if self.traces:
+			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.
+
+
 class McCullochPitts(Nodes):
 	'''
 	McCulloch-Pitts neuron.
 	'''
-	def __init__(self, n, traces=False, threshold=1.0):
+	def __init__(self, n, traces=False, threshold=1.0, trace_tc=5e-2):
 		'''
 		Instantiates a McCulloch-Pitts layer of neurons.
 		
@@ -37,11 +72,16 @@ class McCullochPitts(Nodes):
 			traces (bool): Whether to record decaying spike traces.
 			threshold (float): Value at which to record a spike.
 		'''
-		super.__init__()
+		super().__init__()
 
 		self.n = n  # No. of neurons.
 		self.traces = traces  # Whether to record synpatic traces.
 		self.threshold = threshold  # Spike threshold voltage.
+		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+
+		if self.traces:
+			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.
+			self.trace_tc = trace_tc  # Rate of decay of spike trace time constant.
 
 	def step(self, inpts, dt):
 		'''
@@ -55,11 +95,18 @@ class McCullochPitts(Nodes):
 		self.s = inpts >= self.threshold  # Check for spiking neurons.
 
 		if self.traces:
-			self.x -= dt * self.trace_tc * self.x  # Decay traces.
-			self.x[self.s] = 1  # Set traces for spiked neurons.
+			# Decay and set spike traces.
+			self.x -= dt * self.trace_tc * self.x
+			self.x[self.s] = 1
+
+	def reset(self):
+		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+
+		if self.traces:
+			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.
 
 
-class LIFGroup(Group):
+class LIFNodes(Nodes):
 	'''
 	Group of leaky integrate-and-fire neurons.
 	'''
@@ -107,3 +154,11 @@ class LIFGroup(Group):
 		if self.traces:
 			# Setting synaptic traces.
 			self.x[self.s] = 1.0
+
+	def reset(self):
+		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+		self.v = self.rest * torch.ones(n)  # Neuron voltages.
+		self.refrac_count = torch.zeros(n)  # Refractory period counters.
+
+		if self.traces:
+			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.

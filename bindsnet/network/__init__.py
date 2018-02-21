@@ -5,6 +5,8 @@ import pickle as p
 
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
 
+from nodes import Input
+
 
 def load_network(fname):
 	try:
@@ -26,8 +28,8 @@ class Network:
 	def add_layer(self, layer, name):
 		self.layers[name] = layer
 
-	def add_connections(self, connections, source, target):
-		self.connections[(source, target)] = connections
+	def add_connection(self, connection, source, target):
+		self.connections[(source, target)] = connection
 
 	def add_monitor(self, monitor, name):
 		self.monitors[name] = monitor
@@ -63,51 +65,56 @@ class Network:
 		'''
 		Run network for a single iteration.
 		'''
+		timesteps = int(time / self.dt)
+
 		# Record spikes from each population over the iteration.
 		spikes = {}
-		for key in self.nodes:
-			spikes[key] = torch.zeros(int(time / self.dt), self.nodes[key].n)
+		for key in self.layers:
+			spikes[key] = torch.zeros(self.layers[key].n, timesteps)
 
 		for monitor in self.monitors:
 			self.monitors[monitor].reset()
 
-		# Get inputs to all layers from their parent layers.
+		# Get input to all layers.
 		inpts.update(self.get_inputs())
 		
-		# Simulate neuron and synapse activity for `time` timesteps.
-		for timestep in range(int(time / self.dt)):
-			# Update each layer of nodes in turn.
+		# Simulate network activity for `time` timesteps.
+		for timestep in range(timesteps):
+			# Update each layer of nodes.
 			for key in self.layers:
-				self.layers[key].step(inpts[key], self.dt)
+				if type(self.layers[key]) is Input:
+					self.layers[key].step(inpts[key][:, timestep], self.dt)
+				else:
+					self.layers[key].step(inpts[key], self.dt)
 
-				# Record spikes from this population at this timestep.
-				spikes[key][timestep, :] = self.layers[key].s
+				# Record spikes.
+				spikes[key][:, timestep] = self.layers[key].s
 
-			# Update synapse weights if we're in training mode.
 			if self.train:
+				# Update synapse weights.
 				for synapse in self.connections:
-					if type(self.connections[synapse]) == connections.STDPconnections:
-						self.connections[synapse].update()
+					self.connections[synapse].update()
 
-			# Get inputs to all layers from their parent layers.
+			# Get input to all layers.
 			inpts.update(self.get_inputs())
 
 			for monitor in self.monitors:
 				self.monitors[monitor].record()
 
-		# Normalize synapse weights if we're in training mode.
-		if self.train:
-			for synapse in self.connections:
-				if type(self.connections[synapse]) == connections.STDPconnections:
-					self.connections[synapse].normalize()
+		# if self.train:
+		# 	# Normalize synapse weights.
+		# 	for synapse in self.connections:
+		# 		if type(self.connections[synapse]) == connections.STDPconnections:
+		# 			self.connections[synapse].normalize()
 
 		return spikes
 
-	def reset(self, attrs):
+	def reset(self):
 		'''
-		Reset state variables.
+		Reset state variables of objects in network.
 		'''
 		for layer in self.layers:
-			for attr in attrs:
-				if hasattr(self.layers[layer], attr):
-					self.layers[layer].reset(attr)
+			self.layers[layer].reset()
+
+		for connection in self.connections:
+			self.connections[connection].reset()
