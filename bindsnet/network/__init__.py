@@ -53,9 +53,9 @@ class Network:
 			target = self.connections[key].target
 
 			if not key[1] in inpts:
-				inpts[key[1]] = {}
+				inpts[key[1]] = torch.zeros_like(torch.Tensor(target.n))
 
-			inpts[key[1]][key[0]] = source.s.float() @ weights
+			inpts[key[1]] += source.s.float() @ weights
 
 		return inpts
 
@@ -71,17 +71,17 @@ class Network:
 		for monitor in self.monitors:
 			self.monitors[monitor].reset()
 
-		# Get inputs to all neuron nodes from their parent neuron nodes.
+		# Get inputs to all layers from their parent layers.
 		inpts.update(self.get_inputs())
 		
 		# Simulate neuron and synapse activity for `time` timesteps.
 		for timestep in range(int(time / self.dt)):
 			# Update each layer of nodes in turn.
-			for key in self.nodes:
-				self.nodes[key].step(inpts[key], self.mode, self.dt)
+			for key in self.layers:
+				self.layers[key].step(inpts[key], self.dt)
 
 				# Record spikes from this population at this timestep.
-				spikes[key][timestep, :] = self.nodes[key].s
+				spikes[key][timestep, :] = self.layers[key].s
 
 			# Update synapse weights if we're in training mode.
 			if self.train:
@@ -89,7 +89,7 @@ class Network:
 					if type(self.connections[synapse]) == connections.STDPconnections:
 						self.connections[synapse].update()
 
-			# Get inputs to all neuron nodes from their parent neuron nodes.
+			# Get inputs to all layers from their parent layers.
 			inpts.update(self.get_inputs())
 
 			for monitor in self.monitors:
@@ -109,5 +109,5 @@ class Network:
 		'''
 		for layer in self.layers:
 			for attr in attrs:
-				if hasattr(self.nodes[layer], attr):
-					self.nodes[layer].reset(attr)
+				if hasattr(self.layers[layer], attr):
+					self.layers[layer].reset(attr)
