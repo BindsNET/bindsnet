@@ -1,4 +1,4 @@
-# SpikeTorch
+# bindsnet
 
 Python package used for simulating spiking neural networks (SNNs) in [PyTorch](http://pytorch.org/).
 
