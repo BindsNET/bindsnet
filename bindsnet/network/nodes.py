@@ -218,7 +218,6 @@ class LIFNodes(Nodes):
 			voltage_decay (float): Time constant of neuron voltage decay.
 			trace_tc (float): Time constant of spike trace decay.
 		'''
-		
 		super().__init__()
 
 		self.n = n  # No. of neurons.
