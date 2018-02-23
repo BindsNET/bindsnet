@@ -98,12 +98,6 @@ class Network:
 			for monitor in self.monitors:
 				self.monitors[monitor].record()
 
-		# if self.train:
-		# 	# Normalize synapse weights.
-		# 	for synapse in self.connections:
-		# 		if type(self.connections[synapse]) == connections.STDPconnections:
-		# 			self.connections[synapse].normalize()
-
 		return spikes
 
 	def reset(self):
@@ -133,7 +127,8 @@ class Monitor:
 
 	def record(self):
 		for var in self.state_vars:
-			self.recording[var] = torch.cat([self.recording[var], self.obj.__dict__[var]])
+			data = self.obj.__dict__[var].view(-1, 1)
+			self.recording[var] = torch.cat([self.recording[var], data], 1)
 
 	def reset(self):
 		self.recording = {var : torch.Tensor() for var in self.state_vars}

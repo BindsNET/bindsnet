@@ -93,6 +93,7 @@ class McCullochPitts(Nodes):
 		self.n = n  # No. of neurons.
 		self.traces = traces  # Whether to record synpatic traces.
 		self.threshold = threshold  # Spike threshold voltage.
+		self.v = torch.zeros_like(torch.Tensor(n))  # Neuron voltages.
 		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
 
 		if self.traces:
@@ -108,7 +109,8 @@ class McCullochPitts(Nodes):
 				of inputs to the layer, with size equal to self.n.
 			dt (float): Simulation time step.
 		'''
-		self.s = inpts >= self.threshold  # Check for spiking neurons.
+		self.v = inpts
+		self.s = self.v >= self.threshold  # Check for spiking neurons.
 
 		if self.traces:
 			# Decay and set spike traces.
