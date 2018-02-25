@@ -58,18 +58,18 @@ def plot_spikes(data, ims=None, time=None, figsize=(12, 7)):
             break
 
     if not ims:
+        locs, ticks = [t for t in range(0, time[1]-time[0]+5, 5)], [t for t in range(time[0], time[1]+5, 5)]
         if n_subplots == 1: # Plotting only one image
             plt.figure(figsize=figsize)
             for key in data.keys():
                 ims = plt.imshow(data[key][:, time[0]:time[1]], cmap='binary')
                 plt.title('%s spikes from t = %1.2f ms to %1.2f ms'%(key, time[0], time[1]))
                 plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
-                locs, ticks = [t for t in range(0, time[1]-time[0]+5, 5)], [t for t in range(time[0], time[1]+5, 5)]
+                
                 plt.xticks(locs,ticks)
                     
         else: # Multiple subplots
            f, axes = plt.subplots(n_subplots, 1, figsize=figsize) 
-           locs, ticks = [t for t in range(0, time[1]-time[0]+5, 5)], [t for t in range(time[0], time[1]+5, 5)]
            plt.setp(axes, xticks=locs, xticklabels=ticks)
            
            # Plot each layer at a time
@@ -92,7 +92,7 @@ def plot_spikes(data, ims=None, time=None, figsize=(12, 7)):
 def plot_weights(weights, assignments, wmax=1, ims=None, figsize=(10, 6)):
 	if not ims:
 		f, axes = plt.subplots(1, 2, figsize=figsize)
-		
+
 		color = plt.get_cmap('RdBu', 11)
 		ims = axes[0].imshow(weights, cmap='hot_r', vmin=0, vmax=wmax), axes[1].matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
 		divs = make_axes_locatable(axes[0]), make_axes_locatable(axes[1])
