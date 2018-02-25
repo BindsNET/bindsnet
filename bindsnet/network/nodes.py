@@ -2,7 +2,6 @@ import torch
 
 from abc import ABC, abstractmethod
 
-
 class Nodes(ABC):
 	'''
 	Abstract base class for groups of neurons.
@@ -100,10 +99,10 @@ class McCullochPitts(Nodes):
 			self.x[self.s] = 1
 
 	def reset(self):
-		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
 
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.
+			self.x = torch.zeros_like(torch.Tensor(self.n))  # Firing traces.
 
 
 class LIFNodes(Nodes):
