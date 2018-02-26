@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 
 
@@ -8,15 +9,15 @@ def get_poisson(data, time):
 	input magnitude, so data must be scaled according to desired spike frequency.
     
     Inputs:
-        data (numpy.ndarray): Tensor of shape [n_samples, n_1,
+        data (torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_samples, n_1,
             ..., n_k], with arbitrarily dimensionality [n_1, ..., n_k].
         time (int): Length of Poisson spike train per input variable.
     
     Yields:
-        (np.ndarray): Tensors with shape [time, n_1, ..., n_k], with
+        (torch.Tensor or torch.cuda.Tensor): Tensors with shape [time, n_1, ..., n_k], with
             Poisson-distributed spikes parameterized by the data values.
 	'''
-	n_samples = data.shape[0]  # Number of samples
+	n_samples = data.size(0)  # Number of samples
 	
 	data = np.copy(data)
 	
@@ -44,4 +45,4 @@ def get_poisson(data, time):
 		s = s.reshape([time, *shape])
 
 		# Yield Poisson-distributed spike trains.
-		yield s
+		yield torch.Tensor(s)

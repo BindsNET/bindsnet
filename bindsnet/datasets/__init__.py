@@ -31,6 +31,12 @@ class MNIST:
 	test_labels_url = 'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz'
 	
 	def __init__(self, path=os.path.join('data', 'MNIST')):
+		'''
+		Constructor for the MNIST object. Makes the data directory if it doesn't already exist.
+
+		Inputs:
+			path (str): pathname of directory in which to store the MNIST handwritten digit dataset.
+		'''
 		if not os.path.isdir(path):
 			os.makedirs(path)
 		
@@ -41,8 +47,8 @@ class MNIST:
 		Gets the MNIST training images and labels.
 
 		Returns:
-			(numpy.ndarray) images: The MNIST training images.
-			(numpy.ndarray) labels: The MNIST training labels.
+			(torch.Tensor or torch.cuda.Tensor) images: The MNIST training images.
+			(torch.Tensor or torch.cuda.Tensor) labels: The MNIST training labels.
 		'''
 		if not os.path.isfile(os.path.join(self.path, MNIST.train_images_pickle)):
 			# Download training images if they aren't on disk.
@@ -68,15 +74,15 @@ class MNIST:
 			print('Loading labels from serialized object file.\n')
 			labels = p.load(open(os.path.join(self.path, MNIST.train_labels_pickle), 'rb'))
 		
-		return images, labels
+		return torch.Tensor(images), torch.Tensor(labels)
 
 	def get_test(self):
 		'''
 		Gets the MNIST test images and labels.
 
 		Returns:
-			(numpy.ndarray) images: The MNIST test images.
-			(numpy.ndarray) labels: The MNIST test labels.
+			(torch.Tensor or torch.cuda.Tensor) images: The MNIST test images.
+			(torch.Tensor or torch.cuda.Tensor) labels: The MNIST test labels.
 		'''
 		if not os.path.isfile(os.path.join(self.path, MNIST.test_images_pickle)):
 			# Download test images if they aren't on disk.
@@ -102,7 +108,7 @@ class MNIST:
 			print('Loading labels from serialized object file.\n')
 			labels = p.load(open(os.path.join(self.path, MNIST.test_labels_pickle), 'rb'))
 		
-		return images, labels
+		return torch.Tensor(images), torch.Tensor(labels)
 				
 	def download(self, url, filename):
 		'''
