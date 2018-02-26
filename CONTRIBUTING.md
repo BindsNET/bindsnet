@@ -3,7 +3,7 @@
 To clone this project locally, issue
 
 ```
-git clone https://github.com/djsaunde/spiketorch.git  # 
+git clone https://github.com/djsaunde/spiketorch.git  # clones spiketorch repository
 ```
 
 in the directory of your choice. This will place the repository's code in a directory titled `spiketorch`.

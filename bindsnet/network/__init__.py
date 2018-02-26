@@ -72,9 +72,6 @@ class Network:
 		for key in self.layers:
 			spikes[key] = torch.zeros(self.layers[key].n, timesteps)
 
-		for monitor in self.monitors:
-			self.monitors[monitor].reset()
-
 		# Get input to all layers.
 		inpts.update(self.get_inputs())
 		
@@ -101,12 +98,6 @@ class Network:
 			for monitor in self.monitors:
 				self.monitors[monitor].record()
 
-		# if self.train:
-		# 	# Normalize synapse weights.
-		# 	for synapse in self.connections:
-		# 		if type(self.connections[synapse]) == connections.STDPconnections:
-		# 			self.connections[synapse].normalize()
-
 		return spikes
 
 	def reset(self):
@@ -118,3 +109,26 @@ class Network:
 
 		for connection in self.connections:
 			self.connections[connection].reset()
+
+		for monitor in self.monitors:
+			self.monitors[monitor].reset()
+
+class Monitor:
+	'''
+	Records state variables of interest.
+	'''
+	def __init__(self, obj, state_vars):
+		self.obj = obj
+		self.state_vars = state_vars
+		self.recording = {var : torch.Tensor() for var in self.state_vars}
+
+	def get(self, var):
+		return self.recording[var]
+
+	def record(self):
+		for var in self.state_vars:
+			data = self.obj.__dict__[var].view(-1, 1)
+			self.recording[var] = torch.cat([self.recording[var], data], 1)
+
+	def reset(self):
+		self.recording = {var : torch.Tensor() for var in self.state_vars}

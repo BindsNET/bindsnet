@@ -1,7 +1,7 @@
 import torch
 
 
-def ETH_STDP(conn, nu_pre=1e-4, nu_post=1e-2):
+def ETH_STDP(conn, nu_pre=1e-4, nu_post=1e-2, norm=78.0):
 	# Post-synaptic.
 	conn.w += nu_post * (conn.source.x.view(conn.source.n,
 			1) * conn.target.s.float().view(1, conn.target.n))
@@ -9,8 +9,9 @@ def ETH_STDP(conn, nu_pre=1e-4, nu_post=1e-2):
 	conn.w -= nu_pre * (conn.source.s.float().view(conn.source.n,
 							1) * conn.target.x.view(1, conn.target.n))
 
-	# Ensure that weights are within [0, self.wmax].
+	# Bound and re-normalize weights.
 	conn.w = torch.clamp(conn.w, 0, conn.wmax)
+	conn.w *= norm / conn.w.sum(0).view(1, -1)
 
 
 class Connection:
