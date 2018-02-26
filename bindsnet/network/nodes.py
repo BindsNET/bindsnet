@@ -2,7 +2,6 @@ import torch
 
 from abc import ABC, abstractmethod
 
-
 class Nodes(ABC):
 	'''
 	Abstract base class for groups of neurons.
