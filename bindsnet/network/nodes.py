@@ -8,20 +8,49 @@ class Nodes(ABC):
 	Abstract base class for groups of neurons.
 	'''
 	def __init__(self):
+		'''
+		Abstract constructor for the Nodes class.
+		'''
 		super().__init__()
 
 	@abstractmethod
 	def step(self, inpts, dt):
+		'''
+		Abstract base class method for a single simulation step.
+		
+		Inputs:
+			inpts (dict): Dictionary mapping of Input instances to Tensors inputs.
+			dt (float): Simulation timestep.
+		'''
 		pass
 
 	def get_spikes(self):
+		'''
+		Returns Tensor of instantaneous spike occurrences.
+		
+		Returns:
+			(torch.Tensor or torch.cuda.Tensor): Spike occurrences.
+		'''
 		return self.s
 
 	def get_voltages(self):
+		'''
+		Returns Tensor of instantaneous neuron voltages.
+		
+		Returns:
+			(torch.Tensor or torch.cuda.Tensor): Neuron voltages.
+		'''
 		return self.v
 
 	def get_traces(self):
-		return self.x
+		'''
+		Returns Tensor of instantaneous spike traces.
+		
+		Returns:
+			(torch.Tensor or torch.cuda.Tensor): Spike traces.
+		'''
+		if self.traces:
+			return self.x
 
 
 class Input(Nodes):
@@ -131,8 +160,7 @@ class IFNodes(Nodes):
 	'''
 	Layer of integrate-and-fire (IF) neurons.
 	'''
-	def __init__(self, n, traces=False, threshold=-52.0, reset=-65.0,
-										refractory=5, trace_tc=5e-2):
+	def __init__(self, n, traces=False, threshold=-52.0, reset=-65.0, refractory=5, trace_tc=5e-2):
 		'''
 		Instantiates a layer of IF neurons.
 		
@@ -205,7 +233,7 @@ class LIFNodes(Nodes):
 	Layer of leaky integrate-and-fire (LIF) neurons.
 	'''
 	def __init__(self, n, traces=False, threshold=-52.0, rest=-65.0, reset=-65.0,
-								refractory=5, voltage_decay=1e-2, trace_tc=5e-2):
+									refractory=5, voltage_decay=1e-2, trace_tc=5e-2):
 		'''
 		Instantiates a layer of LIF neurons.
 		

@@ -1,8 +1,9 @@
+import os
+import sys
 import gzip
 import torch
 import urllib
 import shutil
-import os, sys
 import pickle as p
 import numpy  as np
 
@@ -52,6 +53,7 @@ class MNIST:
 		'''
 		if not os.path.isfile(os.path.join(self.path, MNIST.train_images_pickle)):
 			# Download training images if they aren't on disk.
+			print('Downloading training images.\n')
 			self.download(MNIST.train_images_url, MNIST.train_images_file)
 			images = self.process_images(MNIST.train_images_file)
 			
@@ -59,11 +61,12 @@ class MNIST:
 			p.dump(images, open(os.path.join(self.path, MNIST.train_images_pickle), 'wb'))
 		else:
 			# Load image data from disk if it has already been processed.
-			print('Loading images from serialized object file.\n')
+			print('Loading training images from serialized object file.\n')
 			images = p.load(open(os.path.join(self.path, MNIST.train_images_pickle), 'rb'))
 		
 		if not os.path.isfile(os.path.join(self.path, MNIST.train_labels_pickle)):
 			# Download training labels if they aren't on disk.
+			print('Downloading training labels.\n')
 			self.download(MNIST.train_labels_url, MNIST.train_labels_file)
 			labels = self.process_labels(MNIST.train_labels_file)
 			
@@ -86,6 +89,7 @@ class MNIST:
 		'''
 		if not os.path.isfile(os.path.join(self.path, MNIST.test_images_pickle)):
 			# Download test images if they aren't on disk.
+			print('Downloading test images.\n')
 			self.download(MNIST.test_images_url, MNIST.test_images_file)
 			images = self.process_images(MNIST.test_images_file)
 			
@@ -98,6 +102,7 @@ class MNIST:
 		
 		if not os.path.isfile(os.path.join(self.path, MNIST.test_labels_pickle)):
 			# Download test labels if they aren't on disk.
+			print('Downloading test labels.\n')
 			self.download(MNIST.test_labels_url, MNIST.test_labels_file)
 			labels = self.process_labels(MNIST.test_labels_file)
 			
