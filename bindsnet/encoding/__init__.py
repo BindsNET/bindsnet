@@ -10,7 +10,7 @@ def get_poisson(data, time):
     
     Inputs:
         data (torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_samples, n_1,
-            ..., n_k], with arbitrarily sample dimensionality [n_1, ..., n_k].
+            ..., n_k], with arbitrary sample dimensionality [n_1, ..., n_k].
         time (int): Length of Poisson spike train per input variable.
     
     Yields:
