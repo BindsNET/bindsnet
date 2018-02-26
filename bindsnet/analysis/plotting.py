@@ -79,15 +79,16 @@ def plot_spikes(data, ims=None, time=None, figsize=(12, 7)):
                 # axes[plot_ind].axis('off')
            
            f.tight_layout()
-    else:
+           
+    else: #plotting figure given
         assert(len(ims) == n_subplots)
         for plot_ind, layer_data in enumerate(data.items()):
             if time is None:
                 ims[plot_ind].set_data(layer_data[1])
-                ims[plot_ind].set_title('%s spikes'%layer_data[0])
+                ims[plot_ind].set_title('%s spikes from t = %1.2f ms to %1.2f ms'%(layer_data[0], time[0], time[1]))
             else:#plot for given time
                 ims[plot_ind].set_data(layer_data[1][time[0], time[1]])
-                ims[plot_ind].set_title('%s spikes'%layer_data[0])
+                ims[plot_ind].set_title('%s spikes from t = %1.2f ms to %1.2f ms'%(layer_data[0], time[0], time[1]))
         
 def plot_weights(weights, assignments, wmax=1, ims=None, figsize=(10, 6)):
 	if not ims:
