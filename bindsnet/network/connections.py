@@ -87,7 +87,7 @@ class Connection:
 		'''
 		self.w *= norm / self.w.sum(0).view(1, -1)
 		
-	def reset(self):
+	def _reset(self):
 		'''
 		Contains resetting logic for the connection.
 		'''

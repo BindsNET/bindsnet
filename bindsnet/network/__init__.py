@@ -151,13 +151,13 @@ class Network:
 		Reset state variables of objects in network.
 		'''
 		for layer in self.layers:
-			self.layers[layer].reset()
+			self.layers[layer]._reset()
 
 		for connection in self.connections:
-			self.connections[connection].reset()
+			self.connections[connection]._reset()
 
 		for monitor in self.monitors:
-			self.monitors[monitor].reset()
+			self.monitors[monitor]._reset()
 
 
 class Monitor:
@@ -199,7 +199,7 @@ class Monitor:
 			data = self.obj.__dict__[var].view(-1, 1)
 			self.recording[var] = torch.cat([self.recording[var], data], 1)
 
-	def reset(self):
+	def _reset(self):
 		'''
 		Resets recordings to empty Tensors.
 		'''
