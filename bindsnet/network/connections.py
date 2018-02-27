@@ -17,22 +17,22 @@ def post_pre(conn, nu_pre=1e-4, nu_post=1e-2):
 							1) * conn.target.x.view(1, conn.target.n))
 
 	# Bound weights.
-	conn.w = torch.clamp(conn.w, conn.min, conn.wmax)
+	conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
 
 
 class Connection:
 	'''
 	Specifies constant synapses between two populations of neurons.
 	'''
-	def __init__(self, source, target, update_rule=None, w=None, wmin=0.0, wmax=1.0):
+	def __init__(self, source, target, w=None, update_rule=None, wmin=0.0, wmax=1.0):
 		'''
 		Instantiates a Connections object, used to connect two layers of nodes.
 
 		Inputs:
 			source (nodes.Nodes): A layer of nodes from which the connection originates.
 			target (nodes.Nodes): A layer of nodes to which the connection connects.
-			update_rule (function): Modifies connection parameters according to some rule.
 			w (torch.FloatTensor or torch.cuda.FloatTensor): Effective strengths of synaptics.
+			update_rule (function): Modifies connection parameters according to some rule.
 			wmin (float): The minimum value on the connection weights.
 			wmax (float): The maximum value on the connection weights.
 		'''
@@ -42,7 +42,7 @@ class Connection:
 		self.wmax = wmax
 
 		if update_rule is None:
-			self.update_rule = lambda : None
+			self.update_rule = lambda connection : None
 		else:
 			self.update_rule = update_rule
 
@@ -50,8 +50,6 @@ class Connection:
 			self.w = torch.rand(source.n, target.n)
 		else:
 			self.w = w
-
-		torch.clamp(self.w, self.wmin, self.wmax)
 
 	def get_weights(self):
 		'''
@@ -77,7 +75,7 @@ class Connection:
 		'''
 		Run connection's given update rule.
 		'''
-		self.update_rule()
+		self.update_rule(self)
 	
 	def normalize(self, norm=78.0):
 		'''
@@ -87,7 +85,7 @@ class Connection:
 		Inputs:
 			norm (float): Desired sum of weights.
 		'''
-		conn.w *= norm / conn.w.sum(0).view(1, -1)
+		self.w *= norm / self.w.sum(0).view(1, -1)
 		
 	def reset(self):
 		'''

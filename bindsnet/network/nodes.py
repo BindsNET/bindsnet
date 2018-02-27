@@ -276,10 +276,9 @@ class LIFNodes(Nodes):
 				of inputs to the layer, with size equal to self.n.
 			dt (float): Simulation time step.
 		'''
-		if self.traces:
-			# Decay spike traces.
-			self.x -= dt * self.trace_tc * self.x
-
+		# Decay voltages.
+		self.v -= dt * self.voltage_decay * (self.v - self.rest)
+		
 		# Decrement refractory counters.
 		self.refrac_count[self.refrac_count != 0] -= dt
 
@@ -287,6 +286,92 @@ class LIFNodes(Nodes):
 		self.s = (self.v >= self.threshold) * (self.refrac_count == 0)
 		self.refrac_count[self.s] = self.refractory
 		self.v[self.s] = self.reset
+
+		# Integrate input and decay voltages.
+		self.v += inpts
+
+		if self.traces:
+			# Decay and set spike traces.
+			self.x -= dt * self.trace_tc * self.x
+			self.x[self.s] = 1.0
+
+	def reset(self):
+		'''
+		Resets relevant state variables.
+		'''
+		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+		self.v = self.rest * torch.ones(n)  # Neuron voltages.
+		self.refrac_count = torch.zeros(n)  # Refractory period counters.
+
+		if self.traces:
+			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.
+
+
+class AdaptiveLIFNodes(Nodes):
+	'''
+	Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds.
+	'''
+	def __init__(self, n, traces=False, rest=-65.0, reset=-65.0, threshold=-52.0, refractory=5,
+							voltage_decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
+		'''
+		Instantiates a layer of LIF neurons.
+		
+		Inputs:
+			n (int): The number of neurons in the layer.
+			traces (bool): Whether to record decaying spike traces.
+			threshold (float): Value at which to record a spike.
+			rest (float): Value to which neuron voltages decay.
+			reset (float): Value to which neurons are set to following a spike.
+			refractory (int): The number of timesteps following
+				a spike during which a neuron cannot spike again.
+			voltage_decay (float): Time constant of neuron voltage decay.
+			trace_tc (float): Time constant of spike trace decay.
+			theta_plus (float): Constant value to increase threshold upon neuron firing.
+			theta_decay (float): Time constant of adaptive threshold decay.
+		'''
+		super().__init__()
+
+		self.n = n  # No. of neurons.
+		self.traces = traces  # Whether to record synpatic traces.
+		self.rest = rest  # Rest voltage.
+		self.reset = reset  # Post-spike reset voltage.
+		self.threshold = threshold  # Spike threshold voltage.
+		self.refractory = refractory  # Post-spike refractory period.
+		self.voltage_decay = voltage_decay  # Rate of decay of neuron voltage.
+		self.theta_plus = theta_plus  # Constant threshold increase on spike.
+		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
+
+		self.v = self.rest * torch.ones(n)  # Neuron voltages.
+		self.s = torch.zeros(n)  # Spike occurences.
+		self.theta = torch.zeros_like(torch.Tensor(n))  # Adaptive thresholds.
+
+		if traces:
+			self.x = torch.zeros(n)  # Firing traces.
+			self.trace_tc = trace_tc  # Rate of decay of spike trace time constant.
+
+		self.refrac_count = torch.zeros(n)  # Refractory period counters.
+
+	def step(self, inpts, dt):
+		'''
+		Runs a single simulation step.
+
+		Inputs:
+			inpts (torch.FloatTensor or torch.cuda.FloatTensor): Vector
+				of inputs to the layer, with size equal to self.n.
+			dt (float): Simulation time step.
+		'''
+		# Decay voltages.
+		self.v -= dt * self.voltage_decay * (self.v - self.rest)
+		self.theta -= dt * self.theta_decay * self.theta
+		
+		# Decrement refractory counters.
+		self.refrac_count[self.refrac_count != 0] -= dt
+
+		# Check for spiking neurons.
+		self.s = (self.v >= self.threshold) * (self.refrac_count == 0)
+		self.refrac_count[self.s] = self.refractory
+		self.v[self.s] = self.reset
+		self.theta[self.s] += self.theta_plus
 
 		# Integrate input and decay voltages.
 		self.v += inpts

@@ -103,7 +103,7 @@ class Network:
 		Simulation network for given inputs and time.
 		
 		Inputs:
-			inpts (dict): Dictionary including Tensors of shape [n_input, time]
+			inpts (dict): Dictionary including Tensors of shape [time, n_input]
 				for n_input per nodes.Input instance. This may be empty if there
 				are no user-specified input spikes.
 			time (int): Simulation time.
@@ -126,7 +126,7 @@ class Network:
 			# Update each layer of nodes.
 			for key in self.layers:
 				if type(self.layers[key]) is Input:
-					self.layers[key].step(inpts[key][:, timestep], self.dt)
+					self.layers[key].step(inpts[key][timestep, :], self.dt)
 				else:
 					self.layers[key].step(inpts[key], self.dt)
 
