@@ -108,12 +108,14 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(12, 7)):
 	return ims, axes
         
 
-def plot_weights(weights, im=None, figsize=(6, 6)):
+def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(6, 6)):
 	'''
 	Plot a (possibly reshaped) connection weight matrix.
 	
 	Inputs:
 		weights (torch.Tensor or torch.cuda.Tensor): Weight matrix of Connection object.
+		wmin (float): Minimum allowed weight value.
+		wmax (float): Maximum allowed weight value.
 		im (matplotlib.image.AxesImage): Used for re-drawing the weights plot.
 		figsize (tuple(int)): Horizontal, vertical figure size in inches.
 	
@@ -123,7 +125,7 @@ def plot_weights(weights, im=None, figsize=(6, 6)):
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
 		
-		im = ax.imshow(weights, cmap='hot_r', vmin=weights.min(), vmax=weights.max())
+		im = ax.imshow(weights, cmap='hot_r', vmin=wmin, vmax=wmax)
 		div = make_axes_locatable(ax)
 		cax = div.append_axes("right", size="5%", pad=0.05)
 		
