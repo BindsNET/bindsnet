@@ -47,7 +47,7 @@ parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--no-plot', dest='plot', action='store_false')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
 parser.add_argument('--no-gpu', dest='gpu', action='store_false')
-parser.set_defaults(plot=True, gpu=False, train=True)
+parser.set_defaults(plot=False, gpu=False, train=True)
 
 locals().update(vars(parser.parse_args()))
 

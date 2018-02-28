@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 plt.ion()
 
-def plot_input(image, inpt, ims=None, figsize=(12, 6)):
+def plot_input(image, inpt, ims=None, figsize=(10, 5)):
 	if not ims:
 		fig, axes = plt.subplots(1, 2, figsize=figsize)
 		ims = axes[0].imshow(image, cmap='binary'), axes[1].imshow(inpt, cmap='binary')
@@ -16,6 +16,7 @@ def plot_input(image, inpt, ims=None, figsize=(12, 6)):
 		axes[0].set_title('Current image')
 		axes[1].set_title('Poisson spiking representation')
 		axes[1].set_xlabel('Simulation time'); axes[1].set_ylabel('Neuron index')
+		axes[1].set_aspect('auto')
 		
 		for ax in axes:
 			ax.set_xticks(()); ax.set_yticks(())
