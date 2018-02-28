@@ -44,7 +44,7 @@ def get_poisson(data, time):
 		s = s.reshape([time, *shape])
 
 		# Yield Poisson-distributed spike trains.
-		yield torch.Tensor(s)
+		yield torch.Tensor(s).byte()
 
 
 def get_bernoulli(data, time, max_prob=1.0):
@@ -78,5 +78,5 @@ def get_bernoulli(data, time, max_prob=1.0):
 		s = s.reshape([time, *shape])
 
 		# Yield Bernoulli-distributed spike trains.
-		yield torch.Tensor(s)
+		yield torch.Tensor(s).byte()
    
