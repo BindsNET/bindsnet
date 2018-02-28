@@ -146,7 +146,7 @@ class Network:
 
 		return spikes
 
-	def reset(self):
+	def _reset(self):
 		'''
 		Reset state variables of objects in network.
 		'''

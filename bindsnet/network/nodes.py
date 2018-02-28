@@ -367,7 +367,7 @@ class AdaptiveLIFNodes(Nodes):
 		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
-		self.s = (self.v >= self.threshold) * (self.refrac_count == 0)
+		self.s = (self.v >= self.threshold + self.theta) * (self.refrac_count == 0)
 		self.refrac_count[self.s] = self.refractory
 		self.v[self.s] = self.reset
 		self.theta[self.s] += self.theta_plus
