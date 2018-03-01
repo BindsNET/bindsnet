@@ -10,7 +10,7 @@ import numpy  as np
 from struct         import unpack
 from urllib.request import urlretrieve
 
-		
+
 class MNIST:
 	'''
 	Handles loading and saving of the MNIST handwritten digits
@@ -74,7 +74,7 @@ class MNIST:
 			p.dump(labels, open(os.path.join(self.path, MNIST.train_labels_pickle), 'wb'))
 		else:
 			# Load label data from disk if it has already been processed.
-			print('Loading labels from serialized object file.\n')
+			print('Loading training labels from serialized object file.\n')
 			labels = p.load(open(os.path.join(self.path, MNIST.train_labels_pickle), 'rb'))
 		
 		return torch.Tensor(images), torch.Tensor(labels)
@@ -97,7 +97,7 @@ class MNIST:
 			p.dump(images, open(os.path.join(self.path, MNIST.test_images_pickle), 'wb'))
 		else:
 			# Load image data from disk if it has already been processed.
-			print('Loading images from serialized object file.\n')
+			print('Loading test images from serialized object file.\n')
 			images = p.load(open(os.path.join(self.path, MNIST.test_images_pickle), 'rb'))
 		
 		if not os.path.isfile(os.path.join(self.path, MNIST.test_labels_pickle)):
@@ -110,7 +110,7 @@ class MNIST:
 			p.dump(labels, open(os.path.join(self.path, MNIST.test_labels_pickle), 'wb'))
 		else:
 			# Load label data from disk if it has already been processed.
-			print('Loading labels from serialized object file.\n')
+			print('Loading test labels from serialized object file.\n')
 			labels = p.load(open(os.path.join(self.path, MNIST.test_labels_pickle), 'rb'))
 		
 		return torch.Tensor(images), torch.Tensor(labels)
