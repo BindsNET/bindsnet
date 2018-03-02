@@ -43,7 +43,7 @@ def plot_input(image, inpt, ims=None, figsize=(10, 5)):
 	return ims
 
 
-def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(12, 7)):
+def plot_spikes(spikes, ims=None, axes=None, time=None, n_neuron=None, figsize=(12, 7)):
 	'''
 	Plot spikes for any group of neurons.
 
@@ -62,48 +62,57 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(12, 7)):
 		(list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
 	'''
 	n_subplots = len(spikes.keys())
-    
-	# Confirm only 2 values for time were given
+   
+   # Time
 	if time is not None: 
+       # Confirm only 2 values for time were given
 		assert(len(time) == 2)
+       # First value must be less than the second 
 		assert(time[0] < time[1])
-
+	
 	else: # Set it for entire duration
 		for key in spikes.keys():
 			time = (0, spikes[key].shape[1])
 			break
+
+	# Number of neurons
+	if n_neuron is not None:
+		assert(len(n_neuron.keys()) == n_subplots)
+		# Keys given must be same as the ones used in spikes dict
+		assert(set(n_neuron.keys()) == set(spikes.keys()))
+		# Checking to that given n_neurons per neuron layer is valid
+		assert(all(n_neuron[key][0] >= 0 and n_neuron[key][1] <= val.shape[0] for key, val in spikes.items()) == True)
 	
+	else: # Uses default values using spikes dict
+		n_neuron = {key: (0, val.shape[0]) for key, val in spikes.items()}
+    
 	if not ims:
 		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
 		ims = []
 		
 		if n_subplots == 1: # Plotting only one image
-			for key in spikes.keys():
-				ims.append(axes.imshow(spikes[key][:, time[0]:time[1]], cmap='binary'))
-				plt.title('%s spikes from t = %1.2f ms to %1.2f ms' % (key, time[0], time[1]))
+			for datum in spikes.items():
+				ims.append(axes.imshow(spikes[datum[0]][n_neuron[datum[0]][0]:n_neuron[datum[0]][1], time[0]:time[1]], cmap='binary'))
+				plt.title('%s spikes for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neuron[datum[0]][0], n_neuron[datum[0]][1], time[0], time[1]))
 				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
-
+				axes.set_aspect('auto')
 		else: # Plot each layer at a time
 			for i, datum in enumerate(spikes.items()):
-				ims.append(axes[i].imshow(datum[1][:, time[0]:time[1]], cmap='binary'))
-				axes[i].set_title('%s spikes from t = %1.2f ms to %1.2f ms' % (datum[0], time[0], time[1]))
-
+				ims.append(axes[i].imshow(datum[1][n_neuron[datum[0]][0]:n_neuron[datum[0]][1], time[0]:time[1]], cmap='binary'))
+				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neuron[datum[0]][0], n_neuron[datum[0]][1], time[0], time[1]))
+			
+			for ax in axes:
+				ax.set_aspect('auto')
+			
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
-		
-		for ax in axes:
-			ax.set_aspect('auto')
 		
 		plt.tight_layout()
            
 	else: # Plotting figure given
 		assert(len(ims) == n_subplots)
 		for i, datum in enumerate(spikes.items()):
-			if time is None:
-				ims[i].set_data(datum[1])
-				axes[i].set_title('%s spikes from t = %1.2f ms to %1.2f ms' % (datum[0], time[0], time[1]))
-			else: # Plot for given time
-				ims[i].set_data(datum[1][time[0]:time[1]])
-				axes[i].set_title('%s spikes from t = %1.2f ms to %1.2f ms' % (datum[0], time[0], time[1]))
+				ims[i].set_data(datum[1][n_neuron[datum[0]][0]:n_neuron[datum[0]][1], time[0]:time[1]])
+				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neuron[datum[0]][0], n_neuron[datum[0]][1], time[0], time[1]))
 	
 	return ims, axes
         
