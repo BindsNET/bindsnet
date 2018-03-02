@@ -359,7 +359,7 @@ class AdaptiveLIFNodes(Nodes):
 				of inputs to the layer, with size equal to self.n.
 			dt (float): Simulation time step.
 		'''
-		# Decay voltages.
+		# Decay voltages and adaptive thresholds.
 		self.v -= dt * self.voltage_decay * (self.v - self.rest)
 		self.theta -= dt * self.theta_decay * self.theta
 		
@@ -371,6 +371,12 @@ class AdaptiveLIFNodes(Nodes):
 		self.refrac_count[self.s] = self.refractory
 		self.v[self.s] = self.reset
 		self.theta[self.s] += self.theta_plus
+		
+		# Choose only a single neuron to spike (ETH replication).
+		if torch.sum(self.s) > 0:
+			s = torch.zeros_like(torch.Tensor(self.s.size()))
+			s[torch.multinomial(self.s.float(), 1)] = 1
+			self.s = s.byte()
 
 		# Integrate input and decay voltages.
 		self.v += inpts
@@ -386,6 +392,99 @@ class AdaptiveLIFNodes(Nodes):
 		'''
 		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
 		self.v = self.rest * torch.ones(self.n)  # Neuron voltages.
+		self.refrac_count = torch.zeros(self.n)  # Refractory period counters.
+
+		if self.traces:
+			self.x = torch.zeros_like(torch.Tensor(self.n))  # Firing traces.
+
+
+class IzhikevichNodes(Nodes):
+	'''
+	Layer of Izhikevich neurons.
+	'''
+	def __init__(self, n, traces=False, excitatory=True, rest=-65.0, reset=-65.0,
+					threshold=-52.0, refractory=5, voltage_decay=1e-2, trace_tc=5e-2):
+		'''
+		Instantiates a layer of Izhikevich neurons.
+		
+		Inputs:
+			n (int): The number of neurons in the layer.
+			traces (bool): Whether to record decaying spike traces.
+			excitatory (bool): Whether to use excitatory or inhibitory neurons.
+			threshold (float): Value at which to record a spike.
+			rest (float): Value to which neuron voltages decay.
+			reset (float): Value to which neurons are set to following a spike.
+			refractory (int): The number of timesteps following
+				a spike during which a neuron cannot spike again.
+			voltage_decay (float): Time constant of neuron voltage decay.
+			trace_tc (float): Time constant of spike trace decay.
+		'''
+		super().__init__()
+
+		self.n = n  # No. of neurons.
+		self.traces = traces  # Whether to record synpatic traces.
+		self.rest = rest  # Rest voltage.
+		self.reset = reset  # Post-spike reset voltage.
+		self.threshold = threshold  # Spike threshold voltage.
+		self.refractory = refractory  # Post-spike refractory period.
+		self.voltage_decay = voltage_decay  # Rate of decay of neuron voltage.
+		
+		if excitatory:
+			self.r = torch.rand(n)
+			self.a = 0.02 * torch.ones_like(torch.Tensor(n))
+			self.b = 0.2 * torch.ones_like(torch.Tensor(n))
+			self.c = -65.0 + 15 * (self.r ** 2)
+			self.d = 8 - 6 * (self.r ** 2)
+		else:
+			self.r = torch.rand(n)
+			self.a = 0.02 + 0.08 * self.r
+			self.b = 0.25 - 0.05 * torch.ones_like(torch.Tensor(n))
+			self.c = -65.0 * (self.re ** 2)
+			self.d = 2 * torch.ones_like(torch.Tensor(n))
+		
+		self.v = self.rest * torch.ones(n)  # Neuron voltages.
+		self.u = self.b * self.v;
+		self.s = torch.zeros(n)  # Spike occurences.
+
+		if traces:
+			self.x = torch.zeros(n)  # Firing traces.
+			self.trace_tc = trace_tc  # Rate of decay of spike trace time constant.
+
+		self.refrac_count = torch.zeros(n)  # Refractory period counters.
+
+	def step(self, inpts, dt):
+		'''
+		Runs a single simulation step.
+
+		Inputs:
+			inpts (torch.FloatTensor or torch.cuda.FloatTensor): Vector
+				of inputs to the layer, with size equal to self.n.
+			dt (float): Simulation time step.
+		'''
+		# Decrement refractory counters.
+		self.refrac_count[self.refrac_count != 0] -= dt
+		
+		# Check for spiking neurons.
+		self.s = (self.v >= self.threshold) * (self.refrac_count == 0)
+		self.refrac_count[self.s] = self.refractory
+		self.v[self.s] = self.reset
+		
+		# Apply v and u updates.
+		self.v += dt * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+		self.u += self.a * (self.b * self.v - self.u)
+		
+		if self.traces:
+			# Decay and set spike traces.
+			self.x -= dt * self.trace_tc * self.x
+			self.x[self.s] = 1.0
+
+	def _reset(self):
+		'''
+		Resets relevant state variables.
+		'''
+		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
+		self.v = self.rest * torch.ones(self.n)  # Neuron voltages.
+		self.u = self.b * self.v;
 		self.refrac_count = torch.zeros(self.n)  # Refractory period counters.
 
 		if self.traces:

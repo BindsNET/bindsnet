@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 plt.ion()
 
-def plot_input(image, inpt, ims=None, figsize=(10, 5)):
+def plot_input(image, inpt, ims=None, figsize=(8, 4)):
 	'''
 	Plots a two-dimensional image and its corresponding spike-train representation.
 	
@@ -43,7 +43,7 @@ def plot_input(image, inpt, ims=None, figsize=(10, 5)):
 	return ims
 
 
-def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(12, 7)):
+def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(8, 4.5)):
 	'''
 	Plot spikes for any group of neurons.
 
@@ -80,13 +80,13 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(12, 7)):
 		if n_subplots == 1: # Plotting only one image
 			for key in spikes.keys():
 				ims.append(axes.imshow(spikes[key][:, time[0]:time[1]], cmap='binary'))
-				plt.title('%s spikes from t = %1.2f ms to %1.2f ms' % (key, time[0], time[1]))
+				plt.title('%s spikes from t = %dms to %dms' % (key, time[0], time[1]))
 				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
 
 		else: # Plot each layer at a time
 			for i, datum in enumerate(spikes.items()):
 				ims.append(axes[i].imshow(datum[1][:, time[0]:time[1]], cmap='binary'))
-				axes[i].set_title('%s spikes from t = %1.2f ms to %1.2f ms' % (datum[0], time[0], time[1]))
+				axes[i].set_title('%s spikes from t = %dms to %dms' % (datum[0], time[0], time[1]))
 
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
 		
@@ -100,15 +100,15 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(12, 7)):
 		for i, datum in enumerate(spikes.items()):
 			if time is None:
 				ims[i].set_data(datum[1])
-				axes[i].set_title('%s spikes from t = %1.2f ms to %1.2f ms' % (datum[0], time[0], time[1]))
+				axes[i].set_title('%s spikes from t = %dms to %dms' % (datum[0], time[0], time[1]))
 			else: # Plot for given time
 				ims[i].set_data(datum[1][time[0]:time[1]])
-				axes[i].set_title('%s spikes from t = %1.2f ms to %1.2f ms' % (datum[0], time[0], time[1]))
+				axes[i].set_title('%s spikes from t = %dms to %dms' % (datum[0], time[0], time[1]))
 	
 	return ims, axes
         
 
-def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(6, 6)):
+def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 	'''
 	Plot a (possibly reshaped) connection weight matrix.
 	
@@ -139,27 +139,31 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(6, 6)):
 	return im
 
 
-def plot_assignments(assignments, im=None, figsize=(6, 6)):
+def plot_assignments(assignments, im=None, figsize=(5, 5)):
 	'''
 	Plot the two-dimensional neuron assignments.
 	
 	Inputs:
-		assignments (torch.Tensor or torch.cuda.Tensor): Matrix of neuron label assignments.
+		assignments (torch.Tensor or torch.cuda.Tensor): Vector of neuron label assignments.
 		im (matplotlib.image.AxesImage): Used for re-drawing the assignments plot.
 		figsize (tuple(int)): Horizontal, vertical figure size in inches.
 	
 	Returns:
 		(matplotlib.image.AxesImage): Used for re-drawing the assigments plot.
 	'''
+	sqrt = int(np.sqrt(assignments.size(0)))
+	assignments = assignments.view(sqrt, sqrt)
+	
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
 
 		color = plt.get_cmap('RdBu', 11)
 		im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
-		div = make_axes_locatable(ax)
-		cax = div.append_axes("right", size="5%", pad=0.05)
-
+		div = make_axes_locatable(ax); cax = div.append_axes("right", size="5%", pad=0.05)
 		plt.colorbar(im, cax=cax, ticks=np.arange(-1, 10))
+		
+		ax.set_xticks(()); ax.set_yticks(())
+		
 		fig.tight_layout()
 	else:
 		im.set_data(assignments)
@@ -167,7 +171,7 @@ def plot_assignments(assignments, im=None, figsize=(6, 6)):
 	return im
 
 
-def plot_performance(performances, ax=None, figsize=(6, 6)):
+def plot_performance(performances, ax=None, figsize=(7, 4)):
 	'''
 	Plot training accuracy curves.
 	
@@ -185,12 +189,12 @@ def plot_performance(performances, ax=None, figsize=(6, 6)):
 		ax.clear()
 
 	for scheme in performances:
-		ax.plot(range(len(performances[scheme])), [100 * p for p in performances[scheme]], label=scheme)
+		ax.plot(range(len(performances[scheme])), [p for p in performances[scheme]], label=scheme)
 
 	ax.set_ylim([0, 100])
 	ax.set_title('Estimated classification accuracy')
-	ax.set_xlabel('No. of examples')
-	ax.set_ylabel('Accuracy')
+	ax.set_xlabel('No. of examples'); ax.set_ylabel('Accuracy')
+	ax.set_xticks(()); ax.set_yticks(range(0, 110, 10))
 	ax.legend()
 
 	return ax
