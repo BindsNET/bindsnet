@@ -43,7 +43,7 @@ def plot_input(image, inpt, ims=None, figsize=(10, 5)):
 	return ims
 
 
-def plot_spikes(spikes, ims=None, axes=None, time=None, n_neuron=None, figsize=(12, 7)):
+def plot_spikes(spikes, ims=None, axes=None, time=None, n_neuron={}, figsize=(12, 7)):
 	'''
 	Plot spikes for any group of neurons.
 
@@ -67,7 +67,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neuron=None, figsize=(
 	'''
 	n_subplots = len(spikes.keys())
    
-   # Time
+   # Time setup
 	if time is not None: 
        # Confirm only 2 values for time were given
 		assert(len(time) == 2)
@@ -79,16 +79,19 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neuron=None, figsize=(
 			time = (0, spikes[key].shape[1])
 			break
 
-	# Number of neurons
+	# Number of neurons setup
 	if n_neuron is not None:
-		assert(len(n_neuron.keys()) == n_subplots)
+		# Don't have to give numbers for all keys
+		assert(len(n_neuron.keys()) <= n_subplots)
 		# Keys given must be same as the ones used in spikes dict
-		assert(set(n_neuron.keys()) == set(spikes.keys()))
+		assert(all(key in spikes.keys() for key in n_neuron.keys())==True)
 		# Checking to that given n_neurons per neuron layer is valid
-		assert(all(n_neuron[key][0] >= 0 and n_neuron[key][1] <= val.shape[0] for key, val in spikes.items()) == True)
+		assert(all(n_neuron[key][0] >= 0 and n_neuron[key][1] <= val.shape[0] for key, val in spikes.items() if key in n_neuron.keys()) == True)
 	
-	else: # Uses default values using spikes dict
-		n_neuron = {key: (0, val.shape[0]) for key, val in spikes.items()}
+	#else: # Uses default values using spikes dict
+	for key, val in spikes.items():
+		if key not in n_neuron.keys():
+			n_neuron[key] = (0, val.shape[0])
     
 	if not ims:
 		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
@@ -207,3 +210,8 @@ def plot_performance(performances, ax=None, figsize=(6, 6)):
 	ax.legend()
 
 	return ax
+
+def plot_general(monitors=None):
+	if monitors is None:
+		print ("Did you forget to provide monitors?")
+		
