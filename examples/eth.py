@@ -17,7 +17,7 @@ from encoding          import get_poisson
 from connections       import Connection, post_pre
 from nodes             import AdaptiveLIFNodes, LIFNodes, Input
 from analysis.plotting import plot_input, plot_spikes, plot_weights
-
+from evaluation 	   import *
 
 def get_square_weights(weights, n_sqrt):
 	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
@@ -96,6 +96,7 @@ network.add_connection(inh_exc_conn, source='Ai', target='Ae')
 images, labels = MNIST(path='../data').get_train()
 images /= (255 * min_isi)  # Normalize and enforce minimum expected inter-spike interval.
 images = images.view(images.size(0), -1)  # Flatten images to one dimension.
+labels = [int(lbl) for lbl in labels]
 
 # Lazily encode data as Poisson spike trains.
 data_loader = get_poisson(data=images, time=time)
@@ -103,7 +104,7 @@ data_loader = get_poisson(data=images, time=time)
 # Train the network.
 print('Begin training.\n')
 start = default_timer()
-
+train_spikes = []
 for i in range(n_train):    
 	if i % progress_interval == 0:
 		print('Progress: %d / %d (%.4f seconds)' % (i, n_train, default_timer() - start))
@@ -115,6 +116,7 @@ for i in range(n_train):
 	
 	# Run the network on the input for time `t`.
 	spikes = network.run(inpts=inpts, time=time)
+	train_spikes.append(spikes['Ae'])
 	network._reset()  # Reset state variables.
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	
@@ -138,3 +140,7 @@ for i in range(n_train):
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, default_timer() - start))
 print('Training complete.\n')
+
+print("Calculating ngram scores..")
+ngrams = estimate_ngram_probabilities(train_spikes, labels[:len(train_spikes)], 2)
+print("Accuracy = ", ngram(train_spikes, labels[:len(train_spikes)], ngrams, 2))
