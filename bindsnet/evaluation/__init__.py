@@ -1,7 +1,7 @@
 import torch
 
 
-def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.9):
+def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.8):
 	'''
 	Given a sequence of recorded spikes and corresponding labels, assign
 		labels to the neurons based on highest average spiking activity.
@@ -40,11 +40,11 @@ def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.9):
 			# Compute average firing rates for this label.
 			rates[:, i] = alpha * rates[:, i] + (1 - alpha) * torch.sum(spikes[indices], 0) / n_labeled
 	
-	# Neuron assignments are the labels they fire most for.
-	assignments = torch.max(rates, 1)[1]
-	
 	# Compute proportions of spike activity per class.
 	proportions = rates / rates.sum(1, keepdim=True)
+	
+	# Neuron assignments are the labels they fire most for.
+	assignments = torch.max(proportions, 1)[1]
 	
 	return assignments, proportions, rates
 

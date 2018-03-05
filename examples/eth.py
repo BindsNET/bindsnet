@@ -41,7 +41,7 @@ parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--time', type=int, default=350)
 parser.add_argument('--dt', type=int, default=1.0)
-parser.add_argument('--min_isi', type=float, default=25.0)
+parser.add_argument('--min_isi', type=float, default=45.0)
 parser.add_argument('--progress_interval', type=int, default=10)
 parser.add_argument('--update_interval', type=int, default=250)
 parser.add_argument('--train', dest='train', action='store_true')
@@ -154,6 +154,8 @@ for i in range(n_train):
 	spikes = network.run(inpts=inpts, time=time)
 	network._reset()  # Reset state variables.
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
+	
+	print(network.layers['Ae'].theta)
 	
 	# Record spikes.
 	spike_record[i % update_interval] = spikes['Ae']

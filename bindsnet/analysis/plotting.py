@@ -152,7 +152,7 @@ def plot_assignments(assignments, im=None, figsize=(5, 5)):
 		(matplotlib.image.AxesImage): Used for re-drawing the assigments plot.
 	'''
 	sqrt = int(np.sqrt(assignments.size(0)))
-	assignments = assignments.view(sqrt, sqrt)
+	assignments = assignments.view(sqrt, sqrt).t()
 	
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
