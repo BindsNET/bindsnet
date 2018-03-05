@@ -59,7 +59,8 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neuron={}, figsize=(12
 		n_neuron(dict(tuple(int))): CPlot spiking activity of neurons between the
 		   given range of neurons. Default is all neurons of the layer. For example,
 		   (10, 25) will plot spiking activity of neurons between those range of
-		   indices. 
+		   indices. Don't need to provide number of neurons for all layers. Default
+			will be chosen if not provided.
 	
 	Returns:
 		(list(matplotlib.image.AxesImage)): Used for re-drawing the spike plots.
