@@ -217,17 +217,37 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 
 	return ax
 
-def plot_general(monitor=None, ims=None, axes=None, labels=None, figsize=(6,6)):
+def plot_general(monitor=None, ims=None, axes=None, parameters=None, figsize=(8,4.5)):
 	if monitor is None:
 		print ("Did you forget to provide monitors?")
 		raise TypeError
 	
-	n_subplots = len(monitor.keys())
+	if parameters is None:
+		parameters = {key:{'title':'', 'xlabel':'', 'ylabel':'', \
+							'time':(0, monitor.get(key).shape[1]), 'n_neurons':(0, monitor.get(key).shape[0]), 'cmap':'binary'} \
+							for key in monitor.state_vars}
+	
+	n_subplots = len(monitor.state_vars)
 	if not ims:
 		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
 		ims = []
 		
+		if n_subplots == 1:
+			for key in monitor.state_vars:
+				if parameters[key]['cmap'] == 'hot_r' or parameters[key]['hot']:
+					ims.append(axes.matshow(monitor.get(key)[parameters[key]['n_neurons'][0]:parameters[key]['n_neurons'][1], parameters[key]['time'][0]:parameters[key]['n_neurons'][1]]))
+				else:
+					ims.append(axes.imshow(monitor.get(key)[parameters[key]['n_neurons'][0]:parameters[key]['n_neurons'][1], parameters[key]['time'][0]:parameters[key]['n_neurons'][1]]))
+			
+			plt.title('%s voltages for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+			plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
+			axes.set_aspect('auto')
 		
+		
+		else:
+			pass
+
+	# axes given		
 	else:
 		assert(len(ims) == n_subplots)
 	
