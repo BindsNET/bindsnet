@@ -169,13 +169,13 @@ for i in range(n_train):
 	# Record spikes.
 	spike_record[i % update_interval] = spikes['Ae']
 
-	# Optionally plot the excitatory, inhibitory spiking.
+	# Optionally plot various simulation information.
 	if plot:
 		inpt = inpts['X'].t()
 		exc_spikes = spikes['Ae']; inh_spikes = spikes['Ai']
 		input_exc_weights = network.connections[('X', 'Ae')].w
 		square_weights = get_square_weights(input_exc_weights, n_sqrt)
-		voltages = {'Ae' : exc_voltages.numpy().T[:, 0:10], 'Ai' : inh_voltages.numpy().T[:, 0:10]}
+		voltages = {'Ae' : exc_voltages.numpy().T, 'Ai' : inh_voltages.numpy().T}
 		
 		if i == 0:
 			inpt_ims = plot_input(images[i].view(28, 28), inpt)
