@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 plt.ion()
 
-def plot_input(image, inpt, ims=None, figsize=(10, 5)):
+def plot_input(image, inpt, ims=None, figsize=(8, 4)):
 	'''
 	Plots a two-dimensional image and its corresponding spike-train representation.
 	
@@ -43,9 +43,9 @@ def plot_input(image, inpt, ims=None, figsize=(10, 5)):
 	return ims
 
 
-def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(12, 7)):
+def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
 	'''
-	Plot spikes for any group of neurons.
+	Plot spikes for any group(s) of neurons.
 
 	Inputs:
 		spikes (dict(torch.Tensor or torch.cuda.Tensor)): Contains
@@ -120,12 +120,12 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(1
 		assert(len(ims) == n_subplots)
 		for i, datum in enumerate(spikes.items()):
 				ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %1.2f to %1.2f '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 	
 	return ims, axes
         
 
-def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(6, 6)):
+def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 	'''
 	Plot a (possibly reshaped) connection weight matrix.
 	
@@ -156,27 +156,31 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(6, 6)):
 	return im
 
 
-def plot_assignments(assignments, im=None, figsize=(6, 6)):
+def plot_assignments(assignments, im=None, figsize=(5, 5)):
 	'''
 	Plot the two-dimensional neuron assignments.
 	
 	Inputs:
-		assignments (torch.Tensor or torch.cuda.Tensor): Matrix of neuron label assignments.
+		assignments (torch.Tensor or torch.cuda.Tensor): Vector of neuron label assignments.
 		im (matplotlib.image.AxesImage): Used for re-drawing the assignments plot.
 		figsize (tuple(int)): Horizontal, vertical figure size in inches.
 	
 	Returns:
 		(matplotlib.image.AxesImage): Used for re-drawing the assigments plot.
 	'''
+	sqrt = int(np.sqrt(assignments.size(0)))
+	assignments = assignments.view(sqrt, sqrt).t()
+	
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
 
 		color = plt.get_cmap('RdBu', 11)
 		im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
-		div = make_axes_locatable(ax)
-		cax = div.append_axes("right", size="5%", pad=0.05)
-
+		div = make_axes_locatable(ax); cax = div.append_axes("right", size="5%", pad=0.05)
 		plt.colorbar(im, cax=cax, ticks=np.arange(-1, 10))
+		
+		ax.set_xticks(()); ax.set_yticks(())
+		
 		fig.tight_layout()
 	else:
 		im.set_data(assignments)
@@ -184,7 +188,7 @@ def plot_assignments(assignments, im=None, figsize=(6, 6)):
 	return im
 
 
-def plot_performance(performances, ax=None, figsize=(6, 6)):
+def plot_performance(performances, ax=None, figsize=(7, 4)):
 	'''
 	Plot training accuracy curves.
 	
@@ -202,12 +206,12 @@ def plot_performance(performances, ax=None, figsize=(6, 6)):
 		ax.clear()
 
 	for scheme in performances:
-		ax.plot(range(len(performances[scheme])), [100 * p for p in performances[scheme]], label=scheme)
+		ax.plot(range(len(performances[scheme])), [p for p in performances[scheme]], label=scheme)
 
 	ax.set_ylim([0, 100])
 	ax.set_title('Estimated classification accuracy')
-	ax.set_xlabel('No. of examples')
-	ax.set_ylabel('Accuracy')
+	ax.set_xlabel('No. of examples'); ax.set_ylabel('Accuracy')
+	ax.set_xticks(()); ax.set_yticks(range(0, 110, 10))
 	ax.legend()
 
 	return ax
@@ -216,3 +220,68 @@ def plot_general(monitors=None):
 	if monitors is None:
 		print ("Did you forget to provide monitors?")
 		
+def plot_voltages(voltages, ims=None, axes=None, time=None, figsize=(8, 4.5)):
+	'''
+	Plot voltages for any group(s) of neurons.
+
+	Inputs:
+		voltages (dict(torch.Tensor or torch.cuda.Tensor)): Contains
+			voltage data for layers of neurons of interest.
+		ims (list(matplotlib.image.AxesImage)): Used for re-drawing the spike plots.
+		axes (list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
+		time (tuple(int)): Plot spiking activity of neurons between the given range
+			of time. Default is the entire simulation time. For example, time = 
+			(40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
+		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+	
+	Returns:
+		(list(matplotlib.image.AxesImage)): Used for re-drawing the voltage plots.
+		(list(matplotlib.axes.Axes)): Used for re-drawing the voltage plots.
+	'''
+	n_subplots = len(voltages.keys())
+    
+	# Confirm only 2 values for time were given
+	if time is not None: 
+		assert(len(time) == 2)
+		assert(time[0] < time[1])
+
+	else: # Set it for entire duration
+		for key in voltages.keys():
+			time = (0, voltages[key].shape[0])
+			break
+	
+	if not ims:
+		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
+		ims = []
+		
+		if n_subplots == 1: # Plotting only one image
+			for key in voltages.keys():
+				ims.append(axes.plot(voltages[key][:, time[0]:time[1]]))
+				plt.title('%s voltages from t = %d to %d' % (key, time[0], time[1]))
+				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
+
+		else: # Plot each layer at a time
+			for i, datum in enumerate(voltages.items()):
+				ims.append(axes[i].plot(datum[1][:, time[0]:time[1]]))
+				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
+
+		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
+		
+		for ax in axes:
+			ax.set_aspect('auto')
+		
+		plt.tight_layout()
+           
+	else: # Plotting figure given
+		assert(len(ims) == n_subplots)
+		for i, datum in enumerate(voltages.items()):
+			axes[i].clear()
+			
+			if time is None:
+				axes[i].plot(datum[1])
+				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
+			else: # Plot for given time
+				axes[i].plot(datum[1][time[0]:time[1]])
+				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
+	
+	return ims, axes
