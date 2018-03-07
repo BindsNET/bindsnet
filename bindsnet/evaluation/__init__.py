@@ -42,6 +42,7 @@ def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.8):
 	
 	# Compute proportions of spike activity per class.
 	proportions = rates / rates.sum(1, keepdim=True)
+	proportions[proportions != proportions] = 0  # Set NaNs to 0
 	
 	# Neuron assignments are the labels they fire most for.
 	assignments = torch.max(proportions, 1)[1]
