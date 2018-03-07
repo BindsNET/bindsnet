@@ -108,7 +108,7 @@ data_loader = get_poisson(data=images, time=time)
 
 # Record spikes during the simulation.
 spike_record = torch.zeros_like(torch.Tensor(update_interval, time, n_neurons))
-
+spike_record_full = torch.zeros_like(torch.Tensor(n_train, time, n_neurons))
 # Neuron assignments and spike proportions.
 assignments = -torch.ones_like(torch.Tensor(n_neurons))
 proportions = torch.zeros_like(torch.Tensor(n_neurons, 10))
@@ -155,11 +155,12 @@ for i in range(n_train):
 	network._reset()  # Reset state variables.
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	
-	print(network.layers['Ae'].theta)
+	# print(network.layers['Ae'].theta)
 	
 	# Record spikes.
 	spike_record[i % update_interval] = spikes['Ae']
-	
+	spike_record_full[i] = spikes['Ae']
+
 	# Optionally plot the excitatory, inhibitory spiking.
 	if plot:
 		inpt = inpts['X'].t()
@@ -184,3 +185,10 @@ for i in range(n_train):
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, default_timer() - start))
 print('Training complete.\n')
+
+assignments, proportions, _ = assign_labels(spike_record_full, labels[:n_train], 10)
+predictions_pw = proportion_weighting(spike_record_full, assignments, proportions, 10)
+predictions_all = all_activity(spike_record_full, assignments, 10)
+print("Accuracy Proportion Weighting = ", np.mean(np.array(predictions_pw)==np.array(labels[:n_train],dtype=np.int32)))
+print("Accuracy All Activity = ", np.mean(np.array(predictions_all)==np.array(labels[:n_train],dtype=np.int32)))
+

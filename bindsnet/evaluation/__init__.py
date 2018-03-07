@@ -21,7 +21,7 @@ def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.8):
 		(torch.Tensor or torch.cuda.Tensor): A vector of shape (n_neurons, n_labels)
 			of proportions of firing activity per neuron, per data label.
 	'''
-	n_neurons = spikes.size(2)
+	n_neurons = spikes.size(2) # TODO: make generic. size(-1)?
 	
 	if rates is None:
 		rates = torch.zeros_like(torch.Tensor(n_neurons, n_labels))
@@ -45,7 +45,10 @@ def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.8):
 	
 	# Neuron assignments are the labels they fire most for.
 	assignments = torch.max(proportions, 1)[1]
-	
+
+	# Set nans to 0
+	proportions[proportions!=proportions] = 0
+
 	return assignments, proportions, rates
 
 
