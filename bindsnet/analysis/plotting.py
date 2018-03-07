@@ -81,7 +81,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 			break
 
 	# Number of neurons setup
-	if n_neurons is not None:
+	if len(n_neurons.keys()) == 0:
 		# Don't have to give numbers for all keys
 		assert(len(n_neurons.keys()) <= n_subplots)
 		# Keys given must be same as the ones used in spikes dict
@@ -104,6 +104,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 				plt.title('%s spikes for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
 				axes.set_aspect('auto')
+				
 		else: # Plot each layer at a time
 			for i, datum in enumerate(spikes.items()):
 				ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]], cmap='binary'))
@@ -216,11 +217,22 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 
 	return ax
 
-def plot_general(monitors=None):
-	if monitors is None:
+def plot_general(monitor=None, ims=None, axes=None, labels=None, figsize=(6,6)):
+	if monitor is None:
 		print ("Did you forget to provide monitors?")
+		raise TypeError
+	
+	n_subplots = len(monitor.keys())
+	if not ims:
+		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
+		ims = []
 		
-def plot_voltages(voltages, ims=None, axes=None, time=None, figsize=(8, 4.5)):
+		
+	else:
+		assert(len(ims) == n_subplots)
+	
+		
+def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
 	'''
 	Plot voltages for any group(s) of neurons.
 
@@ -233,6 +245,11 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, figsize=(8, 4.5)):
 			of time. Default is the entire simulation time. For example, time = 
 			(40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
 		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+		n_neurons (dict(tuple(int))): CPlot spiking activity of neurons between the
+		   given range of neurons. Default is all neurons of the layer. For example,
+		   (10, 25) will plot spiking activity of neurons between those range of
+		   indices. Don't need to provide number of neurons for all layers. Default
+			will be chosen if not provided.
 	
 	Returns:
 		(list(matplotlib.image.AxesImage)): Used for re-drawing the voltage plots.
@@ -247,28 +264,43 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, figsize=(8, 4.5)):
 
 	else: # Set it for entire duration
 		for key in voltages.keys():
-			time = (0, voltages[key].shape[0])
+			time = (0, voltages[key].shape[1])
 			break
 	
+	# Number of neurons setup
+	if len(n_neurons.keys()) == 0:
+		# Don't have to give numbers for all keys
+		assert(len(n_neurons.keys()) <= n_subplots)
+		# Keys given must be same as the ones used in spikes dict
+		assert(all(key in voltages.keys() for key in n_neurons.keys())==True)
+		# Checking to that given n_neurons per neuron layer is valid
+		assert(all(n_neurons[key][0] >= 0 and n_neurons[key][1] <= val.shape[0] for key, val in voltages.items() if key in n_neurons.keys()) == True)
+	
+	for key, val in voltages.items():
+		if key not in n_neurons.keys():
+			n_neurons[key] = (0, val.shape[0])
+			
 	if not ims:
 		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
 		ims = []
-		
-		if n_subplots == 1: # Plotting only one image
-			for key in voltages.keys():
-				ims.append(axes.plot(voltages[key][:, time[0]:time[1]]))
-				plt.title('%s voltages from t = %d to %d' % (key, time[0], time[1]))
-				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
 
+		if n_subplots == 1: # Plotting only one image
+			for datum in voltages.items():
+				ims.append(axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
+				plt.title('%s voltages for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
+				axes.set_aspect('auto')
+				
 		else: # Plot each layer at a time
+
 			for i, datum in enumerate(voltages.items()):
-				ims.append(axes[i].plot(datum[1][:, time[0]:time[1]]))
-				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
+					ims.append(axes[i].matshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
+					axes[i].set_title('%s voltages for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+			
+			for ax in axes:
+				ax.set_aspect('auto')
 
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
-		
-		for ax in axes:
-			ax.set_aspect('auto')
 		
 		plt.tight_layout()
            
@@ -277,11 +309,9 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, figsize=(8, 4.5)):
 		for i, datum in enumerate(voltages.items()):
 			axes[i].clear()
 			
-			if time is None:
-				axes[i].plot(datum[1])
-				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
-			else: # Plot for given time
-				axes[i].plot(datum[1][time[0]:time[1]])
-				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
+		for i, datum in enumerate(voltages.items()):
+			ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+			axes[i].set_title('%s voltages for neurons (%d - %d) from t = %1.2f to %1.2f '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+	
 	
 	return ims, axes
