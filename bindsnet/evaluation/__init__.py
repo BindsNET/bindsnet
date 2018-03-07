@@ -6,37 +6,6 @@ confidence_weighting()
 ngram()
 
 '''
-def assign_labels(spikes, true_labels):
-    pass
-
-
-def confidence_weighting(spikes, true_labels, train=False, assignments=None):
-    '''
-    Evaluates the network using the confidence weighting scheme.
-    Usage: If train=True, will return the assignments based on this training data. 
-           If train=False, will need to provide assignments generated from the last step.
-    Inputs:
-        spikes: the network activity of the last layer, as returned by network.run()
-            shape = (n_samples,n_layer,timesteps)
-        true_labels: The ground truth values to compare to
-            shape = (n_samples,)
-
-    Outputs: 
-        Accuracy
-    Confusion Matrix
-
-    '''
-    summed_rates = {}
-    for i in xrange(10):
-        num_assignments[i] = np.count_nonzero(assignments == i)
-    if num_assignments[i] > 0:
-            summed_rates[i] = np.sum(spike_rates[assignments == i] * spike_proportions[(assignments == i).ravel(), i]) / num_assignments[i]
-
-
-
-def all(a,t):
-    pass
-
 
 def get_fire_order(example):
     # Example.shape = (n_layer, time steps)     <class 'torch.FloatTensor'> torch.Size([100, 350])
