@@ -45,7 +45,7 @@ def plot_input(image, inpt, ims=None, figsize=(8, 4)):
 
 def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(8, 4.5)):
 	'''
-	Plot spikes for any group of neurons.
+	Plot spikes for any group(s) of neurons.
 
 	Inputs:
 		spikes (dict(torch.Tensor or torch.cuda.Tensor)): Contains
@@ -80,13 +80,13 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(8, 4.5)):
 		if n_subplots == 1: # Plotting only one image
 			for key in spikes.keys():
 				ims.append(axes.imshow(spikes[key][:, time[0]:time[1]], cmap='binary'))
-				plt.title('%s spikes from t = %dms to %dms' % (key, time[0], time[1]))
+				plt.title('%s spikes from t = %d to %d' % (key, time[0], time[1]))
 				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
 
 		else: # Plot each layer at a time
 			for i, datum in enumerate(spikes.items()):
 				ims.append(axes[i].imshow(datum[1][:, time[0]:time[1]], cmap='binary'))
-				axes[i].set_title('%s spikes from t = %dms to %dms' % (datum[0], time[0], time[1]))
+				axes[i].set_title('%s spikes from t = %d to %d' % (datum[0], time[0], time[1]))
 
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
 		
@@ -100,10 +100,10 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, figsize=(8, 4.5)):
 		for i, datum in enumerate(spikes.items()):
 			if time is None:
 				ims[i].set_data(datum[1])
-				axes[i].set_title('%s spikes from t = %dms to %dms' % (datum[0], time[0], time[1]))
+				axes[i].set_title('%s spikes from t = %d to %d' % (datum[0], time[0], time[1]))
 			else: # Plot for given time
 				ims[i].set_data(datum[1][time[0]:time[1]])
-				axes[i].set_title('%s spikes from t = %dms to %dms' % (datum[0], time[0], time[1]))
+				axes[i].set_title('%s spikes from t = %d to %d' % (datum[0], time[0], time[1]))
 	
 	return ims, axes
         
@@ -198,3 +198,70 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 	ax.legend()
 
 	return ax
+
+
+def plot_voltages(voltages, ims=None, axes=None, time=None, figsize=(8, 4.5)):
+	'''
+	Plot voltages for any group(s) of neurons.
+
+	Inputs:
+		voltages (dict(torch.Tensor or torch.cuda.Tensor)): Contains
+			voltage data for layers of neurons of interest.
+		ims (list(matplotlib.image.AxesImage)): Used for re-drawing the spike plots.
+		axes (list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
+		time (tuple(int)): Plot spiking activity of neurons between the given range
+			of time. Default is the entire simulation time. For example, time = 
+			(40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
+		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+	
+	Returns:
+		(list(matplotlib.image.AxesImage)): Used for re-drawing the voltage plots.
+		(list(matplotlib.axes.Axes)): Used for re-drawing the voltage plots.
+	'''
+	n_subplots = len(voltages.keys())
+    
+	# Confirm only 2 values for time were given
+	if time is not None: 
+		assert(len(time) == 2)
+		assert(time[0] < time[1])
+
+	else: # Set it for entire duration
+		for key in voltages.keys():
+			time = (0, voltages[key].shape[0])
+			break
+	
+	if not ims:
+		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
+		ims = []
+		
+		if n_subplots == 1: # Plotting only one image
+			for key in voltages.keys():
+				ims.append(axes.plot(voltages[key][:, time[0]:time[1]]))
+				plt.title('%s voltages from t = %d to %d' % (key, time[0], time[1]))
+				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
+
+		else: # Plot each layer at a time
+			for i, datum in enumerate(voltages.items()):
+				ims.append(axes[i].plot(datum[1][:, time[0]:time[1]]))
+				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
+
+		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
+		
+		for ax in axes:
+			ax.set_aspect('auto')
+		
+		plt.tight_layout()
+           
+	else: # Plotting figure given
+		assert(len(ims) == n_subplots)
+		for i, datum in enumerate(voltages.items()):
+			axes[i].clear()
+			
+			if time is None:
+				axes[i].plot(datum[1])
+				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
+			else: # Plot for given time
+				axes[i].plot(datum[1][time[0]:time[1]])
+				axes[i].set_title('%s voltages from t = %d to %d' % (datum[0], time[0], time[1]))
+	
+	return ims, axes

@@ -12,8 +12,8 @@ sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'datasets')))
 
 from datasets          import MNIST
-from network           import Network
 from encoding          import get_poisson
+from network           import Network, Monitor
 from connections       import Connection, post_pre
 from nodes             import AdaptiveLIFNodes, LIFNodes, Input
 
@@ -25,8 +25,8 @@ def get_square_weights(weights, n_sqrt):
 	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
 	for i in range(n_sqrt):
 		for j in range(n_sqrt):
-			filter_ = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
-			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = filter_
+			fltr = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
+			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = fltr
 	
 	return square_weights
 
@@ -41,7 +41,7 @@ parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--time', type=int, default=350)
 parser.add_argument('--dt', type=int, default=1.0)
-parser.add_argument('--min_isi', type=float, default=45.0)
+parser.add_argument('--min_isi', type=float, default=25.0)
 parser.add_argument('--progress_interval', type=int, default=10)
 parser.add_argument('--update_interval', type=int, default=250)
 parser.add_argument('--train', dest='train', action='store_true')
@@ -58,7 +58,7 @@ if gpu:
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 if not train:
-	udpate_interval = n_test
+	update_interval = n_test
 
 # Build network.
 network = Network(dt=dt)
@@ -90,6 +90,10 @@ exc_inh_conn = Connection(source=exc_layer, target=inh_layer, w=exc_inh_w, updat
 inh_exc_w = -17.5 * (torch.ones(inh_layer.n, exc_layer.n) - torch.diag(torch.ones(inh_layer.n)))
 inh_exc_conn = Connection(source=inh_layer, target=exc_layer, w=inh_exc_w, update_rule=None)
 
+# Voltage recording for excitatory and inhibitory layers.
+exc_voltage_monitor = Monitor(exc_layer, ['v'])
+inh_voltage_monitor = Monitor(inh_layer, ['v'])
+
 # Add all layers and connections to the network.
 network.add_layer(input_layer, name='X')
 network.add_layer(exc_layer, name='Ae')
@@ -97,6 +101,8 @@ network.add_layer(inh_layer, name='Ai')
 network.add_connection(input_exc_conn, source='X', target='Ae')
 network.add_connection(exc_inh_conn, source='Ae', target='Ai')
 network.add_connection(inh_exc_conn, source='Ai', target='Ae')
+network.add_monitor(exc_voltage_monitor, name='exc_voltage')
+network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 
 # Load MNIST data.
 images, labels = MNIST(path='../data').get_train()
@@ -152,10 +158,13 @@ for i in range(n_train):
 	
 	# Run the network on the input.
 	spikes = network.run(inpts=inpts, time=time)
+	
+	# Get voltage recording.
+	exc_voltages = exc_voltage_monitor.get('v')
+	inh_voltages = exc_voltage_monitor.get('v')
+	
 	network._reset()  # Reset state variables.
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
-	
-	print(network.layers['Ae'].theta)
 	
 	# Record spikes.
 	spike_record[i % update_interval] = spikes['Ae']
@@ -166,6 +175,7 @@ for i in range(n_train):
 		exc_spikes = spikes['Ae']; inh_spikes = spikes['Ai']
 		input_exc_weights = network.connections[('X', 'Ae')].w
 		square_weights = get_square_weights(input_exc_weights, n_sqrt)
+		voltages = {'Ae' : exc_voltages.numpy().T[:, 0:10], 'Ai' : inh_voltages.numpy().T[:, 0:10]}
 		
 		if i == 0:
 			inpt_ims = plot_input(images[i].view(28, 28), inpt)
@@ -173,12 +183,15 @@ for i in range(n_train):
 			weights_im = plot_weights(square_weights)
 			assigns_im = plot_assignments(assignments)
 			perf_ax = plot_performance(accuracy)
+			voltage_ims, voltage_axes = plot_voltages(voltages)
+			
 		else:
 			inpt_ims = plot_input(images[i].view(28, 28), inpt, ims=inpt_ims)
 			spike_ims, spike_axes = plot_spikes({'Ae' : exc_spikes, 'Ai' : inh_spikes}, ims=spike_ims, axes=spike_axes)
 			weights_im = plot_weights(square_weights, im=weights_im)
 			assigns_im = plot_assignments(assignments, im=assigns_im)
 			perf_ax = plot_performance(accuracy, ax=perf_ax)
+			voltage_ims, voltage_axes = plot_voltages(voltages, ims=voltage_ims, axes=voltage_axes)
 		
 		plt.pause(1e-8)
 
