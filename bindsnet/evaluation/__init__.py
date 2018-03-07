@@ -45,7 +45,7 @@ def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.8):
 	
 	# Neuron assignments are the labels they fire most for.
 	assignments = torch.max(proportions, 1)[1]
-	
+
 	return assignments, proportions, rates
 
 

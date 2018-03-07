@@ -114,7 +114,7 @@ data_loader = get_poisson(data=images, time=time)
 
 # Record spikes during the simulation.
 spike_record = torch.zeros_like(torch.Tensor(update_interval, time, n_neurons))
-
+spike_record_full = torch.zeros_like(torch.Tensor(n_train, time, n_neurons))
 # Neuron assignments and spike proportions.
 assignments = -torch.ones_like(torch.Tensor(n_neurons))
 proportions = torch.zeros_like(torch.Tensor(n_neurons, 10))
@@ -168,7 +168,7 @@ for i in range(n_train):
 	
 	# Record spikes.
 	spike_record[i % update_interval] = spikes['Ae']
-	
+
 	# Optionally plot the excitatory, inhibitory spiking.
 	if plot:
 		inpt = inpts['X'].t()
@@ -197,3 +197,4 @@ for i in range(n_train):
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, default_timer() - start))
 print('Training complete.\n')
+
