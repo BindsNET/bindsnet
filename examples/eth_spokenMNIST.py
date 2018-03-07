@@ -12,8 +12,11 @@ sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'datasets')))
 
 from datasets          import MNIST
+from datasets		   import SpokenMNIST
 from network           import Network
 from encoding          import get_poisson
+from encoding          import get_poisson_mixture
+from encoding          import get_bernoulli_mixture
 from connections       import Connection, post_pre
 from nodes             import AdaptiveLIFNodes, LIFNodes, Input
 from analysis.plotting import plot_input, plot_spikes, plot_weights
@@ -33,8 +36,8 @@ print()
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
-parser.add_argument('--n_train', type=int, default=60000)
-parser.add_argument('--n_test', type=int, default=10000)
+parser.add_argument('--n_train', type=int, default=1000)
+parser.add_argument('--n_test', type=int, default=100)
 parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--time', type=int, default=350)
@@ -61,7 +64,7 @@ n_sqrt = int(np.sqrt(n_neurons))
 
 # Layers of neurons.
 # Input layer.
-input_layer = Input(n=784, traces=True, trace_tc=1 / 20)
+input_layer = Input(n=40, traces=True, trace_tc=1 / 20)
 
 # Excitatory layer.
 exc_layer = AdaptiveLIFNodes(n=n_neurons, traces=True, rest=-65.0, reset=-65.0, threshold=-52.0, refractory=5,
@@ -93,13 +96,11 @@ network.add_connection(exc_inh_conn, source='Ae', target='Ai')
 network.add_connection(inh_exc_conn, source='Ai', target='Ae')
 
 # Load MNIST data.
-images, labels = MNIST(path='../data').get_train()
-images /= (255 * min_isi)  # Normalize and enforce minimum expected inter-spike interval.
-images = images.view(images.size(0), -1)  # Flatten images to one dimension.
-labels = [int(lbl) for lbl in labels]
+audios, labels = SpokenMNIST().get_train()
 
 # Lazily encode data as Poisson spike trains.
-data_loader = get_poisson(data=images, time=time)
+# data_loader = get_poisson_mixture(data=audios, time=time, window=50)
+data_loader = get_bernoulli_mixture(data=audios, time=time, window=30)
 
 # Train the network.
 print('Begin training.\n')
