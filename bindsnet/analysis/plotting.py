@@ -2,9 +2,10 @@ import sys
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-
+import os
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+sys.path.append(os.path.abspath(os.path.join('..', '..', 'bindsnet', 'network')))
+import nodes
 
 plt.ion()
 
@@ -217,39 +218,86 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 
 	return ax
 
-def plot_general(monitor=None, ims=None, axes=None, parameters=None, figsize=(8,4.5)):
+def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None, figsize=(8,4.5)):
+	'''
+	General plotting function for variables being monitored.
+	
+	Inputs:
+		monitor(monitors.Monitor): Contains state variables being monitored that will be plotted.
+		ims (list(matplotlib.image.AxesImage)): Used for re-drawing the appropriate plots.
+		axes (list(matplotlib.axes.Axes)): Used for re-drawing the appropriate plots.
+		labels (dict(dict(string))): Used to set xlabel, ylabel and titles for 
+				every state variable being plotted.
+		parameters (dict(dict(tuples(int)))): Set time and number of neurons being plotted for
+				every state variable being plotted.
+		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+		
+	Returns:
+		(list(matplotlib.image.AxesImage)): Used for re-drawing the appropriate plots.
+		(list(matplotlib.axes.Axes)): Used for re-drawing the appropriate plots.
+	'''
+	
 	if monitor is None:
 		print ("Did you forget to provide monitors?")
 		raise TypeError
 	
-	if parameters is None:
-		parameters = {key:{'title':'', 'xlabel':'', 'ylabel':'', \
-							'time':(0, monitor.get(key).shape[1]), 'n_neurons':(0, monitor.get(key).shape[0]), 'cmap':'binary'} \
-							for key in monitor.state_vars}
+	if labels is None:
+		labels = {var:{'title':'', 'xlabel':'', 'ylabel':''} for var in monitor.state_vars}
 	
+	else:
+		for var in monitor.state_vars:
+			for lb in ['title', 'xlabel', 'ylabel']:
+				if lb not in labels[var].keys():
+					labels[var][lb] = ''
+					
+	if parameters is None:
+		# Monitor object is of a class in nodes
+		parameters = {var:{'time':(0, monitor.get(var).shape[1]), 'n_neurons':(0, monitor.get(var).shape[0]), 'cmap':'binary'} \
+							for var in monitor.state_vars}
+		
+	else:
+		#if type(monitor.obj) in nodes.__dict__.values():
+		for var in monitor.state_vars:
+			if 'time' not in parameters[var].keys():
+				parameters[var]['time'] = (0, monitor.get(var).shape[1])
+			
+			if 'n_neurons' not in parameters[var].keys():
+				parameters[var]['n_neurons'] = (0, monitor.get(var).shape[0])
+			
+			if 'cmap' not in parameters[var].keys():
+				parameters[var]['cmap'] = 'binary'
+		
 	n_subplots = len(monitor.state_vars)
 	if not ims:
 		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
 		ims = []
 		
 		if n_subplots == 1:
-			for key in monitor.state_vars:
-				if parameters[key]['cmap'] == 'hot_r' or parameters[key]['hot']:
-					ims.append(axes.matshow(monitor.get(key)[parameters[key]['n_neurons'][0]:parameters[key]['n_neurons'][1], parameters[key]['time'][0]:parameters[key]['n_neurons'][1]]))
+			for var in monitor.state_vars:
+				# For Weights
+				if parameters[var]['cmap'] == 'hot_r' or parameters[var]['cmap'] == 'hot':
+					ims.append(axes.matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1], parameters[var]['time'][0]:parameters[var]['time'][1]]))
 				else:
-					ims.append(axes.imshow(monitor.get(key)[parameters[key]['n_neurons'][0]:parameters[key]['n_neurons'][1], parameters[key]['time'][0]:parameters[key]['n_neurons'][1]]))
+					ims.append(axes.imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1], parameters[var]['time'][0]:parameters[var]['time'][1]]))
 			
-			plt.title('%s voltages for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
-			plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
+				plt.title(labels[var]['title']); plt.xlabel(labels[var]['xlabel']); plt.ylabel(labels[var]['ylabel'])
 			axes.set_aspect('auto')
-		
-		
-		else:
-			pass
+
+		else: # Plot each monitor variable at a time
+			for i, var in enumerate(monitor.state_vars):
+				if parameters[var]['cmap'] == 'hot_r' or parameters[var]['cmap'] == 'hot':
+					ims.append(axes[i].matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1], parameters[var]['time'][0]:parameters[var]['time'][1]]))
+				else:
+					ims.append(axes[i].imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1], parameters[var]['time'][0]:parameters[var]['time'][1]]))
+				
+				axes.set_title(labels[var]['title']); axes.set_xlabel(labels[var]['xlabel']); axes.set_ylabel(labels[var]['ylabel'])
+				axes.set_aspect('auto') 
 
 	# axes given		
 	else:
 		assert(len(ims) == n_subplots)
+		
+	return ims, axes
 	
 		
 def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
