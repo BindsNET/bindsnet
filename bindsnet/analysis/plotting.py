@@ -1,11 +1,12 @@
+#import os
 import sys
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import os
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-sys.path.append(os.path.abspath(os.path.join('..', '..', 'bindsnet', 'network')))
-import nodes
+#sys.path.append(os.path.abspath(os.path.join('..', '..', 'bindsnet', 'network')))
+#import nodes
 
 plt.ion()
 
@@ -237,18 +238,25 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
 		(list(matplotlib.axes.Axes)): Used for re-drawing the appropriate plots.
 	'''
 	
+	default = {'xlabel':'Simulation time', 'ylabel':'Index'}
+	
 	if monitor is None:
 		print ("Did you forget to provide monitors?")
 		raise TypeError
 	
 	if labels is None:
-		labels = {var:{'title':'', 'xlabel':'', 'ylabel':''} for var in monitor.state_vars}
+		labels = {var:{'title':'Recording of %s'%(var), 'xlabel':'Simulation time', 'ylabel':'Index'} for var in monitor.state_vars}
 	
+	# Default axis parameters
 	else:
 		for var in monitor.state_vars:
 			for lb in ['title', 'xlabel', 'ylabel']:
-				if lb not in labels[var].keys():
-					labels[var][lb] = ''
+				
+				if lb not in labels[var].keys() and lb == 'title':
+					labels[var][lb] = 'Recording of %s'%var
+					
+				elif lb not in labels[var].keys():
+					labels[var][lb] = default[lb]
 					
 	if parameters is None:
 		# Monitor object is of a class in nodes
@@ -355,7 +363,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 		if n_subplots == 1: # Plotting only one image
 			for datum in voltages.items():
 				ims.append(axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
-				plt.title('%s voltages for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+				plt.title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
 				axes.set_aspect('auto')
 				
@@ -363,7 +371,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 
 			for i, datum in enumerate(voltages.items()):
 					ims.append(axes[i].matshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
-					axes[i].set_title('%s voltages for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+					axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 			
 			for ax in axes:
 				ax.set_aspect('auto')
@@ -379,7 +387,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 			
 		for i, datum in enumerate(voltages.items()):
 			ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-			axes[i].set_title('%s voltages for neurons (%d - %d) from t = %1.2f to %1.2f '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+			axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 	
 	
 	return ims, axes
