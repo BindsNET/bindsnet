@@ -4,6 +4,7 @@ import torch
 import numpy             as np
 import matplotlib.pyplot as plt
 from timeit import default_timer
+import timeit
 
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
@@ -22,6 +23,9 @@ n_e = int(n * 0.8)
 n_i = n - n_e
 dt = 1.0
 run_time = 1000 # 1000 = 1s
+tests = 100
+
+
 
 if gpu:
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -74,10 +78,20 @@ network.add_connection(inh_exc_conn, source='Ai', target='Ae')
 network.add_connection(exc_exc_conn, source='Ae', target='Ae')
 network.add_connection(inh_inh_conn, source='Ai', target='Ai')
 
-# Run the network on the input for time `t`.
-spikes = network.run(inpts={}, time=run_time)
 
-plot_spikes(spikes)
+results = torch.zeros(tests)
 
-import matplotlib.pyplot as plt
-plt.show()
+for i in range(tests):
+  # Run the network on the input for time `run_time`.
+  start = timeit.timeit()
+  spikes = network.run(inpts={}, time=run_time)
+  end = timeit.timeit()
+  results[i] = end - start
+
+
+print("Average: ",torch.mean(results)," std: ",torch.std(results))
+
+#plot_spikes(spikes)
+#
+#import matplotlib.pyplot as plt
+#plt.show()
