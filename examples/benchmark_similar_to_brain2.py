@@ -4,7 +4,7 @@ import torch
 import numpy             as np
 import matplotlib.pyplot as plt
 from timeit import default_timer
-import timeit
+import time
 
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
@@ -83,10 +83,11 @@ results = torch.zeros(tests)
 
 for i in range(tests):
   # Run the network on the input for time `run_time`.
-  start = timeit.timeit()
+  start = time.time()
   spikes = network.run(inpts={}, time=run_time)
-  end = timeit.timeit()
+  end = time.time()
   results[i] = end - start
+  print(results[i])
 
 
 print("Average: ",torch.mean(results)," std: ",torch.std(results))
