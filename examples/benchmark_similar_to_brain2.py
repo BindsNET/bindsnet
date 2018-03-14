@@ -16,7 +16,7 @@ from nodes             import LIFNodes, Input
 from analysis.plotting import plot_spikes, plot_weights
 
 ## param
-gpu = False
+gpu = True
 n = 4000
 n_e = int(n * 0.8)
 n_i = n - n_e
