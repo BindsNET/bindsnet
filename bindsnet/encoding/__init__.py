@@ -131,6 +131,51 @@ def get_poisson(data, time):
 		# Yield Poisson-distributed spike trains.
 		yield torch.Tensor(s).byte()
 
+
+def get_tfs(data, time):
+	'''
+	Generates spike trains based on the Time to First Spike scheme. First Spike times are inversely proportional to
+	input magnitude, so data must be scaled according to desired spike frequency.
+
+    Inputs:
+        data (torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_samples, n_1,
+            ..., n_k], with arbitrary sample dimensionality [n_1, ..., n_k].
+        time (int): Length of Poisson spike train per input variable.
+
+    Yields:
+        (torch.Tensor or torch.cuda.Tensor): Tensors with shape [time, n_1, ..., n_k], with
+            Poisson-distributed spikes parameterized by the data values.
+	'''
+	# n_samples = data.size(0)  # Number of samples
+	# data = np.copy(data)
+    #
+	# for i in range(n_samples):
+	# 	# Get i-th datum.
+	# 	datum = data[i]
+	# 	shape, size = datum.shape, datum.size
+	# 	datum = datum.ravel()
+    #
+	# 	# Invert inputs (input intensity inversely
+	# 	# proportional to spike inter-arrival time).
+	# 	datum[datum != 0] = 1 / datum[datum != 0]
+    #
+	# 	# Make spike data from Poisson sampling.
+	# 	s_times = np.random.poisson(datum, [time, size])
+	# 	s_times = np.cumsum(s_times, axis=0)
+	# 	s_times[s_times >= time] = 0
+    #
+	# 	# Create spike trains from spike times.
+	# 	s = np.zeros([time, size])
+	# 	for idx in range(time):
+	# 		s[s_times[idx], np.arange(size)] = 1
+    #
+	# 	s[0, :] = 0
+	# 	s = s.reshape([time, *shape])
+    #
+	# 	# Yield Poisson-distributed spike trains.
+	# 	yield torch.Tensor(s).byte()
+    #
+
 def get_bernoulli_mixture(data, time, window=1):
 	for audio in data:
 		# For poisson, add minimum element to all
