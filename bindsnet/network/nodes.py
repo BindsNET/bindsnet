@@ -2,6 +2,7 @@ import torch
 
 from abc import ABC, abstractmethod
 
+
 class Nodes(ABC):
 	'''
 	Abstract base class for groups of neurons.
@@ -69,10 +70,10 @@ class Input(Nodes):
 
 		self.n = n  # No. of neurons.
 		self.traces = traces  # Whether to record synpatic traces.
-		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+		self.s = torch.zeros(n).byte()  # Spike occurences.
 		
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.
+			self.x = torch.zeros(n)  # Firing traces.
 			self.trace_tc = trace_tc  # Rate of decay of spike trace time constant.
 
 	def step(self, inpts, dt):
@@ -86,7 +87,7 @@ class Input(Nodes):
 			dt (float): Simulation time step.
 		'''
 		# Set spike occurrences to input values.
-		self.s = inpts
+		self.s = inpts.byte()
 
 		if self.traces:
 			# Decay and set spike traces.
@@ -97,10 +98,10 @@ class Input(Nodes):
 		'''
 		Resets relevant state variables.
 		'''
-		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
+		self.s[self.s != 0] = 0  # Spike occurences.
 
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(self.n))  # Firing traces.
+			self.x = torch.zeros(self.n)  # Firing traces.
 
 
 class McCullochPitts(Nodes):
@@ -121,11 +122,11 @@ class McCullochPitts(Nodes):
 		self.n = n  # No. of neurons.
 		self.traces = traces  # Whether to record synpatic traces.
 		self.threshold = threshold  # Spike threshold voltage.
-		self.v = torch.zeros_like(torch.Tensor(n))  # Neuron voltages.
-		self.s = torch.zeros_like(torch.Tensor(n))  # Spike occurences.
+		self.v = torch.zeros(n)  # Neuron voltages.
+		self.s = torch.zeros(n).byte()  # Spike occurences.
 
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(n))  # Firing traces.
+			self.x = torch.zeros(n)  # Firing traces.
 			self.trace_tc = trace_tc  # Rate of decay of spike trace time constant.
 
 	def step(self, inpts, dt):
@@ -149,10 +150,10 @@ class McCullochPitts(Nodes):
 		'''
 		Resets relevant state variables.
 		'''
-		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
+		self.s[self.s != 0] = 0  # Spike occurences.
 
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(self.n))  # Firing traces.
+			self.x = torch.zeros(self.n)  # Firing traces.
 
 
 class IFNodes(Nodes):
@@ -182,7 +183,7 @@ class IFNodes(Nodes):
 		self.refractory = refractory  # Post-spike refractory period.
 
 		self.v = self.reset * torch.ones(n)  # Neuron voltages.
-		self.s = torch.zeros(n)  # Spike occurences.
+		self.s = torch.zeros(n).byte()  # Spike occurences.
 
 		if traces:
 			self.x = torch.zeros(n)  # Firing traces.
@@ -219,12 +220,12 @@ class IFNodes(Nodes):
 		'''
 		Resets relevant state variables.
 		'''
-		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
+		self.s[self.s != 0] = 0  # Spike occurences.
 		self.v = self.reset * torch.ones(self.n)  # Neuron voltages.
 		self.refrac_count = torch.zeros(self.n)  # Refractory period counters.
 
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(self.n))  # Firing traces.
+			self.x = torch.zeros(self.n)  # Firing traces.
 
 
 class LIFNodes(Nodes):
@@ -258,7 +259,7 @@ class LIFNodes(Nodes):
 		self.voltage_decay = voltage_decay  # Rate of decay of neuron voltage.
 
 		self.v = self.rest * torch.ones(n)  # Neuron voltages.
-		self.s = torch.zeros(n)  # Spike occurences.
+		self.s = torch.zeros(n).byte()  # Spike occurences.
 
 		if traces:
 			self.x = torch.zeros(n)  # Firing traces.
@@ -279,31 +280,31 @@ class LIFNodes(Nodes):
 		self.v -= dt * self.voltage_decay * (self.v - self.rest)
 		
 		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count != 0] -= dt
+		self.refrac_count -= dt
 
 		# Check for spiking neurons.
-		self.s = (self.v >= self.threshold) * (self.refrac_count == 0)
+		self.s = (self.v >= self.threshold) * (self.refrac_count <= 0)
 		self.refrac_count[self.s] = self.refractory
 		self.v[self.s] = self.reset
-
-		# Integrate input and decay voltages.
+		
+		# Integrate inputs.
 		self.v += inpts
 
 		if self.traces:
 			# Decay and set spike traces.
 			self.x -= dt * self.trace_tc * self.x
 			self.x[self.s] = 1.0
-
+		
 	def _reset(self):
 		'''
 		Resets relevant state variables.
 		'''
-		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
+		self.s[self.s != 0] = 0  # Spike occurences.
 		self.v = self.rest * torch.ones(self.n)  # Neuron voltages.
-		self.refrac_count = torch.zeros(self.n)  # Refractory period counters.
+		self.refrac_count[self.s != 0] = 0  # Refractory period counters.
 
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(self.n))  # Firing traces.
+			self.x[self.x != 0] = 0  # Firing traces.
 
 
 class AdaptiveLIFNodes(Nodes):
@@ -342,7 +343,7 @@ class AdaptiveLIFNodes(Nodes):
 
 		self.v = self.rest * torch.ones(n)  # Neuron voltages.
 		self.s = torch.zeros(n)  # Spike occurences.
-		self.theta = torch.zeros_like(torch.Tensor(n))  # Adaptive thresholds.
+		self.theta = torch.zeros(n)  # Adaptive thresholds.
 
 		if traces:
 			self.x = torch.zeros(n)  # Firing traces.
@@ -364,21 +365,21 @@ class AdaptiveLIFNodes(Nodes):
 		self.theta -= dt * self.theta_decay * self.theta
 		
 		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count != 0] -= dt
+		self.refrac_count -= dt
 
 		# Check for spiking neurons.
-		self.s = (self.v >= self.threshold + self.theta) * (self.refrac_count == 0)
+		self.s = (self.v >= self.threshold + self.theta) * (self.refrac_count <= 0)
 		self.refrac_count[self.s] = self.refractory
 		self.v[self.s] = self.reset
-		self.theta[self.s] += self.theta_plus
+		self.theta += self.theta_plus * self.s.float()
 		
 		# Choose only a single neuron to spike (ETH replication).
 		if torch.sum(self.s) > 0:
-			s = torch.zeros_like(torch.Tensor(self.s.size()))
+			s = torch.zeros(self.s.size())
 			s[torch.multinomial(self.s.float(), 1)] = 1
 			self.s = s.byte()
 
-		# Integrate input and decay voltages.
+		# Integrate inputs.
 		self.v += inpts
 
 		if self.traces:
@@ -390,12 +391,12 @@ class AdaptiveLIFNodes(Nodes):
 		'''
 		Resets relevant state variables.
 		'''
-		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
+		self.s[self.s != 0] = 0  # Spike occurences.
 		self.v = self.rest * torch.ones(self.n)  # Neuron voltages.
-		self.refrac_count = torch.zeros(self.n)  # Refractory period counters.
+		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
 
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(self.n))  # Firing traces.
+			self.x[self.x != 0] = 0  # Firing traces.
 
 
 class IzhikevichNodes(Nodes):
@@ -431,16 +432,16 @@ class IzhikevichNodes(Nodes):
 		
 		if excitatory:
 			self.r = torch.rand(n)
-			self.a = 0.02 * torch.ones_like(torch.Tensor(n))
-			self.b = 0.2 * torch.ones_like(torch.Tensor(n))
+			self.a = 0.02 * torch.ones(n)
+			self.b = 0.2 * torch.ones(n)
 			self.c = -65.0 + 15 * (self.r ** 2)
 			self.d = 8 - 6 * (self.r ** 2)
 		else:
 			self.r = torch.rand(n)
 			self.a = 0.02 + 0.08 * self.r
-			self.b = 0.25 - 0.05 * torch.ones_like(torch.Tensor(n))
+			self.b = 0.25 - 0.05 * torch.ones(n)
 			self.c = -65.0 * (self.re ** 2)
-			self.d = 2 * torch.ones_like(torch.Tensor(n))
+			self.d = 2 * torch.ones(n)
 		
 		self.v = self.rest * torch.ones(n)  # Neuron voltages.
 		self.u = self.b * self.v;
@@ -482,10 +483,10 @@ class IzhikevichNodes(Nodes):
 		'''
 		Resets relevant state variables.
 		'''
-		self.s = torch.zeros_like(torch.Tensor(self.n))  # Spike occurences.
+		self.s = torch.zeros(self.n)  # Spike occurences.
 		self.v = self.rest * torch.ones(self.n)  # Neuron voltages.
 		self.u = self.b * self.v;
 		self.refrac_count = torch.zeros(self.n)  # Refractory period counters.
 
 		if self.traces:
-			self.x = torch.zeros_like(torch.Tensor(self.n))  # Firing traces.
+			self.x = torch.zeros(self.n)  # Firing traces.
