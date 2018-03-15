@@ -44,6 +44,7 @@ parser.add_argument('--time', type=int, default=350)
 parser.add_argument('--dt', type=int, default=1.0)
 parser.add_argument('--min_isi', type=float, default=25.0)
 parser.add_argument('--progress_interval', type=int, default=10)
+parser.add_argument('--update_interval', type=int, default=250)
 parser.add_argument('--train', dest='train', action='store_true')
 parser.add_argument('--test', dest='train', action='store_false')
 parser.add_argument('--plot', dest='plot', action='store_true')
@@ -56,6 +57,9 @@ locals().update(vars(parser.parse_args()))
 
 if gpu:
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+if not train:
+	update_interval = n_test
 
 # Build network.
 network = Network(dt=dt)
@@ -102,6 +106,17 @@ audios, labels = SpokenMNIST().get_train()
 # data_loader = get_poisson_mixture(data=audios, time=time, window=50)
 data_loader = get_bernoulli_mixture(data=audios, time=time, window=30)
 
+# Record spikes during the simulation.
+spike_record = torch.zeros_like(torch.Tensor(update_interval, time, n_neurons))
+spike_record_full = torch.zeros_like(torch.Tensor(n_train, time, n_neurons))
+# Neuron assignments and spike proportions.
+assignments = -torch.ones_like(torch.Tensor(n_neurons))
+proportions = torch.zeros_like(torch.Tensor(n_neurons, 10))
+rates = torch.zeros_like(torch.Tensor(n_neurons, 10))
+
+# Sequence of accuracy estimates.
+accuracy = {'all' : [], 'proportion' : []}
+
 # Train the network.
 print('Begin training.\n')
 start = default_timer()
@@ -111,16 +126,40 @@ for i in range(n_train):
 		print('Progress: %d / %d (%.4f seconds)' % (i, n_train, default_timer() - start))
 		start = default_timer()
 	
+	if i % update_interval == 0 and i > 0:
+		# Get network predictions.
+		all_activity_pred = all_activity(spike_record, assignments, 10)
+		proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
+		
+		# Compute network accuracy according to available classification strategies.
+		accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long() \
+												== all_activity_pred) / update_interval)
+		accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long() \
+														== proportion_pred) / update_interval)
+		
+		print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)' \
+						% (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))
+		print('Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n' \
+						% (accuracy['proportion'][-1], np.mean(accuracy['proportion']),
+						  np.max(accuracy['proportion'])))
+		
+		# Assign labels to excitatory layer neurons.
+		assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
+		
 	# Get next input datum.
 	sample = next(data_loader)
 	inpts = {'X' : sample}
 	
 	# Run the network on the input for time `t`.
 	spikes = network.run(inpts=inpts, time=time)
-	train_spikes.append(spikes['Ae'])
+	train_spikes.append(spikes['Ae']) # TODO this is duplicated - also stored in spike_record and spike_record_full
 	network._reset()  # Reset state variables.
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	
+	# Record spikes.
+	spike_record[i % update_interval] = spikes['Ae']
+	spike_record_full[i] = spikes['Ae']
+
 	# Optionally plot the excitatory, inhibitory spiking.
 	if plot:
 		inpt = inpts['X'].t()
@@ -132,16 +171,27 @@ for i in range(n_train):
 			inpt_ims = plot_input(images[i].view(28, 28), inpt)
 			spike_ims, spike_axes = plot_spikes({'Ae' : exc_spikes, 'Ai' : inh_spikes})
 			weights_im = plot_weights(square_weights)
+			assigns_im = plot_assignments(assignments)
+			perf_ax = plot_performance(accuracy)
 		else:
 			inpt_ims = plot_input(images[i].view(28, 28), inpt, ims=inpt_ims)
 			spike_ims, spike_axes = plot_spikes({'Ae' : exc_spikes, 'Ai' : inh_spikes}, ims=spike_ims, axes=spike_axes)
 			weights_im = plot_weights(square_weights, im=weights_im)
+			assigns_im = plot_assignments(assignments, im=assigns_im)
+			perf_ax = plot_performance(accuracy, ax=perf_ax)
 		
 		plt.pause(1e-8)
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, default_timer() - start))
 print('Training complete.\n')
 
+assignments, proportions, _ = assign_labels(spike_record_full, labels[:n_train], 10)
+predictions_pw = proportion_weighting(spike_record_full, assignments, proportions, 10)
+predictions_all = all_activity(spike_record_full, assignments, 10)
+print("Accuracy Proportion Weighting = ", np.mean(np.array(predictions_pw)==np.array(labels[:n_train],dtype=np.int32)))
+print("Accuracy All Activity = ", np.mean(np.array(predictions_all)==np.array(labels[:n_train],dtype=np.int32)))
+
 print("Calculating ngram scores..")
 ngrams = estimate_ngram_probabilities(train_spikes, labels[:len(train_spikes)], 2)
 print("Accuracy = ", ngram(train_spikes, labels[:len(train_spikes)], ngrams, 2))
+
