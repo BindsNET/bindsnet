@@ -19,6 +19,7 @@ class SpokenMNIST:
 	'''
 	def __init__(self, path=None):
 		self.data_dir = '/home/darpan/sem4/free-spoken-digit-dataset/recordings/'
+		# self.data_dir = '/mnt/nfs/work1/rkozma/dsanghavi/bindsnet/data/spokenMNIST/recordings/'
 		if path:
 			self.data_dir = path
 		self.files = [f for f in os.listdir(self.data_dir) if os.path.isfile(os.path.join(self.data_dir, f)) and '.wav' in f]
