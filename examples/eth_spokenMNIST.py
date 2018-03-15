@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'datasets')))
 
-from datasets          import MNIST
+# from datasets          import MNIST
 from datasets		   import SpokenMNIST
 from network           import Network
 from encoding          import get_poisson
