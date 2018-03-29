@@ -102,3 +102,6 @@ ENV/
 
 # Datasets.
 data/
+
+# LSM data.
+lsm/
