@@ -1,6 +1,9 @@
 import torch
 
 
+def no_update(conn):
+	pass
+
 def post_pre(conn, nu_pre=1e-4, nu_post=1e-2):
 	'''
 	Simple STDP rule involving both pre- and post-synaptic spiking activity.
@@ -42,7 +45,7 @@ class Connection:
 		self.wmax = wmax
 
 		if update_rule is None:
-			self.update_rule = lambda connection : None
+			self.update_rule = no_update
 		else:
 			self.update_rule = update_rule
 

@@ -25,10 +25,25 @@ def get_square_weights(weights, n_sqrt):
 	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
 	for i in range(n_sqrt):
 		for j in range(n_sqrt):
+			if not i * n_sqrt + j < weights.size(1):
+				break
+			
 			fltr = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
 			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = fltr
 	
 	return square_weights
+
+def get_square_assignments(assignments, n_sqrt):
+	square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
+	for i in range(n_sqrt):
+		for j in range(n_sqrt):
+			if not i * n_sqrt + j < assignments.size(0):
+				break
+			
+			assignment = assignments[i * n_sqrt + j]
+			square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
+	
+	return square_assignments
 
 print()
 
@@ -41,7 +56,7 @@ parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--time', type=int, default=350)
 parser.add_argument('--dt', type=int, default=1.0)
-parser.add_argument('--min_isi', type=float, default=25.0)
+parser.add_argument('--intensity', type=float, default=1.0)
 parser.add_argument('--progress_interval', type=int, default=10)
 parser.add_argument('--update_interval', type=int, default=250)
 parser.add_argument('--train', dest='train', action='store_true')
@@ -63,7 +78,8 @@ if not train:
 # Build network.
 network = Network(dt=dt)
 
-n_sqrt = int(np.sqrt(n_neurons))
+n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
+start_intensity = intensity
 
 # Layers of neurons.
 # Input layer.
@@ -106,14 +122,16 @@ network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 
 # Load MNIST data.
 images, labels = MNIST(path='../data').get_train()
-images /= (255 * min_isi)  # Normalize and enforce minimum expected inter-spike interval.
+images *= intensity
+images /= 4  # Normalize and enforce minimum expected inter-spike interval.
 images = images.view(images.size(0), -1)  # Flatten images to one dimension.
 
 # Lazily encode data as Poisson spike trains.
 data_loader = get_poisson(data=images, time=time)
 
 # Record spikes during the simulation.
-# spike_record = torch.zeros_like(torch.Tensor(update_interval, time, n_neurons))
+spike_record = torch.zeros_like(torch.Tensor(update_interval, time, n_neurons))
+spike_record_full = torch.zeros_like(torch.Tensor(n_train, time, n_neurons))
 
 # Neuron assignments and spike proportions.
 assignments = -torch.ones_like(torch.Tensor(n_neurons))
@@ -132,36 +150,41 @@ for i in range(n_train):
 		print('Progress: %d / %d (%.4f seconds)' % (i, n_train, default_timer() - start))
 		start = default_timer()
 	
-# 	if i % update_interval == 0 and i > 0:
-# 		# Get network predictions.
-# 		all_activity_pred = all_activity(spike_record, assignments, 10)
-# 		proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
+ 	if i % update_interval == 0 and i > 0:
+ 		# Get network predictions.
+ 		all_activity_pred = all_activity(spike_record, assignments, 10)
+ 		proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
 		
-# 		# Compute network accuracy according to available classification strategies.
-# 		accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long() \
-# 												== all_activity_pred) / update_interval)
-# 		accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long() \
-# 														== proportion_pred) / update_interval)
+ 		# Compute network accuracy according to available classification strategies.
+ 		accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long() \
+ 												== all_activity_pred) / update_interval)
+ 		accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long() \
+ 														== proportion_pred) / update_interval)
 		
-# 		print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)' \
-# 						% (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))
-# 		print('Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n' \
-# 						% (accuracy['proportion'][-1], np.mean(accuracy['proportion']),
-# 						  np.max(accuracy['proportion'])))
+ 		print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)' \
+ 						% (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))
+ 		print('Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n' \
+ 						% (accuracy['proportion'][-1], np.mean(accuracy['proportion']),
+ 						  np.max(accuracy['proportion'])))
 		
-# 		# Assign labels to excitatory layer neurons.
-# 		assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
+ 		# Assign labels to excitatory layer neurons.
+ 		assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
 		
 	# Get next input sample.
 	sample = next(data_loader)
 	inpts = {'X' : sample}
 	
 	# Run the network on the input.
-	spikes = network.run(inpts=inpts, time=time)
+	n_spikes = 0; n_retries = 0; intensity = start_intensity
+	while n_spikes < 5 and n_retries < 3:
+		spikes = network.run(inpts=inpts, time=time)
+		n_spikes = spikes['Ae'].sum(); intensity += 1
+		image = images[i] * intensity
+		sample = next(get_poisson(image.view(1, -1), time=time))
 	
 	# Get voltage recording.
 	exc_voltages = exc_voltage_monitor.get('v')
-	inh_voltages = exc_voltage_monitor.get('v')
+	inh_voltages = inh_voltage_monitor.get('v')
 	
 	network._reset()  # Reset state variables.
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
@@ -169,31 +192,28 @@ for i in range(n_train):
 	# Record spikes.
 	# spike_record[i % update_interval] = spikes['Ae']
 
-	# Optionally plot the excitatory, inhibitory spiking.
+	# Optionally plot various simulation information.
 	if plot:
 		inpt = inpts['X'].t()
 		exc_spikes = spikes['Ae']; inh_spikes = spikes['Ai']
 		input_exc_weights = network.connections[('X', 'Ae')].w
 		square_weights = get_square_weights(input_exc_weights, n_sqrt)
-		
-		if gpu:
-			voltages = {'Ae' : exc_voltages.cpu().numpy().T[:, 0:10], 'Ai' : inh_voltages.cpu().numpy().T[:, 0:10]}
-		else:
-			voltages = {'Ae' : exc_voltages.numpy().T[:, 0:10], 'Ai' : inh_voltages.numpy().T[:, 0:10]}
+		square_assignments = get_square_assignments(assignments, n_sqrt)
+		voltages = {'Ae' : exc_voltages.numpy().T, 'Ai' : inh_voltages.numpy().T}
 		
 		if i == 0:
-			inpt_ims = plot_input(images[i].view(28, 28), inpt)
+			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
 			spike_ims, spike_axes = plot_spikes({'Ae' : exc_spikes, 'Ai' : inh_spikes})
 			weights_im = plot_weights(square_weights)
-			assigns_im = plot_assignments(assignments)
+			assigns_im = plot_assignments(square_assignments)
 			perf_ax = plot_performance(accuracy)
 			voltage_ims, voltage_axes = plot_voltages(voltages)
 			
 		else:
-			inpt_ims = plot_input(images[i].view(28, 28), inpt, ims=inpt_ims)
+			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			spike_ims, spike_axes = plot_spikes({'Ae' : exc_spikes, 'Ai' : inh_spikes}, ims=spike_ims, axes=spike_axes)
 			weights_im = plot_weights(square_weights, im=weights_im)
-			assigns_im = plot_assignments(assignments, im=assigns_im)
+			assigns_im = plot_assignments(square_assignments, im=assigns_im)
 			perf_ax = plot_performance(accuracy, ax=perf_ax)
 			voltage_ims, voltage_axes = plot_voltages(voltages, ims=voltage_ims, axes=voltage_axes)
 		
@@ -201,4 +221,3 @@ for i in range(n_train):
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, default_timer() - start))
 print('Training complete.\n')
-
