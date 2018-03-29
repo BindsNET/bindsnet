@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 plt.ion()
 
-def plot_input(image, inpt, ims=None, figsize=(8, 4)):
+def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
 	'''
 	Plots a two-dimensional image and its corresponding spike-train representation.
 	
@@ -23,11 +23,15 @@ def plot_input(image, inpt, ims=None, figsize=(8, 4)):
 	Returns:
 		(list(matplotlib.image.AxesImage)): Used for re-drawing the input plots.
 	'''
-	if not ims:
+	if axes is None:
 		fig, axes = plt.subplots(1, 2, figsize=figsize)
 		ims = axes[0].imshow(image, cmap='binary'), axes[1].imshow(inpt, cmap='binary')
 		
-		axes[0].set_title('Current image')
+		if label is None:
+			axes[0].set_title('Current image')
+		else:
+			axes[0].set_title('Current image (label = %d)' % label)
+		
 		axes[1].set_title('Poisson spiking representation')
 		axes[1].set_xlabel('Simulation time'); axes[1].set_ylabel('Neuron index')
 		axes[1].set_aspect('auto')
@@ -37,10 +41,13 @@ def plot_input(image, inpt, ims=None, figsize=(8, 4)):
 		
 		fig.tight_layout()
 	else:
+		if label is not None:
+			axes[0].set_title('Current image (label = %d)' % label)
+		
 		ims[0].set_data(image)
 		ims[1].set_data(inpt)
 
-	return ims
+	return axes, ims
 
 
 def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
@@ -101,13 +108,13 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		if n_subplots == 1: # Plotting only one image
 			for datum in spikes.items():
 				ims.append(axes.imshow(spikes[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]], cmap='binary'))
-				plt.title('%s spikes for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+				plt.title('%s spikes for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
 				axes.set_aspect('auto')
 		else: # Plot each layer at a time
 			for i, datum in enumerate(spikes.items()):
 				ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]], cmap='binary'))
-				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %1.2f ms to %1.2f ms '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 			
 			for ax in axes:
 				ax.set_aspect('auto')
@@ -120,7 +127,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		assert(len(ims) == n_subplots)
 		for i, datum in enumerate(spikes.items()):
 				ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %1.2f to %1.2f '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 	
 	return ims, axes
         
@@ -168,9 +175,6 @@ def plot_assignments(assignments, im=None, figsize=(5, 5)):
 	Returns:
 		(matplotlib.image.AxesImage): Used for re-drawing the assigments plot.
 	'''
-	sqrt = int(np.sqrt(assignments.size(0)))
-	assignments = assignments.view(sqrt, sqrt).t()
-	
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
 
@@ -216,10 +220,12 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 
 	return ax
 
+
 def plot_general(monitors=None):
 	if monitors is None:
 		print ("Did you forget to provide monitors?")
-		
+
+
 def plot_voltages(voltages, ims=None, axes=None, time=None, figsize=(8, 4.5)):
 	'''
 	Plot voltages for any group(s) of neurons.
