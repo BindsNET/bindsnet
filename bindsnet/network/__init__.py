@@ -144,7 +144,7 @@ class Network:
 			for monitor in self.monitors:
 				self.monitors[monitor].record()
 
-		return spikes
+		return spikes, inpts
 
 	def _reset(self):
 		'''

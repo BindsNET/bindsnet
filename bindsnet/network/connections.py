@@ -4,19 +4,29 @@ import torch
 def no_update(conn):
 	pass
 
-def post_pre(conn, nu_pre=1e-4, nu_post=1e-2):
+def post_pre(conn):
 	'''
 	Simple STDP rule involving both pre- and post-synaptic spiking activity.
-	
-	Inputs:
-		nu_pre (float): Learning rate for pre-synaptic events.
-		nu_post (float): Learning rate for post-synpatic events.
 	'''
 	# Post-synaptic.
-	conn.w += nu_post * (conn.source.x.view(conn.source.n,
+	conn.w += conn.nu_post * (conn.source.x.view(conn.source.n,
 			1) * conn.target.s.float().view(1, conn.target.n))
 	# Pre-synaptic.
-	conn.w -= nu_pre * (conn.source.s.float().view(conn.source.n,
+	conn.w -= conn.nu_pre * (conn.source.s.float().view(conn.source.n,
+							1) * conn.target.x.view(1, conn.target.n))
+
+	# Bound weights.
+	conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+
+def hebbian(conn):
+	'''
+	Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
+	'''
+	# Post-synaptic.
+	conn.w += conn.nu_post * (conn.source.x.view(conn.source.n,
+			1) * conn.target.s.float().view(1, conn.target.n))
+	# Pre-synaptic.
+	conn.w += conn.nu_pre * (conn.source.s.float().view(conn.source.n,
 							1) * conn.target.x.view(1, conn.target.n))
 
 	# Bound weights.
@@ -27,7 +37,8 @@ class Connection:
 	'''
 	Specifies constant synapses between two populations of neurons.
 	'''
-	def __init__(self, source, target, w=None, update_rule=None, wmin=0.0, wmax=1.0):
+	def __init__(self, source, target, w=None, update_rule=None,
+				nu_pre=1e-4, nu_post=1e-2, wmin=0.0, wmax=1.0):
 		'''
 		Instantiates a Connections object, used to connect two layers of nodes.
 
@@ -36,11 +47,15 @@ class Connection:
 			target (nodes.Nodes): A layer of nodes to which the connection connects.
 			w (torch.FloatTensor or torch.cuda.FloatTensor): Effective strengths of synaptics.
 			update_rule (function): Modifies connection parameters according to some rule.
+			nu_pre (float): Learning rate for pre-synaptic events.
+			nu_post (float): Learning rate for post-synpatic events.
 			wmin (float): The minimum value on the connection weights.
 			wmax (float): The maximum value on the connection weights.
 		'''
 		self.source = source
 		self.target = target
+		self.nu_pre = nu_pre
+		self.nu_post = nu_post
 		self.wmin = wmin
 		self.wmax = wmax
 
@@ -53,6 +68,8 @@ class Connection:
 			self.w = torch.rand(source.n, target.n)
 		else:
 			self.w = w
+		
+		self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
 	def get_weights(self):
 		'''

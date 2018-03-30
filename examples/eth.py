@@ -71,6 +71,9 @@ locals().update(vars(parser.parse_args()))
 
 if gpu:
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
+	torch.cuda.manual_seed_all(seed)
+else:
+	torch.manual_seed(seed)
 
 if not train:
 	update_interval = n_test
@@ -189,9 +192,6 @@ for i in range(n_train):
 	network._reset()  # Reset state variables.
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	
-	# Record spikes.
-	# spike_record[i % update_interval] = spikes['Ae']
-
 	# Optionally plot various simulation information.
 	if plot:
 		inpt = inpts['X'].t()

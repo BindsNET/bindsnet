@@ -88,7 +88,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 			break
 
 	# Number of neurons setup
-	if len(n_neurons.keys()) == 0:
+	if len(n_neurons.keys()) != 0:
 		# Don't have to give numbers for all keys
 		assert(len(n_neurons.keys()) <= n_subplots)
 		# Keys given must be same as the ones used in spikes dict
@@ -96,7 +96,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		# Checking to that given n_neurons per neuron layer is valid
 		assert(all(n_neurons[key][0] >= 0 and n_neurons[key][1] <= val.shape[0] for key, val in spikes.items() if key in n_neurons.keys()) == True)
 	
-	#else: # Uses default values using spikes dict
+	# Uses default values using spikes dict
 	for key, val in spikes.items():
 		if key not in n_neurons.keys():
 			n_neurons[key] = (0, val.shape[0])
@@ -121,12 +121,16 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 				ax.set_aspect('auto')
 			
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
-		
 		plt.tight_layout()
            
 	else: # Plotting figure given
-		assert(len(ims) == n_subplots)
-		for i, datum in enumerate(spikes.items()):
+		if n_subplots == 1:
+			for datum in spikes.items():
+				ims[0].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+				axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+	
+		else:
+			for i, datum in enumerate(spikes.items()):
 				ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
 				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 	
@@ -244,7 +248,7 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
 	default = {'xlabel':'Simulation time', 'ylabel':'Index'}
 	
 	if monitor is None:
-		print ("Did you forget to provide monitors?")
+		print("Did you forget to provide monitors?")
 		raise TypeError
 	
 	if labels is None:
@@ -368,6 +372,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 				ims.append(axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
 				plt.title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
 				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
+				
 				axes.set_aspect('auto')
 				
 		else:  # Plot each layer at a time
@@ -382,16 +387,22 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 		plt.tight_layout()
            
 	else:  # Plotting figure given
-		assert(len(ims) == n_subplots)
-		for i, datum in enumerate(voltages.items()):
-			axes[i].clear()
-			
-		for i, datum in enumerate(voltages.items()):
-			axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]].T)
-			axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
-		
-		for ax in axes:
-			ax.set_aspect('auto')
+		if n_subplots == 1:  # Plotting only one image
+			for datum in voltages.items():
+				axes.clear()
+				axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+				axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+				
+				axes.set_aspect('auto')
+
+		else:
+			for i, datum in enumerate(voltages.items()):
+				axes[i].clear()
+				axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+				axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+
+			for ax in axes:
+				ax.set_aspect('auto')
 			
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
 		plt.tight_layout()
