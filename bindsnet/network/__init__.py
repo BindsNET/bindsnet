@@ -95,7 +95,7 @@ class Network:
 
 			# Add to input: source's spikes multiplied by connection weights.
 			inpts[key[1]] += source.s.float() @ self.connections[key].w
-
+			
 		return inpts
 
 	def run(self, inpts, time):

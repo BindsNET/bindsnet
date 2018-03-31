@@ -26,7 +26,7 @@ parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=25)
+parser.add_argument('--plot_interval', type=int, default=100)
 parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--no-plot', dest='plot', action='store_false')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
@@ -57,15 +57,17 @@ readout_layer = LIFNodes(n=5, refractory=0, traces=True)
 # Connections between layers.
 # Input -> excitatory.
 input_exc_w = 0.01 * torch.rand(input_layer.n, exc_layer.n)
-input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w,
-							update_rule=hebbian, nu_pre=1e-4, nu_post=1e-4, wmax=0.02)
-input_exc_norm = 0.01 * 3780
+input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w, wmax=0.02)
 
 # Excitatory -> readout.
 exc_readout_w = 0.01 * torch.rand(exc_layer.n, readout_layer.n)
 exc_readout_conn = Connection(source=exc_layer, target=readout_layer, w=exc_readout_w,
-							  update_rule=hebbian, nu_pre=1e-4, nu_post=1e-4)
+							  update_rule=hebbian, nu_pre=1e-2, nu_post=1e-2)
 exc_readout_norm = 0.5 * exc_layer.n
+
+# Readout -> readout.
+readout_readout_w = -10 * torch.ones(readout_layer.n, readout_layer.n) + 10 * torch.diag(torch.ones(readout_layer.n))
+readout_readout_conn = Connection(source=readout_layer, target=readout_layer, w=readout_readout_w, wmin=-10.0)
 
 # Voltage recording for excitatory and readout layers.
 exc_voltage_monitor = Monitor(exc_layer, ['v'])
@@ -77,11 +79,11 @@ network.add_layer(exc_layer, name='E')
 network.add_layer(readout_layer, name='R')
 network.add_connection(input_exc_conn, source='X', target='E')
 network.add_connection(exc_readout_conn, source='E', target='R')
+network.add_connection(readout_readout_conn, source='R', target='R')
 network.add_monitor(exc_voltage_monitor, name='exc_voltage')
 network.add_monitor(readout_voltage_monitor, name='readout_voltage')
 
 # Normalize adaptable weights.
-network.connections[('X', 'E')].normalize(input_exc_norm)
 network.connections[('E', 'R')].normalize(exc_readout_norm)
 
 # Load SpaceInvaders environment.
@@ -121,7 +123,6 @@ while True:
 	inpts.update(inpts_)
 	
 	# Normalize adaptable weights.
-	network.connections[('X', 'E')].normalize(input_exc_norm)
 	network.connections[('E', 'R')].normalize(exc_readout_norm)
 	
 	for key in spike_record:
@@ -159,6 +160,8 @@ while True:
 				ax.set_xticks(()); ax.set_yticks(())
 				ax.set_aspect('auto')
 			
+			plt.pause(1e-8)
+			
 		else:
 			if i % plot_interval == 0:
 				spike_ims, spike_axes = plot_spikes(spike_record, ims=spike_ims, axes=spike_axes)
@@ -170,7 +173,7 @@ while True:
 				for ax in w_axes:
 					ax.set_aspect('auto')
 		
-		plt.pause(1e-8)
+				plt.pause(1e-8)
 	
 	i += 1
 	
