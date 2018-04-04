@@ -95,10 +95,10 @@ class Network:
 
 			# Add to input: source's spikes multiplied by connection weights.
 			inpts[key[1]] += source.s.float() @ self.connections[key].w
-			
+
 		return inpts
 
-	def run(self, inpts, time):
+	def run(self, inpts, time, **kwargs):
 		'''
 		Simulation network for given inputs and time.
 		
@@ -135,7 +135,7 @@ class Network:
 
 			# Run synapse updates.
 			for synapse in self.connections:
-				self.connections[synapse].update()
+				self.connections[synapse].update(kwargs)
 
 			# Get input to all layers.
 			inpts.update(self.get_inputs())
@@ -144,7 +144,7 @@ class Network:
 			for monitor in self.monitors:
 				self.monitors[monitor].record()
 
-		return spikes, inpts
+		return spikes
 
 	def _reset(self):
 		'''

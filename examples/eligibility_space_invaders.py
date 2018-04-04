@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
 from encoding          import get_bernoulli
 from environment       import SpaceInvaders
 from network           import Network, Monitor
-from connections       import Connection, hebbian
+from connections       import Connection, m_stdp_et
 from nodes             import LIFNodes, Input
 
 from evaluation        import *
@@ -24,7 +24,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=100)
+parser.add_argument('--plot_interval', type=int, default=250)
+parser.add_argument('--a_plus', type=int, default=1)
+parser.add_argument('--a_minus', type=int, default=-0.5)
 parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--no-plot', dest='plot', action='store_false')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
@@ -44,23 +46,25 @@ network = Network(dt=dt)
 
 # Layers of neurons.
 # Input layer.
-input_layer = Input(n=3780)
+input_layer = Input(n=3780, traces=True)
 
 # Excitatory layer.
 exc_layer = LIFNodes(n=n_neurons, refractory=0, traces=True)
 
 # Readout layer.
-readout_layer = LIFNodes(n=5, refractory=0, traces=True)
+readout_layer = LIFNodes(n=6, refractory=0, traces=True)
 
 # Connections between layers.
 # Input -> excitatory.
 input_exc_w = 0.01 * torch.rand(input_layer.n, exc_layer.n)
-input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w, wmax=0.02)
+input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w,
+							wmax=0.02, update_rule=m_stdp_et, nu=5e-4)
+input_exc_norm = 0.01 * input_layer.n
 
 # Excitatory -> readout.
 exc_readout_w = 0.01 * torch.rand(exc_layer.n, readout_layer.n)
 exc_readout_conn = Connection(source=exc_layer, target=readout_layer, w=exc_readout_w,
-							  update_rule=hebbian, nu_pre=1e-2, nu_post=1e-2)
+							  update_rule=m_stdp_et, nu=1e-2)
 exc_readout_norm = 0.5 * exc_layer.n
 
 # Readout -> readout.
@@ -82,6 +86,7 @@ network.add_monitor(exc_voltage_monitor, name='exc_voltage')
 network.add_monitor(readout_voltage_monitor, name='readout_voltage')
 
 # Normalize adaptable weights.
+network.connections[('X', 'E')].normalize(input_exc_norm)
 network.connections[('E', 'R')].normalize(exc_readout_norm)
 
 # Load SpaceInvaders environment.
@@ -104,6 +109,7 @@ count = 0
 lengths = []
 rewards = []
 mean_rewards = []
+
 while True:
 	count += 1
 	env.render()
@@ -112,9 +118,11 @@ while True:
 		print('Iteration %d' % i)
 		
 	if spikes == {} or spikes['R'].sum() == 0:
-		action = np.random.choice(range(6))
+		# No spikes -> no action.
+		action = 0
 	else:
-		action = torch.multinomial((spikes['R'] / spikes['R'].sum()).view(-1), 1)[0] + 1
+		# If there are spikes, randomly choose from among them for possible actions.
+		action = torch.multinomial((spikes['R'] / spikes['R'].sum()).view(-1), 1)[0]
 	
 	obs, reward, done, info = env.step(action)
 	
@@ -125,9 +133,11 @@ while True:
 	inpts.update({'X' : obs})
 	
 	# Run the network on the input.
-	spikes = network.run(inpts=inpts, time=1)
+	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
+	spikes = network.run(inpts=inpts, time=1, **kwargs)
 	
 	# Normalize adaptable weights.
+	network.connections[('X', 'E')].normalize(input_exc_norm)
 	network.connections[('E', 'R')].normalize(exc_readout_norm)
 	
 	for key in spike_record:
