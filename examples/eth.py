@@ -99,7 +99,8 @@ inh_layer = LIFNodes(n=n_neurons, traces=False, rest=-60.0, reset=-45.0, thresho
 # Connections between layers.
 # Input -> excitatory.
 input_exc_w = 0.3 * torch.rand(input_layer.n, exc_layer.n)
-input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w, update_rule=post_pre, wmin=0.0, wmax=1.0)
+input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w,
+										update_rule=post_pre, wmin=0.0, wmax=1.0)
 
 # Excitatory -> inhibitory.
 exc_inh_w = 22.5 * torch.diag(torch.ones(exc_layer.n))
@@ -124,7 +125,7 @@ network.add_monitor(exc_voltage_monitor, name='exc_voltage')
 network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 
 # Load MNIST data.
-images, labels = MNIST(path='../data').get_train()
+images, labels = MNIST(path=os.path.join('..', 'data')).get_train()
 images *= intensity
 images /= 4  # Normalize and enforce minimum expected inter-spike interval.
 images = images.view(images.size(0), -1)  # Flatten images to one dimension.
@@ -153,25 +154,25 @@ for i in range(n_train):
 		print('Progress: %d / %d (%.4f seconds)' % (i, n_train, default_timer() - start))
 		start = default_timer()
 	
- 	if i % update_interval == 0 and i > 0:
- 		# Get network predictions.
- 		all_activity_pred = all_activity(spike_record, assignments, 10)
- 		proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
-		
- 		# Compute network accuracy according to available classification strategies.
- 		accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long() \
- 												== all_activity_pred) / update_interval)
- 		accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long() \
- 														== proportion_pred) / update_interval)
-		
- 		print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)' \
- 						% (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))
- 		print('Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n' \
- 						% (accuracy['proportion'][-1], np.mean(accuracy['proportion']),
- 						  np.max(accuracy['proportion'])))
-		
- 		# Assign labels to excitatory layer neurons.
- 		assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
+	if i % update_interval == 0 and i > 0:
+		# Get network predictions.
+		all_activity_pred = all_activity(spike_record, assignments, 10)
+		proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
+
+		# Compute network accuracy according to available classification strategies.
+		accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long() \
+												== all_activity_pred) / update_interval)
+		accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long() \
+														== proportion_pred) / update_interval)
+
+		print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)' \
+						% (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))
+		print('Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n' \
+						% (accuracy['proportion'][-1], np.mean(accuracy['proportion']),
+						  np.max(accuracy['proportion'])))
+
+		# Assign labels to excitatory layer neurons.
+		assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
 		
 	# Get next input sample.
 	sample = next(data_loader)
@@ -180,6 +181,7 @@ for i in range(n_train):
 	# Run the network on the input.
 	n_spikes = 0; n_retries = 0; intensity = start_intensity
 	while n_spikes < 5 and n_retries < 3:
+		n_retries += 1
 		spikes = network.run(inpts=inpts, time=time)
 		n_spikes = spikes['Ae'].sum(); intensity += 1
 		image = images[i] * intensity
@@ -199,7 +201,7 @@ for i in range(n_train):
 		input_exc_weights = network.connections[('X', 'Ae')].w
 		square_weights = get_square_weights(input_exc_weights, n_sqrt)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
-		voltages = {'Ae' : exc_voltages.numpy().T, 'Ai' : inh_voltages.numpy().T}
+		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		
 		if i == 0:
 			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])

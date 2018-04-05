@@ -65,7 +65,7 @@ input_exc_norm = 0.01 * input_layer.n
 exc_readout_w = 0.01 * torch.rand(exc_layer.n, readout_layer.n)
 exc_readout_conn = Connection(source=exc_layer, target=readout_layer, w=exc_readout_w,
 							  update_rule=m_stdp_et, nu=1e-2)
-exc_readout_norm = 0.5 * exc_layer.n
+exc_readout_norm = 0.75 * exc_layer.n
 
 # Readout -> readout.
 readout_readout_w = -10 * torch.ones(readout_layer.n, readout_layer.n) + 10 * torch.diag(torch.ones(readout_layer.n))

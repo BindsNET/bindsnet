@@ -111,7 +111,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 				
 				args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
 				plt.title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-				plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
+				plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
 				axes.set_aspect('auto')
 				
 		else: # Plot each layer at a time
@@ -138,6 +138,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		else:
 			for i, datum in enumerate(spikes.items()):
 				ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+				ims[i].autoscale()
 				
 				args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
 				axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)

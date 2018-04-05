@@ -46,7 +46,7 @@ network = Network(dt=dt)
 
 # Layers of neurons.
 # Input layer.
-input_layer = Input(n=4, traces=True)
+input_layer = Input(n=6, traces=True)
 
 # Excitatory layer.
 exc_layer = LIFNodes(n=n_neurons, refractory=0, traces=True)
@@ -56,10 +56,10 @@ readout_layer = LIFNodes(n=2, refractory=0, traces=True)
 
 # Connections between layers.
 # Input -> excitatory.
-input_exc_w = 0.01 * torch.rand(input_layer.n, exc_layer.n)
+input_exc_w = torch.rand(input_layer.n, exc_layer.n)
 input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w,
-							wmax=0.02, update_rule=m_stdp_et, nu=5e-4)
-input_exc_norm = 0.01 * input_layer.n
+										wmax=5.0, update_rule=m_stdp_et, nu=5e-4)
+input_exc_norm = 2.5 * input_layer.n
 
 # Excitatory -> readout.
 exc_readout_w = 0.01 * torch.rand(exc_layer.n, readout_layer.n)
@@ -108,7 +108,7 @@ print()
 count = 0
 lengths = []
 rewards = []
-mean_rewards = []
+sum_rewards = []
 
 while True:
 	count += 1
@@ -177,18 +177,10 @@ while True:
 			
 			plt.pause(1e-8)
 			
-			r_fig, r_axes = plt.subplots(2, 1, sharex=True)
-			r_line, = r_axes[0].plot(mean_rewards, marker='o')
-			l_line, = r_axes[1].plot(lengths, marker='o')
-			
-			r_axes[1].set_xlabel('Episode')
-			r_axes[0].set_ylabel('Mean reward')
-			r_axes[1].set_ylabel('Length of episode')
-			r_axes[0].set_title('Mean reward per episode')
-			r_axes[1].set_title('Iteration length of episodes')
-			
-			for ax in r_axes:
-				ax.grid()
+			r_fig, r_ax = plt.subplots()
+			r_line, = r_ax.plot(sum_rewards, marker='o')
+			r_ax.set_xlabel('Episode'); r_ax.set_ylabel('Reward')
+			r_ax.set_title('Reward per episode'); r_ax.grid()
 			
 		else:
 			if i % plot_interval == 0:
@@ -201,16 +193,9 @@ while True:
 				for ax in w_axes:
 					ax.set_aspect('auto')
 					
-				r_line.set_xdata(range(len(mean_rewards)))
-				r_line.set_ydata(mean_rewards)
-				
-				l_line.set_xdata(range(len(lengths)))
-				l_line.set_ydata(lengths)
-				
-				for ax in r_axes:
-					ax.relim() 
-					ax.autoscale_view(True, True, True) 
-
+				r_line.set_xdata(range(len(sum_rewards)))
+				r_line.set_ydata(sum_rewards)
+				r_ax.relim(); r_ax.autoscale_view(True, True, True) 
 				r_fig.canvas.draw()
 				
 				plt.pause(1e-8)
@@ -221,7 +206,7 @@ while True:
 		env.reset()
 		network._reset()
 		
-		mean_rewards.append(np.mean(rewards))
+		sum_rewards.append(np.sum(rewards))
 		rewards = []
 		
 		lengths.append(count)

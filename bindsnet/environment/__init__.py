@@ -59,11 +59,16 @@ class SpaceInvaders:
 		Returns:
 			(torch.Tensor): Observation from the environment.
 		'''
+		# Call gym's environment reset function.
 		obs = self.env.reset()
+		
+		# Convert to torch.Tensor, and
+		# convert to Bernoulli-distributed spikes.
 		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
 		obs = torch.from_numpy(obs).view(1, -1).float()
 		obs = get_bernoulli(obs, max_prob=self.max_prob)
 
+		# Return converted observations.
 		return next(obs)
 
 	def render(self):
@@ -110,6 +115,14 @@ class CartPole:
 		# Call gym's environment step function.
 		obs, reward, done, info = self.env.step(a)
 		
+		# Encoding into positive values.
+		obs = np.array([obs[0] + 2.4,
+						-min(obs[1], 0),
+						max(obs[1], 0),
+						obs[2] + 41.8,
+						-min(obs[3], 0),
+						max(obs[3], 0)])
+		
 		# Convert to torch.Tensor, and
 		# convert to Bernoulli-distributed spikes.
 		obs = torch.from_numpy(obs).view(1, -1).float()
@@ -125,10 +138,23 @@ class CartPole:
 		Returns:
 			(torch.Tensor): Observation from the environment.
 		'''
+		# Call gym's environment reset function.
 		obs = self.env.reset()
+		
+		# Encoding into positive values.
+		obs = np.array([obs[0] + 2.4,
+						-min(obs[1], 0),
+						max(obs[1], 0),
+						obs[2] + 41.8,
+						-min(obs[3], 0),
+						max(obs[3], 0)])
+		
+		# Convert to torch.Tensor, and
+		# convert to Bernoulli-distributed spikes.
 		obs = torch.from_numpy(obs).view(1, -1).float()
 		obs = get_bernoulli(obs, max_prob=self.max_prob)
 
+		# Return converted observations.
 		return next(obs)
 
 	def render(self):
