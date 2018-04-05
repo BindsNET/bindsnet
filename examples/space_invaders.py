@@ -103,7 +103,7 @@ voltage_record = {'E' : torch.zeros(exc_layer.n, plot_interval),
 print()
 
 while True:
-	env.render()
+#	env.render()
 	
 	if i % 10 == 0:
 		print('Iteration %d' % i)
