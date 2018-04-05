@@ -113,11 +113,6 @@ class Network:
 		'''
 		timesteps = int(time / self.dt)  # effective no. of timesteps
 
-		# Record spikes from each population over the iteration.
-		spikes = {}
-		for key in self.layers:
-			spikes[key] = torch.zeros(self.layers[key].n, timesteps)
-
 		# Get input to all layers.
 		inpts.update(self.get_inputs())
 		
@@ -130,9 +125,6 @@ class Network:
 				else:
 					self.layers[key].step(inpts[key], self.dt)
 
-				# Record spikes.
-				spikes[key][:, timestep] = self.layers[key].s
-
 			# Run synapse updates.
 			for synapse in self.connections:
 				self.connections[synapse].update(kwargs)
@@ -143,8 +135,6 @@ class Network:
 			# Record state variables of interest.
 			for monitor in self.monitors:
 				self.monitors[monitor].record()
-
-		return spikes
 
 	def _reset(self):
 		'''
@@ -193,7 +183,7 @@ class Monitor:
 
 	def record(self):
 		'''
-		Appends the instantaneous value of the recorded state variables to the recording.
+		Appends the current value of the recorded state variables to the recording.
 		'''
 		for var in self.state_vars:
 			data = self.obj.__dict__[var].view(-1, 1)
@@ -203,4 +193,103 @@ class Monitor:
 		'''
 		Resets recordings to empty Tensors.
 		'''
+		# Reset to empty recordings
 		self.recording = {var : torch.Tensor() for var in self.state_vars}
+
+
+class NetworkMonitor:
+	'''
+	Record state variables of all layers and connections.
+	'''
+	def __init__(self, network, state_vars=['v', 's', 'w'], time=None):
+		'''
+		Constructs a NetworkMonitor object.
+		
+		Inputs:
+			network (bindsnet.network.Network): Network to record state variables from.
+			state_vars (list): List of strings indicating names of state variables to record.
+			time (int): If not None, pre-allocate memory for state variable recording.
+		'''
+		self.network = network
+		self.state_vars = state_vars
+		self.time = time
+		self.i = 0
+		
+		# Initialize empty recording.
+		self.recording = {key : {} for key in {**network.layers,
+											   **network.connections}.keys()}
+		
+		if self.time == None:
+			for var in self.state_vars:
+				for layer in self.network.layers:
+					if var in self.network.layers[layer].__dict__:
+						self.recording[layer][var] = torch.Tensor()
+
+				for connection in self.network.connections:
+					if var in self.network.connections[connection].__dict__:
+						self.recording[connection][var] = torch.Tensor()
+		else:
+			for var in self.state_vars:
+				for layer in self.network.layers:
+					if var in self.network.layers[layer].__dict__:
+						self.recording[layer][var] = torch.zeros(self.network.layers[layer].n, self.time)
+
+				for connection in self.network.connections:
+					if var in self.network.connections[connection].__dict__:
+						self.recording[connection][var] = torch.zeros(*self.network.connections[connection].w.size(), self.time)
+		
+	def get(self):
+		'''
+		Return entire recording to user.
+		
+		Returns:
+			(dict[torch.Tensor or torch.cuda.Tensor]): Dictionary of
+				all layers' and connections' recorded state variables.
+		'''
+		return self.recording
+
+	def record(self):
+		'''
+		Appends the current value of the recorded state variables to the recording.
+		'''
+		if self.time == None:
+			for var in self.state_vars:
+				for layer in self.network.layers:
+					if var in self.network.layers[layer].__dict__:
+						data = self.network.layers[layer].__dict__[var].unsqueeze(-1).float()
+						self.recording[layer][var] = torch.cat([self.recording[layer][var], data], -1)
+
+				for connection in self.network.connections:
+					if var in self.network.connections[connection].__dict__:
+						data = self.network.connections[connection].__dict__[var].unsqueeze(-1)
+						self.recording[connection][var] = torch.cat([self.recording[connection][var], data], -1)
+		
+		else:
+			for var in self.state_vars:
+				for layer in self.network.layers:
+					if var in self.network.layers[layer].__dict__:
+						data = self.network.layers[layer].__dict__[var].unsqueeze(-1).float()
+						self.recording[layer][var][:, self.i] = data
+
+				for connection in self.network.connections:
+					if var in self.network.connections[connection].__dict__:
+						data = self.network.connections[connection].__dict__[var].unsqueeze(-1)
+						self.recording[connection][var][:, :, self.i] = data
+			
+			self.i += 1
+		
+	def _reset(self):
+		'''
+		Resets recordings to empty Tensors.
+		'''
+		# Reset to empty recordings
+		for var in state_vars:
+			for layer in self.layers:
+				self.recording[layer] = {}
+				if var in self.layers[layer].__dict__:
+					self.recording[layer][var] = torch.Tensor()
+			
+			for connection in self.connections:
+				self.recording[connection] = {}
+				if var in self.connections[connection].__dict__:
+					self.recording[connection][var] = torch.Tensor()

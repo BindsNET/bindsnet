@@ -9,7 +9,6 @@ sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
 sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'datasets')))
 
-
 from network     import Network
 from connections import Connection
 from nodes       import Input, LIFNodes
