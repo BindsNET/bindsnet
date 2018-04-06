@@ -86,25 +86,36 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	plt.show()
 
 	
-def plot_voltages(voltage, n_ex=0, n_neuron=0, time=None, dt=1, threshold=None):
+def plot_voltages(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
+	'''
+	voltage(torch.tensor (N_examples, N_neurons, time)): Membrane voltage data for a 
+														population of neurons for one example
+	n_ex(int): Allows user to pick which example to plot spikes for. Must be >= 0
+	n_neuron(int): Neuron index for which to plot voltages for
+	time (tuple(int)): Plot spiking activity of neurons between the given range
+			of time. Default is the entire simulation time. For example, time = 
+			(40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
+	threshold(float): Neuron spiking threshold. Will be shown on the plot.
+	
+	'''
+	
 	assert (n_ex >= 0 and n_neuron >= 0)
 	assert (n_ex < voltage.shape[0] and n_neuron < voltage.shape[1])
 
 	if time is None:
-		time = np.arange(0, voltage.shape[-1], dt)
-
+		time = (0, voltage.shape[-1])
 	else:
 		assert (time[0] < time[1])
 		assert (time[1] <= voltage.shape[-1])
-		timer = np.arange(time[0], time[1], dt)
-		
-	time_ticks = np.arange(time[0], time[1]+5, 5)
+	
+	timer = np.arange(time[0], time[1])
+	time_ticks = np.arange(time[0], time[1]+1, 10)
 	
 	plt.figure()
 	plt.plot(voltage[n_ex, n_neuron, timer])
 	plt.xlabel('Simulation Time'); plt.ylabel('Voltage'); plt.title('Membrane voltage of neuron %d for example %d'%(n_neuron, n_ex+1))
 	locs, labels = plt.xticks()
-	locs = range(int(locs[1]), int(locs[-1]), 5)
+	locs = range(int(locs[1]), int(locs[-1]), 10)
 	plt.xticks(locs, time_ticks)
 	
 	# Draw threshold line only if given
@@ -118,7 +129,7 @@ def main():
 	data = np.random.binomial(1, 0.25, size=(5, 20, 100))
 	data = np.random.uniform(0, 30, size=(5, 20, 100))
 	data = np.sort(data, axis=2)
-	plot_voltages(data, n_ex=2, n_neuron=15, time=(20, 100), threshold=20)
+	plot_voltages(data, n_ex=2, n_neuron=15, threshold=20)
 	#plot_spike_trains_for_example(data, n_ex=1, indices=[1,2,3])
 #	weights = np.random.random(size=(5, 4, 4, 20))
 #	plot_weights_movie(weights)
