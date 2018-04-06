@@ -1,6 +1,8 @@
 import os
 import sys
 import torch
+import numpy  as np
+import pickle as p
 import matplotlib.pyplot as plt
 
 from time        import time, sleep
@@ -39,8 +41,27 @@ network.add_monitor(monitor, 'network')
 t1 = time()
 network.run({'X' : torch.rand(t, n_inpt)}, t)
 t2 = time()
-print('Time:', t2 - t1)
+print('Run 1 time:', t2 - t1)
 
-sleep(3)
+# Reset network monitor.
+monitor._reset()
 
-print(monitor.get())
+# Re-run the simulation.
+t1 = time()
+network.run({'X' : torch.rand(t, n_inpt)}, t)
+t2 = time()
+print('Run 2 time:', t2 - t1)
+
+# Write the simulation data to disk.
+path = os.path.join('..', 'results', 'sim_results')
+t1 = time(); monitor.save(path, fmt='npz'); t2 = time()
+print('Write time:', t2 - t1)
+
+# Read the simulation data back from disk.
+t1 = time(); sim_data = np.load(path + '.npz'); t2 = time()
+
+data = {}
+for key in sim_data.keys():
+	data[key] = sim_data[key]
+	
+print('Read time:', t2 - t1)
