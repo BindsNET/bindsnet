@@ -43,43 +43,51 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-# Input layer.
-input_layer = Input(n=3780)
-
-# Excitatory layer.
-exc_layer = LIFNodes(n=n_neurons, refractory=0, traces=True)
-
-# Readout layer.
-readout_layer = LIFNodes(n=5, refractory=0, traces=True)
+inpt = Input(n=3780, traces=True)  # Input layer
+exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
+readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
+layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
 # Input -> excitatory.
-input_exc_w = 0.01 * torch.rand(input_layer.n, exc_layer.n)
-input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w, wmax=0.02)
+w = 0.01 * torch.rand(layers['X'].n, layers['E'].n)
+input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=0.02)
+input_exc_norm = 0.01 * layers['X'].n
 
 # Excitatory -> readout.
-exc_readout_w = 0.01 * torch.rand(exc_layer.n, readout_layer.n)
-exc_readout_conn = Connection(source=exc_layer, target=readout_layer, w=exc_readout_w,
+w = 0.01 * torch.rand(layers['E'].n, layers['R'].n)
+exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=w,
 							  update_rule=hebbian, nu_pre=1e-2, nu_post=1e-2)
-exc_readout_norm = 0.5 * exc_layer.n
+exc_readout_norm = 0.5 * layers['E'].n
 
 # Readout -> readout.
-readout_readout_w = -10 * torch.ones(readout_layer.n, readout_layer.n) + 10 * torch.diag(torch.ones(readout_layer.n))
-readout_readout_conn = Connection(source=readout_layer, target=readout_layer, w=readout_readout_w, wmin=-10.0)
+w = -10 * torch.ones(layers['R'].n, layers['R'].n) + 10 * torch.diag(torch.ones(layers['R'].n))
+readout_readout_conn = Connection(source=layers['R'], target=layers['R'], w=w, wmin=-10.0)
 
-# Voltage recording for excitatory and readout layers.
-exc_voltage_monitor = Monitor(exc_layer, ['v'])
-readout_voltage_monitor = Monitor(readout_layer, ['v'])
+# Spike recordings for all layers.
+spikes = {}
+for layer in layers:
+	spikes[layer] = Monitor(layers[layer], ['s'], time=plot_interval)
+
+# Voltage recordings for excitatory and readout layers.
+voltages = {}
+for layer in set(layers.keys()) - {'X'}:
+	voltages[layer] = Monitor(layers[layer], ['v'], time=plot_interval)
 
 # Add all layers and connections to the network.
-network.add_layer(input_layer, name='X')
-network.add_layer(exc_layer, name='E')
-network.add_layer(readout_layer, name='R')
+for layer in layers:
+	network.add_layer(layers[layer], name=layer)
+
 network.add_connection(input_exc_conn, source='X', target='E')
 network.add_connection(exc_readout_conn, source='E', target='R')
 network.add_connection(readout_readout_conn, source='R', target='R')
-network.add_monitor(exc_voltage_monitor, name='exc_voltage')
-network.add_monitor(readout_voltage_monitor, name='readout_voltage')
+
+# Add all monitors to the network.
+for layer in layers:
+	network.add_monitor(spikes[layer], name='%s_spikes' % layer)
+	
+	if layer in voltages:
+		network.add_monitor(voltages[layer], name='%s_voltages' % layer)
 
 # Normalize adaptable weights.
 network.connections[('E', 'R')].normalize(exc_readout_norm)
@@ -90,13 +98,7 @@ env.reset()
 
 i = 0
 done = False
-spikes, inpts = {}, {}
-
-spike_record = {'X' : torch.zeros(input_layer.n, plot_interval),
-				'E' : torch.zeros(exc_layer.n, plot_interval),
-			    'R' : torch.zeros(readout_layer.n, plot_interval)}
-voltage_record = {'E' : torch.zeros(exc_layer.n, plot_interval),
-				  'R' : torch.zeros(readout_layer.n, plot_interval)}
+s, inpts = {}, {}
 
 print()
 
@@ -104,18 +106,29 @@ count = 0
 lengths = []
 rewards = []
 mean_rewards = []
+
 while True:
 	count += 1
+	
+	if i % plot_interval == 0:
+		spike_record = {layer : spikes[layer].get('s') for layer in spikes}
+		voltage_record = {layer : voltages[layer].get('v') for layer in voltages}
+		
+		for m in network.monitors:
+			network.monitors[m]._reset()
+	
 	env.render()
 	
 	if i % 100 == 0:
 		print('Iteration %d' % i)
-		
-	if spikes == {} or spikes['R'].sum() == 0:
+
+	# Choose action based on readout neuron spiking.
+	if s == {} or s['R'].sum() == 0:
 		action = np.random.choice(range(6))
 	else:
-		action = torch.multinomial((spikes['R'] / spikes['R'].sum()).view(-1), 1)[0] + 1
+		action = torch.multinomial((s['R'] / s['R'].sum()).view(-1), 1)[0] + 1
 	
+	# Get observations, reward, done flag, and other information.
 	obs, reward, done, info = env.step(action)
 	
 	# Update mean reward.
@@ -125,24 +138,16 @@ while True:
 	inpts.update({'X' : obs})
 	
 	# Run the network on the input.
-	spikes = network.run(inpts=inpts, time=1)
+	network.run(inpts=inpts, time=1)
 	
 	# Normalize adaptable weights.
 	network.connections[('E', 'R')].normalize(exc_readout_norm)
 	
-	for key in spike_record:
-		spike_record[key][:, i % plot_interval] = spikes[key]
+	# Get spikes from previous iteration.
+	for layer in layers:
+		s[layer] = spikes[layer].get('s')[:, i % plot_interval]
 	
-	# Get voltage recordings.
-	exc_voltages = exc_voltage_monitor.get('v')
-	voltage_record['E'][:, i % plot_interval] = exc_voltages
-	exc_voltage_monitor._reset()
-	
-	readout_voltages = readout_voltage_monitor.get('v')
-	voltage_record['R'][:, i % plot_interval] = readout_voltages
-	readout_voltage_monitor._reset()
-	
-	# Optionally plot various simulation information.
+	# Optionally plot various simulation info.
 	if plot:
 		if i == 0:
 			spike_ims, spike_axes = plot_spikes(spike_record)
@@ -209,7 +214,6 @@ while True:
 	
 	if done == True:
 		env.reset()
-		network._reset()
 		
 		mean_rewards.append(np.mean(rewards))
 		rewards = []
