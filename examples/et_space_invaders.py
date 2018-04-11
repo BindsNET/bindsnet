@@ -8,17 +8,15 @@ import matplotlib.pyplot as plt
 from timeit                  import default_timer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
 
-from encoding          import get_bernoulli
-from environment       import SpaceInvaders
-from network           import Network, Monitor
-from connections       import Connection, m_stdp_et
-from nodes             import LIFNodes, Input
+from bindsnet.encoding          import get_bernoulli
+from bindsnet.environment       import SpaceInvaders
+from bindsnet.network           import Network, Monitor
+from bindsnet.network.connections       import Connection, m_stdp_et
+from bindsnet.network.nodes             import LIFNodes, Input
 
-from evaluation        import *
-from analysis.plotting import *
+from bindsnet.evaluation        import *
+from bindsnet.analysis.plotting import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
@@ -94,7 +92,6 @@ for layer in layers:
 
 # Normalize adaptable weights.
 network.connections[('E', 'R')].normalize(exc_readout_norm)
-network.connections[('E', 'R')].normalize(exc_readout_norm)
 
 # Load SpaceInvaders environment.
 env = SpaceInvaders()
@@ -149,7 +146,6 @@ while True:
 	network.run(inpts=inpts, time=1, **kwargs)
 	
 	# Normalize adaptable weights.
-	network.connections[('X', 'E')].normalize(input_exc_norm)
 	network.connections[('E', 'R')].normalize(exc_readout_norm)
 	
 	# Get spikes from previous iteration.

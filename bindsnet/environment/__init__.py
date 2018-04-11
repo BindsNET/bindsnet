@@ -4,12 +4,8 @@ import gym
 import torch
 import numpy as np
 
-from skimage.measure import block_reduce
-
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
-
-from encoding import get_bernoulli
+from skimage.measure   import block_reduce
+from bindsnet.encoding import get_bernoulli
 
 
 class SpaceInvaders:

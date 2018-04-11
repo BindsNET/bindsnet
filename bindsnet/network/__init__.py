@@ -3,9 +3,7 @@ import os, sys
 import numpy as np
 import pickle as p
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
-
-from nodes import Input
+from bindsnet.network.nodes import Input
 
 
 def load_network(fname):
