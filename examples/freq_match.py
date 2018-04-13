@@ -33,8 +33,8 @@ network = Network(dt=1.0)
 inpt = Input(n, traces=True)
 output = LIFNodes(n, traces=True)
 
-w = 1.5*torch.rand(n, n)
-conn = Connection(inpt, output, w=w, update_rule=m_stdp_et, nu=1, wmin=0, wmax=1.25)
+w = 1 * torch.rand(n, n)
+conn = Connection(inpt, output, w=w, update_rule=m_stdp_et, nu=1, wmin=0, wmax=1)
 
 network.add_layer(inpt, 'X')
 network.add_layer(output, 'Y')
@@ -51,10 +51,10 @@ reward = 0
 a_plus = 1
 a_minus = 0
 
-rewards = []
-
 avg_rates = torch.zeros(n)
-target_rates = 0.02 + torch.rand(n) / 20
+target_rates = 0.03 + torch.rand(n) / 20
+
+distances = [torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))]
 
 spike_record = {layer : torch.zeros(plot_interval, n) for layer in network.layers}
 
@@ -73,13 +73,13 @@ for i in range(i):
 	else:
 		avg_rates = ((i - 1) / i) * avg_rates + (1 / i) * spikes['Y']
 	
-	reward = -(avg_rates - target_rates)
-	rewards.append(reward.sum())
+	reward = target_rates - avg_rates
+	distance = torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))
+	distances.append(distance)
 	
 	if i % print_interval == 0:
-		print('Averaged reward (iteration %d):' % i, reward.sum())
+		print('Averaged distance (iteration %d):' % i, np.mean(distances))
 		
-	
 	for m in spike_monitors:
 		spike_monitors[m]._reset()
 	
@@ -90,17 +90,18 @@ for i in range(i):
 
 			fig, ax = plt.subplots()
 			im = ax.matshow(torch.stack([avg_rates, target_rates]), cmap='hot_r')
-
-			ax.set_xticks(()); ax.set_yticks(())
+			ax.set_xticks(()); ax.set_yticks([0, 1])
+			ax.set_yticklabels(['Actual', 'Targets'])
 			ax.set_aspect('auto')
+			ax.set_title('Difference between target and actual firing rates.')
+			cbar = plt.colorbar(im)
 			
 			fig2, ax2 = plt.subplots()
-			line2, = ax2.plot(np.abs(rewards))
+			line2, = ax2.plot(distances)
 			ax2.axhline(0, ls='--', c='r')
-			
-			ax2.set_title('Absolute value of averaged "punishment" over time')
+			ax2.set_title('Sum of squared distances over time')
 			ax2.set_xlabel('Timesteps')
-			ax2.set_ylabel('Abs. value punishment')
+			ax2.set_ylabel('Abs. value reward')
 			
 			plt.pause(1e-8)
 
@@ -109,10 +110,13 @@ for i in range(i):
 			weights_im = plot_weights(conn.w.view(n, n), im=weights_im)
 
 			im.set_data(torch.stack([avg_rates, target_rates]))
+			cbar.set_clim(vmin=0, vmax=max(avg_rates))
+			cbar_ticks = np.linspace(0., max(avg_rates), num=11, endpoint=True)
+			cbar.set_ticks(cbar_ticks) 
+			cbar.draw_all()
 			
-			line2.set_xdata(range(len(rewards)))
-			line2.set_ydata(np.abs(rewards))
-			
+			line2.set_xdata(range(len(distances)))
+			line2.set_ydata(distances)
 			ax2.relim() 
 			ax2.autoscale_view(True, True, True) 
 
