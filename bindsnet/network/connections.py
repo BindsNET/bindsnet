@@ -12,11 +12,9 @@ def post_pre(conn, **kwargs):
 	Simple STDP rule involving both pre- and post-synaptic spiking activity.
 	'''
 	# Post-synaptic.
-	conn.w += conn.nu_post * (conn.source.x.view(conn.source.n,
-			1) * conn.target.s.float().view(1, conn.target.n))
+	conn.w += conn.nu_post * conn.source.x.unsqueeze(-1) * conn.target.s.float().unsqueeze(0)
 	# Pre-synaptic.
-	conn.w -= conn.nu_pre * (conn.source.s.float().view(conn.source.n,
-							1) * conn.target.x.view(1, conn.target.n))
+	conn.w -= conn.nu_pre * conn.source.s.float().unsqueeze(-1) * conn.target.x.unsqueeze(0)
 
 	# Bound weights.
 	conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
@@ -97,7 +95,7 @@ class Connection:
 			self.update_rule = update_rule
 
 		if w is None:
-			self.w = torch.rand(source.n, target.n)
+			self.w = torch.rand(*source.shape, *target.shape)
 		else:
 			self.w = w
 		
@@ -125,19 +123,21 @@ class Connection:
 
 	def update(self, kwargs):
 		'''
-		Run connection's given update rule.
+		Compute connection's update rule.
 		'''
 		self.update_rule(self, **kwargs)
 	
 	def normalize(self, norm=78.0):
 		'''
-		Normalize weights along the first axis
-		according to some desired cumulative value.
+		Normalize weights along the first axis according
+		to some desired summed weight per target neuron.
 		
 		Inputs:
 			norm (float): Desired sum of weights.
 		'''
+		self.w = self.w.view(self.source.n, self.target.n)
 		self.w *= norm / self.w.sum(0).view(1, -1)
+		self.w = self.w.view(*self.source.shape, *self.target.shape)
 		
 	def _reset(self):
 		'''

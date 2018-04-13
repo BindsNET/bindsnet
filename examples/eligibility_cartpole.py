@@ -5,20 +5,17 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from timeit                  import default_timer
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from timeit                       import default_timer
+from mpl_toolkits.axes_grid1      import make_axes_locatable
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
+from bindsnet.evaluation          import *
+from bindsnet.analysis.plotting   import *
+from bindsnet.environment         import CartPole
+from bindsnet.encoding            import get_bernoulli
+from bindsnet.network.nodes       import LIFNodes, Input
+from bindsnet.network             import Network, Monitor
+from bindsnet.network.connections import Connection, m_stdp_et
 
-from encoding          import get_bernoulli
-from environment       import CartPole
-from network           import Network, Monitor
-from connections       import Connection, m_stdp_et
-from nodes             import LIFNodes, Input
-
-from evaluation        import *
-from analysis.plotting import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
@@ -134,14 +131,14 @@ while True:
 	
 	# Run the network on the input.
 	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
-	spikes = network.run(inpts=inpts, time=1, **kwargs)
+	network.run(inpts=inpts, time=1, **kwargs)
 	
 	# Normalize adaptable weights.
 	network.connections[('X', 'E')].normalize(input_exc_norm)
 	network.connections[('E', 'R')].normalize(exc_readout_norm)
 	
-	for key in spike_record:
-		spike_record[key][:, i % plot_interval] = spikes[key]
+	# for key in spike_record:
+	# 	spike_record[key][:, i % plot_interval] = spikes[key]
 	
 	# Get voltage recordings.
 	exc_voltages = exc_voltage_monitor.get('v')
