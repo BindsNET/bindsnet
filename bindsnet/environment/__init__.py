@@ -12,16 +12,19 @@ class SpaceInvaders:
 	'''
 	A wrapper around the SpaceInvaders-v0 OpenAI gym environment.
 	'''
-	def __init__(self, max_prob=0.25):
+	def __init__(self, max_prob=0.25, diffs=True):
 		'''
 		Initializes the OpenAI Gym Space Invaders environment wrapper.
 		
 		Inputs:
 			max_prob (float): Specifies the maximum
 				Bernoulli trial spiking probability.
+			diffs (bool): Whether to record previous
+				frame and take difference for new frame.
 		'''
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
+		self.diffs = diffs
 
 	def step(self, a):
 		'''
@@ -39,14 +42,20 @@ class SpaceInvaders:
 		# Call gym's environment step function.
 		obs, reward, done, info = self.env.step(a)
 		
-		# Subsample, convert to torch.Tensor, and
-		# convert to Bernoulli-distributed spikes.
+		# Subsample and convert to torch.Tensor.
 		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
 		obs = torch.from_numpy(obs).view(1, -1).float()
-		obs = get_bernoulli(obs, max_prob=self.max_prob)
+		
+		# Calculate difference and store previous frame.
+		if self.diffs:
+			obs = torch.clamp(obs - self.previous, 0, 1)
+			self.previous = obs
+		
+		# convert to Bernoulli-distributed spikes.
+		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
 		
 		# Return converted observations and other information.
-		return next(obs).view(1, -1), reward, done, info
+		return obs.view(1, -1), reward, done, info
 
 	def reset(self):
 		'''
@@ -58,14 +67,19 @@ class SpaceInvaders:
 		# Call gym's environment reset function.
 		obs = self.env.reset()
 		
-		# Convert to torch.Tensor, and
-		# convert to Bernoulli-distributed spikes.
+		# Subsample and convert to torch.Tensor.
 		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
 		obs = torch.from_numpy(obs).view(1, -1).float()
-		obs = get_bernoulli(obs, max_prob=self.max_prob)
-
+		
+		# Store previous frame.
+		if self.diffs:
+			self.previous = obs
+		
+		# Convert to Bernoulli-distributed spikes.
+		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
+		
 		# Return converted observations.
-		return next(obs)
+		return obs.view(1, -1)
 
 	def render(self):
 		'''

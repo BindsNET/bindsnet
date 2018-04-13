@@ -59,9 +59,7 @@ parser.add_argument('--update_interval', type=int, default=250)
 parser.add_argument('--train', dest='train', action='store_true')
 parser.add_argument('--test', dest='train', action='store_false')
 parser.add_argument('--plot', dest='plot', action='store_true')
-parser.add_argument('--no-plot', dest='plot', action='store_false')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
-parser.add_argument('--no-gpu', dest='gpu', action='store_false')
 parser.set_defaults(plot=False, gpu=False, train=True)
 
 locals().update(vars(parser.parse_args()))
@@ -108,8 +106,8 @@ inh_exc_w = -17.5 * (torch.ones(inh_layer.n, exc_layer.n) - torch.diag(torch.one
 inh_exc_conn = Connection(source=inh_layer, target=exc_layer, w=inh_exc_w, update_rule=None)
 
 # Voltage recording for excitatory and inhibitory layers.
-exc_voltage_monitor = Monitor(exc_layer, ['v'])
-inh_voltage_monitor = Monitor(inh_layer, ['v'])
+exc_voltage_monitor = Monitor(exc_layer, ['v'], time=time)
+inh_voltage_monitor = Monitor(inh_layer, ['v'], time=time)
 
 # Add all layers and connections to the network.
 network.add_layer(input_layer, name='X')
@@ -143,7 +141,7 @@ accuracy = {'all' : [], 'proportion' : []}
 
 spikes = {}
 for layer in set(network.layers) - {'X'}:
-	spikes[layer] = Monitor(network.layers[layer], state_vars=['s'])
+	spikes[layer] = Monitor(network.layers[layer], state_vars=['s'], time=time)
 	network.add_monitor(spikes[layer], name='%s_spikes' % layer)
 
 # Train the network.
@@ -193,9 +191,9 @@ for i in range(n_train):
 	
 	# Optionally plot various simulation information.
 	if plot:
-		inpt = inpts['X'].t()
+		inpt = inpts['X'].view(time, input_layer.n)
 		input_exc_weights = network.connections[('X', 'Ae')].w
-		square_weights = get_square_weights(input_exc_weights, n_sqrt)
+		square_weights = get_square_weights(input_exc_weights.view(input_layer.n, exc_layer.n), n_sqrt)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		

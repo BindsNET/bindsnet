@@ -8,28 +8,25 @@ import matplotlib.pyplot as plt
 from timeit                  import default_timer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
+from bindsnet.evaluation          import *
+from bindsnet.analysis.plotting   import *
+from bindsnet.network             import Network
+from bindsnet.encoding            import get_bernoulli
+from bindsnet.environment         import SpaceInvaders
 
-from encoding          import get_bernoulli
-from environment       import SpaceInvaders
-from network           import Network, Monitor
-from connections       import Connection, hebbian
-from nodes             import LIFNodes, Input
-
-from evaluation        import *
-from analysis.plotting import *
+from bindsnet.network.monitors    import Monitor
+from bindsnet.network.nodes       import LIFNodes, Input
+from bindsnet.network.connections import Connection, hebbian
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=100)
+parser.add_argument('--plot_interval', type=int, default=500)
 parser.add_argument('--plot', dest='plot', action='store_true')
-parser.add_argument('--no-plot', dest='plot', action='store_false')
+parser.add_argument('--env_plot', dest='env_plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
-parser.add_argument('--no-gpu', dest='gpu', action='store_false')
-parser.set_defaults(plot=False, gpu=False)
+parser.set_defaults(plot=False, env_plot=False, gpu=False)
 
 locals().update(vars(parser.parse_args()))
 
@@ -117,7 +114,8 @@ while True:
 		for m in network.monitors:
 			network.monitors[m]._reset()
 	
-	env.render()
+	if plot or env_plot:
+		env.render()
 	
 	if i % 100 == 0:
 		print('Iteration %d' % i)

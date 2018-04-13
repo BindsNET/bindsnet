@@ -61,10 +61,10 @@ class Monitor:
 				
 				# 1D data.
 				if len(data.size()) - 1 == 1:
-					self.recording[var][:, self.i] = data
+					self.recording[var][:, self.i % self.time] = data
 				# 2D data.
 				elif len(data.size()) - 1 == 2:
-					self.recording[var][:, :, self.i] = data
+					self.recording[var][:, :, self.i % self.time] = data
 		
 			self.i += 1
 
@@ -172,12 +172,12 @@ class NetworkMonitor:
 				for layer in self.layers:
 					if var in self.network.layers[layer].__dict__:
 						data = self.network.layers[layer].__dict__[var].unsqueeze(-1).float()
-						self.recording[layer][var][:, self.i] = data
+						self.recording[layer][var][:, self.i % self.time] = data
 
 				for connection in self.connections:
 					if var in self.network.connections[connection].__dict__:
 						data = self.network.connections[connection].__dict__[var].unsqueeze(-1)
-						self.recording[connection][var][:, :, self.i] = data
+						self.recording[connection][var][:, :, self.i % self.time] = data
 			
 			self.i += 1
 	

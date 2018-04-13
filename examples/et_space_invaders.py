@@ -11,10 +11,12 @@ from mpl_toolkits.axes_grid1      import make_axes_locatable
 
 from bindsnet.evaluation          import *
 from bindsnet.analysis.plotting   import *
+from bindsnet.network             import Network
 from bindsnet.encoding            import get_bernoulli
 from bindsnet.environment         import SpaceInvaders
+
+from bindsnet.network.monitors    import Monitor
 from bindsnet.network.nodes       import LIFNodes, Input
-from bindsnet.network             import Network, Monitor
 from bindsnet.network.connections import Connection, m_stdp_et
 
 
@@ -22,14 +24,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=250)
+parser.add_argument('--plot_interval', type=int, default=500)
 parser.add_argument('--print_interval', type=int, default=1000)
 parser.add_argument('--a_plus', type=int, default=1)
 parser.add_argument('--a_minus', type=int, default=-0.5)
 parser.add_argument('--plot', dest='plot', action='store_true')
-parser.add_argument('--env_plot', dest='plot', action='store_true')
+parser.add_argument('--env_plot', dest='env_plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
-parser.set_defaults(plot=False, env_plot=True, gpu=False)
+parser.set_defaults(plot=False, env_plot=False, gpu=False)
 
 locals().update(vars(parser.parse_args()))
 
@@ -51,9 +53,8 @@ layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
 # Input -> excitatory.
-w = 0.01 * torch.rand(layers['X'].n, layers['E'].n)
-input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=0.02)
-input_exc_norm = 0.01 * layers['X'].n
+w = 4e-3 * torch.rand(layers['X'].n, layers['E'].n)
+input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=1e-2)
 
 # Excitatory -> readout.
 w = 0.01 * torch.rand(layers['E'].n, layers['R'].n)
@@ -108,11 +109,6 @@ lengths = []
 rewards = []
 mean_rewards = []
 
-if gpu:
-	previous = torch.zeros(inpt.n).type_as(torch.cuda.ByteTensor())
-else:
-	previous = torch.zeros(inpt.n).type_as(torch.ByteTensor())
-
 while True:
 	count += 1
 	
@@ -139,13 +135,12 @@ while True:
 	
 	# Get observations, reward, done flag, and other information.
 	obs, reward, done, info = env.step(action)
-	difference = obs - previous 
 	
 	# Update mean reward.
 	rewards.append(reward)
 	
 	# Get next input sample.
-	inpts.update({'X' : difference})
+	inpts.update({'X' : obs})
 	
 	# Run the network on the input.
 	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
