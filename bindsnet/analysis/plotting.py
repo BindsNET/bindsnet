@@ -50,7 +50,6 @@ def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
 	return axes, ims
 
 
-
 def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
 	'''
 	Plot spikes for any group(s) of neurons.
@@ -146,7 +145,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		
 	plt.draw()
 	return ims, axes
-        
+
 
 def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 	'''

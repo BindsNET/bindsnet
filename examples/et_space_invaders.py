@@ -5,8 +5,9 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from timeit                  import default_timer
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from time                         import sleep
+from timeit                       import default_timer
+from mpl_toolkits.axes_grid1      import make_axes_locatable
 
 from bindsnet.evaluation          import *
 from bindsnet.analysis.plotting   import *
@@ -16,13 +17,17 @@ from bindsnet.environment         import SpaceInvaders
 
 from bindsnet.network.monitors    import Monitor
 from bindsnet.network.nodes       import LIFNodes, Input
-from bindsnet.network.connections import Connection, hebbian
+from bindsnet.network.connections import Connection, m_stdp_et
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
 parser.add_argument('--plot_interval', type=int, default=500)
+parser.add_argument('--print_interval', type=int, default=1000)
+parser.add_argument('--a_plus', type=int, default=1)
+parser.add_argument('--a_minus', type=int, default=-0.5)
 parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--env_plot', dest='env_plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
@@ -41,20 +46,20 @@ network = Network(dt=dt)
 
 # Layers of neurons.
 inpt = Input(n=3780, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
+exc = LIFNodes(n=n_neurons, refractory=0, traces=True,
+			   threshold=-52.0 + torch.randn(n_neurons))  # Excitatory layer
+readout = LIFNodes(n=5, refractory=0, traces=True, threshold=-40.0)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
 # Input -> excitatory.
-w = 0.01 * torch.rand(layers['X'].n, layers['E'].n)
-input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=0.02)
-input_exc_norm = 0.01 * layers['X'].n
+w = 4e-3 * torch.rand(layers['X'].n, layers['E'].n)
+input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=1e-2)
 
 # Excitatory -> readout.
 w = 0.01 * torch.rand(layers['E'].n, layers['R'].n)
 exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=w,
-							  update_rule=hebbian, nu_pre=1e-2, nu_post=1e-2)
+							  update_rule=m_stdp_et, nu=2e-2)
 exc_readout_norm = 0.5 * layers['E'].n
 
 # Readout -> readout.
@@ -117,14 +122,16 @@ while True:
 	if plot or env_plot:
 		env.render()
 	
-	if i % 100 == 0:
-		print('Iteration %d' % i)
-
+	if i % print_interval == 0 and i > 0:
+		print('Iteration %d | Mean reward %.2f | Mean episode length %.2f' % (i, np.mean(mean_rewards), np.mean(lengths)))
+		
 	# Choose action based on readout neuron spiking.
 	if s == {} or s['R'].sum() == 0:
-		action = np.random.choice(range(6))
+		# No spikes -> no action.
+		action = 0
 	else:
-		action = torch.multinomial((s['R'] / s['R'].sum()).view(-1), 1)[0] + 1
+		# If there are spikes, randomly choose from among them for possible actions.
+		action = torch.multinomial((s['R'] / s['R'].sum()).view(-1), 1)[0]
 	
 	# Get observations, reward, done flag, and other information.
 	obs, reward, done, info = env.step(action)
@@ -136,16 +143,17 @@ while True:
 	inpts.update({'X' : obs})
 	
 	# Run the network on the input.
-	network.run(inpts=inpts, time=1)
+	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
+	network.run(inpts=inpts, time=1, **kwargs)
 	
 	# Normalize adaptable weights.
 	network.connections[('E', 'R')].normalize(exc_readout_norm)
 	
 	# Get spikes from previous iteration.
-	for layer in layers:
+	for layer in spikes:
 		s[layer] = spikes[layer].get('s')[:, i % plot_interval]
 	
-	# Optionally plot various simulation info.
+	# Optionally plot various simulation information.
 	if plot:
 		if i == 0:
 			spike_ims, spike_axes = plot_spikes(spike_record)
@@ -175,10 +183,10 @@ while True:
 			l_line, = r_axes[1].plot(lengths, marker='o')
 			
 			r_axes[1].set_xlabel('Episode')
-			r_axes[0].set_ylabel('Mean reward')
-			r_axes[1].set_ylabel('Length of episode')
-			r_axes[0].set_title('Mean reward per episode')
-			r_axes[1].set_title('Iteration length of episodes')
+			r_axes[0].set_ylabel('Episode and mean reward')
+			r_axes[1].set_ylabel('Episode and mean length')
+			r_axes[0].set_title('Mean and per episode reward')
+			r_axes[1].set_title('Mean and per episode iteration length')
 			
 			for ax in r_axes:
 				ax.grid()

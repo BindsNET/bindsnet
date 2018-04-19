@@ -1,11 +1,7 @@
 import torch
-import os, sys
-import numpy as np
 import pickle as p
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
-
-from nodes import Input
+from bindsnet.network.nodes import Input
 
 
 def load_network(fname):
@@ -16,7 +12,8 @@ def load_network(fname):
 		fname (str): Path to serialized network object on disk.
 	'''
 	try:
-		return p.load(open(fname, 'rb'))
+		with open(fname, 'rb') as f:
+			return p.load(open(fname, 'rb'))
 	except FileNotFoundError:
 		print('Network not found on disk.')
 
@@ -81,6 +78,10 @@ class Network:
 	def get_inputs(self):
 		'''
 		Fetches outputs from network layers to use as inputs to connected layers.
+		
+		Returns:
+			(dict[torch.Tensor or torch.cuda.Tensor]): Inputs
+				to all layers for the current iteration.
 		'''
 		inpts = {}
 		
@@ -94,11 +95,12 @@ class Network:
 				inpts[key[1]] = torch.zeros_like(torch.Tensor(target.n))
 
 			# Add to input: source's spikes multiplied by connection weights.
-			inpts[key[1]] += source.s.float() @ self.connections[key].w
+			inpt = source.s.float().view(-1) @ self.connections[key].w.view(source.n, target.n)
+			inpts[key[1]] += inpt.view(*target.shape)
 			
 		return inpts
 
-	def run(self, inpts, time):
+	def run(self, inpts, time, **kwargs):
 		'''
 		Simulation network for given inputs and time.
 		
@@ -107,16 +109,8 @@ class Network:
 				for n_input per nodes.Input instance. This may be empty if there
 				are no user-specified input spikes.
 			time (int): Simulation time.
-		
-		Returns:
-			(torch.Tensor or torch.cuda.Tensor): Recording of spikes over simulation episode.
 		'''
 		timesteps = int(time / self.dt)  # effective no. of timesteps
-
-		# Record spikes from each population over the iteration.
-		spikes = {}
-		for key in self.layers:
-			spikes[key] = torch.zeros(self.layers[key].n, timesteps)
 
 		# Get input to all layers.
 		inpts.update(self.get_inputs())
@@ -130,12 +124,9 @@ class Network:
 				else:
 					self.layers[key].step(inpts[key], self.dt)
 
-				# Record spikes.
-				spikes[key][:, timestep] = self.layers[key].s
-
 			# Run synapse updates.
 			for synapse in self.connections:
-				self.connections[synapse].update()
+				self.connections[synapse].update(kwargs)
 
 			# Get input to all layers.
 			inpts.update(self.get_inputs())
@@ -143,8 +134,6 @@ class Network:
 			# Record state variables of interest.
 			for monitor in self.monitors:
 				self.monitors[monitor].record()
-
-		return spikes, inpts
 
 	def _reset(self):
 		'''
@@ -158,49 +147,3 @@ class Network:
 
 		for monitor in self.monitors:
 			self.monitors[monitor]._reset()
-
-
-class Monitor:
-	'''
-	Records state variables of interest.
-	'''
-	def __init__(self, obj, state_vars):
-		'''
-		Constructs a Monitor object.
-		
-		Inputs:
-			obj (Object): Object to record state variables from during network simulation.
-			state_vars (list): List of strings indicating names of state variables to record.
-		'''
-		self.obj = obj
-		self.state_vars = state_vars
-		
-		# Initialize empty recording.
-		self.recording = {var : torch.Tensor() for var in self.state_vars}
-
-	def get(self, var):
-		'''
-		Return recording to user.
-		
-		Inputs:
-			var (str): State variable recording to return.
-		
-		Returns:
-			(torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_1, ..., n_k, time],
-				where [n_1, ..., n_k] refers to the shape of the recorded state variable.
-		'''
-		return self.recording[var]
-
-	def record(self):
-		'''
-		Appends the instantaneous value of the recorded state variables to the recording.
-		'''
-		for var in self.state_vars:
-			data = self.obj.__dict__[var].view(-1, 1)
-			self.recording[var] = torch.cat([self.recording[var], data], 1)
-
-	def _reset(self):
-		'''
-		Resets recordings to empty Tensors.
-		'''
-		self.recording = {var : torch.Tensor() for var in self.state_vars}
