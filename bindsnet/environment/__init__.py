@@ -1,11 +1,14 @@
 import os
 import sys
+import cv2
 import gym
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
 
-from skimage.measure   import block_reduce
-from bindsnet.encoding import get_bernoulli
+from bindsnet.datasets.preprocess import *
+from skimage.measure              import block_reduce
+from bindsnet.encoding            import get_bernoulli
 
 
 class SpaceInvaders:
@@ -43,8 +46,10 @@ class SpaceInvaders:
 		obs, reward, done, info = self.env.step(a)
 		
 		# Subsample and convert to torch.Tensor.
-		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
-		obs = torch.from_numpy(obs).view(1, -1).float()
+		#obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
+		#obs = torch.from_numpy(obs).view(1, -1).float()
+		
+		obs = self.pre_process(obs)
 		
 		# Calculate difference and store previous frame.
 		if self.diffs:
@@ -68,8 +73,10 @@ class SpaceInvaders:
 		obs = self.env.reset()
 		
 		# Subsample and convert to torch.Tensor.
-		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
-		obs = torch.from_numpy(obs).view(1, -1).float()
+#		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
+#		obs = torch.from_numpy(obs).view(1, -1).float()
+
+		obs = self.pre_process(obs)
 		
 		# Store previous frame.
 		if self.diffs:
@@ -93,7 +100,23 @@ class SpaceInvaders:
 		'''
 		self.env.close()
 
-
+	def pre_process(self, obs):
+		'''
+		Pre-Processing step for a state specific to Space Invaders.
+		
+		Inputs:
+			obs(numpy.array): Observation from the environment.
+		
+		Returns:
+			obs (torch.Tensor): Pre-processed observation.
+		'''
+		obs = subsample(gray_scale(obs), 84, 110)
+		obs = obs[26:110, :]
+		obs = binary_image(obs)
+		obs = np.reshape(obs, (84, 84, 1))
+		obs = torch.from_numpy(obs).view(1, -1).float()
+		return obs
+		
 class CartPole:
 	'''
 	A wrapper around the CartPole-v0 OpenAI gym environment.

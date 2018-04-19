@@ -4,6 +4,7 @@ import torch
 import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 from timeit                  import default_timer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -17,15 +18,17 @@ from bindsnet.encoding            import get_bernoulli
 from bindsnet.environment         import SpaceInvaders
 
 from bindsnet.network.monitors    import Monitor
+from bindsnet.network.learning    import hebbian
+from bindsnet.network.connections import Connection 
 from bindsnet.network.nodes       import LIFNodes, Input
-from bindsnet.network.learning    import Connection, hebbian
 
+plt.ion()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=500)
+parser.add_argument('--plot_interval', type=int, default=200)
 parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--env_plot', dest='env_plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
@@ -43,7 +46,7 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(n=3780, traces=True)  # Input layer
+inpt = Input(n=7056, traces=True)  # Input layer
 exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
 readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
@@ -117,8 +120,8 @@ while True:
 		for m in network.monitors:
 			network.monitors[m]._reset()
 	
-	if plot or env_plot:
-		env.render()
+#	if plot or env_plot:
+#		env.render()
 	
 	if i % 100 == 0:
 		print('Iteration %d' % i)
@@ -134,15 +137,6 @@ while True:
 	
 	# Update mean reward.
 	rewards.append(reward)
-	
-	# Pre-process input sample
-	obs = gray_scale( sub_sample(obs, 84, 110) )
-	obs = obs[26, 110, :]
-	obs = black_white(obs)
-	print (obs.shape)
-	sys.exit()
-	
-	obs = pre_process(obs)
 	
 	# Get next input sample.
 	inpts.update({'X' : obs})
@@ -163,6 +157,10 @@ while True:
 			spike_ims, spike_axes = plot_spikes(spike_record)
 			voltage_ims, voltage_axes = plot_voltages(voltage_record)
 			
+			g_fig = plt.figure()
+			g_axes = g_fig.add_subplot(111)
+			g_pic = g_axes.imshow(obs.numpy().reshape(84, 84), cmap='gray')
+
 			w_fig, w_axes = plt.subplots(2, 1)
 			
 			i_e_w_im = w_axes[0].matshow(input_exc_conn.w.t(), cmap='hot_r', vmax=input_exc_conn.wmax)
@@ -192,6 +190,7 @@ while True:
 			r_axes[0].set_title('Mean reward per episode')
 			r_axes[1].set_title('Iteration length of episodes')
 			
+			plt.show()
 			for ax in r_axes:
 				ax.grid()
 			
@@ -200,6 +199,8 @@ while True:
 				spike_ims, spike_axes = plot_spikes(spike_record, ims=spike_ims, axes=spike_axes)
 				voltage_ims, voltage_axes = plot_voltages(voltage_record, ims=voltage_ims, axes=voltage_axes)
 				
+				g_pic.set_data(obs.numpy().reshape(84, 84))
+
 				i_e_w_im.set_data(input_exc_conn.w.t())
 				e_r_w_im.set_data(exc_readout_conn.w.t())
 				
@@ -217,7 +218,7 @@ while True:
 					ax.autoscale_view(True, True, True) 
 
 				r_fig.canvas.draw()
-				
+				g_fig.canvas.draw()
 				plt.pause(1e-8)
 	
 	i += 1
