@@ -1,6 +1,6 @@
 import torch
 
-from .learning import no_update
+from ..learning import no_update
 
 
 class Connection:

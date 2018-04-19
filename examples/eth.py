@@ -5,17 +5,18 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from time import time as t
+from time                       import time as t
 
-from bindsnet.evaluation          import *
-from bindsnet.analysis.plotting   import *
-from bindsnet.datasets            import MNIST
-from bindsnet.encoding            import get_poisson
+from bindsnet.evaluation        import *
+from bindsnet.analysis.plotting import *
+from bindsnet.datasets          import MNIST
+from bindsnet.learning          import post_pre
+from bindsnet.encoding          import get_poisson
 
-from bindsnet.network             import Network
-from bindsnet.network.monitors    import Monitor
-from bindsnet.network.connections import Connection, post_pre
-from bindsnet.network.nodes       import AdaptiveLIFNodes, LIFNodes, Input
+from bindsnet.network           import Network
+from bindsnet.network.monitors  import Monitor
+from bindsnet.network.topology  import Connection
+from bindsnet.network.nodes     import AdaptiveLIFNodes, LIFNodes, Input
 
 
 def get_square_weights(weights, n_sqrt):

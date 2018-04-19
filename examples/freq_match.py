@@ -5,16 +5,16 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from time                         import time
+from time                       import time
 
-from bindsnet.analysis.plotting   import *
-from bindsnet.network             import Network
-from bindsnet.encoding            import get_bernoulli
+from bindsnet.analysis.plotting import *
+from bindsnet.network           import Network
+from bindsnet.learning          import m_stdp_et
+from bindsnet.encoding          import get_bernoulli
 
-from bindsnet.network.monitors    import Monitor
-from bindsnet.network.nodes       import LIFNodes, Input
-from bindsnet.network.connections import Connection
-from bindsnet.network.learning    import m_stdp_et
+from bindsnet.network.monitors  import Monitor
+from bindsnet.network.nodes     import LIFNodes, Input
+from bindsnet.network.topology  import Connection
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', type=int, default=100)

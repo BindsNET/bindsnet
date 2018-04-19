@@ -5,15 +5,11 @@ import numpy  as np
 import pickle as p
 import matplotlib.pyplot as plt
 
-from time        import time, sleep
+from time                      import time, sleep
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'datasets')))
-
-from network     import Network, NetworkMonitor
-from connections import Connection
-from nodes       import Input, LIFNodes
+from bindsnet.network.topology import Connection
+from bindsnet.network.nodes    import Input, LIFNodes
+from bindsnet.network          import Network, NetworkMonitor
 
 # Build a network.
 network = Network()

@@ -5,20 +5,20 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from time                         import sleep
-from timeit                       import default_timer
-from mpl_toolkits.axes_grid1      import make_axes_locatable
+from time                       import sleep
+from timeit                     import default_timer
+from mpl_toolkits.axes_grid1    import make_axes_locatable
 
-from bindsnet.evaluation          import *
-from bindsnet.analysis.plotting   import *
-from bindsnet.network             import Network
-from bindsnet.encoding            import get_bernoulli
-from bindsnet.environment         import SpaceInvaders
+from bindsnet.evaluation        import *
+from bindsnet.analysis.plotting import *
+from bindsnet.network           import Network
+from bindsnet.learning          import m_stdp_et
+from bindsnet.encoding          import get_bernoulli
+from bindsnet.environment       import SpaceInvaders
 
-from bindsnet.network.monitors    import Monitor
-from bindsnet.network.nodes       import LIFNodes, Input
-from bindsnet.network.connections import Connection, m_stdp_et
-
+from bindsnet.network.monitors  import Monitor
+from bindsnet.network.nodes     import LIFNodes, Input
+from bindsnet.network.topology  import Connection
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
