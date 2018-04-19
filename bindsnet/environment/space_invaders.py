@@ -22,8 +22,6 @@ from bindsnet.network.learning    import hebbian
 from bindsnet.network.connections import Connection 
 from bindsnet.network.nodes       import LIFNodes, Input
 
-plt.ion()
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
