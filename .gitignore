@@ -102,3 +102,10 @@ ENV/
 
 # Datasets.
 data/
+!data/get_MNIST.sh
+
+# LSM data.
+lsm/
+
+# Results from network monitoring test.
+results/
