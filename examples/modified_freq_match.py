@@ -5,7 +5,7 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from time                       import time
+from time                         import time
 
 from bindsnet.analysis.plotting import *
 from bindsnet.learning          import *
@@ -18,9 +18,10 @@ from bindsnet.network.topology  import Connection
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', type=int, default=100)
-parser.add_argument('-i', type=int, default=300000)
+parser.add_argument('-i', type=int, default=100000)
 parser.add_argument('--plot_interval', type=int, default=500)
 parser.add_argument('--print_interval', type=int, default=25)
+parser.add_argument('--change_interval', type=int, default=10000)
 parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
 parser.set_defaults(plot=False, gpu=False, train=True)
@@ -28,13 +29,13 @@ locals().update(vars(parser.parse_args()))
 
 sqrt = int(np.sqrt(n))
 
-network = Network(dt=1)
+network = Network(dt=1.0)
 
 inpt = Input(n, traces=True)
-output = LIFNodes(n, traces=True, rest=-70.0, threshold=-54.0, voltage_decay=1 / 2000)
+output = LIFNodes(n, traces=True)
 
-w = 1.25 * torch.rand(n, n)
-conn = Connection(inpt, output, w=w, update_rule=m_stdp, nu=0.05, wmin=0, wmax=1.25)
+w = 1 * torch.rand(n, n)
+conn = Connection(inpt, output, w=w, update_rule=m_stdp_et, nu=10, wmin=0, wmax=1)
 
 network.add_layer(inpt, 'X')
 network.add_layer(output, 'Y')
@@ -47,33 +48,42 @@ for layer in spike_monitors:
 data = torch.rand(i, n)
 loader = get_bernoulli(data, time=1, max_prob=0.05)
 
-reward = 0
+reward = 1e-4
 a_plus = 1
-a_minus = -1
+a_minus = 0
 
 avg_rates = torch.zeros(n)
-target_rates = 0.02 + (torch.rand(n) * (0.08 - 0.02)) 
+target_rates = 0.03 + torch.rand(n) / 20
+
 distances = [torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))]
+rewards = [reward]
+
 spike_record = {layer : torch.zeros(plot_interval, n) for layer in network.layers}
 
 print()
 for i in range(i):
-	inpts = {'X' : next(loader)}
+	if i > 0 and i % change_interval == 0:
+		avg_rates = torch.zeros(n)
+		target_rates = 0.03 + torch.rand(n) / 20
 	
-	kwargs = {'dt' : 1, 'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
+	inpts = {'X' : next(loader)}
+	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
 	network.run(inpts, 1, **kwargs)
 	
 	spikes = {layer : spike_monitors[layer].get('s').view(-1) for layer in spike_monitors}
 	for layer in spike_record:
 		spike_record[layer][i % plot_interval] = spikes[layer]
 	
-	if i == 0:
+	a = i % change_interval
+	if a == 0:
 		avg_rates = spikes['Y']
 	else:
-		avg_rates = ((i - 1) / i) * avg_rates + (1 / i) * spikes['Y']
+		avg_rates = ((a - 1) / a) * avg_rates + (1 / a) * spikes['Y']
+	
+	reward = target_rates - avg_rates
+	rewards.append(reward.sum())
 	
 	distance = torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))
-	reward = np.sign(distances[-1] - distance)
 	distances.append(distance)
 	
 	if i % print_interval == 0:
@@ -96,11 +106,13 @@ for i in range(i):
 			cbar = plt.colorbar(im)
 			
 			fig2, ax2 = plt.subplots()
-			line2, = ax2.plot(distances)
+			line2, = ax2.semilogy(distances, label='Distance')
+			# line3, = ax2.semilogy(np.abs(rewards), label='Reward')
 			ax2.axhline(0, ls='--', c='r')
-			ax2.set_title('Sum of squared distances over time')
+			ax2.set_title('Sum of squared differences over time')
 			ax2.set_xlabel('Timesteps')
-			ax2.set_ylabel('Abs. value reward')
+			ax2.set_ylabel('Sum of squared differences')
+			plt.legend()
 			
 			plt.pause(1e-8)
 
@@ -114,8 +126,17 @@ for i in range(i):
 			cbar.set_ticks(cbar_ticks) 
 			cbar.draw_all()
 			
-			line2.set_xdata(range(len(distances)))
-			line2.set_ydata(distances)
+			if not len(distances) > change_interval:
+				line2.set_xdata(range(len(distances)))
+				line2.set_ydata(distances)
+				# line3.set_xdata(range(len(rewards)))
+				# line3.set_ydata(np.abs(rewards))
+			else:
+				line2.set_xdata(range(len(distances) - change_interval, len(distances)))
+				line2.set_ydata(distances[-change_interval:])
+				# line3.set_xdata(range(len(rewards) - change_interval, len(rewards)))
+				# line3.set_ydata(np.abs(rewards[-change_interval:]))
+			
 			ax2.relim() 
 			ax2.autoscale_view(True, True, True) 
 
