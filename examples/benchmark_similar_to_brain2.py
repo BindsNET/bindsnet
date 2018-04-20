@@ -18,20 +18,20 @@ from analysis.plotting import plot_spikes, plot_weights
 
 
 ## param
-gpu = True
+
+gpu = False
 n = 0
 dt = 1.0
 run_time = 1000 # 1000 = 1s
-tests = 6
+tests = 11
 
-if gpu:
-	torch.set_default_tensor_type('torch.cuda.FloatTensor')
-
-for N in range(5):
-	torch.cuda.empty_cache()
-	n = n + 1000
+for N in range(1000):
+	n= n + 200
 	n_e = int(n * 0.8)
 	n_i = n - n_e
+
+	if gpu:
+		torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 	# Build network.
 	network = Network(dt=dt)
@@ -100,3 +100,4 @@ for N in range(5):
 	#
 	#import matplotlib.pyplot as plt
 	#plt.show()
+
