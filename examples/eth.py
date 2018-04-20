@@ -124,7 +124,6 @@ network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 images, labels = MNIST(path=os.path.join('..', 'data')).get_train()
 images *= intensity
 images /= 4  # Normalize and enforce minimum expected inter-spike interval.
-# images = images.view(images.size(0), -1)  # Flatten images to one dimension.
 
 # Lazily encode data as Poisson spike trains.
 data_loader = get_poisson(data=images, time=time)
