@@ -28,13 +28,13 @@ locals().update(vars(parser.parse_args()))
 
 sqrt = int(np.sqrt(n))
 
-network = Network(dt=1.0)
+network = Network(dt=1)
 
 inpt = Input(n, traces=True)
 output = LIFNodes(n, traces=True)
 
-w = 1 * torch.rand(n, n)
-conn = Connection(inpt, output, w=w, update_rule=m_stdp_et, nu=1, wmin=0, wmax=1)
+w = 1.25 * torch.rand(n, n)
+conn = Connection(inpt, output, w=w, update_rule=m_stdp_et, nu=1e-4, wmin=0, wmax=1.25)
 
 network.add_layer(inpt, 'X')
 network.add_layer(output, 'Y')
@@ -49,19 +49,18 @@ loader = get_bernoulli(data, time=1, max_prob=0.05)
 
 reward = 0
 a_plus = 1
-a_minus = 0
+a_minus = -1
 
 avg_rates = torch.zeros(n)
-target_rates = 0.03 + torch.rand(n) / 20
-
+target_rates = 0.02 + (torch.rand(n) * 0.08) 
 distances = [torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))]
-
 spike_record = {layer : torch.zeros(plot_interval, n) for layer in network.layers}
 
 print()
 for i in range(i):
 	inpts = {'X' : next(loader)}
-	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
+	
+	kwargs = {'dt' : 1, 'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
 	network.run(inpts, 1, **kwargs)
 	
 	spikes = {layer : spike_monitors[layer].get('s').view(-1) for layer in spike_monitors}
@@ -73,8 +72,9 @@ for i in range(i):
 	else:
 		avg_rates = ((i - 1) / i) * avg_rates + (1 / i) * spikes['Y']
 	
-	reward = target_rates - avg_rates
 	distance = torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))
+	reward = np.sign(distances[-1] - distance)
+	
 	distances.append(distance)
 	
 	if i % print_interval == 0:

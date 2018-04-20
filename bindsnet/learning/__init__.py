@@ -35,7 +35,8 @@ def m_stdp_et(conn, **kwargs):
 	Reward-modulated STDP with eligibility trace. Adapted from
 	https://florian.io/papers/2007_Florian_Modulated_STDP.pdf.
 	'''
-	# Get reward from this iteration.
+	# Get arguments to MSTDPET function.
+	dt = kwargs['dt']
 	reward = kwargs['reward']
 	a_plus = kwargs['a_plus']
 	a_minus = kwargs['a_minus']
@@ -49,10 +50,13 @@ def m_stdp_et(conn, **kwargs):
 	post_fire = conn.target.s.float().unsqueeze(0)
 	
 	# Calculate value of eligibility trace.
-	et_trace = p_plus * post_fire + pre_fire * p_minus
+	e_trace = -dt * conn.e_trace + (p_plus * post_fire + pre_fire * p_minus)
 	
 	# Compute weight update.
-	conn.w += conn.nu * reward * et_trace
+	conn.w += conn.nu * reward * e_trace
 	
 	# Bound weights.
 	conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+	
+	# Set eligibility trace to be used in next iteration.
+	conn.e_trace = e_trace

@@ -1,6 +1,6 @@
 import torch
 
-from ..learning import no_update
+from ..learning import *
 
 
 class Connection:
@@ -34,7 +34,11 @@ class Connection:
 		if update_rule is None:
 			self.update_rule = no_update
 		else:
+			if update_rule is m_stdp_et:
+				self.e_trace = 0
+				
 			self.update_rule = update_rule
+		
 
 		if w is None:
 			self.w = torch.rand(*source.shape, *target.shape)
