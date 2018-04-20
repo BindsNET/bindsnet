@@ -7,15 +7,15 @@ def get_poisson(data, time):
 	Generates Poisson spike trains based on input intensity. Inputs must be
 	non-negative. Spike inter-arrival times are inversely proportional to
 	input magnitude, so data must be scaled according to desired spike frequency.
-    
-    Inputs:
-        data (torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_samples, n_1,
-            ..., n_k], with arbitrary sample dimensionality [n_1, ..., n_k].
-        time (int): Length of Poisson spike train per input variable.
-    
-    Yields:
-        (torch.Tensor or torch.cuda.Tensor): Tensors with shape [time, n_1, ..., n_k], with
-            Poisson-distributed spikes parameterized by the data values.
+	
+	Inputs:
+		data (torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_samples, n_1,
+			..., n_k], with arbitrary sample dimensionality [n_1, ..., n_k].
+		time (int): Length of Poisson spike train per input variable.
+
+	Yields:
+		(torch.Tensor or torch.cuda.Tensor): Tensors with shape [time, n_1, ..., n_k], with
+			Poisson-distributed spikes parameterized by the data values.
 	'''
 	n_samples = data.size(0)  # Number of samples
 	data = np.copy(data)
@@ -28,7 +28,7 @@ def get_poisson(data, time):
 
 		# Invert inputs (input intensity inversely
 		# proportional to spike inter-arrival time).
-		datum[datum != 0] = 1 / datum[datum != 0]
+		datum[datum != 0] = 1 / datum[datum != 0] * 1000
 
 		# Make spike data from Poisson sampling.
 		s_times = np.random.poisson(datum, [time, size])
@@ -47,7 +47,7 @@ def get_poisson(data, time):
 		yield torch.Tensor(s).byte()
 
 
-def get_bernoulli(data, time, max_prob=1.0):
+def get_bernoulli(data, time=None, max_prob=1.0):
 	'''
 	Generates Bernoulli-distributed spike trains based on input intensity. Inputs must
 	be non-negative. Spikes correspond to successful Bernoulli trials, with success
@@ -74,8 +74,12 @@ def get_bernoulli(data, time, max_prob=1.0):
 		datum *= max_prob
 
 		# Make spike data from Bernoulli sampling.
-		s = np.random.binomial(1, datum, [time, size])
-		s = s.reshape([time, *shape])
+		if time is None:
+			s = np.random.binomial(1, datum, [size])
+			s = s.reshape([*shape])
+		else:
+			s = np.random.binomial(1, datum, [time, size])
+			s = s.reshape([time, *shape])
 
 		# Yield Bernoulli-distributed spike trains.
 		yield torch.Tensor(s).byte()

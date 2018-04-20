@@ -16,7 +16,9 @@ from connections       import Connection, post_pre
 from nodes             import LIFNodes, Input
 from analysis.plotting import plot_spikes, plot_weights
 
+
 ## param
+
 gpu = False
 n = 0
 dt = 1.0
@@ -98,3 +100,4 @@ for N in range(1000):
 	#
 	#import matplotlib.pyplot as plt
 	#plt.show()
+
