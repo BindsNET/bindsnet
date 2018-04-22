@@ -110,7 +110,7 @@ class SpaceInvaders:
 		Returns:
 			obs (torch.Tensor): Pre-processed observation.
 		'''
-		obs = subsample(gray_scale(obs), 84, 110)
+		obs = subsample( gray_scale(obs), 84, 110 )
 		obs = obs[26:110, :]
 		obs = binary_image(obs)
 		obs = np.reshape(obs, (84, 84, 1))

@@ -18,7 +18,7 @@ from bindsnet.encoding            import get_bernoulli
 from bindsnet.environment         import SpaceInvaders
 
 from bindsnet.network.monitors    import Monitor
-from bindsnet.network.learning    import hebbian
+from bindsnet.network.learning    import post_pre
 from bindsnet.network.connections import Connection 
 from bindsnet.network.nodes       import LIFNodes, Input
 
@@ -45,53 +45,61 @@ network = Network(dt=dt)
 
 # Layers of neurons.
 inpt = Input(n=7056, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
-layers = {'X' : inpt, 'E' : exc, 'R' : readout}
+
+strings = range(1, 6)
+exc = {'E%d'%(i): LIFNodes(n=n_neurons, refractory=0, traces=True) for i in strings} # Excitatory layer(s)
+readout = {'R%d'%(i): LIFNodes(n=1, refractory=0, traces=True) for i in strings}     # Readout layer(s)
+
+layers = {**exc, **readout}
+layers['X'] = inpt
 
 # Connections between layers.
-# Input -> excitatory.
-w = 0.01 * torch.rand(layers['X'].n, layers['E'].n)
-input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=0.02)
+# Input -> excitatory (5 layers).
+w = {'E%d'%(i): 0.01 * torch.rand(layers['X'].n, layers['E%d'%(i)].n) for i in strings}
+input_exc_conn = {'E%d'%(i): Connection(source=layers['X'], target=layers['E%d'%(i)], w=w['E%d'%(i)], wmax=0.02) for i in strings}
 input_exc_norm = 0.01 * layers['X'].n
 
 # Excitatory -> readout.
-w = 0.01 * torch.rand(layers['E'].n, layers['R'].n)
-exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=w,
-							  update_rule=hebbian, nu_pre=1e-2, nu_post=1e-2)
-exc_readout_norm = 0.5 * layers['E'].n
+w = {'E%d'%(i): 0.01 * torch.rand(layers['E%d'%(i)].n, layers['R%d'%(i)].n) for i in strings}
+exc_readout_conn = {'E%d'%(i): Connection(source=layers['E%d'%(i)], target=layers['R%d'%(i)], w=w['E%d'%(i)],
+							  update_rule=post_pre, nu_pre=1e-2, nu_post=1e-2) for i in strings}
+exc_readout_norm = {'E%d'%(i): 0.5 * layers['E%d'%(i)].n for i in strings}
 
 # Readout -> readout.
-w = -10 * torch.ones(layers['R'].n, layers['R'].n) + 10 * torch.diag(torch.ones(layers['R'].n))
-readout_readout_conn = Connection(source=layers['R'], target=layers['R'], w=w, wmin=-10.0)
+#w = -10 * torch.ones(layers['R'].n, layers['R'].n) + 10 * torch.diag(torch.ones(layers['R'].n))
+#readout_readout_conn = Connection(source=layers['R'], target=layers['R'], w=w, wmin=-10.0)
 
 # Spike recordings for all layers.
 spikes = {}
 for layer in layers:
-	spikes[layer] = Monitor(layers[layer], ['s'], time=plot_interval)
+		spikes[layer] = Monitor(layers[layer], ['s'], time=plot_interval)
 
-# Voltage recordings for excitatory and readout layers.
+# Voltage recordings for excitatory and readout layers
 voltages = {}
 for layer in set(layers.keys()) - {'X'}:
-	voltages[layer] = Monitor(layers[layer], ['v'], time=plot_interval)
+		voltages[layer] = Monitor(layers[layer], ['v'], time=plot_interval)
 
-# Add all layers and connections to the network.
+# Add all layers to the network
 for layer in layers:
-	network.add_layer(layers[layer], name=layer)
+		network.add_layer(layers[layer], name=layer)
 
-network.add_connection(input_exc_conn, source='X', target='E')
-network.add_connection(exc_readout_conn, source='E', target='R')
-network.add_connection(readout_readout_conn, source='R', target='R')
+# Add all connections to the network
+for i in strings:
+	network.add_connection(input_exc_conn['E%d'%(i)], source='X', target='E%d'%(i))
+	network.add_connection(exc_readout_conn['E%d'%(i)], source='E%d'%(i), target='R%d'%(i))
 
-# Add all monitors to the network.
+#network.add_connection(readout_readout_conn, source='R', target='R')
+
+# Add all monitors to the network
 for layer in layers:
 	network.add_monitor(spikes[layer], name='%s_spikes' % layer)
-	
+		
 	if layer in voltages:
 		network.add_monitor(voltages[layer], name='%s_voltages' % layer)
 
 # Normalize adaptable weights.
-network.connections[('E', 'R')].normalize(exc_readout_norm)
+for i in strings:
+	network.connections[('E%d'%(i), 'R%d'%(i))].normalize(exc_readout_norm['E%d'%(i)])
 	
 # Load SpaceInvaders environment.
 env = SpaceInvaders()
@@ -125,10 +133,16 @@ while True:
 		print('Iteration %d' % i)
 
 	# Choose action based on readout neuron spiking.
-	if s == {} or s['R'].sum() == 0:
+	if s == {} or sum([s['R%d'%(i)].sum() for i in strings]) == 0:
 		action = np.random.choice(range(6))
 	else:
-		action = torch.multinomial((s['R'] / s['R'].sum()).view(-1), 1)[0] + 1
+		# Pick max spiking action (No exploration?)
+#		spike_ind, spike_max = max(enumerate([s['R%d'%(i)].sum() for i in strings]))
+#		action = spike_ind + 1
+		
+		# Probability dist over actions
+		all_readout_spikes = sum([s['R%d'%(i)].sum() for i in strings])
+		action = torch.multinomial( torch.Tensor( [s['R%d'%(i)].sum() / all_readout_spikes for i in strings] ).view(-1), 1)[0] + 1
 	
 	# Get observations, reward, done flag, and other information.
 	obs, reward, done, info = env.step(action)
@@ -143,7 +157,8 @@ while True:
 	network.run(inpts=inpts, time=1)
 	
 	# Normalize adaptable weights.
-	network.connections[('E', 'R')].normalize(exc_readout_norm)
+	for i in strings:
+		network.connections[('E%d'%(i), 'R%d'%(i))].normalize(exc_readout_norm['E%d'%(i)])
 	
 	# Get spikes from previous iteration.
 	for layer in layers:
