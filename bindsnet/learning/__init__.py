@@ -48,11 +48,11 @@ def m_stdp(conn, **kwargs):
 	pre_fire = conn.source.s.float().unsqueeze(-1)
 	post_fire = conn.target.s.float().unsqueeze(0)
 	
-	# Calculate value of eligibility trace.
-	e_trace = p_plus * post_fire + pre_fire * p_minus
+	# Calculate point eligibility value.
+	eligibility = p_plus * post_fire + pre_fire * p_minus
 	
 	# Compute weight update.
-	conn.w += conn.nu * reward * e_trace
+	conn.w += conn.nu * reward * eligibility
 	
 	# Bound weights.
 	conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)

@@ -60,7 +60,7 @@ print()
 for i in range(i):
 	inpts = {'X' : next(loader)}
 	
-	kwargs = {'dt' : 1, 'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
+	kwargs = {str(('X', 'Y')) : {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}}
 	network.run(inpts, 1, **kwargs)
 	
 	spikes = {layer : spike_monitors[layer].get('s').view(-1) for layer in spike_monitors}

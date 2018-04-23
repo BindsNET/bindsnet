@@ -35,7 +35,7 @@ inpt = Input(n, traces=True)
 output = LIFNodes(n, traces=True)
 
 w = 1 * torch.rand(n, n)
-conn = Connection(inpt, output, w=w, update_rule=m_stdp_et, nu=10, wmin=0, wmax=1)
+conn = Connection(inpt, output, w=w, update_rule=m_stdp, nu=10, wmin=0, wmax=1)
 
 network.add_layer(inpt, 'X')
 network.add_layer(output, 'Y')
@@ -67,7 +67,7 @@ for i in range(i):
 		target_rates = 0.03 + torch.rand(n) / 20
 	
 	inpts = {'X' : next(loader)}
-	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
+	kwargs = {str(('X', 'Y')) : {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}}
 	network.run(inpts, 1, **kwargs)
 	
 	spikes = {layer : spike_monitors[layer].get('s').view(-1) for layer in spike_monitors}
