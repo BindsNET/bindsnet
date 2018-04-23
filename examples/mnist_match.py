@@ -150,17 +150,33 @@ for i in range(i):
 		sums = []
 		for j in range(10):
 			if gpu:
-				sums.append(np.sum(spike_record['Z'].cpu().numpy()))
+				s = []
+				for k in range(10):
+					s.append(np.sum(spike_record['Y'].cpu().numpy()[k::10].sum(axis=1)))
+				
+				sums = [s, 
+						np.sum(spike_record['Y'].cpu().numpy(), axis=1),
+						np.sum(spike_record['Z'].cpu().numpy(), axis=1)]
 			else:
-				sums.append(np.sum(spike_record['Z'].numpy()))
+				s = []
+				for k in range(10):
+					s.append(np.sum(spike_record['Y'].numpy()[k::10].sum(axis=1)))
+					
+				sums = [s,
+						np.sum(spike_record['Y'].numpy(), axis=1),
+						np.sum(spike_record['Z'].numpy(), axis=1)]
 		
 		a = int(i / change_interval)
 		if a == 1:
-			performance = np.argmax(sums) == lbls[i - 1]
+			p = [np.argmax(sums[0]) == lbls[i - 1],
+						   np.argmax(sums[1]) % 10 == lbls[i - 1],
+						   np.argmax(sums[2]) == lbls[i - 1]]
 		else:
-			performance = ((a - 1) / a) * performance + (1 / a) * int(np.argmax(sums) == lbls[i])
+			p = [((a - 1) / a) * p[0] + (1 / a) * int(np.argmax(sums[0]) == lbls[i - 1]),
+						   ((a - 1) / a) * p[1] + (1 / a) * int(np.argmax(sums[1]) % 10 == lbls[i - 1]),
+						   ((a - 1) / a) * p[2] + (1 / a) * int(np.argmax(sums[2]) == lbls[i - 1])]
 		
-		print('Performance on iteration %d: %.2f' % (i, performance * 100))
+		print('Performance on iteration %d: (%.2f, %.2f, %.2f)' % (i / change_interval, p[0] * 100, p[1] * 100, p[2] * 100))
 		
 	for m in spike_monitors:
 		spike_monitors[m]._reset()
