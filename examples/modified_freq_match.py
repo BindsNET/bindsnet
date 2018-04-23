@@ -31,11 +31,11 @@ sqrt = int(np.sqrt(n))
 
 network = Network(dt=1.0)
 
-inpt = Input(n, traces=True)
+inpt = Input(100, traces=True)
 output = LIFNodes(n, traces=True)
 
-w = 1 * torch.rand(n, n)
-conn = Connection(inpt, output, w=w, update_rule=m_stdp, nu=10, wmin=0, wmax=1)
+w = 1 * torch.rand(100, n)
+conn = Connection(inpt, output, w=w, update_rule=m_stdp, nu=1, wmin=0, wmax=1)
 
 network.add_layer(inpt, 'X')
 network.add_layer(output, 'Y')
@@ -45,7 +45,7 @@ spike_monitors = {layer : Monitor(network.layers[layer], ['s']) for layer in net
 for layer in spike_monitors:
 	network.add_monitor(spike_monitors[layer], '%s' % layer)
 
-data = torch.rand(i, n)
+data = torch.rand(i, 100)
 loader = get_bernoulli(data, time=1, max_prob=0.05)
 
 reward = 1e-4
@@ -58,7 +58,8 @@ target_rates = 0.03 + torch.rand(n) / 20
 distances = [torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))]
 rewards = [reward]
 
-spike_record = {layer : torch.zeros(plot_interval, n) for layer in network.layers}
+spike_record = {'X' : torch.zeros(plot_interval, 100),
+			    'Y' : torch.zeros(plot_interval, n)}
 
 print()
 for i in range(i):
@@ -87,7 +88,7 @@ for i in range(i):
 	distances.append(distance)
 	
 	if i % print_interval == 0:
-		print('Averaged distance (iteration %d):' % i, np.mean(distances))
+		print('Current distance (iteration %d):' % i, np.mean(distances[-1]))
 		
 	for m in spike_monitors:
 		spike_monitors[m]._reset()
@@ -95,19 +96,19 @@ for i in range(i):
 	if plot:
 		if i == 0:
 			spike_ims, spike_axes = plot_spikes(spike_record)
-			weights_im = plot_weights(conn.w.view(n, n))
-
+			weights_im = plot_weights(conn.w.view(100, n))
+			
 			fig, ax = plt.subplots()
-			im = ax.matshow(torch.stack([avg_rates, target_rates]), cmap='hot_r')
-			ax.set_xticks(()); ax.set_yticks([0, 1])
-			ax.set_yticklabels(['Actual', 'Targets'])
+			im = ax.matshow(torch.stack([avg_rates, target_rates, torch.abs(avg_rates - target_rates)]), cmap='hot_r')
+			ax.set_xticks(()); ax.set_yticks([0, 1, 2])
+			ax.set_yticklabels(['Actual rates', 'Target rates', 'Differences'])
 			ax.set_aspect('auto')
 			ax.set_title('Difference between target and actual firing rates.')
 			cbar = plt.colorbar(im)
+			plt.tight_layout()
 			
 			fig2, ax2 = plt.subplots()
 			line2, = ax2.semilogy(distances, label='Distance')
-			# line3, = ax2.semilogy(np.abs(rewards), label='Reward')
 			ax2.axhline(0, ls='--', c='r')
 			ax2.set_title('Sum of squared differences over time')
 			ax2.set_xlabel('Timesteps')
@@ -118,9 +119,9 @@ for i in range(i):
 
 		elif i % plot_interval == 0:
 			spike_ims, spike_axes = plot_spikes(spike_record, spike_ims, spike_axes)
-			weights_im = plot_weights(conn.w.view(n, n), im=weights_im)
+			weights_im = plot_weights(conn.w.view(100, n), im=weights_im)
 
-			im.set_data(torch.stack([avg_rates, target_rates]))
+			im.set_data(torch.stack([avg_rates, target_rates, torch.abs(avg_rates - target_rates)]))
 			cbar.set_clim(vmin=0, vmax=max(avg_rates))
 			cbar_ticks = np.linspace(0., max(avg_rates), num=11, endpoint=True)
 			cbar.set_ticks(cbar_ticks) 
@@ -129,13 +130,9 @@ for i in range(i):
 			if not len(distances) > change_interval:
 				line2.set_xdata(range(len(distances)))
 				line2.set_ydata(distances)
-				# line3.set_xdata(range(len(rewards)))
-				# line3.set_ydata(np.abs(rewards))
 			else:
 				line2.set_xdata(range(len(distances) - change_interval, len(distances)))
 				line2.set_ydata(distances[-change_interval:])
-				# line3.set_xdata(range(len(rewards) - change_interval, len(rewards)))
-				# line3.set_ydata(np.abs(rewards[-change_interval:]))
 			
 			ax2.relim() 
 			ax2.autoscale_view(True, True, True) 
