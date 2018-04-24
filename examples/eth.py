@@ -185,7 +185,7 @@ for i in range(n_train):
 	inh_voltages = inh_voltage_monitor.get('v')
 	
 	# Add to spikes recording.
-	spike_record[i % update_interval] = spikes['Ae'].get('s')
+	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
 	
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	

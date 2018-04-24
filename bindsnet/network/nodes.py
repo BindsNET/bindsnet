@@ -309,6 +309,7 @@ class LIFNodes(Nodes):
 		# Check for spiking neurons.
 		self.s = (self.v >= self.threshold) * (self.refrac_count <= 0)
 		self.refrac_count[self.s] = self.refractory
+		
 		self.v[self.s] = self.reset
 		
 		# Integrate inputs.

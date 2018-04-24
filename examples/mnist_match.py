@@ -104,7 +104,7 @@ for i in range(i):
 		for j in np.random.choice(range(n)[lbls[i]::10], clamped, replace=False):
 			target_rates[j] = target_rate
 		
-	inpts = {'X' : next(loader)}
+	inpts = {'X' : next(loader).view(1, 784)}
 	kwargs = {str(('X', 'Y')) : {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}}
 	
 	network.run(inpts, 1, **kwargs)

@@ -54,17 +54,17 @@ class Monitor:
 		if self.time is None:
 			for var in self.state_vars:
 				data = self.obj.__dict__[var].view(-1, 1).float()
-				self.recording[var] = torch.cat([self.recording[var], data], 1)
+				self.recording[var] = torch.cat([self.recording[var], data], -1)
 		else:
 			for var in self.state_vars:
 				data = self.obj.__dict__[var].unsqueeze(-1)
 				
 				# 1D data.
 				if len(data.size()) - 1 == 1:
-					self.recording[var][:, self.i % self.time] = data
+					self.recording[var][:, self.i % self.time] = data.squeeze()
 				# 2D data.
 				elif len(data.size()) - 1 == 2:
-					self.recording[var][:, :, self.i % self.time] = data
+					self.recording[var][:, :, self.i % self.time] = data.squeeze()
 		
 			self.i += 1
 

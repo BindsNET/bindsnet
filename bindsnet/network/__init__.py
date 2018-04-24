@@ -1,7 +1,9 @@
 import torch
 import pickle as p
 
-from bindsnet.network.nodes import Input
+from .nodes    import *
+from .topology import *
+from .monitors import *
 
 
 def load_network(fname):

@@ -88,7 +88,7 @@ for i in range(i):
 	distances.append(distance)
 	
 	if i % print_interval == 0:
-		print('Current distance (iteration %d):' % i, np.mean(distances[-1]))
+		print('Current distance (iteration %d): %.4f' % (i, distances[-1].item()))
 		
 	for m in spike_monitors:
 		spike_monitors[m]._reset()
