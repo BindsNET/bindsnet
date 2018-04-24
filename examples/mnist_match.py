@@ -23,7 +23,7 @@ parser.add_argument('-i', type=int, default=500 * 1000)
 parser.add_argument('--intensity', type=float, default=2.0)
 parser.add_argument('--clamped', type=int, default=5)
 parser.add_argument('--target_rate', type=float, default=0.03)
-parser.add_argument('--low_rate', type=float, default=0.001)
+parser.add_argument('--low_rate', type=float, default=0.0)
 parser.add_argument('--plot_interval', type=int, default=500)
 parser.add_argument('--print_interval', type=int, default=25)
 parser.add_argument('--change_interval', type=int, default=500)
@@ -121,7 +121,7 @@ for i in range(i):
 		avg_rates = ((a - 1) / a) * avg_rates + (1 / a) * spikes['Y']
 	
 	reward = target_rates - avg_rates
-	reward[reward < 0] = -0.001
+	reward[reward < 0] = 0
 	reward[reward > 0] = 0.1
 	rewards.append(reward.sum())
 	distance = torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))

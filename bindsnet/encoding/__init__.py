@@ -42,7 +42,7 @@ def get_poisson(data, time):
 
 		s[0, :] = 0
 		s = s.reshape([time, *shape])
-
+		
 		# Yield Poisson-distributed spike trains.
 		yield torch.Tensor(s).byte()
 

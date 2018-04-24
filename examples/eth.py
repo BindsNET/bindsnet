@@ -198,7 +198,7 @@ for i in range(n_train):
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		
 		if i == 0:
-			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
+			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt.t(), label=labels[i])
 			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes})
 			weights_im = plot_weights(square_weights)
 			assigns_im = plot_assignments(square_assignments)
@@ -206,7 +206,7 @@ for i in range(n_train):
 			voltage_ims, voltage_axes = plot_voltages(voltages)
 			
 		else:
-			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
+			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt.t(), label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes},
 												ims=spike_ims, axes=spike_axes)
 			weights_im = plot_weights(square_weights, im=weights_im)

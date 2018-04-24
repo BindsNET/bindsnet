@@ -30,10 +30,10 @@ sqrt = int(np.sqrt(n))
 
 network = Network(dt=1)
 
-inpt = Input(n, traces=True)
+inpt = Input(100, traces=True)
 output = LIFNodes(n, traces=True, rest=-70.0, threshold=-54.0, voltage_decay=1 / 2000)
 
-w = 1.25 * torch.rand(n, n)
+w = 1.25 * torch.rand(100, n)
 conn = Connection(inpt, output, w=w, update_rule=m_stdp, nu=0.05, wmin=0, wmax=1.25)
 
 network.add_layer(inpt, 'X')
@@ -44,7 +44,7 @@ spike_monitors = {layer : Monitor(network.layers[layer], ['s']) for layer in net
 for layer in spike_monitors:
 	network.add_monitor(spike_monitors[layer], '%s' % layer)
 
-data = torch.rand(i, n)
+data = torch.rand(i, 100)
 loader = get_bernoulli(data, time=1, max_prob=0.05)
 
 reward = 0
@@ -54,7 +54,8 @@ a_minus = -1
 avg_rates = torch.zeros(n)
 target_rates = 0.02 + (torch.rand(n) * (0.08 - 0.02)) 
 distances = [torch.sum(torch.sqrt((target_rates - avg_rates) ** 2))]
-spike_record = {layer : torch.zeros(plot_interval, n) for layer in network.layers}
+spike_record = {'X' : torch.zeros(plot_interval, 100),
+			    'Y' : torch.zeros(plot_interval, n)}
 
 print()
 for i in range(i):
@@ -85,7 +86,7 @@ for i in range(i):
 	if plot:
 		if i == 0:
 			spike_ims, spike_axes = plot_spikes(spike_record)
-			weights_im = plot_weights(conn.w.view(n, n))
+			weights_im = plot_weights(conn.w.view(100, n))
 
 			fig, ax = plt.subplots()
 			im = ax.matshow(torch.stack([avg_rates, target_rates]), cmap='hot_r')
@@ -106,7 +107,7 @@ for i in range(i):
 
 		elif i % plot_interval == 0:
 			spike_ims, spike_axes = plot_spikes(spike_record, spike_ims, spike_axes)
-			weights_im = plot_weights(conn.w.view(n, n), im=weights_im)
+			weights_im = plot_weights(conn.w.view(100, n), im=weights_im)
 
 			im.set_data(torch.stack([avg_rates, target_rates]))
 			cbar.set_clim(vmin=0, vmax=max(avg_rates))
