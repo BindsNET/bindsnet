@@ -13,31 +13,34 @@ class Pipeline:
 		
 		# Create figures based on desired plots inside kwargs
 		self.axs, self.ims = self.plot()
+		self.time = kwargs['time']
+		self.render = kwargs['render']
+		self.analysis = kwargs['analysis']
 		
 		
-	def step(self, time, render=False, plot=False):
+	def step(self):
 		'''
-		
+		Step through an iteration 
 		'''
 		
 		# Get input from the environment
 		inpts = self.env.get()
 		
 		# Run the network
-		self.network.run(inpts=inpts, time=time)
+		self.network.run(inpts=inpts, time=self.time)
 		
 		# If an instance of OpenAI gym environment
 		#obs, reward, done, info = env.step(action)
 		
 		# Update the plots
-		if plot:
+		if self.analysis:
 			self.plot()
 		
 		# Based on the environment we could want to render
-		if render:
+		if self.render:
 			self.env.render()
 	
-	def plot(self, inpt):
+	def plot(self):
 		'''
 		Plot monitor variables or desired variables?
 		'''
@@ -51,6 +54,13 @@ class Pipeline:
 	def normalize(self, src, target, norm):
 		self.network.connections[(src, target)].normalize(norm)
 	
+	
+	def reset(self):
+		'''
+		Reset the entire pipeline
+		'''
+		self.env.reset()
+		self.network._reset()
 	
 	
 	
