@@ -44,7 +44,7 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(n=7056, traces=True)  # Input layer
+inpt = Input(n=6216, traces=True)  # Input layer
 exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
 readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
@@ -157,7 +157,7 @@ while True:
 			
 			g_fig = plt.figure()
 			g_axes = g_fig.add_subplot(111)
-			g_pic = g_axes.imshow(obs.numpy().reshape(84, 84), cmap='gray')
+			g_pic = g_axes.imshow(obs.numpy().reshape(74, 84), cmap='gray')
 
 			w_fig, w_axes = plt.subplots(2, 1)
 			

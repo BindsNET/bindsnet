@@ -56,3 +56,5 @@ def m_stdp_et(conn, **kwargs):
 	
 	# Bound weights.
 	conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+	
+	

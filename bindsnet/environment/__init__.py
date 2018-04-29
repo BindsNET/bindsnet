@@ -1,6 +1,5 @@
 import os
 import sys
-import cv2
 import gym
 import torch
 import numpy as np
@@ -111,9 +110,11 @@ class SpaceInvaders:
 			obs (torch.Tensor): Pre-processed observation.
 		'''
 		obs = subsample( gray_scale(obs), 84, 110 )
-		obs = obs[26:110, :]
+		print (obs.shape)
+		sys.exit(0)
+		obs = obs[26:100, :]
 		obs = binary_image(obs)
-		obs = np.reshape(obs, (84, 84, 1))
+		#obs = np.reshape(obs, (74, 84, 1))
 		obs = torch.from_numpy(obs).view(1, -1).float()
 		return obs
 		

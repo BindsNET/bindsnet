@@ -12,13 +12,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from bindsnet.evaluation          import *
 from bindsnet.analysis.plotting   import *
 from bindsnet.datasets.preprocess import *
+from bindsnet.network.learning    import *
 
 from bindsnet.network             import Network
 from bindsnet.encoding            import get_bernoulli
 from bindsnet.environment         import SpaceInvaders
 
 from bindsnet.network.monitors    import Monitor
-from bindsnet.network.learning    import post_pre
+from bindsnet.network.learning    import *
 from bindsnet.network.connections import Connection 
 from bindsnet.network.nodes       import LIFNodes, Input
 
@@ -62,7 +63,7 @@ input_exc_norm = 0.01 * layers['X'].n
 # Excitatory -> readout.
 w = {'E%d'%(i): 0.01 * torch.rand(layers['E%d'%(i)].n, layers['R%d'%(i)].n) for i in strings}
 exc_readout_conn = {'E%d'%(i): Connection(source=layers['E%d'%(i)], target=layers['R%d'%(i)], w=w['E%d'%(i)],
-							  update_rule=post_pre, nu_pre=1e-2, nu_post=1e-2) for i in strings}
+							  update_rule=m_stdp_et, nu_pre=1e-2, nu_post=1e-2) for i in strings}
 exc_readout_norm = {'E%d'%(i): 0.5 * layers['E%d'%(i)].n for i in strings}
 
 # Readout -> readout.
@@ -154,7 +155,7 @@ while True:
 	inpts.update({'X' : obs})
 	
 	# Run the network on the input.
-	network.run(inpts=inpts, time=1)
+	network.run(inpts=inpts, time=1, {'reward': reward, 'a_plus':0, 'a_minus':0})
 	
 	# Normalize adaptable weights.
 	for i in strings:
