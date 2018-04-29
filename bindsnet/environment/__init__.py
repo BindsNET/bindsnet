@@ -6,15 +6,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from bindsnet.datasets.preprocess import *
+from bindsnet.encoding            import *
 from skimage.measure              import block_reduce
-from bindsnet.encoding            import get_bernoulli
+
 
 
 class SpaceInvaders:
 	'''
 	A wrapper around the SpaceInvaders-v0 OpenAI gym environment.
 	'''
-	def __init__(self, max_prob=0.25, diffs=True):
+	def __init__(self, max_prob=0.25, diffs=True, encode_func=get_bernoulli):
 		'''
 		Initializes the OpenAI Gym Space Invaders environment wrapper.
 		
@@ -23,10 +24,12 @@ class SpaceInvaders:
 				Bernoulli trial spiking probability.
 			diffs (bool): Whether to record previous
 				frame and take difference for new frame.
+			encode_func (bindsnet.encoding): Encoding of spikes
 		'''
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
 		self.diffs = diffs
+		self.encode = encode_func
 
 	def step(self, a):
 		'''
@@ -36,10 +39,10 @@ class SpaceInvaders:
 			a (int): Action to take in Space Invaders environment.
 		
 		Returns:
-			(torch.Tensor): Observation from the environment.
-			(float): Reward signal from the environment.
-			(bool): Indicates whether the simulation has finished.
-			(dict): Current information about the environment.
+			obs (torch.Tensor): Observation from the environment.
+			reward (float): Reward signal from the environment.
+			done (bool): Indicates whether the simulation has finished.
+			info (dict): Current information about the environment.
 		'''
 		# Call gym's environment step function.
 		obs, reward, done, info = self.env.step(a)
@@ -48,25 +51,32 @@ class SpaceInvaders:
 		#obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
 		#obs = torch.from_numpy(obs).view(1, -1).float()
 		
-		obs = self.pre_process(obs)
+#		obs = self.pre_process(obs)
 		
 		# Calculate difference and store previous frame.
-		if self.diffs:
-			obs = torch.clamp(obs - self.previous, 0, 1)
-			self.previous = obs
+#		if self.diffs:
+#			obs = torch.clamp(obs - self.previous, 0, 1)
+#			self.previous = obs
 		
 		# convert to Bernoulli-distributed spikes.
-		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
+#		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
 		
+		obs = self.get_input(obs)
 		# Return converted observations and other information.
 		return obs.view(1, -1), reward, done, info
 
+
+	def get_input(self, obs):
+		obs = self.pre_process(obs)
+		obs = next(self.encode(obs, max_prob=self.max_prob))
+		return obs
+		
 	def reset(self):
 		'''
 		Wrapper around the OpenAI Gym environment `reset()` function.
 		
 		Returns:
-			(torch.Tensor): Observation from the environment.
+			obs (torch.Tensor): Observation from the environment.
 		'''
 		# Call gym's environment reset function.
 		obs = self.env.reset()
@@ -82,7 +92,7 @@ class SpaceInvaders:
 			self.previous = obs
 		
 		# Convert to Bernoulli-distributed spikes.
-		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
+		obs = next(self.encode(obs, max_prob=self.max_prob))
 		
 		# Return converted observations.
 		return obs.view(1, -1)
@@ -110,11 +120,9 @@ class SpaceInvaders:
 			obs (torch.Tensor): Pre-processed observation.
 		'''
 		obs = subsample( gray_scale(obs), 84, 110 )
-		print (obs.shape)
-		sys.exit(0)
 		obs = obs[26:100, :]
 		obs = binary_image(obs)
-		#obs = np.reshape(obs, (74, 84, 1))
+		obs = np.reshape(obs, (74, 84, 1))
 		obs = torch.from_numpy(obs).view(1, -1).float()
 		return obs
 		
