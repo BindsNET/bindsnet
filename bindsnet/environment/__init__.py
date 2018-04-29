@@ -51,7 +51,7 @@ class SpaceInvaders:
 		#obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
 		#obs = torch.from_numpy(obs).view(1, -1).float()
 		
-#		obs = self.pre_process(obs)
+		obs = self.pre_process(obs)
 		
 		# Calculate difference and store previous frame.
 #		if self.diffs:
@@ -61,16 +61,11 @@ class SpaceInvaders:
 		# convert to Bernoulli-distributed spikes.
 #		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
 		
-		obs = self.get_input(obs)
+#		obs = self.get_input(obs)
 		# Return converted observations and other information.
-		return obs.view(1, -1), reward, done, info
+		return obs, reward, done, info
 
 
-	def get_input(self, obs):
-		obs = self.pre_process(obs)
-		obs = next(self.encode(obs, max_prob=self.max_prob))
-		return obs
-		
 	def reset(self):
 		'''
 		Wrapper around the OpenAI Gym environment `reset()` function.
