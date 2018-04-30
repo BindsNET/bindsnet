@@ -3,26 +3,31 @@ import sys
 import gym
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
 
-from skimage.measure   import block_reduce
-from bindsnet.encoding import get_bernoulli
+from bindsnet.datasets.preprocess import *
+from bindsnet.encoding            import *
+from skimage.measure              import block_reduce
+
 
 
 class SpaceInvaders:
 	'''
 	A wrapper around the :code:`SpaceInvaders-v0` OpenAI gym environment.
 	'''
-	def __init__(self, max_prob=0.25, diffs=True):
+	def __init__(self, max_prob=0.25, diffs=True, encode_func=get_bernoulli):
 		'''
 		Initializes the OpenAI Gym Space Invaders environment wrapper.
 		
 		Inputs:
 			| :code:`max_prob` (:code:`float`): Specifies the maximum Bernoulli spiking probability.
 			| :code:`diffs` (:code:`bool`): Whether to record previous frame and take differences.
+			| :code:`encoding` (:code:`function`): Encoding of data into spikes.
 		'''
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
 		self.diffs = diffs
+		self.encoding = encoding
 
 	def step(self, a):
 		'''
@@ -37,23 +42,13 @@ class SpaceInvaders:
 			| (:code:`bool`): Indicates whether the simulation has finished.
 			| (:code:`dict`): Current information about the environment.
 		'''
-		# Call gym's environment step function.
+		# Call gym's environment step function and pre-process observation.
 		obs, reward, done, info = self.env.step(a)
-		
-		# Subsample and convert to torch.Tensor.
-		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
-		obs = torch.from_numpy(obs).view(1, -1).float()
-		
-		# Calculate difference and store previous frame.
-		if self.diffs:
-			obs = torch.clamp(obs - self.previous, 0, 1)
-			self.previous = obs
-		
-		# convert to Bernoulli-distributed spikes.
-		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
+		obs = self.pre_process(obs)
 		
 		# Return converted observations and other information.
-		return obs.view(1, -1), reward, done, info
+		return obs, reward, done, info
+
 
 	def reset(self):
 		'''
@@ -61,20 +56,17 @@ class SpaceInvaders:
 		
 		Returns:
 			| (:code:`torch.Tensor`): Observation from the environment.
+			obs (torch.Tensor): Observation from the environment.
 		'''
-		# Call gym's environment reset function.
-		obs = self.env.reset()
-		
-		# Subsample and convert to torch.Tensor.
-		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
-		obs = torch.from_numpy(obs).view(1, -1).float()
+		# Call gym's environment reset function and pre-process observation.
+		obs = self.preprocess(self.env.reset())
 		
 		# Store previous frame.
 		if self.diffs:
 			self.previous = obs
 		
 		# Convert to Bernoulli-distributed spikes.
-		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
+		obs = next(self.encode(obs, max_prob=self.max_prob))
 		
 		# Return converted observations.
 		return obs.view(1, -1)
@@ -91,7 +83,24 @@ class SpaceInvaders:
 		'''
 		self.env.close()
 
-
+	def pre_process(self, obs):
+		'''
+		Pre-Processing step for a state specific to Space Invaders.
+		
+		Inputs:
+			obs(numpy.array): Observation from the environment.
+		
+		Returns:
+			obs (torch.Tensor): Pre-processed observation.
+		'''
+		obs = subsample(gray_scale(obs), 84, 110 )
+		obs = obs[26:100, :]
+		obs = binary_image(obs)
+		obs = np.reshape(obs, (74, 84, 1))
+		obs = torch.from_numpy(obs).view(1, -1).float()
+		
+		return obs
+		
 class CartPole:
 	'''
 	A wrapper around the :code:`CartPole-v0` OpenAI gym environment.

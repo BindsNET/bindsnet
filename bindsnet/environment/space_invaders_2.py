@@ -4,26 +4,30 @@ import torch
 import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
-from timeit                     import default_timer
-from mpl_toolkits.axes_grid1    import make_axes_locatable
+from timeit                  import default_timer
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from bindsnet.evaluation        import *
-from bindsnet.analysis.plotting import *
-from bindsnet.network           import Network
-from bindsnet.learning          import hebbian
-from bindsnet.encoding          import get_bernoulli
-from bindsnet.environment       import SpaceInvaders
+from bindsnet.evaluation          import *
+from bindsnet.analysis.plotting   import *
+from bindsnet.datasets.preprocess import *
+from bindsnet.network.learning    import *
 
-from bindsnet.network.monitors  import Monitor
-from bindsnet.network.topology  import Connection
-from bindsnet.network.nodes     import LIFNodes, Input
+from bindsnet.network             import Network
+from bindsnet.encoding            import get_bernoulli
+from bindsnet.environment         import SpaceInvaders
+
+from bindsnet.network.monitors    import Monitor
+from bindsnet.network.learning    import *
+from bindsnet.network.connections import Connection 
+from bindsnet.network.nodes       import LIFNodes, Input
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=500)
+parser.add_argument('--plot_interval', type=int, default=200)
 parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--env_plot', dest='env_plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
@@ -41,55 +45,63 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(n=3780, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
-layers = {'X' : inpt, 'E' : exc, 'R' : readout}
+inpt = Input(n=7056, traces=True)  # Input layer
+
+strings = range(1, 6)
+exc = {'E%d'%(i): LIFNodes(n=n_neurons, refractory=0, traces=True) for i in strings} # Excitatory layer(s)
+readout = {'R%d'%(i): LIFNodes(n=1, refractory=0, traces=True) for i in strings}     # Readout layer(s)
+
+layers = {**exc, **readout}
+layers['X'] = inpt
 
 # Connections between layers.
-# Input -> excitatory.
-w = 0.01 * torch.rand(layers['X'].n, layers['E'].n)
-input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=0.02)
+# Input -> excitatory (5 layers).
+w = {'E%d'%(i): 0.01 * torch.rand(layers['X'].n, layers['E%d'%(i)].n) for i in strings}
+input_exc_conn = {'E%d'%(i): Connection(source=layers['X'], target=layers['E%d'%(i)], w=w['E%d'%(i)], wmax=0.02) for i in strings}
 input_exc_norm = 0.01 * layers['X'].n
 
 # Excitatory -> readout.
-w = 0.01 * torch.rand(layers['E'].n, layers['R'].n)
-exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=w,
-							  update_rule=hebbian, nu_pre=1e-2, nu_post=1e-2)
-exc_readout_norm = 0.5 * layers['E'].n
+w = {'E%d'%(i): 0.01 * torch.rand(layers['E%d'%(i)].n, layers['R%d'%(i)].n) for i in strings}
+exc_readout_conn = {'E%d'%(i): Connection(source=layers['E%d'%(i)], target=layers['R%d'%(i)], w=w['E%d'%(i)],
+							  update_rule=m_stdp_et, nu_pre=1e-2, nu_post=1e-2) for i in strings}
+exc_readout_norm = {'E%d'%(i): 0.5 * layers['E%d'%(i)].n for i in strings}
 
 # Readout -> readout.
-w = -10 * torch.ones(layers['R'].n, layers['R'].n) + 10 * torch.diag(torch.ones(layers['R'].n))
-readout_readout_conn = Connection(source=layers['R'], target=layers['R'], w=w, wmin=-10.0)
+#w = -10 * torch.ones(layers['R'].n, layers['R'].n) + 10 * torch.diag(torch.ones(layers['R'].n))
+#readout_readout_conn = Connection(source=layers['R'], target=layers['R'], w=w, wmin=-10.0)
 
 # Spike recordings for all layers.
 spikes = {}
 for layer in layers:
-	spikes[layer] = Monitor(layers[layer], ['s'], time=plot_interval)
+		spikes[layer] = Monitor(layers[layer], ['s'], time=plot_interval)
 
-# Voltage recordings for excitatory and readout layers.
+# Voltage recordings for excitatory and readout layers
 voltages = {}
 for layer in set(layers.keys()) - {'X'}:
-	voltages[layer] = Monitor(layers[layer], ['v'], time=plot_interval)
+		voltages[layer] = Monitor(layers[layer], ['v'], time=plot_interval)
 
-# Add all layers and connections to the network.
+# Add all layers to the network
 for layer in layers:
-	network.add_layer(layers[layer], name=layer)
+		network.add_layer(layers[layer], name=layer)
 
-network.add_connection(input_exc_conn, source='X', target='E')
-network.add_connection(exc_readout_conn, source='E', target='R')
-network.add_connection(readout_readout_conn, source='R', target='R')
+# Add all connections to the network
+for i in strings:
+	network.add_connection(input_exc_conn['E%d'%(i)], source='X', target='E%d'%(i))
+	network.add_connection(exc_readout_conn['E%d'%(i)], source='E%d'%(i), target='R%d'%(i))
 
-# Add all monitors to the network.
+#network.add_connection(readout_readout_conn, source='R', target='R')
+
+# Add all monitors to the network
 for layer in layers:
 	network.add_monitor(spikes[layer], name='%s_spikes' % layer)
-	
+		
 	if layer in voltages:
 		network.add_monitor(voltages[layer], name='%s_voltages' % layer)
 
 # Normalize adaptable weights.
-network.connections[('E', 'R')].normalize(exc_readout_norm)
-
+for i in strings:
+	network.connections[('E%d'%(i), 'R%d'%(i))].normalize(exc_readout_norm['E%d'%(i)])
+	
 # Load SpaceInvaders environment.
 env = SpaceInvaders()
 env.reset()
@@ -115,17 +127,23 @@ while True:
 		for m in network.monitors:
 			network.monitors[m]._reset()
 	
-	if plot or env_plot:
-		env.render()
+#	if plot or env_plot:
+#		env.render()
 	
 	if i % 100 == 0:
 		print('Iteration %d' % i)
 
 	# Choose action based on readout neuron spiking.
-	if s == {} or s['R'].sum() == 0:
+	if s == {} or sum([s['R%d'%(i)].sum() for i in strings]) == 0:
 		action = np.random.choice(range(6))
 	else:
-		action = torch.multinomial((s['R'] / s['R'].sum()).view(-1), 1)[0] + 1
+		# Pick max spiking action (No exploration?)
+#		spike_ind, spike_max = max(enumerate([s['R%d'%(i)].sum() for i in strings]))
+#		action = spike_ind + 1
+		
+		# Probability dist over actions
+		all_readout_spikes = sum([s['R%d'%(i)].sum() for i in strings])
+		action = torch.multinomial( torch.Tensor( [s['R%d'%(i)].sum() / all_readout_spikes for i in strings] ).view(-1), 1)[0] + 1
 	
 	# Get observations, reward, done flag, and other information.
 	obs, reward, done, info = env.step(action)
@@ -133,23 +151,15 @@ while True:
 	# Update mean reward.
 	rewards.append(reward)
 	
-	# Pre-process input sample
-	obs = gray_scale( sub_sample(obs, 84, 110) )
-	obs = obs[26, 110, :]
-	obs = black_white(obs)
-	print (obs.shape)
-	sys.exit()
-	
-	obs = pre_process(obs)
-	
 	# Get next input sample.
 	inpts.update({'X' : obs})
 	
 	# Run the network on the input.
-	network.run(inpts=inpts, time=1)
+	network.run(inpts=inpts, time=1, {'reward': reward, 'a_plus':0, 'a_minus':0})
 	
 	# Normalize adaptable weights.
-	network.connections[('E', 'R')].normalize(exc_readout_norm)
+	for i in strings:
+		network.connections[('E%d'%(i), 'R%d'%(i))].normalize(exc_readout_norm['E%d'%(i)])
 	
 	# Get spikes from previous iteration.
 	for layer in layers:
@@ -161,6 +171,10 @@ while True:
 			spike_ims, spike_axes = plot_spikes(spike_record)
 			voltage_ims, voltage_axes = plot_voltages(voltage_record)
 			
+			g_fig = plt.figure()
+			g_axes = g_fig.add_subplot(111)
+			g_pic = g_axes.imshow(obs.numpy().reshape(84, 84), cmap='gray')
+
 			w_fig, w_axes = plt.subplots(2, 1)
 			
 			i_e_w_im = w_axes[0].matshow(input_exc_conn.w.t(), cmap='hot_r', vmax=input_exc_conn.wmax)
@@ -190,6 +204,7 @@ while True:
 			r_axes[0].set_title('Mean reward per episode')
 			r_axes[1].set_title('Iteration length of episodes')
 			
+			plt.show()
 			for ax in r_axes:
 				ax.grid()
 			
@@ -198,6 +213,8 @@ while True:
 				spike_ims, spike_axes = plot_spikes(spike_record, ims=spike_ims, axes=spike_axes)
 				voltage_ims, voltage_axes = plot_voltages(voltage_record, ims=voltage_ims, axes=voltage_axes)
 				
+				g_pic.set_data(obs.numpy().reshape(84, 84))
+
 				i_e_w_im.set_data(input_exc_conn.w.t())
 				e_r_w_im.set_data(exc_readout_conn.w.t())
 				
@@ -215,7 +232,7 @@ while True:
 					ax.autoscale_view(True, True, True) 
 
 				r_fig.canvas.draw()
-				
+				g_fig.canvas.draw()
 				plt.pause(1e-8)
 	
 	i += 1
