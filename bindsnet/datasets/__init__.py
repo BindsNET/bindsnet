@@ -14,7 +14,7 @@ from urllib.request import urlretrieve
 class MNIST:
 	'''
 	Handles loading and saving of the MNIST handwritten digits
-	(http://yann.lecun.com/exdb/mnist/).
+	`(link) <http://yann.lecun.com/exdb/mnist/>`_.
 	'''
 	train_images_pickle = 'train_images.p'
 	train_labels_pickle = 'train_labels.p'
@@ -33,10 +33,10 @@ class MNIST:
 	
 	def __init__(self, path=os.path.join('data', 'MNIST')):
 		'''
-		Constructor for the MNIST object. Makes the data directory if it doesn't already exist.
+		Constructor for the :code:`MNIST` object. Makes the data directory if it doesn't already exist.
 
 		Inputs:
-			path (str): pathname of directory in which to store the MNIST handwritten digit dataset.
+			| :code:`path` (:code:`str`): pathname of directory in which to store the MNIST handwritten digit dataset.
 		'''
 		if not os.path.isdir(path):
 			os.makedirs(path)
@@ -48,8 +48,8 @@ class MNIST:
 		Gets the MNIST training images and labels.
 
 		Returns:
-			(torch.Tensor or torch.cuda.Tensor) images: The MNIST training images.
-			(torch.Tensor or torch.cuda.Tensor) labels: The MNIST training labels.
+			| :code:`images` (:code:`torch.Tensor`): The MNIST training images.
+			| :code:`labels` (:code:`torch.Tensor`): The MNIST training labels.
 		'''
 		if not os.path.isfile(os.path.join(self.path, MNIST.train_images_pickle)):
 			# Download training images if they aren't on disk.
@@ -84,8 +84,8 @@ class MNIST:
 		Gets the MNIST test images and labels.
 
 		Returns:
-			(torch.Tensor or torch.cuda.Tensor) images: The MNIST test images.
-			(torch.Tensor or torch.cuda.Tensor) labels: The MNIST test labels.
+			| :code:`images` (:code:`torch.Tensor`): The MNIST test images.
+			| :code:`labels` (:code:`torch.Tensor`): The MNIST test labels.
 		'''
 		if not os.path.isfile(os.path.join(self.path, MNIST.test_images_pickle)):
 			# Download test images if they aren't on disk.
@@ -120,8 +120,8 @@ class MNIST:
 		Downloads and unzips an MNIST data file.
 		
 		Inputs:
-			url (str): The URL of the data file to be downloaded.
-			filename (str): The name of the file to save the downloaded data to.
+			| :code:`url` (:code:`str`): The URL of the data file to be downloaded.
+			| :code:`filename` (:code:`str`): The name of the file to save the downloaded data to.
 		'''
 		data = urlretrieve(url, os.path.join(self.path, filename + '.gz'))
 		with gzip.open(os.path.join(self.path, filename + '.gz'), 'rb') as _in:
@@ -133,11 +133,11 @@ class MNIST:
 		Opens a file of MNIST images and processes them into numpy arrays.
 		
 		Inputs:
-			filename (str): Name of the file containing MNIST images to load.
+			| :code:`filename` (:code:`str`): Name of the file containing MNIST images to load.
 		
 		Returns:
-			(numpy.ndarray): A numpy array of shape [n_images, 28, 28],
-				where n_images refers to the number of images in the file.
+			| (:code:`numpy.ndarray`): A numpy array of shape :code:`[n_images, 28,
+				28]`, where :code:`n_images` refers to the number of images in the file.
 		'''
 		filename = os.path.join(self.path, filename)
 		data = open(filename, 'rb')
@@ -167,11 +167,11 @@ class MNIST:
 		Opens a file of MNIST label data and processes it into a numpy vector.
 		
 		Inputs:
-			filename (str): The name of the file containing MNIST label data.
+			| :code:`filename` (:code:`str`): The name of the file containing MNIST label data.
 		
 		Returns:
-			(np.ndarray): A one-dimensional array of shape (n_labels,), where
-				n_labels refers to the number of labels contained in the file.
+			| (:code:`np.ndarray`): A one-dimensional array of shape :code:`(n_labels,)`,
+				where :code:`n_labels` refers to the number of labels contained in the file.
 		'''
 		filename = os.path.join(self.path, filename)
 		data = open(filename, 'rb')

@@ -56,8 +56,7 @@ class Connection:
 		Retrieve weight matrix of the connection.
 		
 		Returns:
-			(torch.Tensor or torch.cuda.Tensor): 
-				Weight matrix of the connection.
+			| (:code:`torch.Tensor`): Weight matrix of the connection.
 		'''
 		return self.w
 
@@ -66,8 +65,7 @@ class Connection:
 		Set weight matrix of the connection.
 		
 		Inputs:
-			w (torch.Tensor or torch.cuda.Tensor):
-				Weight matrix to set to connection.
+			| :code:`w` (:code:`torch.Tensor`): Weight matrix to set to connection.
 		'''
 		self.w = w
 
@@ -83,7 +81,7 @@ class Connection:
 		to some desired summed weight per target neuron.
 		
 		Inputs:
-			norm (float): Desired sum of weights.
+			| :code:`norm` (:code:`float`): Desired sum of weights per target neuron.
 		'''
 		self.w = self.w.view(self.source.n, self.target.n)
 		self.w *= norm / self.w.sum(0).view(1, -1)
@@ -106,16 +104,16 @@ class SparseConnection:
 		Instantiates a :code:`Connection` object with sparse weights.
 
 		Inputs:
-			:code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
-			:code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
-			:code:`w` (:code:`torch`.FloatTensor or torch.cuda.FloatTensor): Effective strengths of synapses.
-			:code:`sparsity` (:code:`float`): Fraction of sparse connections to use.
-			:code:`update_rule` (:code:`function`): Modifies connection parameters according to some rule.
-			:code:`nu` (:code:`float`): Learning rate for both pre- and post-synaptic events.
-			:code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
-			:code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
-			:code:`wmin` (:code:`float`): The minimum value on the connection weights.
-			:code:`wmax` (:code:`float`): The maximum value on the connection weights.
+			| :code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
+			| :code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
+			| :code:`w` (:code:`torch`.FloatTensor or torch.cuda.FloatTensor): Effective strengths of synapses.
+			| :code:`sparsity` (:code:`float`): Fraction of sparse connections to use.
+			| :code:`update_rule` (:code:`function`): Modifies connection parameters according to some rule.
+			| :code:`nu` (:code:`float`): Learning rate for both pre- and post-synaptic events.
+			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
+			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
+			| :code:`wmin` (:code:`float`): The minimum value on the connection weights.
+			| :code:`wmax` (:code:`float`): The maximum value on the connection weights.
 		'''
 		self.source = source
 		self.target = target

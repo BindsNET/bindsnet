@@ -10,17 +10,15 @@ from bindsnet.encoding import get_bernoulli
 
 class SpaceInvaders:
 	'''
-	A wrapper around the SpaceInvaders-v0 OpenAI gym environment.
+	A wrapper around the :code:`SpaceInvaders-v0` OpenAI gym environment.
 	'''
 	def __init__(self, max_prob=0.25, diffs=True):
 		'''
 		Initializes the OpenAI Gym Space Invaders environment wrapper.
 		
 		Inputs:
-			max_prob (float): Specifies the maximum
-				Bernoulli trial spiking probability.
-			diffs (bool): Whether to record previous
-				frame and take difference for new frame.
+			| :code:`max_prob` (:code:`float`): Specifies the maximum Bernoulli spiking probability.
+			| :code:`diffs` (:code:`bool`): Whether to record previous frame and take differences.
 		'''
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
@@ -28,16 +26,16 @@ class SpaceInvaders:
 
 	def step(self, a):
 		'''
-		Wrapper around the OpenAI Gym environment `step()` function.
+		Wrapper around the OpenAI Gym environment :code:`step()` function.
 		
 		Inputs:
-			a (int): Action to take in Space Invaders environment.
+			| :code:`a` (:code:`int`): Action to take in Space Invaders environment.
 		
 		Returns:
-			(torch.Tensor): Observation from the environment.
-			(float): Reward signal from the environment.
-			(bool): Indicates whether the simulation has finished.
-			(dict): Current information about the environment.
+			| (:code:`torch.Tensor`): Observation from the environment.
+			| (:code:`float`): Reward signal from the environment.
+			| (:code:`bool`): Indicates whether the simulation has finished.
+			| (:code:`dict`): Current information about the environment.
 		'''
 		# Call gym's environment step function.
 		obs, reward, done, info = self.env.step(a)
@@ -59,10 +57,10 @@ class SpaceInvaders:
 
 	def reset(self):
 		'''
-		Wrapper around the OpenAI Gym environment `reset()` function.
+		Wrapper around the OpenAI Gym environment :code:`reset()` function.
 		
 		Returns:
-			(torch.Tensor): Observation from the environment.
+			| (:code:`torch.Tensor`): Observation from the environment.
 		'''
 		# Call gym's environment reset function.
 		obs = self.env.reset()
@@ -83,44 +81,43 @@ class SpaceInvaders:
 
 	def render(self):
 		'''
-		Wrapper around the OpenAI Gym environment `render()` function.
+		Wrapper around the OpenAI Gym environment :code:`render()` function.
 		'''
 		self.env.render()
 
 	def close(self):
 		'''
-		Wrapper around the OpenAI Gym environment `close()` function.
+		Wrapper around the OpenAI Gym environment :code:`close()` function.
 		'''
 		self.env.close()
 
 
 class CartPole:
 	'''
-	A wrapper around the CartPole-v0 OpenAI gym environment.
+	A wrapper around the :code:`CartPole-v0` OpenAI gym environment.
 	'''
 	def __init__(self, max_prob=0.5):
 		'''
 		Initializes the OpenAI Gym Space Invaders environment wrapper.
 		
 		Inputs:
-			max_prob (float): Specifies the maximum
-				Bernoulli trial spiking probability.
+			| :code:`max_prob` (:code:`float`): Specifies the maximum Bernoulli trial spiking probability.
 		'''
 		self.max_prob = max_prob
 		self.env = gym.make('CartPole-v0')
 
 	def step(self, a):
 		'''
-		Wrapper around the OpenAI Gym environment `step()` function.
+		Wrapper around the OpenAI Gym environment :code:`step()` function.
 		
 		Inputs:
-			a (int): Action to take in Space Invaders environment.
+			| :code:`a` (:code:`int`): Action to take in Space Invaders environment.
 		
 		Returns:
-			(torch.Tensor): Observation from the environment.
-			(float): Reward signal from the environment.
-			(bool): Indicates whether the simulation has finished.
-			(dict): Current information about the environment.
+			| (:code:`torch.Tensor`): Observation from the environment.
+			| (:code:`float`): Reward signal from the environment.
+			| (:code:`bool`): Indicates whether the simulation has finished.
+			| (:code:`dict`): Current information about the environment.
 		'''
 		# Call gym's environment step function.
 		obs, reward, done, info = self.env.step(a)
@@ -133,8 +130,7 @@ class CartPole:
 						-min(obs[3], 0),
 						max(obs[3], 0)])
 		
-		# Convert to torch.Tensor, and
-		# convert to Bernoulli-distributed spikes.
+		# Convert to torch.Tensor, and then to Bernoulli-distributed spikes.
 		obs = torch.from_numpy(obs).view(1, -1).float()
 		obs = get_bernoulli(obs, max_prob=self.max_prob)
 		
@@ -143,10 +139,10 @@ class CartPole:
 
 	def reset(self):
 		'''
-		Wrapper around the OpenAI Gym environment `reset()` function.
+		Wrapper around the OpenAI Gym environment :code:`reset()` function.
 		
 		Returns:
-			(torch.Tensor): Observation from the environment.
+			| (:code:`torch.Tensor`): Observation from the environment.
 		'''
 		# Call gym's environment reset function.
 		obs = self.env.reset()
@@ -169,12 +165,12 @@ class CartPole:
 
 	def render(self):
 		'''
-		Wrapper around the OpenAI Gym environment `render()` function.
+		Wrapper around the OpenAI Gym environment :code:`render()` function.
 		'''
 		self.env.render()
 
 	def close(self):
 		'''
-		Wrapper around the OpenAI Gym environment `close()` function.
+		Wrapper around the OpenAI Gym environment :code:`close()` function.
 		'''
 		self.env.close()

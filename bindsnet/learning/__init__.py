@@ -33,7 +33,7 @@ def hebbian(conn, **kwargs):
 def m_stdp(conn, **kwargs):
 	'''
 	Reward-modulated STDP. Adapted from
-	https://florian.io/papers/2007_Florian_Modulated_STDP.pdf.
+	`(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
 	'''
 	# Get arguments to MSTDPET function.
 	reward = kwargs['reward']
@@ -60,7 +60,7 @@ def m_stdp(conn, **kwargs):
 def m_stdp_et(conn, **kwargs):
 	'''
 	Reward-modulated STDP with eligibility trace. Adapted from
-	https://florian.io/papers/2007_Florian_Modulated_STDP.pdf.
+	`(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
 	'''
 	# Get arguments to MSTDPET function.
 	reward = kwargs['reward']

@@ -9,13 +9,13 @@ def get_poisson(data, time):
 	input magnitude, so data must be scaled according to desired spike frequency.
 	
 	Inputs:
-		data (torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_samples, n_1,
-			..., n_k], with arbitrary sample dimensionality [n_1, ..., n_k].
-		time (int): Length of Poisson spike train per input variable.
+		| :code:`data` (:code:`torch.Tensor`): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`,
+			with arbitrary data dimensionality :code:`[n_1, ..., n_k]`.
+		| :code:`time` (:code:`int`): Length of Poisson spike train per input variable.
 
 	Yields:
-		(torch.Tensor or torch.cuda.Tensor): Tensors with shape [time, n_1, ..., n_k], with
-			Poisson-distributed spikes parameterized by the data values.
+		| (:code:`torch.Tensor`): Tensor with shape :code:`[time, n_1, ..., n_k]` of
+			Poisson-distributed spikes with inter-arrival times determines by the data.
 	'''
 	n_samples = data.size(0)  # Number of samples
 	data = np.copy(data)
@@ -54,10 +54,10 @@ def get_bernoulli(data, time=None, max_prob=1.0):
 	probability equal to (normalized in [0, 1]) input value.
 
 	Inputs:
-		data (torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_samples,
-			n_1, ..., n_k], with arbitrary sample dimensionality [n_1, ..., n_k].
-		time (int): Length of Bernoulli spike train per input variable.
-		max_prob (float): Maximum probability of spike per Bernoulli trial.
+		| :code:`data` (:code:`torch.Tensor`): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`,
+			with arbitrary sample dimensionality :code:`[n_1, ..., n_k]`.
+		| :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
+		| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
 	'''
 	n_samples = data.size(0)  # Number of samples
 	data = np.copy(data)
