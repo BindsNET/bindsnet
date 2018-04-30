@@ -3,5 +3,6 @@ from .analysis    import *
 from .datasets    import *
 from .encoding    import *
 from .learning    import *
+from .pipeline    import *
 from .evaluation  import *
 from .environment import *
