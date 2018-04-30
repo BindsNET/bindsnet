@@ -14,15 +14,15 @@ class Connection:
 		Instantiates a :code:`Connection` object.
 
 		Inputs:
-			:code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
-			:code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
-			:code:`w` (:code:`torch`.FloatTensor or torch.cuda.FloatTensor): Effective strengths of synapses.
-			:code:`update_rule` (:code:`function`): Modifies connection parameters according to some rule.
-			:code:`nu` (:code:`float`): Learning rate for both pre- and post-synaptic events.
-			:code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
-			:code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
-			:code:`wmin` (:code:`float`): The minimum value on the connection weights.
-			:code:`wmax` (:code:`float`): The maximum value on the connection weights.
+			| :code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
+			| :code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
+			| :code:`w` (:code:`torch`.FloatTensor or torch.cuda.FloatTensor): Effective strengths of synapses.
+			| :code:`update_rule` (:code:`function`): Modifies connection parameters according to some rule.
+			| :code:`nu` (:code:`float`): Learning rate for both pre- and post-synaptic events.
+			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
+			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
+			| :code:`wmin` (:code:`float`): The minimum value on the connection weights.
+			| :code:`wmax` (:code:`float`): The maximum value on the connection weights.
 		'''
 		self.source = source
 		self.target = target
