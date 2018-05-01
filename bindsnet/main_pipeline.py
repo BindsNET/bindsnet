@@ -19,8 +19,8 @@ from bindsnet.network             import Network
 from bindsnet.encoding            import get_bernoulli
 from bindsnet.environment         import SpaceInvaders
 
+from bindsnet.learning            import hebbian
 from bindsnet.network.monitors    import Monitor
-from bindsnet.network.learning    import hebbian
 from bindsnet.network.connections import Connection 
 from bindsnet.network.nodes       import LIFNodes, Input
 

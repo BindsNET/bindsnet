@@ -82,7 +82,7 @@ class Pipeline:
 
 	def plot(self):
 		'''
-		Plot monitor variables or desired variables?
+		Plot monitor variables or desired variables
 		'''
 		if self.ims == None and self.axs == None:
 			# Initialize plots
@@ -95,7 +95,7 @@ class Pipeline:
 		
 	def reset(self):
 		'''
-		Reset the entire pipeline.
+		Reset the entire pipeline
 		'''
 		self.env.reset()
 		self.network._reset()
