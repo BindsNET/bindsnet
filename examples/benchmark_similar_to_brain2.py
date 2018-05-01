@@ -1,22 +1,21 @@
 import os
 import sys
+import time
 import torch
 import numpy             as np
 import matplotlib.pyplot as plt
+
 from timeit import default_timer
-import time
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'datasets')))
+from bindsnet.network           import Network
+from bindsnet.encoding          import get_poisson
+from bindsnet.network.topology  import Connection, post_pre
+from bindsnet.network.nodes     import LIFNodes, Input
+from bindsnet.analysis.plotting import plot_spikes, plot_weights
 
-from network           import Network
-from encoding          import get_poisson
-from connections       import Connection, post_pre
-from nodes             import LIFNodes, Input
-from analysis.plotting import plot_spikes, plot_weights
 
 ## param
+
 gpu = False
 n = 0
 dt = 1.0
@@ -98,3 +97,4 @@ for N in range(1000):
 	#
 	#import matplotlib.pyplot as plt
 	#plt.show()
+

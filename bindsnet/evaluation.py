@@ -1,28 +1,28 @@
 import torch
 
 
-def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.8):
+def assign_labels(spikes, labels, n_labels, rates=None, alpha=1.0):
 	'''
 	Given a sequence of recorded spikes and corresponding labels, assign
 		labels to the neurons based on highest average spiking activity.
 	
 	Inputs:
-		spikes (torch.Tensor or torch.cuda.Tensor): Binary tensor of shape
-			(n_samples, time, n_neurons) of a single layer's spiking activity.
-		labels (torch.Tensor or torch.cuda.Tensor): Vector of shape
-			(n_samples,) with data labels corresponding to spiking activity.
-		n_labels (int): The number of target labels in the data.
-		rates (torch.Tensor or torch.cuda.Tensor): If passed, these
-			represent spike rates from a previous assign_labels() call.
+		| :code:`spikes` (:code:`torch.Tensor`): Binary tensor of shape
+			:code:`(n_samples, time, n_neurons)` of a single layer's spiking activity.
+		| :code:`labels` (:code:`torch.Tensor`): Vector of shape :code:`(n_samples,)`
+			with data labels corresponding to spiking activity.
+		| :code:`n_labels` (:code:`int`): The number of target labels in the data.
+		| :code:`rates` (:code:`torch.Tensor`): If passed, these represent
+			spike rates from a previous :code:`assign_labels()` call.
+		| :code:`alpha` (:code:`float`): Rate of decay of label assignments.
 	
 	Returns:
-		(torch.Tensor or torch.cuda.Tensor): A vector of
-			shape (n_neurons,) of neuron label assignments.
-		(torch.Tensor or torch.cuda.Tensor): A vector of shape (n_neurons, n_labels)
+		| (:code:`torch.Tensor`): A vector of shape :code:`(n_neurons,)` of neuron label assignments.
+		| (:code:`torch.Tensor`): A vector of shape :code:`(n_neurons, n_labels)`
 			of proportions of firing activity per neuron, per data label.
 	'''
 	n_neurons = spikes.size(2)
-	
+		
 	if rates is None:
 		rates = torch.zeros_like(torch.Tensor(n_neurons, n_labels))
 	
@@ -38,34 +38,34 @@ def assign_labels(spikes, labels, n_labels, rates=None, alpha=0.8):
 			indices = torch.nonzero(labels == i).view(-1)
 			
 			# Compute average firing rates for this label.
-			rates[:, i] = alpha * rates[:, i] + (1 - alpha) * torch.sum(spikes[indices], 0) / n_labeled
+			rates[:, i] = alpha * rates[:, i] + (torch.sum(spikes[indices], 0) / n_labeled)
 	
 	# Compute proportions of spike activity per class.
 	proportions = rates / rates.sum(1, keepdim=True)
+	proportions[proportions != proportions] = 0  # Set NaNs to 0
 	
 	# Neuron assignments are the labels they fire most for.
 	assignments = torch.max(proportions, 1)[1]
-
+	
 	return assignments, proportions, rates
 
 
 def all_activity(spikes, assignments, n_labels):
 	'''
 	Given neuron assignments and the network spiking activity, new
-		data is classified with the label giving the highest average
-		spiking activity over all neurons with the label assignment.
+	data is classified with the label giving the highest average
+	spiking activity over all neurons with the label assignment.
 	
 	Inputs:
-		spikes (torch.Tensor or torch.cuda.Tensor): Binary tensor of shape
-			(n_samples, time, n_neurons) of a single layer's spiking activity.
-		assignments (torch.Tensor or torch.cuda.Tensor): A vector
-			of shape (n_neurons,) of neuron label assignments.
-		n_labels (int): The number of target labels in the data.
+		| :code:`spikes` (:code:`torch.Tensor`): Binary tensor of shape
+			:code:`(n_samples, time, n_neurons)` of a single layer's spiking activity.
+		| :code:`assignments` (:code:`torch.Tensor`): A vector of
+			shape :code:`(n_neurons,)` of neuron label assignments.
+		| :code:`n_labels` (:code:`int`): The number of target labels in the data.
 	
 	Returns:
-		(torch.Tensor or torch.cuda.Tensor): Predictions tensor of shape
-			(n_samples,) resulting from the "all activity" classification
-			strategy.
+		| (:code:`torch.Tensor`): Predictions tensor of shape `(n_samples,)`
+			resulting from the "all activity" classification scheme.
 	'''
 	n_samples = spikes.size(0)
 	
@@ -95,24 +95,22 @@ def all_activity(spikes, assignments, n_labels):
 def proportion_weighting(spikes, assignments, proportions, n_labels):
 	'''
 	Given neuron assignments and the network spiking activity, new
-		data is classified with the label giving the highest average
-		spiking activity over all neurons with the label assignment,
-		weighted by the class-wise proportion of spiking activity.
+	data is classified with the label giving the highest average
+	spiking activity over all neurons with the label assignment,
+	weighted by the class-wise proportion of spiking activity.
 	
 	Inputs:
-		spikes (torch.Tensor or torch.cuda.Tensor): Binary tensor of shape
-			(n_samples, time, n_neurons) of a single layer's spiking activity.
-		assignments (torch.Tensor or torch.cuda.Tensor): A vector
-			of shape (n_neurons,) of neuron label assignments.
-		proportions (torch.Tensor or torch.cuda.Tensor): A matrix of shape
-			(n_neurons, n_labels) giving the per-class proportions of neuron
-			spiking activity.
-		n_labels (int): The number of target labels in the data.
+		| :code:`spikes` (:code:`torch.Tensor`): Binary tensor of shape
+			:code:`(n_samples, time, n_neurons)` of a single layer's spiking activity.
+		| :code:`assignments` (:code:`torch.Tensor`): A vector of
+			shape :code:`(n_neurons,)` of neuron label assignments.
+		| :code:`proportions` (torch.Tensor): A matrix of shape :code:`(n_neurons, n_labels)`
+			giving the per-class proportions of neuron spiking activity.
+		| :code:`n_labels` (:code:`int`): The number of target labels in the data.
 	
 	Returns:
-		(torch.Tensor or torch.cuda.Tensor): Predictions tensor of shape
-			(n_samples,) resulting from the "proportion weighting"
-			classification strategy.
+		| (:code:`torch.Tensor`): Predictions tensor of shape :code:`(n_samples,)`
+			resulting from the "proportion weighting" classification scheme.
 	'''
 	n_samples = spikes.size(0)
 	
