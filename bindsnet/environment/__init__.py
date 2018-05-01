@@ -24,12 +24,21 @@ class Games(ABC):
 
 	@abstractmethod
 	def pre_process(self):
+		'''
+		Pre-processing steps for every observation
+		'''
 		pass
 	
 	def get_observation(self):
+		'''
+		Returns the observation for current timestep
+		'''
 		return self.obs
 
 	def get_reward(self):
+		'''
+		Returns the reward for current timestep
+		'''
 		return self.reward
 	
 

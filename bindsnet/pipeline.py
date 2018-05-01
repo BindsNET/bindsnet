@@ -6,14 +6,19 @@ import matplotlib.pyplot as plt
 
 class Pipeline:
 	
-	def __init__(self, Network, Environment, plot=False, **kwargs):
+	def __init__(self, Network, Environment, **kwargs):
 		'''
 		Initializes the pipeline
 		
 		Inputs:
 			Network (bindsnet.Network): Arbitrary network (e.g ETH)
 			Environment (bindsnet.Environment): Arbitrary environment (e.g MNIST, Space Invaders)
-			plot (bool): plot monitor variables 
+		
+		Kwargs:
+			plot (bool): Plot monitor variables 
+			render (bool): Show the environment
+			time (int): Time input is presented for to the network
+			history (int): Number of observations to keep track of
 		'''
 		# Plot interval?
 		
@@ -21,7 +26,8 @@ class Pipeline:
 		self.env = Environment
 		
 		# Create figures based on desired plots inside kwargs
-		self.plot = plot
+		# Need to check if they exist
+		self.plot = kwargs['plot']
 		
 		if self.plot:
 			self.axs, self.ims = self.plot()
@@ -40,7 +46,7 @@ class Pipeline:
 		
 	def step(self):
 		'''
-		Step through an iteration 
+		Step through an iteration of pipeline
 		'''
 		
 		if self.iteration % 100 == 0:
