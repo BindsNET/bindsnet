@@ -3,31 +3,62 @@ import sys
 import gym
 import torch
 import numpy as np
+from PIL import Image
 import matplotlib.pyplot as plt
+from abc import ABC, abstractmethod
 
 from bindsnet.datasets.preprocess import *
 from bindsnet.encoding            import *
 from skimage.measure              import block_reduce
 
 
+class Games(ABC):
+	'''
+	Abstract base class for OpenAI gym environments.
+	'''
+	def __init__(self):
+		'''
+		Abstract constructor for the Nodes class.
+		'''
+		super().__init__()
 
-class SpaceInvaders:
+	@abstractmethod
+	def pre_process(self):
+		'''
+		Pre-processing steps for every observation
+		'''
+		pass
+	
+	def get_observation(self):
+		'''
+		Returns the observation for current timestep
+		'''
+		return self.obs
+
+	def get_reward(self):
+		'''
+		Returns the reward for current timestep
+		'''
+		return self.reward
+	
+
+class SpaceInvaders(Games):
 	'''
 	A wrapper around the :code:`SpaceInvaders-v0` OpenAI gym environment.
 	'''
-	def __init__(self, max_prob=0.25, diffs=True, encode_func=get_bernoulli):
+	def __init__(self, max_prob=0.25, diffs=True):
 		'''
 		Initializes the OpenAI Gym Space Invaders environment wrapper.
 		
 		Inputs:
 			| :code:`max_prob` (:code:`float`): Specifies the maximum Bernoulli spiking probability.
 			| :code:`diffs` (:code:`bool`): Whether to record previous frame and take differences.
-			| :code:`encoding` (:code:`function`): Encoding of data into spikes.
 		'''
+		super().__init__()
+		
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
 		self.diffs = diffs
-		self.encoding = encoding
 
 	def step(self, a):
 		'''
@@ -42,14 +73,14 @@ class SpaceInvaders:
 			| (:code:`bool`): Indicates whether the simulation has finished.
 			| (:code:`dict`): Current information about the environment.
 		'''
-		# Call gym's environment step function and pre-process observation.
-		obs, reward, done, info = self.env.step(a)
-		obs = self.pre_process(obs)
+		# Call gym's environment step function.
+		self.obs, self.reward, done, info = self.env.step(a)
+		self.preprocess()
 		
 		# Return converted observations and other information.
-		return obs, reward, done, info
+		return self.obs, self.reward, done, info
 
-
+	
 	def reset(self):
 		'''
 		Wrapper around the OpenAI Gym environment :code:`reset()` function.
@@ -58,18 +89,9 @@ class SpaceInvaders:
 			| (:code:`torch.Tensor`): Observation from the environment.
 			obs (torch.Tensor): Observation from the environment.
 		'''
-		# Call gym's environment reset function and pre-process observation.
-		obs = self.preprocess(self.env.reset())
+		# Call gym's environment reset function.
+		self.obs = self.preprocess(self.env.reset())
 		
-		# Store previous frame.
-		if self.diffs:
-			self.previous = obs
-		
-		# Convert to Bernoulli-distributed spikes.
-		obs = next(self.encode(obs, max_prob=self.max_prob))
-		
-		# Return converted observations.
-		return obs.view(1, -1)
 
 	def render(self):
 		'''
@@ -77,13 +99,15 @@ class SpaceInvaders:
 		'''
 		self.env.render()
 
+
 	def close(self):
 		'''
 		Wrapper around the OpenAI Gym environment :code:`close()` function.
 		'''
 		self.env.close()
 
-	def pre_process(self, obs):
+
+	def preprocess(self):
 		'''
 		Pre-Processing step for a state specific to Space Invaders.
 		
@@ -93,15 +117,14 @@ class SpaceInvaders:
 		Returns:
 			obs (torch.Tensor): Pre-processed observation.
 		'''
-		obs = subsample(gray_scale(obs), 84, 110 )
-		obs = obs[26:100, :]
-		obs = binary_image(obs)
-		obs = np.reshape(obs, (74, 84, 1))
-		obs = torch.from_numpy(obs).view(1, -1).float()
+		self.obs = subsample( gray_scale(self.obs), 84, 110)
+		self.obs = self.obs[26:104, :]
+		self.obs = binary_image(self.obs)
+		self.obs = np.reshape(self.obs, (78, 84, 1))
+		self.obs = torch.from_numpy(self.obs).view(1, -1).float()
+
 		
-		return obs
-		
-class CartPole:
+class CartPole(Games):
 	'''
 	A wrapper around the :code:`CartPole-v0` OpenAI gym environment.
 	'''
@@ -112,6 +135,8 @@ class CartPole:
 		Inputs:
 			| :code:`max_prob` (:code:`float`): Specifies the maximum Bernoulli trial spiking probability.
 		'''
+		super().__init__()
+		
 		self.max_prob = max_prob
 		self.env = gym.make('CartPole-v0')
 
@@ -172,6 +197,9 @@ class CartPole:
 		# Return converted observations.
 		return next(obs)
 
+	def pre_process(self):
+		pass
+	
 	def render(self):
 		'''
 		Wrapper around the OpenAI Gym environment :code:`render()` function.
