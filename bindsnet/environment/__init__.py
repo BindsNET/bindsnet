@@ -3,15 +3,37 @@ import sys
 import gym
 import torch
 import numpy as np
+from PIL import Image
 import matplotlib.pyplot as plt
+from abc import ABC, abstractmethod
 
 from bindsnet.datasets.preprocess import *
 from bindsnet.encoding            import *
 from skimage.measure              import block_reduce
 
 
+class Games(ABC):
+	'''
+	Abstract base class for OpenAI gym environments.
+	'''
+	def __init__(self):
+		'''
+		Abstract constructor for the Nodes class.
+		'''
+		super().__init__()
 
-class SpaceInvaders:
+	@abstractmethod
+	def pre_process(self):
+		pass
+	
+	def get_observation(self):
+		return self.obs
+
+	def get_reward(self):
+		return self.reward
+	
+
+class SpaceInvaders(Games):
 	'''
 	A wrapper around the SpaceInvaders-v0 OpenAI gym environment.
 	'''
@@ -26,6 +48,8 @@ class SpaceInvaders:
 				frame and take difference for new frame.
 			encode_func (bindsnet.encoding): Encoding of spikes
 		'''
+		super().__init__()
+		
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
 		self.diffs = diffs
@@ -52,18 +76,18 @@ class SpaceInvaders:
 		#obs = torch.from_numpy(obs).view(1, -1).float()
 		
 		obs = self.pre_process(obs)
-		
+
 		# Calculate difference and store previous frame.
 #		if self.diffs:
 #			obs = torch.clamp(obs - self.previous, 0, 1)
 #			self.previous = obs
 		
-		# convert to Bernoulli-distributed spikes.
-#		obs = next(get_bernoulli(obs, max_prob=self.max_prob))
+#		 convert to Bernoulli-distributed spikes.
+		obs = next(self.encode(obs, max_prob=self.max_prob))
 		
 #		obs = self.get_input(obs)
 		# Return converted observations and other information.
-		return obs, reward, done, info
+		return obs.view(1,-1), reward, done, info
 
 
 	def reset(self):
@@ -90,7 +114,7 @@ class SpaceInvaders:
 		obs = next(self.encode(obs, max_prob=self.max_prob))
 		
 		# Return converted observations.
-		return obs.view(1, -1)
+		return obs
 
 	def render(self):
 		'''
@@ -115,13 +139,19 @@ class SpaceInvaders:
 			obs (torch.Tensor): Pre-processed observation.
 		'''
 		obs = subsample( gray_scale(obs), 84, 110 )
-		obs = obs[26:100, :]
+		obs = obs[26:104, :]
 		obs = binary_image(obs)
-		obs = np.reshape(obs, (74, 84, 1))
+		
+#		fig = plt.figure()
+#		plt.imshow(obs, interpolation='nearest')
+#		fig.savefig(r'/mnt/c/Users/Hassaan/Desktop/School related/Spring 2018/Independent Study')
+#		sys.exit()
+
+		obs = np.reshape(obs, (78, 84, 1))
 		obs = torch.from_numpy(obs).view(1, -1).float()
 		return obs
 		
-class CartPole:
+class CartPole(Games):
 	'''
 	A wrapper around the CartPole-v0 OpenAI gym environment.
 	'''
@@ -133,6 +163,8 @@ class CartPole:
 			max_prob (float): Specifies the maximum
 				Bernoulli trial spiking probability.
 		'''
+		super().__init__()
+		
 		self.max_prob = max_prob
 		self.env = gym.make('CartPole-v0')
 
@@ -194,6 +226,9 @@ class CartPole:
 		# Return converted observations.
 		return next(obs)
 
+	def pre_process(self):
+		pass
+	
 	def render(self):
 		'''
 		Wrapper around the OpenAI Gym environment `render()` function.
