@@ -78,7 +78,7 @@ class Network:
 		Initializes network object.
 		
 		Inputs:
-			:code:`dt` (:code:`float`): Simulation timestep. All other
+			| :code:`dt` (:code:`float`): Simulation timestep. All other
 				objects' time constants are relative to this value.
 		'''
 		self.dt = dt
