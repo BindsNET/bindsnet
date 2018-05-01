@@ -69,25 +69,23 @@ class SpaceInvaders(Games):
 			info (dict): Current information about the environment.
 		'''
 		# Call gym's environment step function.
-		obs, reward, done, info = self.env.step(a)
+		self.obs, reward, done, info = self.env.step(a)
 		
 		# Subsample and convert to torch.Tensor.
 		#obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
 		#obs = torch.from_numpy(obs).view(1, -1).float()
 		
-		obs = self.pre_process(obs)
-
 		# Calculate difference and store previous frame.
 #		if self.diffs:
 #			obs = torch.clamp(obs - self.previous, 0, 1)
 #			self.previous = obs
 		
+		self.pre_process()
 #		 convert to Bernoulli-distributed spikes.
-		obs = next(self.encode(obs, max_prob=self.max_prob))
+		self.obs = next(self.encode(self.obs, max_prob=self.max_prob))
 		
-#		obs = self.get_input(obs)
 		# Return converted observations and other information.
-		return obs.view(1,-1), reward, done, info
+		return self.obs.view(1, -1), reward, done, info
 
 
 	def reset(self):
@@ -98,23 +96,21 @@ class SpaceInvaders(Games):
 			obs (torch.Tensor): Observation from the environment.
 		'''
 		# Call gym's environment reset function.
-		obs = self.env.reset()
+		self.obs = self.env.reset()
 		
 		# Subsample and convert to torch.Tensor.
 #		obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
 #		obs = torch.from_numpy(obs).view(1, -1).float()
 
-		obs = self.pre_process(obs)
+		self.pre_process()
 		
 		# Store previous frame.
-		if self.diffs:
-			self.previous = obs
+#		if self.diffs:
+#			self.previous = obs
 		
 		# Convert to Bernoulli-distributed spikes.
-		obs = next(self.encode(obs, max_prob=self.max_prob))
-		
-		# Return converted observations.
-		return obs
+		self.obs = next(self.encode(self.obs, max_prob=self.max_prob))
+
 
 	def render(self):
 		'''
@@ -122,13 +118,15 @@ class SpaceInvaders(Games):
 		'''
 		self.env.render()
 
+
 	def close(self):
 		'''
 		Wrapper around the OpenAI Gym environment `close()` function.
 		'''
 		self.env.close()
 
-	def pre_process(self, obs):
+
+	def pre_process(self):
 		'''
 		Pre-Processing step for a state specific to Space Invaders.
 		
@@ -138,18 +136,18 @@ class SpaceInvaders(Games):
 		Returns:
 			obs (torch.Tensor): Pre-processed observation.
 		'''
-		obs = subsample( gray_scale(obs), 84, 110 )
-		obs = obs[26:104, :]
-		obs = binary_image(obs)
+		self.obs = subsample( gray_scale(self.obs), 84, 110 )
+		self.obs = self.obs[26:104, :]
+		self.obs = binary_image(self.obs)
+		
+		self.obs = np.reshape(self.obs, (78, 84, 1))
+		self.obs = torch.from_numpy(self.obs).view(1, -1).float()
 		
 #		fig = plt.figure()
 #		plt.imshow(obs, interpolation='nearest')
 #		fig.savefig(r'/mnt/c/Users/Hassaan/Desktop/School related/Spring 2018/Independent Study')
 #		sys.exit()
 
-		obs = np.reshape(obs, (78, 84, 1))
-		obs = torch.from_numpy(obs).view(1, -1).float()
-		return obs
 		
 class CartPole(Games):
 	'''

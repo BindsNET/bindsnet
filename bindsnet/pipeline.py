@@ -22,15 +22,20 @@ class Pipeline:
 		
 		# Create figures based on desired plots inside kwargs
 		self.plot = plot
+		
 		if self.plot:
 			self.axs, self.ims = self.plot()
 		
 		# Kwargs being assigned to the pipeline
 		self.time = kwargs['time']
 		self.render = kwargs['render']
-#		self.history = {n: 0 for n in range(kwargs['history'])}
+		self.history = {n: 0 for n in range(kwargs['history'])}
 		
 		self.iteration = 0		
+		
+#		self.fig = plt.figure()
+#		self.axes = self.fig.add_subplot(111)
+#		self.f_pic = self.axes.imshow(np.zeros( (78, 84)), cmap='gray')
 		
 		
 	def step(self):
@@ -56,22 +61,15 @@ class Pipeline:
 		obs, reward, done, info = self.env.step(action)
 		
 		# Recording initial observations
-#		if self.iteration < len(self.history):
-#			self.history[self.iteration] = obs
-#		else:
-#			# Propagate all the observations back
-#			for n in range(self.history-1)[::-1]:
-#				self.history[n] = self.history[n+1]
-#			
-#			# Store the most recent observation
-#			self.history[0] = obs
-#			
-#			# Perform difference
-#			obs = 0
-#			for n in range(len(self.history)-1):
-#				obs += self.history[n] - self.history[n+1]
-#			
-#			obs = torch.clamp(obs, 0, 1)
+		if self.iteration < len(self.history):
+			self.history[self.iteration] = obs
+		else:
+			new_obs = torch.clamp(obs - sum(self.history.values()), 0, 1)		
+#			self.f_pic.set_data(new_obs.numpy().reshape(78, 84))
+#			self.fig.canvas.draw()
+			self.history[self.iteration%len(self.history)] = obs
+			
+			obs = new_obs			
 			
 		# Run the network
 		self.network.run(inpts={'X': obs}, time=self.time)
@@ -84,6 +82,7 @@ class Pipeline:
 
 		return done
 		
+	
 	def plot(self):
 		'''
 		Plot monitor variables or desired variables?
@@ -106,6 +105,9 @@ class Pipeline:
 		self.env.reset()
 		self.network._reset()
 		self.iteration = 0
+		self.history = {n: 0 for n in len(self.history)}
+		
+		# Reset plots
 	
 	
 	

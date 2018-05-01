@@ -101,9 +101,8 @@ env = SpaceInvaders()
 env.reset()
 
 done = False
-s = {}
 
-p = Pipeline(network, env, plot=False, time=1, render=True)
+p = Pipeline(network, env, plot=False, time=1, render=False, history=4)
 print()
 
 while True:
