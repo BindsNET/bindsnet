@@ -46,7 +46,7 @@ class SpaceInvaders(Games):
 	'''
 	A wrapper around the SpaceInvaders-v0 OpenAI gym environment.
 	'''
-	def __init__(self, max_prob=0.25, diffs=True, encode_func=get_bernoulli):
+	def __init__(self, max_prob=0.25, diffs=True):
 		'''
 		Initializes the OpenAI Gym Space Invaders environment wrapper.
 		
@@ -55,14 +55,12 @@ class SpaceInvaders(Games):
 				Bernoulli trial spiking probability.
 			diffs (bool): Whether to record previous
 				frame and take difference for new frame.
-			encode_func (bindsnet.encoding): Encoding of spikes
 		'''
 		super().__init__()
 		
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
 		self.diffs = diffs
-		self.encode = encode_func
 
 	def step(self, a):
 		'''
@@ -78,7 +76,7 @@ class SpaceInvaders(Games):
 			info (dict): Current information about the environment.
 		'''
 		# Call gym's environment step function.
-		self.obs, reward, done, info = self.env.step(a)
+		self.obs, self.reward, done, info = self.env.step(a)
 		
 		# Subsample and convert to torch.Tensor.
 		#obs = block_reduce(obs, block_size=(3, 3, 3), func=np.mean)
@@ -91,12 +89,12 @@ class SpaceInvaders(Games):
 		
 		self.pre_process()
 #		 convert to Bernoulli-distributed spikes.
-		self.obs = next(self.encode(self.obs, max_prob=self.max_prob))
+#		self.encoded = next(self.encode(self.obs, max_prob=self.max_prob))
 		
 		# Return converted observations and other information.
-		return self.obs.view(1, -1), reward, done, info
+		return self.obs, self.reward, done, info
 
-
+	
 	def reset(self):
 		'''
 		Wrapper around the OpenAI Gym environment `reset()` function.
@@ -113,13 +111,6 @@ class SpaceInvaders(Games):
 
 		self.pre_process()
 		
-		# Store previous frame.
-#		if self.diffs:
-#			self.previous = obs
-		
-		# Convert to Bernoulli-distributed spikes.
-		self.obs = next(self.encode(self.obs, max_prob=self.max_prob))
-
 
 	def render(self):
 		'''

@@ -61,10 +61,10 @@ class Monitor:
 				
 				# 1D data.
 				if len(data.size()) - 1 == 1:
-					self.recording[var][:, self.i % self.time] = data
+					self.recording[var][:, self.i % self.time] = data.squeeze()
 				# 2D data.
 				elif len(data.size()) - 1 == 2:
-					self.recording[var][:, :, self.i % self.time] = data
+					self.recording[var][:, :, self.i % self.time] = data.squeeze()
 		
 			self.i += 1
 

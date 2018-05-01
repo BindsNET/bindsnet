@@ -3,16 +3,18 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+from bindsnet.encoding import *
 
 class Pipeline:
 	
-	def __init__(self, Network, Environment, **kwargs):
+	def __init__(self, network, environment, encoding=get_bernoulli, **kwargs):
 		'''
 		Initializes the pipeline
 		
 		Inputs:
-			Network (bindsnet.Network): Arbitrary network (e.g ETH)
-			Environment (bindsnet.Environment): Arbitrary environment (e.g MNIST, Space Invaders)
+			network (bindsnet.Network): Arbitrary network (e.g ETH)
+			environment (bindsnet.Environment): Arbitrary environment (e.g MNIST, Space Invaders)
+			encoding (bindsnet.encoding): Function to encode observation into spike trains
 		
 		Kwargs:
 			plot (bool): Plot monitor variables 
@@ -20,23 +22,22 @@ class Pipeline:
 			time (int): Time input is presented for to the network
 			history (int): Number of observations to keep track of
 		'''
-		# Plot interval?
-		
-		self.network = Network
-		self.env = Environment
-		
-		# Create figures based on desired plots inside kwargs
-		# Need to check if they exist
-		self.plot = kwargs['plot']
-		
-		if self.plot:
-			self.axs, self.ims = self.plot()
+		# Required arguments
+		self.network = network
+		self.env = environment
+		self.encoding = encoding
 		
 		# Kwargs being assigned to the pipeline
 		self.time = kwargs['time']
 		self.render = kwargs['render']
-		self.history = {n: 0 for n in range(kwargs['history'])}
+		self.history = {i: torch.Tensor() for i in range(kwargs['history'])}
+		self.plot = kwargs['plot']
 		
+		# Plot necessary things
+		if self.plot:
+			self.axs, self.ims = self.plot()
+		
+		# Counter
 		self.iteration = 0		
 		
 #		self.fig = plt.figure()
@@ -60,25 +61,31 @@ class Pipeline:
 		if self.network.layers['R'].s.sum() == 0 or self.iteration == 0:
 			action = np.random.choice(range(6))
 		else:
-			action = torch.multinomial((self.network.layers['R'].s.float() / self.network.layers['R'].s.sum()).view(-1), 1)[0] + 1
+			action = torch.multinomial((self.network.layers['R'].s.float() / self.network.layers['R'].s.sum().float()).view(-1), 1)[0] + 1
 #			action = torch.max( (self.network.layers['R'].s.float() / self.network.layers['R'].s.sum()).view(-1) , -1)[1][0] + 1
 		
 		# If an instance of OpenAI gym environment
-		obs, reward, done, info = self.env.step(action)
+		self.obs, self.reward, self.done, info = self.env.step(action)
 		
-		# Recording initial observations
-		if self.iteration < len(self.history):
-			self.history[self.iteration] = obs
+		# Store frame of history
+		if len(self.history) > 0:
+			if self.iteration < len(self.history): # Recording initial observations
+				self.history[self.iteration] = self.env.obs
+				self.encoded = next(self.encoding(self.env.obs, max_prob=self.env.max_prob)).unsqueeze(0)
+			else:
+				new_obs = torch.clamp(self.env.obs - sum(self.history.values()), 0, 1)		
+	#			self.f_pic.set_data(new_obs.numpy().reshape(78, 84))
+	#			self.fig.canvas.draw()
+				self.history[self.iteration%len(self.history)] = self.env.obs
+				
+				# Encode the new observation
+				self.encoded = next(self.encoding(new_obs, max_prob=self.env.max_prob)).unsqueeze(0)
+		# Encode the observation without any history
 		else:
-			new_obs = torch.clamp(obs - sum(self.history.values()), 0, 1)		
-#			self.f_pic.set_data(new_obs.numpy().reshape(78, 84))
-#			self.fig.canvas.draw()
-			self.history[self.iteration%len(self.history)] = obs
-			
-			obs = new_obs			
-			
+			self.encoded = next(self.encoding(self.obs, max_prob=self.env.max_prob)).unsqueeze(0)
+		
 		# Run the network
-		self.network.run(inpts={'X': obs}, time=self.time)
+		self.network.run(inpts={'X': self.encoded}, time=self.time)
 		
 		# Plot any relevant information
 		if self.plot:
@@ -86,9 +93,7 @@ class Pipeline:
 		
 		self.iteration += 1
 
-		return done
-		
-	
+
 	def plot(self):
 		'''
 		Plot monitor variables or desired variables?
@@ -111,16 +116,8 @@ class Pipeline:
 		self.env.reset()
 		self.network._reset()
 		self.iteration = 0
-		self.history = {n: 0 for n in len(self.history)}
+		self.history = {i: torch.Tensor() for i in len(self.history)}
 		
-		# Reset plots
-	
-	
-	
-	
-	
-	
-	
-	
+		
 	
 		
