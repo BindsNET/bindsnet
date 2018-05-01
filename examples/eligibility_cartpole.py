@@ -5,17 +5,18 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from timeit                       import default_timer
-from mpl_toolkits.axes_grid1      import make_axes_locatable
+from timeit                     import default_timer
+from mpl_toolkits.axes_grid1    import make_axes_locatable
 
-from bindsnet.evaluation          import *
-from bindsnet.analysis.plotting   import *
-from bindsnet.environment         import CartPole
-from bindsnet.encoding            import get_bernoulli
-from bindsnet.network.nodes       import LIFNodes, Input
-from bindsnet.network             import Network, Monitor
-from bindsnet.network.connections import Connection, m_stdp_et
+from bindsnet.evaluation        import *
+from bindsnet.analysis.plotting import *
+from bindsnet.environment       import CartPole
+from bindsnet.learning          import m_stdp_et
+from bindsnet.encoding          import get_bernoulli
 
+from bindsnet.network.topology  import Connection
+from bindsnet.network.nodes     import LIFNodes, Input
+from bindsnet.network           import Network, Monitor
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)

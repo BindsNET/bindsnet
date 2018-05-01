@@ -10,12 +10,12 @@ class Monitor:
 	'''
 	def __init__(self, obj, state_vars, time=None):
 		'''
-		Constructs a Monitor object.
+		Constructs a :code:`Monitor` object.
 		
 		Inputs:
-			obj (Object): Object to record state variables from during network simulation.
-			state_vars (list): List of strings indicating names of state variables to record.
-			time (int): If not None, pre-allocate memory for state variable recording.
+			| :code:`obj` (:code:`Object`): An object to record state variables from during network simulation.
+			| :code:`state_vars` (:code:`list`): List of strings indicating names of state variables to record.
+			| :code:`time` (:code:`int`): If not :code:`None`, pre-allocate memory for state variable recording.
 		'''
 		self.obj = obj
 		self.state_vars = state_vars
@@ -39,11 +39,11 @@ class Monitor:
 		Return recording to user.
 		
 		Inputs:
-			var (str): State variable recording to return.
+			| :code:`var` (:code:`str`): State variable recording to return.
 		
 		Returns:
-			(torch.Tensor or torch.cuda.Tensor): Tensor of shape [n_1, ..., n_k, time],
-				where [n_1, ..., n_k] refers to the shape of the recorded state variable.
+			| (:code:`torch.Tensor`): Tensor of shape :code:`[n_1, ..., n_k, time]`,
+				where :code:`[n_1, ..., n_k]` refers to the shape of the recorded state variable.
 		'''
 		return self.recording[var]
 
@@ -54,31 +54,29 @@ class Monitor:
 		if self.time is None:
 			for var in self.state_vars:
 				data = self.obj.__dict__[var].view(-1, 1).float()
-				self.recording[var] = torch.cat([self.recording[var], data], 1)
+				self.recording[var] = torch.cat([self.recording[var], data], -1)
 		else:
 			for var in self.state_vars:
 				data = self.obj.__dict__[var].unsqueeze(-1)
 				
 				# 1D data.
 				if len(data.size()) - 1 == 1:
-					self.recording[var][:, self.i % self.time] = data
+					self.recording[var][:, self.i % self.time] = data.squeeze()
 				# 2D data.
 				elif len(data.size()) - 1 == 2:
-					self.recording[var][:, :, self.i % self.time] = data
+					self.recording[var][:, :, self.i % self.time] = data.squeeze()
 		
 			self.i += 1
 
 	def _reset(self):
 		'''
-		Resets recordings to empty torch.Tensors.
+		Resets recordings to empty :code:`torch.Tensor`s.
 		'''
-		# If no simulation time is specified,
-		# specify 0-dimensional recordings.
+		# If no simulation time is specified, specify 0-dimensional recordings.
 		if self.time is None:
 			self.recording = {var : torch.Tensor() for var in self.state_vars}
 		
-		# If simulation time is specified, pre-
-		# allocate recordings in memory for speed.
+		# If simulation time is specified, pre-allocate recordings in memory for speed.
 		else:
 			self.recording = {var : torch.zeros(*self.obj.__dict__[var].size(), self.time) for var in self.state_vars}
 			self.i = 0
@@ -90,12 +88,12 @@ class NetworkMonitor:
 	'''
 	def __init__(self, network, layers=None, connections=None, state_vars=['v', 's', 'w'], time=None):
 		'''
-		Constructs a NetworkMonitor object.
+		Constructs a :code:`NetworkMonitor` object.
 		
 		Inputs:
-			network (bindsnet.network.Network): Network to record state variables from.
-			state_vars (list): List of strings indicating names of state variables to record.
-			time (int): If not None, pre-allocate memory for state variable recording.
+			| :code:`network` (:code:`bindsnet.network.Network`): Network to record state variables from.
+			| :code:`state_vars` (:code:`list`): List of strings indicating names of state variables to record.
+			| :code:`time` (:code:`int`): If not :code:`None`, pre-allocate memory for state variable recording.
 		'''
 		self.network = network
 		self.state_vars = state_vars
@@ -117,8 +115,7 @@ class NetworkMonitor:
 		# Initialize empty recording.
 		self.recording = {k : {} for k in self.layers + self.connections}
 		
-		# If no simulation time is specified,
-		# specify 0-dimensional recordings.
+		# If no simulation time is specified, specify 0-dimensional recordings.
 		if self.time is None:
 			for v in self.state_vars:
 				for l in self.layers:
@@ -129,8 +126,7 @@ class NetworkMonitor:
 					if v in self.network.connections[c].__dict__:
 						self.recording[c][v] = torch.Tensor()
 		
-		# If simulation time is specified, pre-
-		# allocate recordings in memory for speed.
+		# If simulation time is specified, pre-allocate recordings in memory for speed.
 		else:
 			for v in self.state_vars:
 				for l in self.layers:
@@ -146,8 +142,7 @@ class NetworkMonitor:
 		Return entire recording to user.
 		
 		Returns:
-			(dict[torch.Tensor or torch.cuda.Tensor]): Dictionary of
-				all layers' and connections' recorded state variables.
+			| (:code:`dict[torch.Tensor]`): Dictionary of all layers' and connections' recorded state variables.
 		'''
 		return self.recording
 
@@ -186,8 +181,8 @@ class NetworkMonitor:
 		Write the recording dictionary out to file.
 		
 		Inputs:
-			path (str): The directory to which to write the monitor's recording.
-			fmt (str): Type of file to write to disk. One of "pickle" or "npz".
+			| :code:`path` (:code:`str`): The directory to which to write the monitor's recording.
+			| :code:`fmt` (:code:`str`): Type of file to write to disk. One of :code:`"pickle"` or :code:`"npz"`.
 		'''
 		if not os.path.exists(os.path.dirname(path)):
 			os.makedirs(os.path.dirname(path))
@@ -209,14 +204,13 @@ class NetworkMonitor:
 		
 	def _reset(self):
 		'''
-		Resets recordings to empty Tensors.
+		Resets recordings to empty :code:`torch.Tensors`.
 		'''
 		# Reset to empty recordings
 		self.i = 0
 		self.recording = {k : {} for k in self.layers + self.connections}
 		
-		# If no simulation time is specified,
-		# specify 0-dimensional recordings.
+		# If no simulation time is specified, specify 0-dimensional recordings.
 		if self.time is None:
 			for v in self.state_vars:
 				for l in self.layers:
@@ -227,8 +221,7 @@ class NetworkMonitor:
 					if v in self.network.connections[c].__dict__:
 						self.recording[c][v] = torch.Tensor()
 		
-		# If simulation time is specified, pre-
-		# allocate recordings in memory for speed.
+		# If simulation time is specified, pre-allocate recordings in memory for speed.
 		else:
 			for v in self.state_vars:
 				for l in self.layers:

@@ -169,6 +169,7 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 		cax = div.append_axes("right", size="5%", pad=0.05)
 		
 		ax.set_xticks(()); ax.set_yticks(())
+		ax.set_aspect('auto')
 		
 		plt.colorbar(im, cax=cax)
 		fig.tight_layout()

@@ -6,22 +6,19 @@ import pickle            as p
 import argparse
 import matplotlib.pyplot as plt
 
-from tqdm                 import tqdm
-from timeit               import default_timer
-from sklearn.linear_model import LogisticRegression
+from tqdm                       import tqdm
+from timeit                     import default_timer
+from sklearn.linear_model       import LogisticRegression
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'datasets')))
+from bindsnet.evaluation        import *
+from bindsnet.analysis.plotting import *
+from bindsnet.datasets          import MNIST
+from bindsnet.learning          import post_pre
+from bindsnet.encoding          import get_poisson
 
-from datasets          import MNIST
-from encoding          import get_poisson
-from network           import Network, Monitor
-from connections       import Connection, post_pre
-from nodes             import AdaptiveLIFNodes, LIFNodes, Input
-
-from evaluation        import *
-from analysis.plotting import *
+from bindsnet.network.topology  import Connection
+from bindsnet.network           import Network, Monitor
+from bindsnet.network.nodes     import AdaptiveLIFNodes, LIFNodes, Input
 
 
 def get_square_weights(weights, n_sqrt):

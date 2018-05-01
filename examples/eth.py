@@ -5,17 +5,18 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from time import time as t
+from time                       import time as t
 
-from bindsnet.evaluation          import *
-from bindsnet.analysis.plotting   import *
-from bindsnet.datasets            import MNIST
-from bindsnet.encoding            import get_poisson
+from bindsnet.evaluation        import *
+from bindsnet.analysis.plotting import *
+from bindsnet.datasets          import MNIST
+from bindsnet.learning          import post_pre
+from bindsnet.encoding          import get_poisson
 
-from bindsnet.network             import Network
-from bindsnet.network.monitors    import Monitor
-from bindsnet.network.connections import Connection, post_pre
-from bindsnet.network.nodes       import AdaptiveLIFNodes, LIFNodes, Input
+from bindsnet.network           import Network
+from bindsnet.network.monitors  import Monitor
+from bindsnet.network.topology  import Connection
+from bindsnet.network.nodes     import AdaptiveLIFNodes, LIFNodes, Input
 
 
 def get_square_weights(weights, n_sqrt):
@@ -123,7 +124,6 @@ network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 images, labels = MNIST(path=os.path.join('..', 'data')).get_train()
 images *= intensity
 images /= 4  # Normalize and enforce minimum expected inter-spike interval.
-# images = images.view(images.size(0), -1)  # Flatten images to one dimension.
 
 # Lazily encode data as Poisson spike trains.
 data_loader = get_poisson(data=images, time=time)
@@ -185,7 +185,7 @@ for i in range(n_train):
 	inh_voltages = inh_voltage_monitor.get('v')
 	
 	# Add to spikes recording.
-	spike_record[i % update_interval] = spikes['Ae'].get('s')
+	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
 	
 	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	
@@ -198,7 +198,7 @@ for i in range(n_train):
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		
 		if i == 0:
-			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
+			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt.t(), label=labels[i])
 			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes})
 			weights_im = plot_weights(square_weights)
 			assigns_im = plot_assignments(square_assignments)
@@ -206,7 +206,7 @@ for i in range(n_train):
 			voltage_ims, voltage_axes = plot_voltages(voltages)
 			
 		else:
-			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
+			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt.t(), label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes},
 												ims=spike_ims, axes=spike_axes)
 			weights_im = plot_weights(square_weights, im=weights_im)

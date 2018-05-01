@@ -1,11 +1,10 @@
 import os
 import sys
 import numpy as np
+
 from sklearn.linear_model import LogisticRegression
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-
-from datasets import MNIST
+from bindsnet.datasets import MNIST
 
 # Load MNIST data.
 X_train, y_train = MNIST(path=os.path.join('..', 'data')).get_train()

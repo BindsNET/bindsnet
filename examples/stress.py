@@ -3,15 +3,11 @@ import sys
 import torch
 import matplotlib.pyplot as plt
 
-from time import time
+from time                      import time
 
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'network')))
-sys.path.append(os.path.abspath(os.path.join('..', 'bindsnet', 'datasets')))
-
-from network     import Network
-from connections import Connection
-from nodes       import Input, LIFNodes
+from bindsnet.network          import Network
+from bindsnet.network.topology import Connection
+from bindsnet.network.nodes    import Input, LIFNodes
 
 n = 5000
 
