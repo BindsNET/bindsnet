@@ -144,8 +144,8 @@ class Pipeline:
 			self.first = False
 		else:
 			self.pic.set_data(obs.numpy().reshape(78, 84))
-
-
+			
+			
 	def plot_data(self):
 		'''
 		Plot monitor variables or desired variables.
