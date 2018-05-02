@@ -24,19 +24,19 @@ class Games(ABC):
     @abstractmethod
     def preprocess(self):
         '''
-        Pre-processing steps for every observation
+        Pre-processing steps for every observation.
         '''
         pass
     
     def get_observation(self):
         '''
-        Returns the observation for current timestep
+        Returns the observation for current timestep.
         '''
         return self.obs
 
     def get_reward(self):
         '''
-        Returns the reward for current timestep
+        Returns the reward for current timestep.
         '''
         return self.reward
     
@@ -72,10 +72,10 @@ class SpaceInvaders(Games):
             | :code:`a` (:code:`int`): Action to take in Space Invaders environment.
         
         Returns:
-            | (:code:`torch.Tensor`): Observation from the environment.
-            | (:code:`float`): Reward signal from the environment.
-            | (:code:`bool`): Indicates whether the simulation has finished.
-            | (:code:`dict`): Current information about the environment.
+            | :code:`obs` (:code:`torch.Tensor`): Observation from the environment.
+            | :code:`reward` (:code:`float`): Reward signal from the environment.
+            | :code:`done` (:code:`bool`): Indicates whether the simulation has finished.
+            | :code:`info` (:code:`dict`): Current information about the environment.
         '''
         # Call gym's environment step function.
         self.obs, self.reward, done, info = self.env.step(a)
@@ -90,8 +90,7 @@ class SpaceInvaders(Games):
         Wrapper around the OpenAI Gym environment :code:`reset()` function.
         
         Returns:
-            | (:code:`torch.Tensor`): Observation from the environment.
-            obs (torch.Tensor): Observation from the environment.
+            | :code:`obs` (:code:`torch.Tensor`): Observation from the environment.
         '''
         # Call gym's environment reset function.
         self.obs = self.env.reset()
@@ -117,10 +116,10 @@ class SpaceInvaders(Games):
         Pre-Processing step for a state specific to Space Invaders.
         
         Inputs:
-            obs(numpy.array): Observation from the environment.
+            | (:code:`numpy.array`): Observation from the environment.
         
         Returns:
-            obs (torch.Tensor): Pre-processed observation.
+            | (:code:`torch.Tensor`): Pre-processed observation.
         '''
         self.obs = subsample( gray_scale(self.obs), 84, 110)
         self.obs = self.obs[26:104, :]

@@ -13,8 +13,8 @@ class Pipeline:
 		
 		Inputs:
 			:code:`network` (:code:`bindsnet.Network`): Arbitrary network object.
-			:code:`environment` (:code:`bindsnet.Environment`): Arbitrary environment (e.g MNIST, Space Invaders)
-			:code:`encoding` (:code:`function`): Function to encode observation into spike trains
+			:code:`environment` (:code:`bindsnet.Environment`): Arbitrary environment (e.g MNIST, Space Invaders).
+			:code:`encoding` (:code:`function`): Function to encode observation into spike trains.
 			:code:`kwargs`:
 				:code:`plot` (:code:`bool`): Plot monitor variables.
 				:code:`render` (:code:`bool`): Show the environment.
@@ -80,6 +80,7 @@ class Pipeline:
 		
 		self.iteration += 1
 
+
 	def plot(self):
 		'''
 		Plot monitor variables or desired variables
@@ -90,8 +91,10 @@ class Pipeline:
 		else: # Update the plots dynamically
 			pass
 		
+		
 	def normalize(self, src, target, norm):
 		self.network.connections[(src, target)].normalize(norm)
+		
 		
 	def reset(self):
 		'''
