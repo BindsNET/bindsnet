@@ -6,24 +6,9 @@ import argparse
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+from bindsnet                import *
 from timeit                  import default_timer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from bindsnet.pipeline            import *
-from bindsnet.evaluation          import *
-from bindsnet.analysis.plotting   import *
-from bindsnet.datasets.preprocess import *
-
-
-from bindsnet.network             import Network
-from bindsnet.encoding            import get_bernoulli
-from bindsnet.environment         import SpaceInvaders
-
-from bindsnet.network.monitors    import Monitor
-from bindsnet.network.learning    import hebbian
-from bindsnet.network.connections import Connection 
-from bindsnet.network.nodes       import LIFNodes, Input
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
@@ -48,8 +33,8 @@ network = Network(dt=dt)
 
 # Layers of neurons.
 inpt = Input(n=6552, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
+exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
+readout = LIFNodes(n=5, refrac=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.

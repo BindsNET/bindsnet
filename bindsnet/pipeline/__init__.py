@@ -15,10 +15,12 @@ class Pipeline:
 		Initializes the pipeline,
 		
 		Inputs:
+		
 			| :code:`network` (:code:`bindsnet.Network`): Arbitrary network object.
 			| :code:`environment` (:code:`bindsnet.Environment`): Arbitrary environment (e.g MNIST, Space Invaders)
 			| :code:`encoding` (:code:`function`): Function to encode observation into spike trains
 			| :code:`kwargs`:
+			
 				| :code:`plot` (:code:`bool`): Plot monitor variables.
 				| :code:`render` (:code:`bool`): Show the environment.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
