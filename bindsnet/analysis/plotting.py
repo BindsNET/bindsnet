@@ -60,11 +60,11 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
 		| :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons between the given range
 			of time. Default is the entire simulation time. 
-			..For example, time = (40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
+			For example, time=(40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
 		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 		| :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity of neurons between the
 		   given range of neurons. Default is all neurons of the layer. 
-			..For example, (10, 25) will plot spiking activity of neurons between those range of
+			For example, (10, 25) will plot spiking activity of neurons between those range of
 		   indices. Don't need to provide number of neurons for all layers.
 	
 	Returns:
@@ -129,6 +129,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		if n_subplots == 1:
 			for datum in spikes.items():
 				ims[0].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+				ims[0].autoscale()
 				
 				args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
 				axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
@@ -333,11 +334,13 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
 		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the voltage plots.
 		| :code:`time` (:code:`tuple(int)`): Plot voltage of neurons between the given range of time. Default is the entire simulation time. 
-			..For example, time = (40, 80) will plot svoltage of neurons from 40 ms to 80 ms.
+			
+		   For example, time=(40, 80) will plot voltage of neurons from 40 ms to 80 ms.
 		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 		| :code:`n_neurons` (:code:`dict(tuple(int))`): Plot voltage of neurons between the 
 		     given range of neurons. Default is all neurons of the layer. 
-			..For example, (10, 25) will plot spiking activity of neurons between those range of indices. 
+			
+			For example, (10, 25) will plot spiking activity of neurons between those range of indices. 
 	
 	Returns:
 		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
