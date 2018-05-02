@@ -46,6 +46,17 @@ class Games(ABC):
         '''
         self.env.close()
 
+
+class MNISTEnv:
+	'''
+	A wrapper around the :code:`MNIST` dataset object to pass to the :code:`Pipeline` object.
+	'''
+	def __init__(self):
+		'''
+		Initializes the environment wrapper around the MNIST dataset.
+		'''
+
+
 class SpaceInvaders(Games):
     '''
     A wrapper around the :code:`SpaceInvaders-v0` OpenAI gym environment.
@@ -55,6 +66,7 @@ class SpaceInvaders(Games):
         Initializes the OpenAI Gym Space Invaders environment wrapper.
         
         Inputs:
+		
             | :code:`max_prob` (:code:`float`): Specifies the maximum Bernoulli spiking probability.
             | :code:`diffs` (:code:`bool`): Whether to record previous frame and take differences.
         '''
@@ -69,9 +81,11 @@ class SpaceInvaders(Games):
         Wrapper around the OpenAI Gym environment :code:`step()` function.
         
         Inputs:
+		
             | :code:`a` (:code:`int`): Action to take in Space Invaders environment.
         
         Returns:
+		
             | :code:`obs` (:code:`torch.Tensor`): Observation from the environment.
             | :code:`reward` (:code:`float`): Reward signal from the environment.
             | :code:`done` (:code:`bool`): Indicates whether the simulation has finished.
@@ -83,26 +97,24 @@ class SpaceInvaders(Games):
         
         # Return converted observations and other information.
         return self.obs, self.reward, done, info
-
     
     def reset(self):
         '''
         Wrapper around the OpenAI Gym environment :code:`reset()` function.
         
         Returns:
+		
             | :code:`obs` (:code:`torch.Tensor`): Observation from the environment.
         '''
         # Call gym's environment reset function.
         self.obs = self.env.reset()
         self.preprocess()
         
-
     def render(self):
         '''
         Wrapper around the OpenAI Gym environment :code:`render()` function.
         '''
         self.env.render()
-
 
     def close(self):
         '''
@@ -110,15 +122,16 @@ class SpaceInvaders(Games):
         '''
         self.env.close()
 
-
     def preprocess(self):
         '''
         Pre-Processing step for a state specific to Space Invaders.
         
         Inputs:
+		
             | (:code:`numpy.array`): Observation from the environment.
         
         Returns:
+		
             | (:code:`torch.Tensor`): Pre-processed observation.
         '''
         self.obs = subsample( gray_scale(self.obs), 84, 110)
@@ -137,6 +150,7 @@ class CartPole(Games):
         Initializes the OpenAI Gym Space Invaders environment wrapper.
         
         Inputs:
+		
             | :code:`max_prob` (:code:`float`): Specifies the maximum Bernoulli trial spiking probability.
         '''
         super().__init__()
@@ -149,9 +163,11 @@ class CartPole(Games):
         Wrapper around the OpenAI Gym environment :code:`step()` function.
         
         Inputs:
+		
             | :code:`a` (:code:`int`): Action to take in Space Invaders environment.
         
         Returns:
+		
             | (:code:`torch.Tensor`): Observation from the environment.
             | (:code:`float`): Reward signal from the environment.
             | (:code:`bool`): Indicates whether the simulation has finished.
@@ -180,6 +196,7 @@ class CartPole(Games):
         Wrapper around the OpenAI Gym environment :code:`reset()` function.
         
         Returns:
+		
             | (:code:`torch.Tensor`): Observation from the environment.
         '''
         # Call gym's environment reset function.

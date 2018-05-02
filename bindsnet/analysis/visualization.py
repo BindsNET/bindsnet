@@ -70,7 +70,7 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	plt.xlabel('Simulation Time'); plt.ylabel('Neuron index')
 	plt.show()
 
-def plot_voltages(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
+def plot_voltage(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
 	'''
 	Plot voltage for a single neuron on a specific example.
 	
