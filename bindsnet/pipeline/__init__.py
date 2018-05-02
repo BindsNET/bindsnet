@@ -3,10 +3,13 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from bindsnet.encoding import *
+from ..encoding import *
 
 class Pipeline:
-	
+	'''
+	| Allows for the abstraction of the interaction between spiking neural network,
+	| environment (or dataset), and encoding of inputs into spike trains.
+	'''
 	def __init__(self, network, environment, encoding=get_bernoulli, **kwargs):
 		'''
 		Initializes the pipeline,
@@ -55,26 +58,27 @@ class Pipeline:
 		# If an instance of OpenAI gym environment
 		self.obs, self.reward, self.done, info = self.env.step(action)
 		
-		# Store frame of history
+		# Store frame of history and encode the inputs.
 		if len(self.history) > 0:
 			if self.iteration < len(self.history):  # Recording initial observations
+				# Add current observation to the history buffer.
 				self.history[self.iteration] = self.env.obs
 				self.encoded = next(self.encoding(self.env.obs, max_prob=self.env.max_prob)).unsqueeze(0)
 			else:
+				# Subtract off overlapping data from the history buffer.
 				new_obs = torch.clamp(self.env.obs - sum(self.history.values()), 0, 1)		
-				self.history[self.iteration%len(self.history)] = self.env.obs
+				self.history[self.iteration % len(self.history)] = self.env.obs
 				
-				# Encode the new observation
+				# Encode the new observation.
 				self.encoded = next(self.encoding(new_obs, max_prob=self.env.max_prob)).unsqueeze(0)
 		
-		# Encode the observation without any history
+		# Encode the observation without any history.
 		else:
 			self.encoded = next(self.encoding(self.obs, max_prob=self.env.max_prob)).unsqueeze(0)
 		
-		# Run the network
+		# Run the network on the spike train encoded inputs.
 		self.network.run(inpts={'X': self.encoded}, time=self.time)
 		
-		# Plot any relevant information
 		if self.plot:
 			self.plot()
 		
@@ -82,7 +86,7 @@ class Pipeline:
 
 	def plot(self):
 		'''
-		Plot monitor variables or desired variables?
+		Plot desired variables.
 		'''
 		if self.ims == None and self.axs == None:
 			# Initialize plots

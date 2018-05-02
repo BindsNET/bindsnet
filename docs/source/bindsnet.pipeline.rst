@@ -1,10 +1,10 @@
-bindsnet\.datasets package
+bindsnet\.pipeline package
 ==========================
 
 Module contents
 ---------------
 
-.. automodule:: bindsnet.datasets
+.. automodule:: bindsnet.pipeline
     :members:
     :undoc-members:
     :show-inheritance:

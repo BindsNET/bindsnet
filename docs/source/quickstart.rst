@@ -9,7 +9,7 @@ For example, to run a (close) replication of the network from `this paper <https
 
 	./get_MNIST.sh
 	
-This will download and unzip all the data file contained in the `MNIST handwritten digit dataset <http://yann.lecun.com/exdb/mnist/>`_to the :code:'data/' directory. Then, change directory to the :code:`examples/` folder and issue
+This will download and unzip all the data file contained in the `MNIST handwritten digit dataset <http://yann.lecun.com/exdb/mnist/>`_ to the :code:`data/` directory. Then, change directory to the :code:`examples/` folder and issue
 
 .. code-block:: bash
 
