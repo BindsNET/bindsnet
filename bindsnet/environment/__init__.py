@@ -95,7 +95,7 @@ class SpaceInvaders(Games):
         '''
         # Call gym's environment reset function.
         self.obs = self.env.reset()
-        self.obs = self.preprocess()
+        self.preprocess()
         
 
     def render(self):

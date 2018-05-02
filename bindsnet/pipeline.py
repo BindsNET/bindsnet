@@ -9,7 +9,7 @@ class Pipeline:
 	
 	def __init__(self, network, environment, encoding=get_bernoulli, **kwargs):
 		'''
-		Initializes the pipeline,
+		Initializes the pipeline.
 		
 		Inputs:
 			:code:`network` (:code:`bindsnet.Network`): Arbitrary network object.
