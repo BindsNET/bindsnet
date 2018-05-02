@@ -21,7 +21,7 @@ from bindsnet.environment         import SpaceInvaders
 
 from bindsnet.learning            import hebbian
 from bindsnet.network.monitors    import Monitor
-from bindsnet.network.connections import Connection 
+from bindsnet.network.topology    import Connection 
 from bindsnet.network.nodes       import LIFNodes, Input
 
 
@@ -48,8 +48,8 @@ network = Network(dt=dt)
 
 # Layers of neurons.
 inpt = Input(n=6552, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
+exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
+readout = LIFNodes(n=5, refrac=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
@@ -100,7 +100,7 @@ network.connections[('E', 'R')].normalize(exc_readout_norm)
 env = SpaceInvaders()
 env.reset()
 
-p = Pipeline(network, env, encoding=get_bernoulli, plot=False, time=1, render=True, history=0)
+p = Pipeline(network, env, encoding=get_bernoulli, plot=False, time=1, render=False, history=0)
 print()
 
 while True:

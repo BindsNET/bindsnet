@@ -46,7 +46,7 @@ class Pipeline:
 		if self.render:
 			self.env.render()
 			
-		# Choose action based on readout neuron spiking.
+		# Choose action based on readout neuron spiking
 		if self.network.layers['R'].s.sum() == 0 or self.iteration == 0:
 			action = np.random.choice(range(6))
 		else:
@@ -95,7 +95,7 @@ class Pipeline:
 		
 	def reset(self):
 		'''
-		Reset the entire pipeline
+		Reset the pipeline
 		'''
 		self.env.reset()
 		self.network._reset()

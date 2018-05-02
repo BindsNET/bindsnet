@@ -3,7 +3,6 @@ import sys
 import gym
 import torch
 import numpy as np
-from PIL import Image
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 
@@ -23,7 +22,7 @@ class Games(ABC):
         super().__init__()
 
     @abstractmethod
-    def pre_process(self):
+    def preprocess(self):
         '''
         Pre-processing steps for every observation
         '''
@@ -95,7 +94,8 @@ class SpaceInvaders(Games):
             obs (torch.Tensor): Observation from the environment.
         '''
         # Call gym's environment reset function.
-        self.obs = self.preprocess(self.env.reset())
+        self.obs = self.env.reset()
+        self.obs = self.preprocess()
         
 
     def render(self):
@@ -202,7 +202,7 @@ class CartPole(Games):
         # Return converted observations.
         return next(obs)
 
-    def pre_process(self):
+    def preprocess(self):
         pass
     
     def render(self):
