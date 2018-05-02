@@ -36,12 +36,12 @@ class Pipeline:
 		if 'time' in kwargs.keys():
 			self.time = kwargs['time']
 		else:
-			self.time = time
+			self.time = 1
 		
 		if 'render' in kwargs.keys():
 			self.render = kwargs['render']
 		else:
-			self.render = render
+			self.render = False
 		
 		if 'history' in kwargs.keys():
 			self.history = {i : torch.Tensor() for i in range(kwargs['history'])}
@@ -50,18 +50,19 @@ class Pipeline:
 		
 		if 'plot' in kwargs.keys() and 'layer' in kwargs.keys():
 			self.plot = kwargs['plot']
-			self.layer_to_plot = [layer for layer in kwargs['layer'] if layer in self.network.layers]
-			self.spike_record = {layer: torch.ByteTensor() for layer in self.layer_to_plot}
-			self.set_spike_data()
-			self.plot_data()
 		else:
 			self.plot = False
 		
 		if 'plot_interval' in kwargs.keys():
 			self.plot_interval = kwargs['plot_interval']
 		else:
-			self.plot_interval = plot_interval
-			
+			self.plot_interval = 100
+		
+		if self.plot:
+			self.layer_to_plot = [layer for layer in kwargs['layer'] if layer in self.network.layers]
+			self.spike_record = {layer: torch.ByteTensor() for layer in self.layer_to_plot}
+			self.set_spike_data()
+			self.plot_data()
 
 	def set_spike_data(self):
 		for layer in self.layer_to_plot:
@@ -80,10 +81,6 @@ class Pipeline:
 		if self.iteration % 100 == 0:
 			print('Iteration %d' % self.iteration)
 		
-			# Reset monitors
-			for m in self.network.monitors:
-				self.network.monitors[m]._reset()
-				
 		# Render game
 		if self.render:
 			self.env.render()
@@ -117,7 +114,7 @@ class Pipeline:
 		self.network.run(inpts={'X': self.encoded}, time=self.time)
 		
 		# Plot any relevant information
-		if self.plot and self.iteration % self.plot_interval == 0:
+		if self.plot and (self.iteration % self.plot_interval == 0):
 			self.set_spike_data()
 			self.plot_data()
 			
@@ -131,8 +128,8 @@ class Pipeline:
 		# Initialize plots
 		if self.ims == None and self.axes == None:
 			self.ims, self.axes = plot_spikes(self.spike_record)
-		# Update the plots dynamically
-		else:
+		else: 
+			# Update the plots dynamically
 			self.ims, self.axes = plot_spikes(self.spike_record, ims=self.ims, axes=self.axes)
 		
 		plt.pause(1e-8)
