@@ -1,14 +1,15 @@
 import cv2
+import torch
 
 def gray_scale(im):
 	'''
 	Converts RGB image into grayscale.
 	
 	Inputs:
-		im(numpy.array): RGB image.
+		| :code:`im` (:code:`numpy.array`): RGB image.
 	
 	Returns:
-		im(numpy.array): Grayscaled image (All pixel values are from [0, 1])
+		| :code:`im` (:code:`numpy.array`): Grayscaled image
 	'''
 	im = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
 	return im
@@ -23,12 +24,12 @@ def binary_image(im):
 	Converts input image into black and white (binary)
 	
 	Inputs:
-		im(numpy.array): Grayscaled image.
+		| :code:`im` (:code:`numpy.array`): Grayscaled image
 	
 	Returns:
-		im(numpy.array): Black and white image. 
+		| :code:`im` (:code:`numpy.array`): Black and white image. 
 	'''
-	ret, im = cv2.threshold(im, 1, 255, cv2.THRESH_BINARY)
+	ret, im = cv2.threshold(im, 0, 1, cv2.THRESH_BINARY)
 	return im
 
 
@@ -37,12 +38,12 @@ def subsample(im, x, y):
 	Scale the image to (x, y).
 	
 	Inputs:
-		im(numpy.array): Image to be rescaled.
-		x(int): Output value for im's x dimension.
-		y(int): Output value for im's y dimension.
+		| :code:`im` (:code:`numpy.array`): Image to be rescaled.
+		| :code:`x` (:code:`int`): Output value for im's x dimension.
+		| :code:`y` (:code:`int`): Output value for im's y dimension.
 	
 	Returns:
-		im(numpy.array): Rescaled image. 
+		| :code:`im` (:code:`numpy.array`): Rescaled image. 
 	'''
 	im = cv2.resize(im, (x, y))
 	return im 

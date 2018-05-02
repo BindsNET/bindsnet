@@ -5,4 +5,3 @@ bindsnet
    :maxdepth: 4
 
    bindsnet
-   setup

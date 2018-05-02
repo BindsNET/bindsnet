@@ -23,9 +23,14 @@ The development of BindsNET is supported by the Defense Advanced Research Projec
    installation
    quickstart
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Package reference
+
+   bindsnet
+
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
