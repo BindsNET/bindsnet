@@ -42,9 +42,9 @@ class TestNodes:
 		for nodes in [LIFNodes,
 					  AdaptiveLIFNodes]:
 			for n in [1, 100, 10000]:
-				layer = nodes(n, rest=0.0, reset=-10.0, threshold=10.0, refractory=3, voltage_decay=7e-4)
+				layer = nodes(n, rest=0.0, reset=-10.0, thresh=10.0, refrac=3, decay=7e-4)
 				
-				assert layer.rest == 0.0; assert layer.reset == -10.0; assert layer.threshold == 10.0
-				assert layer.refractory == 3; assert layer.voltage_decay == 7e-4
+				assert layer.rest == 0.0; assert layer.reset == -10.0; assert layer.thresh == 10.0
+				assert layer.refrac == 3; assert layer.decay == 7e-4
 				assert all(layer.get_spikes().float() == torch.zeros(n))
 				assert all(layer.get_voltages() == layer.rest * torch.ones(n))

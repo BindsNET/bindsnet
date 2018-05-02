@@ -10,19 +10,19 @@ class Pipeline:
 	| Allows for the abstraction of the interaction between spiking neural network,
 	| environment (or dataset), and encoding of inputs into spike trains.
 	'''
-	def __init__(self, network, environment, encoding=get_bernoulli, **kwargs):
+	def __init__(self, network, environment, encoding=bernoulli, **kwargs):
 		'''
 		Initializes the pipeline,
 		
 		Inputs:
-			:code:`network` (:code:`bindsnet.Network`): Arbitrary network object.
-			:code:`environment` (:code:`bindsnet.Environment`): Arbitrary environment (e.g MNIST, Space Invaders)
-			:code:`encoding` (:code:`function`): Function to encode observation into spike trains
-			:code:`kwargs`:
-				:code:`plot` (:code:`bool`): Plot monitor variables.
-				:code:`render` (:code:`bool`): Show the environment.
-				:code:`time` (:code:`int`): Time input is presented for to the network.
-				:code:`history` (:code:`int`): Number of observations to keep track of.
+			| :code:`network` (:code:`bindsnet.Network`): Arbitrary network object.
+			| :code:`environment` (:code:`bindsnet.Environment`): Arbitrary environment (e.g MNIST, Space Invaders)
+			| :code:`encoding` (:code:`function`): Function to encode observation into spike trains
+			| :code:`kwargs`:
+				| :code:`plot` (:code:`bool`): Plot monitor variables.
+				| :code:`render` (:code:`bool`): Show the environment.
+				| :code:`time` (:code:`int`): Time input is presented for to the network.
+				| :code:`history` (:code:`int`): Number of observations to keep track of.
 		'''
 		self.network = network
 		self.env = environment
