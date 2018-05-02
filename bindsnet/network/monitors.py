@@ -47,6 +47,7 @@ class Monitor:
 		'''
 		return self.recording[var]
 
+
 	def record(self):
 		'''
 		Appends the current value of the recorded state variables to the recording.
@@ -67,6 +68,7 @@ class Monitor:
 					self.recording[var][:, :, self.i % self.time] = data.squeeze()
 		
 			self.i += 1
+
 
 	def _reset(self):
 		'''

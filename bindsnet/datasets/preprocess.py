@@ -1,4 +1,5 @@
 import cv2
+import torch
 
 def gray_scale(im):
 	'''
@@ -28,7 +29,7 @@ def binary_image(im):
 	Returns:
 		| :code:`im` (:code:`numpy.array`): Black and white image. 
 	'''
-	ret, im = cv2.threshold(im, 1, 255, cv2.THRESH_BINARY)
+	ret, im = cv2.threshold(im, 0, 1, cv2.THRESH_BINARY)
 	return im
 
 

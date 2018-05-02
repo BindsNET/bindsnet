@@ -19,10 +19,12 @@ class Pipeline:
 			| :code:`kwargs`:
 				| :code:`plot` (:code:`bool`): Plot monitor variables.
 				| :code:`render` (:code:`bool`): Show the environment.
-				| :code:`time` (:code:`int`): Time input is presented for to the network.
-				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`layer` (:code:`list(string)`): Layer to plot data for. 
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
+				| :code:`time` (:code:`int`): Time input is presented for to the network.
+				| :code:`history` (:code:`int`): Number of observations to keep track of.
+				| :code:`delta` (:code:`int`): Step size to save observations in history. 
+				| For example, delta=1 will save consecutive observations and delta=2 will save every other
 				
 		'''
 		self.network = network
@@ -43,10 +45,12 @@ class Pipeline:
 		else:
 			self.render = False
 		
-		if 'history' in kwargs.keys():
+		if 'history' in kwargs.keys() and 'delta' in kwargs.keys():
 			self.history = {i : torch.Tensor() for i in range(kwargs['history'])}
+			self.delta = kwargs['delta']
 		else:
 			self.history = {}
+			self.delta = 0
 		
 		if 'plot' in kwargs.keys() and 'layer' in kwargs.keys():
 			self.plot = kwargs['plot']
@@ -63,6 +67,9 @@ class Pipeline:
 			self.spike_record = {layer: torch.ByteTensor() for layer in self.layer_to_plot}
 			self.set_spike_data()
 			self.plot_data()
+
+		self.first = True
+
 
 	def set_spike_data(self):
 		for layer in self.layer_to_plot:
@@ -96,12 +103,20 @@ class Pipeline:
 		
 		# Store frame of history
 		if len(self.history) > 0:
-			if self.iteration < len(self.history):  # Recording initial observations
-				self.history[self.iteration] = self.env.obs
-				self.encoded = next(self.encoding(self.env.obs, max_prob=self.env.max_prob)).unsqueeze(0)
+			# Recording initial observations
+			if self.iteration < len(self.history)*self.delta:  
+				# Store observation based on delta value
+				if self.iteration % self.delta == 0:
+					self.history[self.iteration] = self.obs
+				self.encoded = next(self.encoding(self.obs, max_prob=self.env.max_prob)).unsqueeze(0)
 			else:
-				new_obs = torch.clamp(self.env.obs - sum(self.history.values()), 0, 1)		
-				self.history[self.iteration%len(self.history)] = self.env.obs
+				new_obs = torch.clamp(self.obs - sum(self.history.values()), 0, 1)		
+				
+				self.plot_obs(new_obs)
+				
+				# Store observation based on delta value
+				if self.iteration % self.delta == 0:
+					self.history[self.iteration % len(self.history)] = self.obs
 				
 				# Encode the new observation
 				self.encoded = next(self.encoding(new_obs, max_prob=self.env.max_prob)).unsqueeze(0)
@@ -119,6 +134,16 @@ class Pipeline:
 			self.plot_data()
 			
 		self.iteration += 1
+
+
+	def plot_obs(self, obs):
+		if self.first:
+			fig = plt.figure()
+			axes = fig.add_subplot(111)
+			self.pic = axes.imshow(obs.numpy().reshape(78, 84), cmap='gray')
+			self.first = False
+		else:
+			self.pic.set_data(obs.numpy().reshape(78, 84))
 
 
 	def plot_data(self):
