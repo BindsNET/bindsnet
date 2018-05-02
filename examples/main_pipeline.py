@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=200)
+parser.add_argument('--plot_interval', type=int, default=100)
 parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--env_plot', dest='env_plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
@@ -85,7 +85,7 @@ network.connections[('E', 'R')].normalize(exc_readout_norm)
 env = SpaceInvaders()
 env.reset()
 
-p = Pipeline(network, env, encoding=get_bernoulli, plot=False, time=1, render=True, history=0)
+p = Pipeline(network, env, encoding=get_bernoulli, plot=True, time=1, render=False, history=0, plot_interval=100, layer=['E'])
 print()
 
 while True:
