@@ -50,15 +50,14 @@ def get_weights_for_example(w, sample_every=1):
 
 def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	'''
-	spikes(torch.tensor (N_examples, N_neurons, time)): Spiking train data for a 
-														population of neurons for one example
-	n_ex(int): Allows user to pick which example to plot spikes for. Must be >= 0
-	top_k(int): Plot k neurons that spiked the most for n_ex example
-	indices(list(int)): Plot specific neurons' spiking activity instead of top_k
-								Meant to replace top_k. 
+	Plot spike trains for top-k neurons or for specific indices.
+	
+	| :code:`spikes` (:code:`torch.tensor (N_examples, N_neurons, time)`): Spiking train data for a population of neurons for one example
+	| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot spikes for. Must be >= 0
+	| :code:`top_k` (:code:`int`): Plot k neurons that spiked the most for n_ex example
+	| :code:`indices` (:code:`list(int)`): Plot specific neurons' spiking activity instead of top_k. Meant to replace top_k. 
 								
-	If both top_k and indices are left as default values (None), plot will include
-	all neurons.
+	Default will plot all neurons' spiking activity.
 	
 	'''
 
@@ -88,14 +87,16 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	
 def plot_voltages(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
 	'''
-	voltage(torch.tensor (N_examples, N_neurons, time)): Membrane voltage data for a 
+	Plot voltage for a single neuron on a specific example.
+	
+	| :code:`voltage` (torch.tensor (N_examples, N_neurons, time)): Membrane voltage data for a 
 														population of neurons for one example
-	n_ex(int): Allows user to pick which example to plot spikes for. Must be >= 0
-	n_neuron(int): Neuron index for which to plot voltages for
-	time (tuple(int)): Plot spiking activity of neurons between the given range
-			of time. Default is the entire simulation time. For example, time = 
-			(40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
-	threshold(float): Neuron spiking threshold. Will be shown on the plot.
+	| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot voltage for. Must be >= 0
+	| :code:`n_neuron` (:code:`int`): Neuron index for which to plot voltages for
+	| :code:`time` (:code:tuple(int)`): Plot spiking activity of neurons between the given range
+			of time. Default is the entire simulation time. 
+			..For example, time = (40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
+	| :code:`threshold` (:code:`float`): Neuron spiking threshold. Will be shown on the plot.
 	
 	'''
 	
