@@ -3,12 +3,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-<<<<<<< HEAD:bindsnet/pipeline/__init__.py
-from ..encoding import *
-=======
-from bindsnet.encoding import *
-from bindsnet.analysis import plot_spikes, plot_voltages
->>>>>>> upstream/hassaan:bindsnet/pipeline.py
+from bindsnet import *
+
 
 class Pipeline:
 	'''
@@ -105,18 +101,18 @@ class Pipeline:
 			if self.iteration < len(self.history):  # Recording initial observations
 				# Add current observation to the history buffer.
 				self.history[self.iteration] = self.env.obs
-				self.encoded = next(self.encoding(self.env.obs, max_prob=self.env.max_prob)).unsqueeze(0)
+				self.encoded = self.encoding(self.env.obs, max_prob=self.env.max_prob)
 			else:
 				# Subtract off overlapping data from the history buffer.
 				new_obs = torch.clamp(self.env.obs - sum(self.history.values()), 0, 1)		
 				self.history[self.iteration % len(self.history)] = self.env.obs
 				
 				# Encode the new observation.
-				self.encoded = next(self.encoding(new_obs, max_prob=self.env.max_prob)).unsqueeze(0)
+				self.encoded = self.encoding(new_obs, max_prob=self.env.max_prob)
 		
 		# Encode the observation without any history.
 		else:
-			self.encoded = next(self.encoding(self.obs, max_prob=self.env.max_prob)).unsqueeze(0)
+			self.encoded = self.encoding(self.obs, max_prob=self.env.max_prob)
 		
 		# Run the network on the spike train encoded inputs.
 		self.network.run(inpts={'X': self.encoded}, time=self.time)
