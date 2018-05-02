@@ -9,17 +9,7 @@ import matplotlib.animation as animation
 import matplotlib.gridspec as gridspec
 
 def spike_trains_main(data=None, n_ex=None, top_k=None, indices=None):
-#	fig = plt.figure(figsize=(10, 8))
-#	outer = gridspec.GridSpec(1, 2, wspace=0.2, hspace=0.2)
-#	
-#	inner = gridspec.GridSpecFromSubplotSpec(top_k, 1,
-#                    subplot_spec=outer[1], wspace=0.1, hspace=0.1)
-	
-#	ax = plt.Subplot(fig, outer[0])
-	
-
 	for j in range(top_k):
-#		ax = plt.Subplot(fig, inner[j])
 		plot_spike_trains_examples(data, n_ex=n_ex)
 
 def create_movie(weights):
@@ -34,8 +24,7 @@ def create_movie(weights):
 	global ani; ani=0
 	ani = animation.FuncAnimation(fig, update, frames=weights.shape[-1], interval=1000, blit=True)
 	plt.show()
-		
-	
+
 def plot_weights_movie(weights):
 	n_examples = weights.shape[0]
 	ws = []
@@ -43,8 +32,7 @@ def plot_weights_movie(weights):
 		ws.append(get_weights_for_example(weights[i]))
 	ws = np.concatenate(ws, axis=2)
 	create_movie(ws)
-	
-	
+		
 def get_weights_for_example(w, sample_every=1):
 	return w[:, :, range(0, w.shape[2], sample_every)]
 
@@ -52,13 +40,12 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	'''
 	Plot spike trains for top-k neurons or for specific indices.
 	
-	| :code:`spikes` (:code:`torch.tensor (N_examples, N_neurons, time)`): Spiking train data for a population of neurons for one example
-	| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot spikes for. Must be >= 0
-	| :code:`top_k` (:code:`int`): Plot k neurons that spiked the most for n_ex example
-	| :code:`indices` (:code:`list(int)`): Plot specific neurons' spiking activity instead of top_k. Meant to replace top_k. 
-								
-	Default will plot all neurons' spiking activity.
+	Inputs:
 	
+		| :code:`spikes` (:code:`torch.tensor (N_examples, N_neurons, time)`): Spiking train data for a population of neurons for one example
+		| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot spikes for. Must be >= 0
+		| :code:`top_k` (:code:`int`): Plot k neurons that spiked the most for n_ex example
+		| :code:`indices` (:code:`list(int)`): Plot specific neurons' spiking activity instead of top_k. Meant to replace top_k. 
 	'''
 
 	assert (n_ex is not None and n_ex >= 0 and n_ex < spikes.shape[0])
@@ -71,7 +58,6 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	elif top_k is None: # Plot based on indices parameter
 		assert (indices is not None)
 		spike_per_neuron = [np.argwhere(i==1).flatten() for i in spikes[n_ex, indices, :]]
-		#plt.title('Spiking activity for %d neurons'%(indices))
 		
 	elif indices is None: # Plot based on top_k parameter
 		assert (top_k is not None)
@@ -84,20 +70,17 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	plt.xlabel('Simulation Time'); plt.ylabel('Neuron index')
 	plt.show()
 
-	
 def plot_voltages(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
 	'''
 	Plot voltage for a single neuron on a specific example.
 	
-	| :code:`voltage` (torch.tensor (N_examples, N_neurons, time)): Membrane voltage data for a 
-														population of neurons for one example
-	| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot voltage for. Must be >= 0
-	| :code:`n_neuron` (:code:`int`): Neuron index for which to plot voltages for
-	| :code:`time` (:code:tuple(int)`): Plot spiking activity of neurons between the given range
-			of time. Default is the entire simulation time. 
-			..For example, time = (40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
-	| :code:`threshold` (:code:`float`): Neuron spiking threshold. Will be shown on the plot.
-	
+	Inputs:
+
+		| :code:`voltage` (:code:`torch.Tensor`): Membrane voltage data for a population of neurons.
+		| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot voltage for.
+		| :code:`n_neuron` (:code:`int`): Neuron index for which to plot voltages for
+		| :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons between the given range of time. 
+		| :code:`threshold` (:code:`float`): Neuron spiking threshold. Will be shown on the plot.
 	'''
 	
 	assert (n_ex >= 0 and n_neuron >= 0)
@@ -131,10 +114,6 @@ def main():
 	data = np.random.uniform(0, 30, size=(5, 20, 100))
 	data = np.sort(data, axis=2)
 	plot_voltages(data, n_ex=2, n_neuron=15, threshold=20)
-	#plot_spike_trains_for_example(data, n_ex=1, indices=[1,2,3])
-#	weights = np.random.random(size=(5, 4, 4, 20))
-#	plot_weights_movie(weights)
-	
 	
 if __name__ == '__main__':
 	main()

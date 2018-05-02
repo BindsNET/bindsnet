@@ -13,6 +13,7 @@ Subpackages
     bindsnet.evaluation
     bindsnet.learning
     bindsnet.network
+    bindsnet.pipeline
 
 Module contents
 ---------------
