@@ -52,12 +52,15 @@ class Pipeline:
 		else:
 			self.render = False
 		
-		if 'history' in kwargs.keys() and 'delta' in kwargs.keys():
+		if 'delta' in kwargs.keys():
 			self.delta = kwargs['delta']
+		else:
+			self.delta = 1
+			
+		if 'history' in kwargs.keys():
 			self.history = {i : torch.Tensor() for i in range(0, kwargs['history']*self.delta, self.delta)}
 		else:
 			self.history = {}
-			self.delta = 0
 		
 		if 'plot' in kwargs.keys() and 'layer' in kwargs.keys():
 			self.plot = kwargs['plot']
