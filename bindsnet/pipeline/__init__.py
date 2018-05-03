@@ -29,10 +29,6 @@ class Pipeline:
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
-				| For example, delta=1 will save consecutive observations and delta=2 will save every other
-				
-				| :code:`time` (:code:`int`): Time input is presented for to the network.
-				| :code:`history` (:code:`int`): Number of observations to keep track of.
 		'''
 		self.network = network
 		self.env = environment
@@ -77,17 +73,14 @@ class Pipeline:
 
 		self.first = True
 
-
 	def set_spike_data(self):
 		for layer in self.layer_to_plot:
 			self.spike_record[layer] = self.network.monitors['%s_spikes' % layer].get('s')
 		
-	
 	def get_voltage_data(self):
 		voltage_record = {layer : voltages[layer].get('v') for layer in voltages}
 		return voltage_record
-	
-	
+		
 	def step(self):
 		'''
 		Step through an iteration of pipeline.
@@ -111,7 +104,7 @@ class Pipeline:
 		# Store frame of history and encode the inputs.
 		if len(self.history) > 0:
 			# Recording initial observations
-			if self.iteration < len(self.history)*self.delta:  
+			if self.iteration < len(self.history) * self.delta:  
 				# Store observation based on delta value
 				if self.iteration % self.delta == 0:
 					self.history[self.iteration] = self.obs
@@ -141,7 +134,7 @@ class Pipeline:
 			self.encoded = self.encoding(self.obs, max_prob=self.env.max_prob)
 		
 		# Run the network on the spike train encoded inputs.
-		self.network.run(inpts={'X': self.encoded}, time=self.time)
+		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
 		# Plot any relevant information
 		if self.plot and (self.iteration % self.plot_interval == 0):
@@ -150,7 +143,6 @@ class Pipeline:
 			
 		self.iteration += 1
 
-
 	def plot_obs(self, obs):
 		if self.first:
 			fig = plt.figure()
@@ -158,9 +150,8 @@ class Pipeline:
 			self.pic = axes.imshow(obs.numpy().reshape(78, 84), cmap='gray')
 			self.first = False
 		else:
-			self.pic.set_data(obs.numpy().reshape(78, 84))
-			
-			
+			self.pic.set_data(obs.numpy().reshape(78, 84))	
+	
 	def plot_data(self):
 		'''
 		Plot desired variables.
@@ -174,11 +165,9 @@ class Pipeline:
 		
 		plt.pause(1e-8)
 
-		
 	def normalize(self, src, target, norm):
 		self.network.connections[(src, target)].normalize(norm)
-		
-		
+	
 	def reset(self):
 		'''
 		Reset the pipeline.

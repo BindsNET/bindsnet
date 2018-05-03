@@ -38,6 +38,7 @@ class MNIST:
 		Constructor for the :code:`MNIST` object. Makes the data directory if it doesn't already exist.
 
 		Inputs:
+		
 			| :code:`path` (:code:`str`): pathname of directory in which to store the MNIST handwritten digit dataset.
 		'''
 		if not os.path.isdir(path):
@@ -50,6 +51,7 @@ class MNIST:
 		Gets the MNIST training images and labels.
 
 		Returns:
+		
 			| :code:`images` (:code:`torch.Tensor`): The MNIST training images.
 			| :code:`labels` (:code:`torch.Tensor`): The MNIST training labels.
 		'''
@@ -86,6 +88,7 @@ class MNIST:
 		Gets the MNIST test images and labels.
 
 		Returns:
+		
 			| :code:`images` (:code:`torch.Tensor`): The MNIST test images.
 			| :code:`labels` (:code:`torch.Tensor`): The MNIST test labels.
 		'''
@@ -122,6 +125,7 @@ class MNIST:
 		Downloads and unzips an MNIST data file.
 		
 		Inputs:
+		
 			| :code:`url` (:code:`str`): The URL of the data file to be downloaded.
 			| :code:`filename` (:code:`str`): The name of the file to save the downloaded data to.
 		'''
@@ -135,9 +139,11 @@ class MNIST:
 		Opens a file of MNIST images and processes them into numpy arrays.
 		
 		Inputs:
+		
 			| :code:`filename` (:code:`str`): Name of the file containing MNIST images to load.
 		
 		Returns:
+		
 			| (:code:`numpy.ndarray`): A numpy array of shape :code:`[n_images, 28,
 				28]`, where :code:`n_images` refers to the number of images in the file.
 		'''
@@ -169,9 +175,11 @@ class MNIST:
 		Opens a file of MNIST label data and processes it into a numpy vector.
 		
 		Inputs:
+		
 			| :code:`filename` (:code:`str`): The name of the file containing MNIST label data.
 		
 		Returns:
+		
 			| (:code:`np.ndarray`): A one-dimensional array of shape :code:`(n_labels,)`,
 				where :code:`n_labels` refers to the number of labels contained in the file.
 		'''
