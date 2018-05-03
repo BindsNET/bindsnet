@@ -53,8 +53,8 @@ class Pipeline:
 			self.render = False
 		
 		if 'history' in kwargs.keys() and 'delta' in kwargs.keys():
-			self.history = {i : torch.Tensor() for i in range(kwargs['history'])}
 			self.delta = kwargs['delta']
+			self.history = {i : torch.Tensor() for i in range(0, kwargs['history']*self.delta, self.delta)}
 		else:
 			self.history = {}
 			self.delta = 0
@@ -114,25 +114,28 @@ class Pipeline:
 			if self.iteration < len(self.history)*self.delta:  
 				# Store observation based on delta value
 				if self.iteration % self.delta == 0:
-					self.history[self.iteration] = self.obs
+					# Add current observation to the history buffer.
+					self.history[self.iteration] = self.env.obs
 				
-				self.encoded = next(self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob))
+				self.encoded = next(self.encoding(self.env.obs, time=self.time, max_prob=self.env.max_prob))
+			
+			# Have enough observations in the history buffer to perform difference
 			else:
-				new_obs = torch.clamp(self.obs - sum(self.history.values()), 0, 1)		
+				new_obs = torch.clamp(self.env.obs - sum(self.history.values()), 0, 1)		
 				
 				#self.plot_obs(new_obs)
 				
 				# Store observation based on delta value
 				if self.iteration % self.delta == 0:
 					# Add current observation to the history buffer.
-					self.history[self.iteration % len(self.history)] = self.obs
+					self.history[self.iteration % len(self.history)] = self.env.obs
 					
 				# Encode the new observation.
 				self.encoded = next(self.encoding(new_obs, time=self.time, max_prob=self.env.max_prob))
 		
 		# Encode the observation without any history.
 		else:
-			self.encoded = next(self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob))
+			self.encoded = next(self.encoding(self.env.obs, time=self.time, max_prob=self.env.max_prob))
 		
 		# Run the network on the spike train encoded inputs.
 		self.network.run(inpts={'X': self.encoded}, time=self.time)
