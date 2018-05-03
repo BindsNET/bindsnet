@@ -5,19 +5,8 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from time                       import time as t
-
-from bindsnet.evaluation        import *
-from bindsnet.analysis.plotting import *
-from bindsnet.datasets          import MNIST
-from bindsnet.learning          import post_pre
-from bindsnet.encoding          import get_poisson
-
-from bindsnet.network           import Network
-from bindsnet.network.monitors  import Monitor
-from bindsnet.network.topology  import Connection
-from bindsnet.network.nodes     import AdaptiveLIFNodes, LIFNodes, Input
-
+from bindsnet import *
+from time     import time as t
 
 def get_square_weights(weights, n_sqrt):
 	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
@@ -85,12 +74,12 @@ start_intensity = intensity
 input_layer = Input(n=784, shape=[28, 28], traces=True, trace_tc=1 / 20)
 
 # Excitatory layer.
-exc_layer = AdaptiveLIFNodes(n=n_neurons, traces=True, rest=-65.0, reset=-65.0, threshold=-52.0, refractory=5,
-                                    voltage_decay=1e-2, trace_tc=1 / 20, theta_plus=0.05, theta_decay=1e-7)
+exc_layer = AdaptiveLIFNodes(n=n_neurons, traces=True, rest=-65.0, reset=-65.0, thresh=-52.0, refrac=5,
+                                    decay=1e-2, trace_tc=1 / 20, theta_plus=0.05, theta_decay=1e-7)
 
 # Inhibitory layer.
-inh_layer = LIFNodes(n=n_neurons, traces=False, rest=-60.0, reset=-45.0, threshold=-40.0,
-                                 voltage_decay=1e-1, refractory=2, trace_tc=1 / 20)
+inh_layer = LIFNodes(n=n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0,
+                                 decay=1e-1, refrac=2, trace_tc=1 / 20)
 
 # Connections between layers.
 # Input -> excitatory.
@@ -126,7 +115,7 @@ images *= intensity
 images /= 4  # Normalize and enforce minimum expected inter-spike interval.
 
 # Lazily encode data as Poisson spike trains.
-data_loader = get_poisson(data=images, time=time)
+data_loader = poisson_loader(data=images, time=time)
 
 # Record spikes during the simulation.
 spike_record = torch.zeros(update_interval, time, n_neurons)

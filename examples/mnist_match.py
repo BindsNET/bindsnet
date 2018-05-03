@@ -135,9 +135,7 @@ for i in range(i):
 				for k in range(10):
 					s.append(np.sum(spike_record['Y'].cpu().numpy()[k::10].sum(axis=1)))
 				
-				sums = [s, 
-						np.sum(spike_record['Y'].cpu().numpy(), axis=1),
-						np.sum(spike_record['Z'].cpu().numpy(), axis=1)]
+				sums = [s, np.sum(spike_record['Y'].cpu().numpy(), axis=1)]
 			else:
 				s = []
 				for k in range(10):

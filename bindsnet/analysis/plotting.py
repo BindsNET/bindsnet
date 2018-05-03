@@ -13,15 +13,15 @@ def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
 	Plots a two-dimensional image and its corresponding spike-train representation.
 	
 	Inputs:
-		image (torch.Tensor or torch.cuda.Tensor): A two-dimensional
-			array of floating point values depicting an input image.
-		inpt (torch.Tensor or torch.cuda.Tensor): A two-dimensional array of
-			floating point values depicting an image's spike-train encoding.
-		ims (list(matplotlib.image.AxesImage)): Used for re-drawing the input plots.
-		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+		
+		| :code:`image` (:code:`torch.Tensor`): A 2D array of floats depicting an input image.
+		| :code:`inpt` (:code:`torch.Tensor`): A 2D array of floats depicting an image's spike-train encoding.
+		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the input plots.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 	
 	Returns:
-		(list(matplotlib.image.AxesImage)): Used for re-drawing the input plots.
+		
+		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the input plots.
 	'''
 	if axes is None:
 		fig, axes = plt.subplots(1, 2, figsize=figsize)
@@ -55,23 +55,18 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 	Plot spikes for any group(s) of neurons.
 
 	Inputs:
-		spikes (dict(torch.Tensor or torch.cuda.Tensor)): Contains
-			spiking data for groups of neurons of interest.
-		ims (list(matplotlib.image.AxesImage)): Used for re-drawing the spike plots.
-		axes (list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
-		time (tuple(int)): Plot spiking activity of neurons between the given range
-			of time. Default is the entire simulation time. For example, time = 
-			(40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
-		figsize (tuple(int)): Horizontal, vertical figure size in inches.
-		n_neurons (dict(tuple(int))): CPlot spiking activity of neurons between the
-		   given range of neurons. Default is all neurons of the layer. For example,
-		   (10, 25) will plot spiking activity of neurons between those range of
-		   indices. Don't need to provide number of neurons for all layers. Default
-			will be chosen if not provided.
+		
+		| :code:`spikes` (:code:`dict(torch.Tensor)`): Contains spiking data for groups of neurons of interest.
+		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
+		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
+		| :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons in the given time range. Default is entire simulation time.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
+		| :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
 	
 	Returns:
-		(list(matplotlib.image.AxesImage)): Used for re-drawing the spike plots.
-		(list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
+		
+		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
+		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
 	'''
 	n_subplots = len(spikes.keys())
    
@@ -131,6 +126,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		if n_subplots == 1:
 			for datum in spikes.items():
 				ims[0].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+				ims[0].autoscale()
 				
 				args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
 				axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
@@ -152,14 +148,16 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 	Plot a (possibly reshaped) connection weight matrix.
 	
 	Inputs:
-		weights (torch.Tensor or torch.cuda.Tensor): Weight matrix of Connection object.
-		wmin (float): Minimum allowed weight value.
-		wmax (float): Maximum allowed weight value.
-		im (matplotlib.image.AxesImage): Used for re-drawing the weights plot.
-		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+		
+		| :code:`weights` (:code:`torch.Tensor`): Weight matrix of Connection object.
+		| :code:`wmin` (:code:`float`): Minimum allowed weight value.
+		| :code:`wmax` (:code:`float`): Maximum allowed weight value.
+		| :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 	
 	Returns:
-		(matplotlib.image.AxesImage): Used for re-drawing the weights plot.
+		
+		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 	'''
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
@@ -184,12 +182,14 @@ def plot_assignments(assignments, im=None, figsize=(5, 5)):
 	Plot the two-dimensional neuron assignments.
 	
 	Inputs:
-		assignments (torch.Tensor or torch.cuda.Tensor): Vector of neuron label assignments.
-		im (matplotlib.image.AxesImage): Used for re-drawing the assignments plot.
-		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+		
+		| :code:`assignments` (:code:`torch.Tensor`): Vector of neuron label assignments.
+		| :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assignments plot.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 	
 	Returns:
-		(matplotlib.image.AxesImage): Used for re-drawing the assigments plot.
+		
+		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assigments plot.
 	'''
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
@@ -213,12 +213,14 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 	Plot training accuracy curves.
 	
 	Inputs:
-		performances (dict(list(float))): Lists of training accuracy estimates per voting scheme.
-		ax (matplotlib.axes.Axes): Used for re-drawing the performance plot.
-		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+		
+		| :code:`performances` (:code:`dict(list(float))`): Lists of training accuracy estimates per voting scheme.
+		| :code:`ax` (:code:`matplotlib.axes.Axes`): Used for re-drawing the performance plot.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 	
 	Returns:
-		(matplotlib.axes.Axes): Used for re-drawing the performance plot.
+		
+		| (:code:`matplotlib.axes.Axes`): Used for re-drawing the performance plot.
 	'''
 	if not ax:
 		_, ax = plt.subplots(figsize=figsize)
@@ -242,28 +244,29 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
 	General plotting function for variables being monitored.
 	
 	Inputs:
-		monitor(monitors.Monitor): Contains state variables being monitored that will be plotted.
-		ims (list(matplotlib.image.AxesImage)): Used for re-drawing the appropriate plots.
-		axes (list(matplotlib.axes.Axes)): Used for re-drawing the appropriate plots.
-		labels (dict(dict(string))): Used to set xlabel, ylabel and titles for 
-				every state variable being plotted.
-		parameters (dict(dict(tuples(int)))): Set time and number of neurons being plotted for
-				every state variable being plotted.
-		figsize (tuple(int)): Horizontal, vertical figure size in inches.
+		
+		| :code:`monitor` (:code:`monitors.Monitor`): Contains state variables to be plotted.
+		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing plots.
+		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing plots.
+		| :code:`labels` (:code:`dict(dict(string))`): Used to set axis labels and titles for plotted variables.
+		| :code:`parameters` (:code:`dict(dict(tuples(int)))`): Set time, number of neurons for plotted variables.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 		
 	Returns:
-		(list(matplotlib.image.AxesImage)): Used for re-drawing the appropriate plots.
-		(list(matplotlib.axes.Axes)): Used for re-drawing the appropriate plots.
+		
+		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing plots.
+		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing plots.
 	'''
-	
-	default = {'xlabel':'Simulation time', 'ylabel':'Index'}
+	default = {'xlabel' : 'Simulation time', 'ylabel' : 'Index'}
 	
 	if monitor is None:
 		print("Did you forget to provide monitors?")
 		raise TypeError
 	
 	if labels is None:
-		labels = {var:{'title':'Recording of %s'%(var), 'xlabel':'Simulation time', 'ylabel':'Index'} for var in monitor.state_vars}
+		labels = {var : {'title' : 'Recording of %s'%(var),
+					     'xlabel' : 'Simulation time',
+					     'ylabel' : 'Index'} for var in monitor.state_vars}
 	
 	# Default axis parameters
 	else:
@@ -278,8 +281,9 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
 					
 	if parameters is None:
 		# Monitor object is of a class in nodes
-		parameters = {var:{'time':(0, monitor.get(var).shape[1]), 'n_neurons':(0, monitor.get(var).shape[0]), 'cmap':'binary'} \
-							for var in monitor.state_vars}
+		parameters = {var : {'time' : (0, monitor.get(var).shape[1]),
+						   'n_neurons' : (0, monitor.get(var).shape[0]),
+						   'cmap' : 'binary'} for var in monitor.state_vars}
 		
 	else:
 		#if type(monitor.obj) in nodes.__dict__.values():
@@ -331,23 +335,18 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 	Plot voltages for any group(s) of neurons.
 
 	Inputs:
-		voltages (dict(torch.Tensor or torch.cuda.Tensor)): Contains
-			voltage data for layers of neurons of interest.
-		ims (list(matplotlib.image.AxesImage)): Used for re-drawing the spike plots.
-		axes (list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
-		time (tuple(int)): Plot spiking activity of neurons between the given range
-			of time. Default is the entire simulation time. For example, time = 
-			(40, 80) will plot spiking activity of neurons from 40 ms to 80 ms.
-		figsize (tuple(int)): Horizontal, vertical figure size in inches.
-		n_neurons (dict(tuple(int))): CPlot spiking activity of neurons between the
-		   given range of neurons. Default is all neurons of the layer. For example,
-		   (10, 25) will plot spiking activity of neurons between those range of
-		   indices. Don't need to provide number of neurons for all layers. Default
-			will be chosen if not provided.
+		
+		| :code:`voltages` (:code:`dict(torch.Tensor`)): Contains voltage data by neuron layers.
+		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
+		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
+		| :code:`time` (:code:`tuple(int)`): Plot voltages of neurons in given time range. Default is entire simulation time.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
+		| :code:`n_neurons` (:code:`dict(tuple(int))`): Plot voltages of neurons in given range of neurons. Default is all neurons.
 	
 	Returns:
-		(list(matplotlib.image.AxesImage)): Used for re-drawing the voltage plots.
-		(list(matplotlib.axes.Axes)): Used for re-drawing the voltage plots.
+		
+		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
+		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the voltage plots.
 	'''
 	n_subplots = len(voltages.keys())
     

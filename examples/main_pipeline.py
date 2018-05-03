@@ -6,34 +6,19 @@ import argparse
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+from bindsnet                import *
 from timeit                  import default_timer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from bindsnet.pipeline            import *
-from bindsnet.evaluation          import *
-from bindsnet.analysis.plotting   import *
-from bindsnet.datasets.preprocess import *
-
-
-from bindsnet.network             import Network
-from bindsnet.encoding            import get_bernoulli
-from bindsnet.environment         import SpaceInvaders
-
-from bindsnet.network.monitors    import Monitor
-from bindsnet.network.learning    import hebbian
-from bindsnet.network.connections import Connection 
-from bindsnet.network.nodes       import LIFNodes, Input
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=200)
+parser.add_argument('--plot_interval', type=int, default=100)
 parser.add_argument('--plot', dest='plot', action='store_true')
-parser.add_argument('--env_plot', dest='env_plot', action='store_true')
+parser.add_argument('--render', dest='render', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
-parser.set_defaults(plot=False, env_plot=False, gpu=False)
+parser.set_defaults(plot=False, render=False, gpu=False)
 
 locals().update(vars(parser.parse_args()))
 
@@ -48,8 +33,8 @@ network = Network(dt=dt)
 
 # Layers of neurons.
 inpt = Input(n=6552, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
+exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
+readout = LIFNodes(n=5, refrac=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
@@ -100,7 +85,7 @@ network.connections[('E', 'R')].normalize(exc_readout_norm)
 env = SpaceInvaders()
 env.reset()
 
-p = Pipeline(network, env, encoding=get_bernoulli, plot=False, time=1, render=True, history=0)
+p = Pipeline(network, env, encoding=get_bernoulli, plot=True, time=1, render=False, history=2, delta=1, plot_interval=100, layer=['E'])
 print()
 
 while True:
@@ -109,3 +94,5 @@ while True:
 	
 	if p.done == True:
 		env.reset()
+else:
+	env.close()
