@@ -120,7 +120,7 @@ class Pipeline:
 					# Add current observation to the history buffer.
 					self.history[self.iteration] = self.env.obs
 				
-				self.encoded = next(self.encoding(self.env.obs, time=self.time, max_prob=self.env.max_prob))
+				self.encoded = self.encoding(self.env.obs,  max_prob=self.env.max_prob)
 			
 			# Have enough observations in the history buffer to perform difference
 			else:
@@ -134,11 +134,11 @@ class Pipeline:
 					self.history[self.iteration % len(self.history)] = self.env.obs
 					
 				# Encode the new observation.
-				self.encoded = next(self.encoding(new_obs, time=self.time, max_prob=self.env.max_prob))
+				self.encoded = self.encoding(new_obs, max_prob=self.env.max_prob)
 		
 		# Encode the observation without any history.
 		else:
-			self.encoded = next(self.encoding(self.env.obs, time=self.time, max_prob=self.env.max_prob))
+			self.encoded = self.encoding(self.env.obs, max_prob=self.env.max_prob)
 		
 		# Run the network on the spike train encoded inputs.
 		self.network.run(inpts={'X': self.encoded}, time=self.time)
