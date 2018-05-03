@@ -124,17 +124,9 @@ class Pipeline:
 				
 				# Store observation based on delta value
 				if self.iteration % self.delta == 0:
+					# Add current observation to the history buffer.
 					self.history[self.iteration % len(self.history)] = self.obs
 					
-			if self.iteration < len(self.history):  # Recording initial observations
-				# Add current observation to the history buffer.
-				self.history[self.iteration] = self.env.obs
-				self.encoded = next(self.encoding(self.env.obs, time=self.time, max_prob=self.env.max_prob))
-			else:
-				# Subtract off overlapping data from the history buffer.
-				new_obs = torch.clamp(self.env.obs - sum(self.history.values()), 0, 1)		
-				self.history[self.iteration % len(self.history)] = self.env.obs
-				
 				# Encode the new observation.
 				self.encoded = next(self.encoding(new_obs, time=self.time, max_prob=self.env.max_prob))
 		
