@@ -56,26 +56,26 @@ class TestEncodings:
 		print(); print('*** test_poisson ***'); print()
 		
 		for n in [1, 10, 100, 1000]:  # number of nodes in layer
-			for t in [1, 10, 100, 1000]:  # number of timesteps
-				datum = torch.empty(n).uniform_(0, 100)
-				spikes = poisson(datum, time=t)
+			for t in [1000]:  # number of timesteps
+				datum = torch.empty(n).uniform_(20, 100)  # Generate firing rates.
+				spikes = poisson(datum, time=t)  # Encode as spikes.
 				
 				assert spikes.size() == torch.Size((t, n))
 				
 				print('No. nodes: %d, no. timesteps: %d, activity ratio: %.4f' % \
-					  (n, t, (datum.sum() * t) / spikes.float().sum()))
+					  (n, t, (datum / spikes.float().sum(0)).mean()))
 		
 	def test_poisson_loader(self):
 		print(); print('*** test_poisson_loader ***'); print()
 		
-		for s in [1, 10, 100]:  # number of data samples
+		for s in [1, 10]:  # number of data samples
 			for n in [1, 10, 100]:  # number of nodes in layer
-				for t in [1, 10, 100]:  # number of timesteps
-					data = torch.empty(s, n).uniform_(0, 100)
-					spike_loader = poisson_loader(data, time=t)
+				for t in [1000]:  # number of timesteps
+					data = torch.empty(s, n).uniform_(20, 100)  # Generate firing rates.
+					spike_loader = poisson_loader(data, time=t)  # Encode as spikes.
 					
 					for i, spikes in enumerate(spike_loader):
 						assert spikes.size() == torch.Size((t, n))
 					
 						print('No. nodes: %d, no. timesteps: %d, activity ratio: %.4f' % \
-							  (n, t, (data[i].sum() * t) / spikes.float().sum()))
+							  (n, t, (data[i] / spikes.float().sum(0)).mean()))
