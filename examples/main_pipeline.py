@@ -91,15 +91,15 @@ p = Pipeline(network,
 			 plot=False,
 			 time=1,
 			 render=False,
-			 history=1,
-			 delta=1,
+			 history=5,
+			 delta=3,
 			 plot_interval=100,
 			 layer=['E'])
 
 print()
 
 while True:
-	p.step()
+	p.step(print_interval = 100)
 	p.normalize('E', 'R', exc_readout_norm)
 	
 	if p.done == True:

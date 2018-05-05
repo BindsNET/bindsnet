@@ -50,9 +50,9 @@ class Pipeline:
 			self.render = False
 		
 		if 'history' in kwargs.keys() and 'delta' in kwargs.keys():
-			self.history_length = kwargs['history']
-			self.history = {i : torch.Tensor() for i in range(kwargs['history'])}
 			self.delta = kwargs['delta']
+			self.history_counter = 0
+			self.history = {i : torch.Tensor() for i in range(0, kwargs['history']*self.delta, self.delta)}
 		else:
 			self.history_length = 0
 			self.history = {}
@@ -79,11 +79,11 @@ class Pipeline:
 	def set_spike_data(self):
 		for layer in self.layer_to_plot:
 			self.spike_record[layer] = self.network.monitors['%s_spikes' % layer].get('s')
-		
+
 	def get_voltage_data(self):
 		voltage_record = {layer : voltages[layer].get('v') for layer in voltages}
 		return voltage_record
-		
+
 	def step(self, print_interval=100):
 		'''
 		Step through an iteration of the pipeline.
@@ -105,20 +105,20 @@ class Pipeline:
 		self.obs, self.reward, self.done, info = self.env.step(action)
 		
 		# Store frame of history and encode the inputs.
-		if self.history_length > 0:
+		if len(self.history) > 0:
 			# Recording initial observations
-			if self.iteration < self.history_length * self.delta:
+			if self.iteration < len(self.history) * self.delta:
 				# Store observation based on delta value
 				if self.iteration % self.delta == 0:
-					self.history[self.iteration % self.history_length] = self.obs
+					self.history[self.history_counter] = self.obs
 			else:
 				# Take difference between stored frames and current frame.
 				temp = torch.clamp(self.obs - sum(self.history.values()), 0, 1)
 								
 				# Store observation based on delta value.
 				if self.iteration % self.delta == 0:
-					self.history[self.iteration % self.history_length] = self.obs
-				
+					self.history[self.history_counter] = self.obs
+					
 				self.obs = temp
 		
 		self.encoded = self.encoding(self.obs, max_prob=self.env.max_prob)
@@ -126,12 +126,20 @@ class Pipeline:
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
+		# Update counter
+		if self.iteration % self.delta == 0:
+			if self.history_counter != max(self.history.keys()):
+				self.history_counter += self.delta
+			# Wrap around the history
+			else:
+				self.history_counter %= max(self.history.keys())	
+						
 		# Plot relevant data.
 		if self.plot and (self.iteration % self.plot_interval == 0):
 			self.set_spike_data()
 			self.plot_data()
 			
-			if self.history_length > 0 and not self.iteration < self.history_length * self.delta:  
+			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
 				self.plot_obs(self.obs)
 			
 		self.iteration += 1
