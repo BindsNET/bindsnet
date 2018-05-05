@@ -88,9 +88,9 @@ env.reset()
 p = Pipeline(network,
 			 env,
 			 encoding=bernoulli,
-			 plot=True,
+			 plot=plot,
 			 time=1,
-			 render=False,
+			 render=render,
 			 history=5,
 			 delta=10,
 			 plot_interval=100,
@@ -99,7 +99,7 @@ p = Pipeline(network,
 print()
 
 while True:
-	p.step(print_interval = 100)
+	p.step()
 	p.normalize('E', 'R', exc_readout_norm)
 	
 	if p.done == True:
