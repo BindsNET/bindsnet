@@ -9,7 +9,7 @@ class Connection:
 	Specifies synapses between one or two populations of neurons.
 	'''
 	def __init__(self, source, target, w=None, update_rule=None, nu=1e-2,
-							nu_pre=1e-4, nu_post=1e-2, wmin=0.0, wmax=1.0):
+							nu_pre=1e-4, nu_post=1e-2, wmin=None, wmax=None):
 		'''
 		Instantiates a :code:`Connection` object.
 
@@ -29,8 +29,6 @@ class Connection:
 		self.nu = nu
 		self.nu_pre = nu_pre
 		self.nu_post = nu_post
-		self.wmin = wmin
-		self.wmax = wmax
 
 		if update_rule is None:
 			self.update_rule = no_update
@@ -44,6 +42,22 @@ class Connection:
 				self.tc_minus = 0.05
 				
 			self.update_rule = update_rule
+		
+		if wmin is None:
+			if w is None:
+				self.wmin = 0
+			else:
+				self.wmin = torch.min(w)
+		else:
+			self.wmin = wmin
+		
+		if wmax is None:
+			if w is None:
+				self.wmax = 1
+			else:
+				self.wmax = torch.max(w)
+		else:
+			self.wmax = wmax
 		
 		if w is None:
 			self.w = self.wmin + (self.wmax - self.wmin) * torch.rand(*source.shape, *target.shape)
@@ -81,6 +95,7 @@ class Connection:
 		to some desired summed weight per target neuron.
 		
 		Inputs:
+		
 			| :code:`norm` (:code:`float`): Desired sum of weights per target neuron.
 		'''
 		self.w = self.w.view(self.source.n, self.target.n)

@@ -11,6 +11,7 @@ def load_network(fname):
 	Loads serialized network object from disk.
 	
 	Inputs:
+	
 		| :code:`fname` (:code:`str`): Path to serialized network object on disk.
 	'''
 	try:
@@ -78,6 +79,7 @@ class Network:
 		Initializes network object.
 		
 		Inputs:
+		
 			| :code:`dt` (:code:`float`): Simulation timestep. All other
 				objects' time constants are relative to this value.
 		'''
@@ -91,6 +93,7 @@ class Network:
 		Adds a layer of nodes to the network.
 		
 		Inputs:
+		
 			| :code:`layer` (:code:`bindsnet.nodes.Nodes`): A subclass of the :code:`Nodes` object.
 			| :code:`name` (:code:`str`): Logical name of layer.
 		'''
@@ -101,6 +104,7 @@ class Network:
 		Adds a connection between layers of nodes to the network.
 		
 		Inputs:
+		
 			| :code:`connection` (:code:`bindsnet.topology.Connection`): An instance of class :code:`Connection`.
 			| :code:`source` (:code:`str`): Logical name of the connection's source layer.
 			| :code:`target` (:code:`str`): Logical name of the connection's target layer.
@@ -112,6 +116,7 @@ class Network:
 		Adds a monitor on a network object to the network.
 		
 		Inputs:
+		
 			| :code:`monitor` (:code:`bindsnet.Monitor`): An instance of class :code:`Monitor`.
 			| :code:`name` (:code:`str`): Logical name of monitor object.
 		'''
@@ -122,6 +127,7 @@ class Network:
 		Serializes the network object to disk.
 		
 		Inputs:
+		
 			| :code:`fname` (:code:`str`): Path to store serialized network object on disk.
 		
 		**Example:**
@@ -157,6 +163,7 @@ class Network:
 		Fetches outputs from network layers for input to downstream layers.
 		
 		Returns:
+		
 			| (:code:`dict[torch.Tensor or torch.cuda.Tensor]`): Inputs to all layers for the current iteration.
 		'''
 		inpts = {}
@@ -181,6 +188,7 @@ class Network:
 		Simulation network for given inputs and time.
 		
 		Inputs:
+		
 			| :code:`inpts` (:code:`dict`): Dictionary including :code:`Tensor`s of shape :code:`[time, n_input]` for :code:`n_input` per :code:`nodes.Input` instance.
 			| :code:`time` (:code:`int`): Simulation time.
 		

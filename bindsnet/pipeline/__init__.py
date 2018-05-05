@@ -84,13 +84,10 @@ class Pipeline:
 		voltage_record = {layer : voltages[layer].get('v') for layer in voltages}
 		return voltage_record
 
-	def step(self, print_interval=100):
+	def step(self):
 		'''
 		Step through an iteration of the pipeline.
 		'''
-		if self.iteration % print_interval == 0:
-			print('Iteration %d' % self.iteration)
-		
 		# Render game.
 		if self.render:
 			self.env.render()

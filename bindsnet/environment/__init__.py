@@ -6,9 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 
-from bindsnet.datasets.preprocess import *
-from bindsnet.encoding            import *
-from bindsnet.datasets            import *
+from ..datasets.preprocess import *
+from ..encoding            import *
+from ..datasets            import *
 
 
 class Games(ABC):
