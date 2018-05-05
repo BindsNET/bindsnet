@@ -88,11 +88,11 @@ env.reset()
 p = Pipeline(network,
 			 env,
 			 encoding=bernoulli,
-			 plot=False,
+			 plot=True,
 			 time=1,
 			 render=False,
 			 history=5,
-			 delta=3,
+			 delta=10,
 			 plot_interval=100,
 			 layer=['E'])
 

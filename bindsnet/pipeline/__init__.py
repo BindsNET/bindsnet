@@ -51,10 +51,10 @@ class Pipeline:
 		
 		if 'history' in kwargs.keys() and 'delta' in kwargs.keys():
 			self.delta = kwargs['delta']
-			self.history_counter = 0
+			self.history_index = 0
 			self.history = {i : torch.Tensor() for i in range(0, kwargs['history']*self.delta, self.delta)}
 		else:
-			self.history_length = 0
+			self.history_index = 0
 			self.history = {}
 			self.delta = 1
 		
@@ -95,7 +95,7 @@ class Pipeline:
 		if self.render:
 			self.env.render()
 			
-		# Choose action based on readout neuron spiking.
+		# Choose action based on readout neuron spiking
 		if self.network.layers['R'].s.sum() == 0 or self.iteration == 0:
 			action = np.random.choice(range(6))
 		else:
@@ -104,23 +104,24 @@ class Pipeline:
 		# Run a step of the environment.
 		self.obs, self.reward, self.done, info = self.env.step(action)
 		
-		# Store frame of history and encode the inputs.
+		# Store frame of history and encode the inputs
 		if len(self.history) > 0:
 			# Recording initial observations
 			if self.iteration < len(self.history) * self.delta:
 				# Store observation based on delta value
 				if self.iteration % self.delta == 0:
-					self.history[self.history_counter] = self.obs
+					self.history[self.history_index] = self.obs
 			else:
-				# Take difference between stored frames and current frame.
+				# Take difference between stored frames and current frame
 				temp = torch.clamp(self.obs - sum(self.history.values()), 0, 1)
 								
 				# Store observation based on delta value.
 				if self.iteration % self.delta == 0:
-					self.history[self.history_counter] = self.obs
+					self.history[self.history_index] = self.obs
 					
 				self.obs = temp
 		
+		# Encode the observation using given encoder function
 		self.encoded = self.encoding(self.obs, max_prob=self.env.max_prob)
 
 		# Run the network on the spike train-encoded inputs.
@@ -128,15 +129,14 @@ class Pipeline:
 		
 		# Update counter
 		if self.iteration % self.delta == 0:
-			if self.history_counter != max(self.history.keys()):
-				self.history_counter += self.delta
+			if self.history_index != max(self.history.keys()):
+				self.history_index += self.delta
 			# Wrap around the history
 			else:
-				self.history_counter %= max(self.history.keys())	
+				self.history_index %= max(self.history.keys())	
 						
-		# Plot relevant data.
+		# Plot relevant data
 		if self.plot and (self.iteration % self.plot_interval == 0):
-			self.set_spike_data()
 			self.plot_data()
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
@@ -157,6 +157,9 @@ class Pipeline:
 		'''
 		Plot desired variables.
 		'''
+		# Set data
+		self.set_spike_data()
+		
 		# Initialize plots
 		if self.ims == None and self.axes == None:
 			self.ims, self.axes = plot_spikes(self.spike_record)
@@ -185,4 +188,4 @@ class Pipeline:
 		self.env.reset()
 		self.network._reset()
 		self.iteration = 0
-		self.history = {i: torch.Tensor() for i in len(self.history)}
+		self.history = self.history = {i: torch.Tensor() for i in self.history}
