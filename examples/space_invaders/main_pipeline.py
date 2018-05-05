@@ -90,15 +90,16 @@ p = Pipeline(network,
 			 encoding=bernoulli,
 			 plot=True,
 			 time=1,
-			 render=True,
-			 history=1,
-			 delta=1,
+			 render=False,
+			 history=5,
+			 delta=10,
 			 plot_interval=100,
 			 layer=['E'])
+
 print()
 
 while True:
-	p.step()
+	p.step(print_interval = 100)
 	p.normalize('E', 'R', exc_readout_norm)
 	
 	if p.done == True:
