@@ -6,21 +6,9 @@ import argparse
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+from bindsnet                import *
 from timeit                  import default_timer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from bindsnet.evaluation          import *
-from bindsnet.analysis.plotting   import *
-from bindsnet.datasets.preprocess import *
-
-from bindsnet.network             import Network
-from bindsnet.encoding            import get_bernoulli
-from bindsnet.environment         import SpaceInvaders
-
-from bindsnet.network.monitors    import Monitor
-from bindsnet.network.learning    import hebbian
-from bindsnet.network.connections import Connection 
-from bindsnet.network.nodes       import LIFNodes, Input
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
@@ -118,8 +106,8 @@ while True:
 		for m in network.monitors:
 			network.monitors[m]._reset()
 	
-#	if plot or env_plot:
-#		env.render()
+	if plot or env_plot:
+		env.render()
 	
 	if i % 100 == 0:
 		print('Iteration %d' % i)

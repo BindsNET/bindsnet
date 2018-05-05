@@ -227,7 +227,7 @@ class SpaceInvaders(Games):
 		self.obs = binary_image(self.obs)
 		self.obs = np.reshape(self.obs, (78, 84, 1))
 		self.obs = torch.from_numpy(self.obs).view(1, -1).float()
-
+		
 
 class CartPole(Games):
 	'''
