@@ -43,7 +43,7 @@ parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--time', type=int, default=350)
 parser.add_argument('--dt', type=int, default=1.0)
-parser.add_argument('--intensity', type=float, default=1.0)
+parser.add_argument('--intensity', type=float, default=0.25)
 parser.add_argument('--progress_interval', type=int, default=10)
 parser.add_argument('--update_interval', type=int, default=250)
 parser.add_argument('--train', dest='train', action='store_true')
@@ -112,7 +112,6 @@ network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 # Load MNIST data.
 images, labels = MNIST(path=os.path.join('..', 'data')).get_train()
 images *= intensity
-images /= 4  # Normalize and enforce minimum expected inter-spike interval.
 
 # Lazily encode data as Poisson spike trains.
 data_loader = poisson_loader(data=images, time=time)
@@ -161,7 +160,7 @@ for i in range(n_train):
 
 		# Assign labels to excitatory layer neurons.
 		assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
-		
+	
 	# Get next input sample.
 	sample = next(data_loader)
 	inpts = {'X' : sample}

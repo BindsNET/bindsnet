@@ -85,11 +85,21 @@ network.connections[('E', 'R')].normalize(exc_readout_norm)
 env = SpaceInvaders()
 env.reset()
 
-p = Pipeline(network, env, encoding=get_bernoulli, plot=True, time=1, render=False, history=2, delta=1, plot_interval=100, layer=['E'])
+p = Pipeline(network,
+			 env,
+			 encoding=bernoulli,
+			 plot=True,
+			 time=1,
+			 render=False,
+			 history=5,
+			 delta=10,
+			 plot_interval=100,
+			 layer=['E'])
+
 print()
 
 while True:
-	p.step()
+	p.step(print_interval = 100)
 	p.normalize('E', 'R', exc_readout_norm)
 	
 	if p.done == True:
