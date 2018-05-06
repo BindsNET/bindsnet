@@ -8,7 +8,7 @@ class DiehlAndCook(Network):
 	'''
 	Implements the spiking neural network architecture from `(Diehl & Cook 2015) <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
 	'''
-	def __init__(self, n_inpt=784, n_neurons=100, exc=22.5, inh=17.5, time=350, dt=1.0):
+	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, time=350, dt=1.0):
 		'''
 		Constructs the :code:`DiehlAndCook` network architecture.
 		
@@ -68,18 +68,18 @@ class DiehlAndCook(Network):
 		
 		self.add_connection(Connection(source=self.layers['Ae'],
 									   target=self.layers['Ai'],
-									   w=self.exc * torch.ones(self.n_neurons, self.n_neurons),
+									   w=self.exc * torch.diag(torch.ones(self.n_neurons)),
 									   update_rule=None,
-									   wmin=self.exc,
+									   wmin=0,
 									   wmax=self.exc),
-						    source='X',
-						    target='Ae')
+						    source='Ae',
+						    target='Ai')
 		
 		self.add_connection(Connection(source=self.layers['Ai'],
 									   target=self.layers['Ae'],
 									   w=-self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons))),
 									   update_rule=None,
 									   wmin=-self.inh,
-									   wmax=-self.inh),
-						    source='X',
+									   wmax=0),
+						    source='Ai',
 						    target='Ae')
