@@ -91,8 +91,6 @@ p = Pipeline(network,
 			 plot=True,
 			 time=1,
 			 render=False,
-			 history=5,
-			 delta=10,
 			 plot_interval=100,
 			 layer=['E'])
 

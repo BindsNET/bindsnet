@@ -127,13 +127,9 @@ class Pipeline:
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
-		# Update counter
-		if self.iteration % self.delta == 0:
-			if self.history_index != max(self.history.keys()):
-				self.history_index += self.delta
-			# Wrap around the history
-			else:
-				self.history_index %= max(self.history.keys())	
+		# Update index
+		if len(self.history) > 0:
+			self.update_index()
 						
 		# Plot relevant data
 		if self.plot and (self.iteration % self.plot_interval == 0):
@@ -169,6 +165,14 @@ class Pipeline:
 		
 		plt.pause(1e-8)
 
+	def update_index(self):
+		if self.iteration % self.delta == 0:
+			if self.history_index != max(self.history.keys()):
+				self.history_index += self.delta
+			# Wrap around the history
+			else:
+				self.history_index %= max(self.history.keys())	
+					
 	def normalize(self, source, target, norm):
 		'''
 		Normalize a connection in the pipeline's :code:`Network`.
