@@ -14,6 +14,7 @@ class Connection:
 		Instantiates a :code:`Connection` object.
 
 		Inputs:
+		
 			| :code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
 			| :code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
 			| :code:`w` (:code:`torch`.FloatTensor or torch.cuda.FloatTensor): Effective strengths of synapses.
@@ -70,6 +71,7 @@ class Connection:
 		Retrieve weight matrix of the connection.
 		
 		Returns:
+		
 			| (:code:`torch.Tensor`): Weight matrix of the connection.
 		'''
 		return self.w
@@ -79,6 +81,7 @@ class Connection:
 		Set weight matrix of the connection.
 		
 		Inputs:
+		
 			| :code:`w` (:code:`torch.Tensor`): Weight matrix to set to connection.
 		'''
 		self.w = w
@@ -119,6 +122,7 @@ class SparseConnection:
 		Instantiates a :code:`Connection` object with sparse weights.
 
 		Inputs:
+		
 			| :code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
 			| :code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
 			| :code:`w` (:code:`torch`.FloatTensor or torch.cuda.FloatTensor): Effective strengths of synapses.

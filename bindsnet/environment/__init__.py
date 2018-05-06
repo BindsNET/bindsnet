@@ -86,7 +86,7 @@ class MNISTEnv:
 			self.data, self.labels = MNIST(data_path).get_test()
 			self.label_loader = iter(self.labels)
 		
-		self.env = iter(data)
+		self.env = iter(self.data)
 	
 	def step(self, a=None):
 		'''
@@ -112,7 +112,7 @@ class MNISTEnv:
 		self.preprocess()
 		
 		# Info dictionary contains label of MNIST digit.
-		info = {'label' : next(self.labels)}
+		info = {'label' : next(self.label_loader)}
 		
 		return self.obs, 0, False, info
 	

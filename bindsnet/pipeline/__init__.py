@@ -9,8 +9,7 @@ plt.ion()
 
 class Pipeline:
 	'''
-	| Allows for the abstraction of the interaction between spiking neural network,
-	| environment (or dataset), and encoding of inputs into spike trains.
+	Allows for the abstraction of the interaction between spiking neural network, environment (or dataset), and encoding of inputs into spike trains.
 	'''
 	def __init__(self, network, environment, encoding=bernoulli, **kwargs):
 		'''
@@ -25,7 +24,6 @@ class Pipeline:
 			
 				| :code:`plot` (:code:`bool`): Plot monitor variables.
 				| :code:`render` (:code:`bool`): Show the environment.
-				| :code:`layer` (:code:`list(string)`): Layer to plot data for. 
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
@@ -58,7 +56,7 @@ class Pipeline:
 			self.history = {}
 			self.delta = 1
 		
-		if 'plot' in kwargs.keys() and 'layer' in kwargs.keys():
+		if 'plot' in kwargs.keys():
 			self.plot = kwargs['plot']
 		else:
 			self.plot = False
@@ -69,15 +67,15 @@ class Pipeline:
 			self.plot_interval = 100
 		
 		if self.plot:
-			self.layer_to_plot = [layer for layer in self.network.layers]
-			self.spike_record = {layer : torch.ByteTensor() for layer in self.layer_to_plot}
+			self.layers_to_plot = [layer for layer in self.network.layers]
+			self.spike_record = {layer : torch.ByteTensor() for layer in self.layers_to_plot}
 			self.set_spike_data()
 			self.plot_data()
 
 		self.first = True
 
 	def set_spike_data(self):
-		for layer in self.layer_to_plot:
+		for layer in self.layers_to_plot:
 			self.spike_record[layer] = self.network.monitors['%s_spikes' % layer].get('s')
 
 	def get_voltage_data(self):
@@ -86,7 +84,7 @@ class Pipeline:
 
 	def step(self):
 		'''
-		Step through an iteration of the pipeline.
+		Run an iteration of the pipeline.
 		'''
 		# Render game.
 		if self.render:

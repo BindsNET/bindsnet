@@ -19,37 +19,18 @@ class Nodes(ABC):
 		Abstract base class method for a single simulation step.
 		
 		Inputs:
+		
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
 		pass
-
-	def get_spikes(self):
+	
+	@abstractmethod
+	def _reset(self):
 		'''
-		Returns instantaneous spike occurrences.
-		
-		Returns:
-			| (:code:`torch.Tensor`): Current spikes from this group of neurons.
+		Abstract base class method for resetting state variables.
 		'''
-		return self.s
-
-	def get_voltages(self):
-		'''
-		Returns instantaneous neuron voltages.
-		
-		Returns:
-			| (:code:`torch.Tensor`): Current neuron voltages of this group of neurons.
-		'''
-		return self.v
-
-	def get_traces(self):
-		'''
-		Returns instantaneous spike traces.
-		
-		Returns:
-			| (:code:`torch.Tensor`): Current spike traces of this group of neurons.
-		'''
-		return self.x
+		pass
 
 
 class Input(Nodes):
