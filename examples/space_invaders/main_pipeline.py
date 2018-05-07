@@ -34,7 +34,7 @@ network = Network(dt=dt)
 # Layers of neurons.
 inpt = Input(n=6552, traces=True)  # Input layer
 exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refrac=0, traces=True)  # Readout layer
+readout = LIFNodes(n=6, refrac=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
@@ -88,18 +88,19 @@ env.reset()
 p = Pipeline(network,
 			 env,
 			 encoding=bernoulli,
-			 plot=True,
+			 plot=plot,
 			 time=1,
-			 render=False,
+			 render=render,
 			 history=5,
 			 delta=10,
 			 plot_interval=100,
-			 layer=['E'])
+			 feedback=select_multinomial,
+			 output='R')
 
 print()
 
 while True:
-	p.step(print_interval = 100)
+	p.step()
 	p.normalize('E', 'R', exc_readout_norm)
 	
 	if p.done == True:

@@ -3,53 +3,55 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from bindsnet import *
+from .feedback  import *
+from ..encoding import bernoulli
 
 plt.ion()
 
 class Pipeline:
 	'''
-	| Allows for the abstraction of the interaction between spiking neural network,
-	| environment (or dataset), and encoding of inputs into spike trains.
+	Allows for the abstraction of the interaction between spiking neural network, environment (or dataset), and encoding of inputs into spike trains.
 	'''
-	def __init__(self, network, environment, encoding=bernoulli, **kwargs):
+	def __init__(self, network, environment, encoding=bernoulli, feedback=no_feedback, **kwargs):
 		'''
 		Initializes the pipeline.
 		
 		Inputs:
 		
 			| :code:`network` (:code:`bindsnet.Network`): Arbitrary network object.
-			| :code:`environment` (:code:`bindsnet.Environment`): Arbitrary environment (e.g MNIST, Space Invaders)
-			| :code:`encoding` (:code:`function`): Function to encode observation into spike trains
+			| :code:`environment` (:code:`bindsnet.Environment`): Arbitrary environment.
+			| :code:`encoding` (:code:`function`): Function to encode observations into spike trains.
+			| :code:`feedback` (:code:`function`): Function to convert network outputs into environment inputs.
 			| :code:`kwargs`:
 			
 				| :code:`plot` (:code:`bool`): Plot monitor variables.
 				| :code:`render` (:code:`bool`): Show the environment.
-				| :code:`layer` (:code:`list(string)`): Layer to plot data for. 
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
+				| :code:`output` (:code:`str`): String name of the layer from which to take output from.
 		'''
 		self.network = network
 		self.env = environment
 		self.encoding = encoding
+		self.feedback = feedback
 		
 		self.iteration = 0
 		self.ims, self.axes = None, None
 		
 		# Setting kwargs.
-		if 'time' in kwargs.keys():
+		if 'time' in kwargs:
 			self.time = kwargs['time']
 		else:
 			self.time = 1
 		
-		if 'render' in kwargs.keys():
+		if 'render' in kwargs:
 			self.render = kwargs['render']
 		else:
 			self.render = False
 		
-		if 'history' in kwargs.keys() and 'delta' in kwargs.keys():
+		if 'history' in kwargs and 'delta' in kwargs:
 			self.delta = kwargs['delta']
 			self.history_index = 0
 			self.history = {i : torch.Tensor() for i in range(0, kwargs['history']*self.delta, self.delta)}
@@ -58,48 +60,47 @@ class Pipeline:
 			self.history = {}
 			self.delta = 1
 		
-		if 'plot' in kwargs.keys() and 'layer' in kwargs.keys():
+		if 'plot' in kwargs:
 			self.plot = kwargs['plot']
 		else:
 			self.plot = False
 		
-		if 'plot_interval' in kwargs.keys():
+		if 'plot_interval' in kwargs:
 			self.plot_interval = kwargs['plot_interval']
 		else:
 			self.plot_interval = 100
 		
+		if 'output' in kwargs:
+			self.output = kwargs['output']
+		else:
+			self.output = None
+			
 		if self.plot:
-			self.layer_to_plot = [layer for layer in self.network.layers]
-			self.spike_record = {layer : torch.ByteTensor() for layer in self.layer_to_plot}
+			self.layers_to_plot = [layer for layer in self.network.layers]
+			self.spike_record = {layer : torch.ByteTensor() for layer in self.layers_to_plot}
 			self.set_spike_data()
 			self.plot_data()
 
 		self.first = True
 
 	def set_spike_data(self):
-		for layer in self.layer_to_plot:
+		for layer in self.layers_to_plot:
 			self.spike_record[layer] = self.network.monitors['%s_spikes' % layer].get('s')
 
 	def get_voltage_data(self):
 		voltage_record = {layer : voltages[layer].get('v') for layer in voltages}
 		return voltage_record
 
-	def step(self, print_interval=100):
+	def step(self):
 		'''
-		Step through an iteration of the pipeline.
+		Run an iteration of the pipeline.
 		'''
-		if self.iteration % print_interval == 0:
-			print('Iteration %d' % self.iteration)
-		
 		# Render game.
 		if self.render:
 			self.env.render()
 			
 		# Choose action based on readout neuron spiking
-		if self.network.layers['R'].s.sum() == 0 or self.iteration == 0:
-			action = np.random.choice(range(6))
-		else:
-			action = torch.multinomial((self.network.layers['R'].s.float() / self.network.layers['R'].s.sum().float()).view(-1), 1)[0] + 1
+		action = self.feedback(self, output=self.output)
 		
 		# Run a step of the environment.
 		self.obs, self.reward, self.done, info = self.env.step(action)

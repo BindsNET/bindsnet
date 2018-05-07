@@ -63,61 +63,16 @@ else:
 if not train:
 	update_interval = n_test
 
-# Build network.
-network = Network(dt=dt)
-
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
+	
+# Build network, create environment, and specify data encoding.
+network = DiehlAndCook(n_inpt=784, n_neurons=n_neurons, exc=excite, inh=inhib, time=time, dt=dt)
+environment = MNISTEnv(data_path=os.path.join('..', 'data'))
+encoding = poisson_loader
 
-# Layers of neurons.
-# Input layer.
-input_layer = Input(n=784, shape=[28, 28], traces=True, trace_tc=1 / 20)
-
-# Excitatory layer.
-exc_layer = AdaptiveLIFNodes(n=n_neurons, traces=True, rest=-65.0, reset=-65.0, thresh=-52.0, refrac=5,
-                                    decay=1e-2, trace_tc=1 / 20, theta_plus=0.05, theta_decay=1e-7)
-
-# Inhibitory layer.
-inh_layer = LIFNodes(n=n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0,
-                                 decay=1e-1, refrac=2, trace_tc=1 / 20)
-
-# Connections between layers.
-# Input -> excitatory.
-input_exc_w = 0.3 * torch.rand(*input_layer.shape, *exc_layer.shape)
-input_exc_conn = Connection(source=input_layer, target=exc_layer, w=input_exc_w,
-										update_rule=post_pre, wmin=0.0, wmax=1.0)
-
-# Excitatory -> inhibitory.
-exc_inh_w = 22.5 * torch.diag(torch.ones(exc_layer.n))
-exc_inh_conn = Connection(source=exc_layer, target=inh_layer, w=exc_inh_w, update_rule=None)
-
-# Inhibitory -> excitatory.
-inh_exc_w = -17.5 * (torch.ones(inh_layer.n, exc_layer.n) - torch.diag(torch.ones(inh_layer.n)))
-inh_exc_conn = Connection(source=inh_layer, target=exc_layer, w=inh_exc_w, update_rule=None)
-
-# Voltage recording for excitatory and inhibitory layers.
-exc_voltage_monitor = Monitor(exc_layer, ['v'], time=time)
-inh_voltage_monitor = Monitor(inh_layer, ['v'], time=time)
-
-# Add all layers and connections to the network.
-network.add_layer(input_layer, name='X')
-network.add_layer(exc_layer, name='Ae')
-network.add_layer(inh_layer, name='Ai')
-network.add_connection(input_exc_conn, source='X', target='Ae')
-network.add_connection(exc_inh_conn, source='Ae', target='Ai')
-network.add_connection(inh_exc_conn, source='Ai', target='Ae')
-network.add_monitor(exc_voltage_monitor, name='exc_voltage')
-network.add_monitor(inh_voltage_monitor, name='inh_voltage')
-
-# Load MNIST data.
-images, labels = MNIST(path=os.path.join('..', 'data')).get_train()
-images *= intensity
-
-# Lazily encode data as Poisson spike trains.
-data_loader = poisson_loader(data=images, time=time)
-
-# Record spikes during the simulation.
-spike_record = torch.zeros(update_interval, time, n_neurons)
+# Build pipeline from above-specified components.
+pipeline = Pipeline(network, environment, encoding, plot=plot, time=time)
 
 # Neuron assignments and spike proportions.
 assignments = -torch.ones_like(torch.Tensor(n_neurons))
@@ -136,7 +91,10 @@ for layer in set(network.layers) - {'X'}:
 print('Begin training.\n')
 start = t()
 
-for i in range(n_train):    
+for i in range(n_train):
+	pipeline.step()
+
+for i in range(n_train):
 	if i % progress_interval == 0:
 		print('Progress: %d / %d (%.4f seconds)' % (i, n_train, t() - start))
 		start = t()
@@ -179,9 +137,9 @@ for i in range(n_train):
 	
 	# Optionally plot various simulation information.
 	if plot:
-		inpt = inpts['X'].view(time, input_layer.n)
+		inpt = inpts['X'].view(time, 784)
 		input_exc_weights = network.connections[('X', 'Ae')].w
-		square_weights = get_square_weights(input_exc_weights.view(input_layer.n, exc_layer.n), n_sqrt)
+		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		

@@ -6,9 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 
-from bindsnet.datasets.preprocess import *
-from bindsnet.encoding            import *
-from bindsnet.datasets            import *
+from ..datasets.preprocess import *
+from ..encoding            import *
+from ..datasets            import *
 
 
 class Games(ABC):
@@ -86,7 +86,7 @@ class MNISTEnv:
 			self.data, self.labels = MNIST(data_path).get_test()
 			self.label_loader = iter(self.labels)
 		
-		self.env = iter(data)
+		self.env = iter(self.data)
 	
 	def step(self, a=None):
 		'''
@@ -112,7 +112,7 @@ class MNISTEnv:
 		self.preprocess()
 		
 		# Info dictionary contains label of MNIST digit.
-		info = {'label' : next(self.labels)}
+		info = {'label' : next(self.label_loader)}
 		
 		return self.obs, 0, False, info
 	
@@ -169,6 +169,7 @@ class SpaceInvaders(Games):
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
 		self.diffs = diffs
+		self.action_space = self.env.action_space
 
 	def step(self, a):
 		'''
@@ -185,6 +186,10 @@ class SpaceInvaders(Games):
 			| :code:`done` (:code:`bool`): Indicates whether the simulation has finished.
 			| :code:`info` (:code:`dict`): Current information about the environment.
 		'''
+		# No action selected corresponds to no-op.
+		if a is None:
+			a = 0
+		
 		# Call gym's environment step function.
 		self.obs, self.reward, done, info = self.env.step(a)
 		self.preprocess()
@@ -227,7 +232,7 @@ class SpaceInvaders(Games):
 		self.obs = binary_image(self.obs)
 		self.obs = np.reshape(self.obs, (78, 84, 1))
 		self.obs = torch.from_numpy(self.obs).view(1, -1).float()
-
+		
 
 class CartPole(Games):
 	'''
