@@ -106,20 +106,7 @@ class Pipeline:
 		
 		# Store frame of history and encode the inputs
 		if len(self.history) > 0:
-			# Recording initial observations
-			if self.iteration < len(self.history) * self.delta:
-				# Store observation based on delta value
-				if self.iteration % self.delta == 0:
-					self.history[self.history_index] = self.obs
-			else:
-				# Take difference between stored frames and current frame
-				temp = torch.clamp(self.obs - sum(self.history.values()), 0, 1)
-								
-				# Store observation based on delta value.
-				if self.iteration % self.delta == 0:
-					self.history[self.history_index] = self.obs
-					
-				self.obs = temp
+			self.update_history()
 		
 		# Encode the observation using given encoder function
 		self.encoded = self.encoding(self.obs, max_prob=self.env.max_prob)
@@ -165,6 +152,22 @@ class Pipeline:
 		
 		plt.pause(1e-8)
 
+	def update_history(self):
+		# Recording initial observations
+		if self.iteration < len(self.history) * self.delta:
+			# Store observation based on delta value
+			if self.iteration % self.delta == 0:
+				self.history[self.history_index] = self.obs
+		else:
+			# Take difference between stored frames and current frame
+			temp = torch.clamp(self.obs - sum(self.history.values()), 0, 1)
+							
+			# Store observation based on delta value.
+			if self.iteration % self.delta == 0:
+				self.history[self.history_index] = self.obs
+				
+			self.obs = temp
+				
 	def update_index(self):
 		if self.iteration % self.delta == 0:
 			if self.history_index != max(self.history.keys()):
