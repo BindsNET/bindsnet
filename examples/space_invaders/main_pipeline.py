@@ -93,8 +93,7 @@ p = Pipeline(network,
 			 render=render,
 			 history=5,
 			 delta=10,
-			 plot_interval=100,
-			 layer=['E'])
+			 plot_interval=100)
 
 print()
 

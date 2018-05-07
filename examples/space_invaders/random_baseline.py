@@ -20,9 +20,7 @@ avg_rewards = []
 lengths = []
 avg_lengths = []
 
-i = 0
-j = 0
-k = 0
+i, j, k = 0, 0, 0
 while i < n:
 	if render:
 		env.render()
