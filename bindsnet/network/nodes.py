@@ -376,12 +376,6 @@ class AdaptiveLIFNodes(Nodes):
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
 		
-		# Choose only a single neuron to spike (ETH replication).
-		if torch.sum(self.s) > 0:
-			s = torch.zeros(self.s.size())
-			s[torch.multinomial(self.s.float(), 1)] = 1
-			self.s = s.byte()
-
 		# Integrate inputs.
 		self.v += inpts
 

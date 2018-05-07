@@ -74,7 +74,7 @@ class MNISTEnv(DatasetEnvironment):
 			| :code:`time` (:code:`time`): Length of spike train per example.
 			| :code:`intensity` (:code:`intensity`): Raw data is multiplied by this value.
 		'''
-		super(MNIST).__init__()
+		super(MNISTEnv).__init__()
 		
 		self.train = train
 		self.time = time
