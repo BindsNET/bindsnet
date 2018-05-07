@@ -34,7 +34,7 @@ network = Network(dt=dt)
 # Layers of neurons.
 inpt = Input(n=6552, traces=True)  # Input layer
 exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refrac=0, traces=True)  # Readout layer
+readout = LIFNodes(n=6, refrac=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
@@ -93,7 +93,9 @@ p = Pipeline(network,
 			 render=render,
 			 history=5,
 			 delta=10,
-			 plot_interval=100)
+			 plot_interval=100,
+			 feedback=select_multinomial,
+			 output='R')
 
 print()
 

@@ -169,6 +169,7 @@ class SpaceInvaders(Games):
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
 		self.diffs = diffs
+		self.action_space = self.env.action_space
 
 	def step(self, a):
 		'''
@@ -185,6 +186,10 @@ class SpaceInvaders(Games):
 			| :code:`done` (:code:`bool`): Indicates whether the simulation has finished.
 			| :code:`info` (:code:`dict`): Current information about the environment.
 		'''
+		# No action selected corresponds to no-op.
+		if a is None:
+			a = 0
+		
 		# Call gym's environment step function.
 		self.obs, self.reward, done, info = self.env.step(a)
 		self.preprocess()
