@@ -42,6 +42,7 @@ class Input(Nodes):
 		Instantiates a layer of input neurons.
 		
 		Inputs:
+		
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record decaying spike traces.
@@ -68,6 +69,7 @@ class Input(Nodes):
 		On each simulation step, set the spikes of the population equal to the inputs.
 
 		Inputs:
+		
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
@@ -98,6 +100,7 @@ class McCullochPitts(Nodes):
 		Instantiates a McCulloch-Pitts layer of neurons.
 		
 		Inputs:
+		
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
@@ -126,6 +129,7 @@ class McCullochPitts(Nodes):
 		Runs a single simulation step.
 
 		Inputs:
+		
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
@@ -156,6 +160,7 @@ class IFNodes(Nodes):
 		Instantiates a layer of IF neurons.
 		
 		Inputs:
+		
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
@@ -193,6 +198,7 @@ class IFNodes(Nodes):
 		Runs a single simulation step.
 
 		Inputs:
+		
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
@@ -234,6 +240,7 @@ class LIFNodes(Nodes):
 		Instantiates a layer of LIF neurons.
 		
 		Inputs:
+		
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
@@ -272,6 +279,7 @@ class LIFNodes(Nodes):
 		Runs a single simulation step.
 
 		Inputs:
+		
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
@@ -317,6 +325,7 @@ class AdaptiveLIFNodes(Nodes):
 		Instantiates a layer of LIF neurons.
 		
 		Inputs:
+		
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
@@ -360,6 +369,7 @@ class AdaptiveLIFNodes(Nodes):
 		Runs a single simulation step.
 
 		Inputs:
+		
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
@@ -406,6 +416,7 @@ class IzhikevichNodes(Nodes):
 		Instantiates a layer of Izhikevich neurons.
 		
 		Inputs:
+		
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
@@ -458,6 +469,7 @@ class IzhikevichNodes(Nodes):
 		Runs a single simulation step.
 
 		Inputs:
+		
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
