@@ -43,7 +43,7 @@ class DatasetEnvironment(ABC):
 		'''
 		Abstract constructor for the DatasetEnvironment class.
 		'''
-		super.__init__()
+		super().__init__()
 	
 	@abstractmethod
 	def preprocess(self):
@@ -52,6 +52,7 @@ class DatasetEnvironment(ABC):
 		'''
 		pass
 
+	@abstractmethod
 	def close(self):
 		'''
 		Dummy function mimicking OpenAI Gym :code:`close()` function.
@@ -59,7 +60,7 @@ class DatasetEnvironment(ABC):
 		pass
 
 
-class MNISTEnv:
+class MNISTEnv(DatasetEnvironment):
 	'''
 	A wrapper around the :code:`MNIST` dataset object to pass to the :code:`Pipeline` object.
 	'''
@@ -73,7 +74,7 @@ class MNISTEnv:
 			| :code:`time` (:code:`time`): Length of spike train per example.
 			| :code:`intensity` (:code:`intensity`): Raw data is multiplied by this value.
 		'''
-		super().__init__()
+		super(MNIST).__init__()
 		
 		self.train = train
 		self.time = time
@@ -121,7 +122,7 @@ class MNISTEnv:
 		Dummy function for OpenAI Gym environment's :code:`reset()` function.
 		'''
 		# Reload data and label generators.
-		self.env = poisson_loader(data=self.data, time=self.time)
+		self.env = iter(self.data)
 		self.label_loader = iter(self.labels)
 	
 	def render(self):
@@ -148,6 +149,7 @@ class MNISTEnv:
 
 			| (:code:`torch.Tensor`): Pre-processed observation.
 		'''
+		self.obs = self.obs.view(784)
 		self.obs *= self.intensity
 
 
@@ -279,10 +281,9 @@ class CartPole(Games):
 
 		# Convert to torch.Tensor, and then to Bernoulli-distributed spikes.
 		obs = torch.from_numpy(obs).view(1, -1).float()
-		obs = get_bernoulli(obs, max_prob=self.max_prob)
 
 		# Return converted observations and other information.
-		return next(obs).view(1, -1), reward, done, info
+		return obs, reward, done, info
 
 	def reset(self):
 		'''
@@ -306,7 +307,6 @@ class CartPole(Games):
 		# Convert to torch.Tensor, and
 		# convert to Bernoulli-distributed spikes.
 		obs = torch.from_numpy(obs).view(1, -1).float()
-		obs = bernoulli(obs, max_prob=self.max_prob)
 
 		# Return converted observations.
 		return obs

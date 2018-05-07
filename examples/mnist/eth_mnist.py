@@ -76,7 +76,7 @@ network.add_monitor(exc_voltage_monitor, name='exc_voltage')
 network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 
 # Load MNIST data.
-images, labels = MNIST(path=os.path.join('..', 'data')).get_train()
+images, labels = MNIST(path=os.path.join('..', '..', 'data')).get_train()
 images = images.view(-1, 784)
 images *= intensity
 

@@ -3,8 +3,9 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .feedback  import *
-from ..encoding import bernoulli
+from .feedback           import *
+from ..analysis.plotting import *
+from ..encoding          import bernoulli
 
 plt.ion()
 
@@ -123,18 +124,22 @@ class Pipeline:
 				self.obs = temp
 		
 		# Encode the observation using given encoder function
-		self.encoded = self.encoding(self.obs, max_prob=self.env.max_prob)
-
+		if 'max_prob' in self.env.__dict__:
+			self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
+		else:
+			self.encoded = self.encoding(self.obs, time=self.time)
+			
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
 		# Update counter
-		if self.iteration % self.delta == 0:
-			if self.history_index != max(self.history.keys()):
-				self.history_index += self.delta
-			# Wrap around the history
-			else:
-				self.history_index %= max(self.history.keys())	
+		if len(self.history) > 0:
+			if self.iteration % self.delta == 0:
+				if self.history_index != max(self.history.keys()):
+					self.history_index += self.delta
+				# Wrap around the history
+				else:
+					self.history_index %= max(self.history.keys())
 						
 		# Plot relevant data
 		if self.plot and (self.iteration % self.plot_interval == 0):
@@ -182,7 +187,7 @@ class Pipeline:
 		'''
 		self.network.connections[(source, target)].normalize(norm)
 	
-	def reset(self):
+	def _reset(self):
 		'''
 		Reset the pipeline.
 		'''
