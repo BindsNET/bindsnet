@@ -82,7 +82,7 @@ def network_1():
 	# Normalize adaptable weights.
 	network.connections[('E', 'R')].normalize(exc_readout_norm)
 
-	return network
+	return network, exc_readout_norm
 
 def network_2():
 	# Build network.
@@ -153,10 +153,9 @@ def network_2():
 	# Normalize adaptable weights.
 	network.connections[('E', 'R')].normalize(exc_readout_norm)
 	
-	return network
+	return network, exc_readout_norm
 
-
-network = network_1()
+network, exc_readout_norm = network_1()
 
 # Load SpaceInvaders environment.
 env = SpaceInvaders()
@@ -167,11 +166,11 @@ p = Pipeline(network,
 			 encoding=bernoulli,
 			 plot=True,
 			 time=1,
-			 history=10,
+			 history=3,
 			 delta=10,
 			 render=False,
 			 plot_interval=100,
-			 layer=['E'])
+			 layer=['X', 'E', 'R'])
 
 print()
 

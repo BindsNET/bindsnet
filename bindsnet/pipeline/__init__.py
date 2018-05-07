@@ -70,7 +70,7 @@ class Pipeline:
 			self.plot_interval = 100
 		
 		if self.plot:
-			self.layer_to_plot = [layer for layer in self.network.layers]
+			self.layer_to_plot = [layer for layer in kwargs['layer']]
 			self.spike_record = {layer : torch.ByteTensor() for layer in self.layer_to_plot}
 			self.set_spike_data()
 			self.plot_data()
@@ -114,10 +114,6 @@ class Pipeline:
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
-		# Update index
-		#if len(self.history) > 0:
-	#		self.update_index()
-						
 		# Plot relevant data
 		if self.plot and (self.iteration % self.plot_interval == 0):
 			self.plot_data()
@@ -174,7 +170,6 @@ class Pipeline:
 				
 	def update_index(self):
 		if self.iteration % self.delta == 0:
-			print (self.history_index)
 			if self.history_index != max(self.history.keys()):
 				self.history_index += self.delta
 			# Wrap around the history
