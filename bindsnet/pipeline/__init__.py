@@ -102,7 +102,7 @@ class Pipeline:
 		
 		# Run a step of the environment.
 		self.obs, self.reward, self.done, info = self.env.step(action)
-		
+
 		# Store frame of history and encode the inputs
 		if len(self.history) > 0:
 			self.update_history()
@@ -120,18 +120,21 @@ class Pipeline:
 			#print ('sum of inhibition spikes: %d'%torch.sum(self.network.layers['I'].s))
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
-				self.plot_obs(self.obs)
+				self.plot_obs()
 			
 		self.iteration += 1
 
-	def plot_obs(self, obs):
+	def plot_obs(self):
+		'''
+		Plot the processed observation after difference against history
+		'''
 		if self.first:
 			self.fig = plt.figure()
 			axes = self.fig.add_subplot(111)
-			self.im = axes.imshow(obs.numpy().reshape(78, 84), cmap='gray')
+			self.im = axes.imshow(self.obs.numpy().reshape(self.env.obs_shape), cmap='gray')
 			self.first = False
 		else:
-			self.im.set_data(obs.numpy().reshape(78, 84))
+			self.im.set_data(self.obs.numpy().reshape(self.env.obs_shape))
 			
 	def plot_data(self):
 		'''
@@ -153,6 +156,13 @@ class Pipeline:
 		plt.pause(1e-8)
 
 	def update_history(self):
+		'''
+		Updates the observations inside history by performing subtraction from 
+		most recent observation and the sum of previous observations.
+		
+		If there are not enough observations to take a difference from, simply 
+		store the observation without any subtraction.
+		'''
 		# Recording initial observations
 		if self.iteration < len(self.history) * self.delta:
 			# Store observation based on delta value
@@ -169,6 +179,13 @@ class Pipeline:
 			self.obs = temp
 				
 	def update_index(self):
+		'''
+		Updates the index to keep track of history.
+		
+		For example: history = 4, delta = 3 will produce self.history = {0, 3, 6, 9}
+						  and self.history_index will be updated according to self.delta
+						  and will wrap around the history dictionary.
+		'''
 		if self.iteration % self.delta == 0:
 			if self.history_index != max(self.history.keys()):
 				self.history_index += self.delta

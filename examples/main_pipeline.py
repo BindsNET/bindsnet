@@ -20,7 +20,7 @@ parser.add_argument('--render', dest='render', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
 parser.set_defaults(plot=False, render=False, gpu=False)
 
-globals().update(vars(parser.parse_args()))
+locals().update(vars(parser.parse_args()))
 
 if gpu:
 	torch.set_default_tensor_type('torch.cuda.FloatTensor')
