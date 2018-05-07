@@ -36,7 +36,8 @@ class Pipeline:
 		self.encoding = encoding
 		
 		self.iteration = 0
-		self.ims, self.axes = None, None
+		self.ims_s, self.axes_s = None, None
+		self.ims_v, self.axes_v = None, None
 		
 		# Setting kwargs.
 		if 'time' in kwargs.keys():
@@ -77,12 +78,10 @@ class Pipeline:
 		self.first = True
 
 	def set_spike_data(self):
-		for layer in self.layer_to_plot:
-			self.spike_record[layer] = self.network.monitors['%s_spikes' % layer].get('s')
+		self.spike_record = {layer: self.network.monitors['%s_spikes' % layer].get('s') for layer in self.layer_to_plot}
 
-	def get_voltage_data(self):
-		voltage_record = {layer : voltages[layer].get('v') for layer in voltages}
-		return voltage_record
+	def set_voltage_data(self):
+		self.voltage_record = {layer : self.network.monitors['%s_voltages' % layer].get('v') for layer in set(self.layer_to_plot) - {'X'}}
 
 	def step(self, print_interval=100):
 		'''
@@ -107,7 +106,8 @@ class Pipeline:
 		# Store frame of history and encode the inputs
 		if len(self.history) > 0:
 			self.update_history()
-		
+			self.update_index()
+			
 		# Encode the observation using given encoder function
 		self.encoded = self.encoding(self.obs, max_prob=self.env.max_prob)
 
@@ -115,12 +115,13 @@ class Pipeline:
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
 		# Update index
-		if len(self.history) > 0:
-			self.update_index()
+		#if len(self.history) > 0:
+	#		self.update_index()
 						
 		# Plot relevant data
 		if self.plot and (self.iteration % self.plot_interval == 0):
 			self.plot_data()
+			#print ('sum of inhibition spikes: %d'%torch.sum(self.network.layers['I'].s))
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
 				self.plot_obs(self.obs)
@@ -142,13 +143,16 @@ class Pipeline:
 		'''
 		# Set data
 		self.set_spike_data()
+		self.set_voltage_data()
 		
 		# Initialize plots
-		if self.ims == None and self.axes == None:
-			self.ims, self.axes = plot_spikes(self.spike_record)
+		if self.ims_s is None and self.axes_s is None and self.ims_v is None and self.axes_v is None:
+			self.ims_s, self.axes_s = plot_spikes(self.spike_record)
+			self.ims_v, self.axes_v = plot_voltages(self.voltage_record)
 		else: 
 			# Update the plots dynamically
-			self.ims, self.axes = plot_spikes(self.spike_record, ims=self.ims, axes=self.axes)
+			self.ims_s, self.axes_s = plot_spikes(self.spike_record, ims=self.ims_s, axes=self.axes_s)
+			self.ims_v, self.axes_v = plot_voltages(self.voltage_record, ims=self.ims_v, axes=self.axes_v)
 		
 		plt.pause(1e-8)
 
@@ -170,6 +174,7 @@ class Pipeline:
 				
 	def update_index(self):
 		if self.iteration % self.delta == 0:
+			print (self.history_index)
 			if self.history_index != max(self.history.keys()):
 				self.history_index += self.delta
 			# Wrap around the history
