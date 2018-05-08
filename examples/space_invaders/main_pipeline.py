@@ -158,19 +158,19 @@ def network_2():
 network, exc_readout_norm = network_2()
 
 # Load SpaceInvaders environment.
-env = SpaceInvaders()
+env = SpaceInvaders(max_prob=1)
 env.reset()
 
 p = Pipeline(network,
 			 env,
 			 encoding=bernoulli,
-			 plot=True,
+			 plot=False,
 			 time=1,
-			 history=1,
-			 delta=10,
+			 history=5,
+			 delta=3,
 			 render=False,
 			 plot_interval=plot_interval,
-			 feedback=select_multinomial,
+			 feedback=select_softmax,
 			 output='R')
 
 print()

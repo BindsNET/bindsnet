@@ -144,7 +144,7 @@ class Pipeline:
 		if self.plot and (self.iteration % self.plot_interval == 0):
 			self.plot_data()
 			
-			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
+			if self.iteration > len(self.history) * self.delta:  
 				self.plot_obs()
 			
 		self.iteration += 1
@@ -177,7 +177,7 @@ class Pipeline:
 			self.ims_s, self.axes_s = plot_spikes(self.spike_record, ims=self.ims_s, axes=self.axes_s)
 			self.ims_v, self.axes_v = plot_voltages(self.voltage_record, ims=self.ims_v, axes=self.axes_v)
 		
-		plt.pause(1e-8)
+		plt.pause(1e-3)
 
 	def update_history(self):
 		'''
