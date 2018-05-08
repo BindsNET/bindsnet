@@ -413,7 +413,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 
 			for ax in axes:
 				ax.set_aspect('auto')
-			
+				
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
 		plt.tight_layout()
 	

@@ -39,8 +39,10 @@ class Pipeline:
 		self.feedback = feedback
 		
 		self.iteration = 0
-		self.ims_s, self.axes_s = None, None
-		self.ims_v, self.axes_v = None, None
+		
+		self.ims_s, self.axes_s     = None, None
+		self.ims_v, self.axes_v     = None, None
+		self.ims_obs, self.axes_obs = None, None
 		
 		# Setting kwargs.
 		if 'time' in kwargs:
@@ -55,10 +57,10 @@ class Pipeline:
 		
 		if 'history' in kwargs and 'delta' in kwargs:
 			self.delta = kwargs['delta']
-			self.history_index = 0
-			self.history = {i : torch.Tensor() for i in range(0, kwargs['history']*self.delta, self.delta)}
+			self.history_index = 1
+			self.history = {i : torch.Tensor() for i in range(1, kwargs['history']*self.delta + 1, self.delta)}
 		else:
-			self.history_index = 0
+			self.history_index = 1
 			self.history = {}
 			self.delta = 1
 		
@@ -76,20 +78,20 @@ class Pipeline:
 			self.output = kwargs['output']
 		else:
 			self.output = None
-			
+		
+		# Initial plot setup
 		if self.plot:
 			self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
 			self.set_spike_data()
 			self.plot_data()
 
-		self.first = True
 		self.print_interval = 100
 		
 	def set_spike_data(self):
 		'''
 		Get the spike data from all layers in the pipeline's network.
 		'''
-		self.spike_record = {layer : self.network.monitors['%s_spikes' % layer].get('s') for layer in self.network.layers}
+		self.spike_record = {layer: self.network.monitors['%s_spikes' % layer].get('s') for layer in self.network.layers}
 
 	def set_voltage_data(self):
 		'''
@@ -128,7 +130,7 @@ class Pipeline:
 		if len(self.history) > 0:
 			self.update_history()
 			self.update_index()
-			
+		
 		# Encode the observation using given encoding function.
 		if 'max_prob' in self.env.__dict__:
 			self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
@@ -151,13 +153,12 @@ class Pipeline:
 		'''
 		Plot the processed observation after difference against history
 		'''
-		if self.first:
-			self.fig = plt.figure()
-			axes = self.fig.add_subplot(111)
-			self.im = axes.imshow(self.obs.numpy().reshape(self.env.obs_shape), cmap='gray')
-			self.first = False
+		if self.ims_obs is None and self.axes_obs is None:
+			fig = plt.figure()
+			self.axes_obs = fig.add_subplot(111)
+			self.ims_obs = self.axes_obs.imshow(self.obs.numpy().reshape(self.env.obs_shape), cmap='gray')
 		else:
-			self.im.set_data(self.obs.numpy().reshape(self.env.obs_shape))
+			self.ims_obs.set_data(self.obs.numpy().reshape(self.env.obs_shape))
 			
 	def plot_data(self):
 		'''
@@ -194,18 +195,18 @@ class Pipeline:
 		else:
 			# Take difference between stored frames and current frame
 			temp = torch.clamp(self.obs - sum(self.history.values()), 0, 1)
-							
+					
 			# Store observation based on delta value.
 			if self.iteration % self.delta == 0:
 				self.history[self.history_index] = self.obs
 				
 			self.obs = temp
-				
+			
 	def update_index(self):
 		'''
 		Updates the index to keep track of history.
 		
-		For example: history = 4, delta = 3 will produce self.history = {0, 3, 6, 9}
+		For example: history = 4, delta = 3 will produce self.history = {1, 4, 7, 10}
 						  and self.history_index will be updated according to self.delta
 						  and will wrap around the history dictionary.
 		'''
@@ -214,7 +215,7 @@ class Pipeline:
 				self.history_index += self.delta
 			# Wrap around the history
 			else:
-				self.history_index %= max(self.history.keys())	
+				self.history_index = (self.history_index % max(self.history.keys())) + 1 
 					
 	def normalize(self, source, target, norm):
 		'''
