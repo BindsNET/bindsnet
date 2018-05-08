@@ -11,7 +11,7 @@ plt.ion()
 
 class Pipeline:
 	'''
-	Allows for the abstraction of the interaction between spiking neural network, environment (or dataset), and encoding of inputs into spike trains.
+	Abstracts the interaction between network, environment (or dataset), input encoding, and environment feedback.
 	'''
 	def __init__(self, network, environment, encoding=bernoulli, feedback=no_feedback, **kwargs):
 		'''
@@ -86,38 +86,50 @@ class Pipeline:
 		self.print_interval = 100
 		
 	def set_spike_data(self):
-		self.spike_record = {layer: self.network.monitors['%s_spikes' % layer].get('s') for layer in self.network.layers}
+		'''
+		Get the spike data from all layers in the pipeline's network.
+		'''
+		self.spike_record = {layer : self.network.monitors['%s_spikes' % layer].get('s') for layer in self.network.layers}
 
 	def set_voltage_data(self):
-		self.voltage_record = {layer : self.network.monitors['%s_voltages' % layer].get('v') for layer in set(self.network.layers) - {'X'}}
+		'''
+		Get the voltage data from all applicable layers in the pipeline's network.
+		'''
+		self.voltage_record = {}
+		for layer in self.network.layers:
+			if 'v' in self.network.layers[layer].__dict__:
+				self.voltage_record[layer] = self.network.monitors['%s_voltages' % layer].get('v')
 
-	def print_iterations(self):
+	def print_iteration(self):
+		'''
+		Prints the current iteration to standard output.
+		'''
 		if self.iteration % self.print_interval == 0:
-			print ('Iteration: %d'%self.iteration)
+			print('Iteration: %d' % self.iteration)
 
 	def step(self):
 		'''
 		Run an iteration of the pipeline.
 		'''
 		# Temporary printing
-		self.print_iterations()
+		self.print_iteration()
 		
 		# Render game.
 		if self.render:
 			self.env.render()
-		
-		# Choose action based on readout neuron spiking
+			
+		# Choose action based on output neuron spiking.
 		action = self.feedback(self, output=self.output)
 		
 		# Run a step of the environment.
 		self.obs, self.reward, self.done, info = self.env.step(action)
 
-		# Store frame of history and encode the inputs
+		# Store frame of history and encode the inputs.
 		if len(self.history) > 0:
 			self.update_history()
 			self.update_index()
 			
-		# Encode the observation using given encoder function
+		# Encode the observation using given encoding function.
 		if 'max_prob' in self.env.__dict__:
 			self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
 		else:
@@ -126,7 +138,7 @@ class Pipeline:
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
-		# Plot relevant data
+		# Plot relevant data.
 		if self.plot and (self.iteration % self.plot_interval == 0):
 			self.plot_data()
 			
@@ -210,9 +222,9 @@ class Pipeline:
 		
 		Inputs:
 		
-			:code:`source` (:code:`str`): Name of the pre-connection population.
-			:code:`source` (:code:`str`): Name of the post-connection population.
-			:code:`norm` (:code:`float`): Normalization constant of the connection weights.
+			| :code:`source` (:code:`str`): Name of the pre-connection population.
+			| :code:`source` (:code:`str`): Name of the post-connection population.
+			| :code:`norm` (:code:`float`): Normalization constant of the connection weights.
 		'''
 		self.network.connections[(source, target)].normalize(norm)
 	
