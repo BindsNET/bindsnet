@@ -74,7 +74,7 @@ lbls = []
 for j in range(0, i, change_interval):
 	lbls.extend([int(labels[j % 60000])] * change_interval)
 
-loader = get_bernoulli(data=torch.stack(ims), time=1, max_prob=0.05)
+loader = bernoulli_loader(data=torch.stack(ims), time=1, max_prob=0.05)
 
 reward = 0
 out_reward = 0
@@ -112,10 +112,11 @@ for i in range(i):
 		out_target_rates = low_rate * torch.ones(10)
 		out_target_rates[lbls[i]] = target_rate
 	
-	inpts = {'X' : next(loader)}
+	inpts = {'X' : next(loader).view(1, -1)}
 	kwargs = {str(('X', 'Y')) : {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus},
 			  str(('Y', 'Z')) : {'reward' : out_reward, 'a_plus' : a_plus, 'a_minus' : a_minus}}
 	
+
 	network.run(inpts, 1, **kwargs)
 	econn.normalize()
 	oconn.normalize(100)

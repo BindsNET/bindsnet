@@ -188,7 +188,7 @@ class MNISTEnv(DatasetEnvironment):
 	
 	def preprocess(self):
 		'''
-		Preprocessing step for a state specific to Space Invaders.
+		Preprocessing step for a state specific to the MNIST dataset.
 
 		Inputs:
 
