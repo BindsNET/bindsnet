@@ -83,7 +83,8 @@ class Pipeline:
 			self.plot_data()
 
 		self.first = True
-
+		self.print_interval = 100
+		
 	def set_spike_data(self):
 		'''
 		Get the spike data from all layers in the pipeline's network.
@@ -99,10 +100,20 @@ class Pipeline:
 			if 'v' in self.network.layers[layer].__dict__:
 				self.voltage_record[layer] = self.network.monitors['%s_voltages' % layer].get('v')
 
+	def print_iteration(self):
+		'''
+		Prints the current iteration to standard output.
+		'''
+		if self.iteration % self.print_interval == 0:
+			print('Iteration: %d' % self.iteration)
+
 	def step(self):
 		'''
 		Run an iteration of the pipeline.
 		'''
+		# Temporary printing
+		self.print_iteration()
+		
 		# Render game.
 		if self.render:
 			self.env.render()
@@ -132,7 +143,7 @@ class Pipeline:
 			self.plot_data()
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
-				pass
+				self.plot_obs()
 			
 		self.iteration += 1
 
