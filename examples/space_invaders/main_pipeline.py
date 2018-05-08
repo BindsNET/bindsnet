@@ -35,7 +35,7 @@ def network_1():
 	# Layers of neurons.
 	inpt = Input(n=6552, traces=True)  # Input layer
 	exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
-	readout = LIFNodes(n=5, refrac=0, traces=True)  # Readout layer
+	readout = LIFNodes(n=6, refrac=0, traces=True)  # Readout layer
 	layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 	
 	# Connections between layers.
@@ -93,7 +93,7 @@ def network_2():
 	exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
 	inh = LIFNodes(n=n_neurons, traces=True, rest=-60.0, reset=-45.0, thresh=-40.0,
                                  decay=1e-1, refrac=2, trace_tc=1 / 20)
-	readout = LIFNodes(n=5, refrac=0, traces=True)  # Readout layer
+	readout = LIFNodes(n=6, refrac=0, traces=True)  # Readout layer
 	layers = {'X' : inpt, 'E' : exc, 'I': inh, 'R' : readout}
 	
 	# Connections between layers.
@@ -155,7 +155,7 @@ def network_2():
 	
 	return network, exc_readout_norm
 
-network, exc_readout_norm = network_2()
+network, exc_readout_norm = network_1()
 
 # Load SpaceInvaders environment.
 env = SpaceInvaders()
@@ -170,7 +170,9 @@ p = Pipeline(network,
 			 delta=10,
 			 render=False,
 			 plot_interval=100,
-			 layer=['X', 'E', 'R'])
+			 layer=['X', 'E', 'R'],
+			 feedback=select_multinomial,
+			 output='R')
 
 print()
 
@@ -181,4 +183,4 @@ while True:
 	if p.done == True:
 		env.reset()
 else:
-	env.close()
+	raise KeyboardInterrupt	

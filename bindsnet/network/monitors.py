@@ -13,6 +13,7 @@ class Monitor:
 		Constructs a :code:`Monitor` object.
 		
 		Inputs:
+		
 			| :code:`obj` (:code:`Object`): An object to record state variables from during network simulation.
 			| :code:`state_vars` (:code:`list`): List of strings indicating names of state variables to record.
 			| :code:`time` (:code:`int`): If not :code:`None`, pre-allocate memory for state variable recording.
@@ -39,9 +40,11 @@ class Monitor:
 		Return recording to user.
 		
 		Inputs:
+		
 			| :code:`var` (:code:`str`): State variable recording to return.
 		
 		Returns:
+		
 			| (:code:`torch.Tensor`): Tensor of shape :code:`[n_1, ..., n_k, time]`,
 				where :code:`[n_1, ..., n_k]` refers to the shape of the recorded state variable.
 		'''
@@ -93,6 +96,7 @@ class NetworkMonitor:
 		Constructs a :code:`NetworkMonitor` object.
 		
 		Inputs:
+		
 			| :code:`network` (:code:`bindsnet.network.Network`): Network to record state variables from.
 			| :code:`state_vars` (:code:`list`): List of strings indicating names of state variables to record.
 			| :code:`time` (:code:`int`): If not :code:`None`, pre-allocate memory for state variable recording.
@@ -144,6 +148,7 @@ class NetworkMonitor:
 		Return entire recording to user.
 		
 		Returns:
+		
 			| (:code:`dict[torch.Tensor]`): Dictionary of all layers' and connections' recorded state variables.
 		'''
 		return self.recording
@@ -183,6 +188,7 @@ class NetworkMonitor:
 		Write the recording dictionary out to file.
 		
 		Inputs:
+		
 			| :code:`path` (:code:`str`): The directory to which to write the monitor's recording.
 			| :code:`fmt` (:code:`str`): Type of file to write to disk. One of :code:`"pickle"` or :code:`"npz"`.
 		'''

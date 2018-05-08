@@ -6,9 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 
-from bindsnet.datasets.preprocess import *
-from bindsnet.encoding            import *
-from bindsnet.datasets            import *
+from ..datasets.preprocess import *
+from ..encoding            import *
+from ..datasets            import *
 
 
 class Games(ABC):
@@ -43,7 +43,7 @@ class DatasetEnvironment(ABC):
 		'''
 		Abstract constructor for the DatasetEnvironment class.
 		'''
-		super.__init__()
+		super().__init__()
 	
 	@abstractmethod
 	def preprocess(self):
@@ -52,6 +52,7 @@ class DatasetEnvironment(ABC):
 		'''
 		pass
 
+	@abstractmethod
 	def close(self):
 		'''
 		Dummy function mimicking OpenAI Gym :code:`close()` function.
@@ -59,7 +60,7 @@ class DatasetEnvironment(ABC):
 		pass
 
 
-class MNISTEnv:
+class MNISTEnv(DatasetEnvironment):
 	'''
 	A wrapper around the :code:`MNIST` dataset object to pass to the :code:`Pipeline` object.
 	'''
@@ -73,7 +74,7 @@ class MNISTEnv:
 			| :code:`time` (:code:`time`): Length of spike train per example.
 			| :code:`intensity` (:code:`intensity`): Raw data is multiplied by this value.
 		'''
-		super().__init__()
+		super(MNISTEnv).__init__()
 		
 		self.train = train
 		self.time = time
@@ -86,7 +87,7 @@ class MNISTEnv:
 			self.data, self.labels = MNIST(data_path).get_test()
 			self.label_loader = iter(self.labels)
 		
-		self.env = iter(data)
+		self.env = iter(self.data)
 	
 	def step(self, a=None):
 		'''
@@ -112,7 +113,7 @@ class MNISTEnv:
 		self.preprocess()
 		
 		# Info dictionary contains label of MNIST digit.
-		info = {'label' : next(self.labels)}
+		info = {'label' : next(self.label_loader)}
 		
 		return self.obs, 0, False, info
 	
@@ -121,7 +122,7 @@ class MNISTEnv:
 		Dummy function for OpenAI Gym environment's :code:`reset()` function.
 		'''
 		# Reload data and label generators.
-		self.env = poisson_loader(data=self.data, time=self.time)
+		self.env = iter(self.data)
 		self.label_loader = iter(self.labels)
 	
 	def render(self):
@@ -148,6 +149,7 @@ class MNISTEnv:
 
 			| (:code:`torch.Tensor`): Pre-processed observation.
 		'''
+		self.obs = self.obs.view(784)
 		self.obs *= self.intensity
 
 
@@ -169,6 +171,7 @@ class SpaceInvaders(Games):
 		self.max_prob = max_prob
 		self.env = gym.make('SpaceInvaders-v0')
 		self.diffs = diffs
+		self.action_space = self.env.action_space
 
 	def step(self, a):
 		'''
@@ -185,6 +188,10 @@ class SpaceInvaders(Games):
 			| :code:`done` (:code:`bool`): Indicates whether the simulation has finished.
 			| :code:`info` (:code:`dict`): Current information about the environment.
 		'''
+		# No action selected corresponds to no-op.
+		if a is None:
+			a = 0
+		
 		# Call gym's environment step function.
 		self.obs, self.reward, done, info = self.env.step(a)
 		self.preprocess()
@@ -227,8 +234,8 @@ class SpaceInvaders(Games):
 		self.obs = binary_image(self.obs)
 		self.obs = np.reshape(self.obs, (78, 84, 1))
 		self.obs_shape = (78, 84)
-		self.obs = torch.from_numpy(self.obs).view(1, -1).float()
-
+		self.obs = torch.from_numpy(self.obs).view(-1).float()
+		
 
 class CartPole(Games):
 	'''
@@ -275,10 +282,9 @@ class CartPole(Games):
 
 		# Convert to torch.Tensor, and then to Bernoulli-distributed spikes.
 		obs = torch.from_numpy(obs).view(1, -1).float()
-		obs = get_bernoulli(obs, max_prob=self.max_prob)
 
 		# Return converted observations and other information.
-		return next(obs).view(1, -1), reward, done, info
+		return obs, reward, done, info
 
 	def reset(self):
 		'''
@@ -302,7 +308,6 @@ class CartPole(Games):
 		# Convert to torch.Tensor, and
 		# convert to Bernoulli-distributed spikes.
 		obs = torch.from_numpy(obs).view(1, -1).float()
-		obs = bernoulli(obs, max_prob=self.max_prob)
 
 		# Return converted observations.
 		return obs
