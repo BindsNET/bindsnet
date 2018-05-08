@@ -5,20 +5,11 @@ import numpy             as np
 import argparse
 import matplotlib.pyplot as plt
 
-from time                       import sleep
-from timeit                     import default_timer
-from mpl_toolkits.axes_grid1    import make_axes_locatable
+from bindsnet                import *
+from time                    import sleep
+from timeit                  import default_timer
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from bindsnet.evaluation        import *
-from bindsnet.analysis.plotting import *
-from bindsnet.network           import Network
-from bindsnet.learning          import m_stdp_et
-from bindsnet.encoding          import get_bernoulli
-from bindsnet.environment       import SpaceInvaders
-
-from bindsnet.network.monitors  import Monitor
-from bindsnet.network.nodes     import LIFNodes, Input
-from bindsnet.network.topology  import Connection
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
@@ -45,10 +36,10 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(n=3780, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refractory=0, traces=True,
-			   threshold=-52.0 + torch.randn(n_neurons))  # Excitatory layer
-readout = LIFNodes(n=5, refractory=0, traces=True, threshold=-40.0)  # Readout layer
+inpt = Input(n=6552, traces=True)  # Input layer
+exc = LIFNodes(n=n_neurons, refrac=0, traces=True,
+			   thresh=-52.0 + torch.randn(n_neurons))  # Excitatory layer
+readout = LIFNodes(n=5, refrac=0, traces=True, thresh=-40.0)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
@@ -127,10 +118,8 @@ while True:
 		
 	# Choose action based on readout neuron spiking.
 	if s == {} or s['R'].sum() == 0:
-		# No spikes -> no action.
 		action = 0
 	else:
-		# If there are spikes, randomly choose from among them for possible actions.
 		action = torch.multinomial((s['R'] / s['R'].sum()).view(-1), 1)[0]
 	
 	# Get observations, reward, done flag, and other information.
@@ -140,10 +129,10 @@ while True:
 	rewards.append(reward)
 	
 	# Get next input sample.
-	inpts.update({'X' : obs})
+	inpts.update({'X' : obs.view(1, -1)})
 	
 	# Run the network on the input.
-	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
+	kwargs = {str(('E', 'R')) : {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}}
 	network.run(inpts=inpts, time=1, **kwargs)
 	
 	# Normalize adaptable weights.
@@ -161,8 +150,8 @@ while True:
 			
 			w_fig, w_axes = plt.subplots(2, 1)
 			
-			i_e_w_im = w_axes[0].matshow(input_exc_conn.w.t(), cmap='hot_r', vmax=input_exc_conn.wmax)
-			e_r_w_im = w_axes[1].matshow(exc_readout_conn.w.t(), cmap='hot_r', vmax=exc_readout_conn.wmax)
+			i_e_w_im = w_axes[0].matshow(input_exc_conn.w.t(), cmap='hot_r', vmax=float(input_exc_conn.wmax))
+			e_r_w_im = w_axes[1].matshow(exc_readout_conn.w.t(), cmap='hot_r', vmax=float(exc_readout_conn.wmax))
 			
 			d1 = make_axes_locatable(w_axes[0])
 			d2 = make_axes_locatable(w_axes[1])
