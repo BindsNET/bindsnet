@@ -78,27 +78,34 @@ class Pipeline:
 			self.output = None
 			
 		if self.plot:
-			self.layers_to_plot = [layer for layer in self.network.layers]
-			self.spike_record = {layer : torch.ByteTensor() for layer in self.layers_to_plot}
+			self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
 			self.set_spike_data()
 			self.plot_data()
 
 		self.first = True
-
+		self.print_interval = 100
+		
 	def set_spike_data(self):
-		self.spike_record = {layer: self.network.monitors['%s_spikes' % layer].get('s') for layer in self.layer_to_plot}
+		self.spike_record = {layer: self.network.monitors['%s_spikes' % layer].get('s') for layer in self.network.layers}
 
 	def set_voltage_data(self):
-		self.voltage_record = {layer : self.network.monitors['%s_voltages' % layer].get('v') for layer in set(self.layer_to_plot) - {'X'}}
+		self.voltage_record = {layer : self.network.monitors['%s_voltages' % layer].get('v') for layer in set(self.network.layers) - {'X'}}
+
+	def print_iterations(self):
+		if self.iteration % self.print_interval == 0:
+			print ('Iteration: %d'%self.iteration)
 
 	def step(self):
 		'''
 		Run an iteration of the pipeline.
 		'''
+		# Temporary printing
+		self.print_iterations()
+		
 		# Render game.
 		if self.render:
 			self.env.render()
-			
+		
 		# Choose action based on readout neuron spiking
 		action = self.feedback(self, output=self.output)
 		
@@ -124,7 +131,7 @@ class Pipeline:
 			self.plot_data()
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
-				pass
+				self.plot_obs()
 			
 		self.iteration += 1
 
