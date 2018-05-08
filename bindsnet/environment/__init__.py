@@ -20,6 +20,38 @@ class Games(ABC):
 		Abstract constructor for the Games class.
 		'''
 		super().__init__()
+	
+	@abstractmethod
+	def reset(self):
+		'''
+		Wrapper around the OpenAI Gym environment :code:`reset()` function.
+		'''
+		pass
+	
+	@abstractmethod
+	def step(self, a):
+		'''
+		Wrapper around the OpenAI Gym environment :code:`step()` function.
+		
+		Inputs:
+		
+			:code:`a` (:code:`int`): Action to enact on environment.
+		'''
+		pass
+	
+	@abstractmethod
+	def render(self):
+		'''
+		Wrapper around the OpenAI Gym environment :code:`render()` function.
+		'''
+		pass
+	
+	@abstractmethod
+	def close(self):
+		'''
+		Wrapper around the OpenAI Gym environment :code:`close()` function.
+		'''
+		self.env.close()
 
 	@abstractmethod
 	def preprocess(self):
@@ -27,12 +59,6 @@ class Games(ABC):
 		Pre-processing steps for every observation.
 		'''
 		pass
-
-	def close(self):
-		'''
-		Wrapper around the OpenAI Gym environment :code:`close()` function.
-		'''
-		self.env.close()
 
 
 class DatasetEnvironment(ABC):
@@ -46,16 +72,34 @@ class DatasetEnvironment(ABC):
 		super().__init__()
 	
 	@abstractmethod
-	def preprocess(self):
+	def reset(self):
 		'''
-		Pre-processing steps for every observation.
+		Wrapper around the OpenAI Gym environment :code:`reset()` function.
 		'''
 		pass
-
+	
+	@abstractmethod
+	def step(self, a):
+		'''
+		Wrapper around the OpenAI Gym environment :code:`step()` function.
+		
+		Inputs:
+		
+			:code:`a` (:code:`int`): Action to enact on environment.
+		'''
+		pass
+	
 	@abstractmethod
 	def close(self):
 		'''
-		Dummy function mimicking OpenAI Gym :code:`close()` function.
+		Wrapper around the OpenAI Gym environment :code:`close()` function.
+		'''
+		self.env.close()
+
+	@abstractmethod
+	def preprocess(self):
+		'''
+		Pre-processing steps for every observation.
 		'''
 		pass
 
@@ -73,6 +117,7 @@ class MNISTEnv(DatasetEnvironment):
 			| :code:`train` (:code:`bool`): Whether to use train or test dataset.
 			| :code:`time` (:code:`time`): Length of spike train per example.
 			| :code:`intensity` (:code:`intensity`): Raw data is multiplied by this value.
+			| :code:`data_path` (:code:`str`): Whether to put or look for the MNIST data.
 		'''
 		super(MNISTEnv).__init__()
 		
@@ -92,6 +137,10 @@ class MNISTEnv(DatasetEnvironment):
 	def step(self, a=None):
 		'''
 		Dummy function for OpenAI Gym environment's :code:`step()` function.
+		
+		Inputs:
+		
+			| :code:`a` (:code:`None`): There is no interaction of the network with the MNIST dataset.
 
 		Returns:
 
@@ -179,7 +228,7 @@ class SpaceInvaders(Games):
 
 		Inputs:
 
-			| :code:`a` (:code:`int`): Action to take in Space Invaders environment.
+			| :code:`a` (:code:`int`): Action to take in SpaceInvaders environment.
 
 		Returns:
 
@@ -233,7 +282,7 @@ class SpaceInvaders(Games):
 		self.obs = self.obs[26:104, :]
 		self.obs = binary_image(self.obs)
 		self.obs = np.reshape(self.obs, (78, 84, 1))
-		self.obs = torch.from_numpy(self.obs).view(1, -1).float()
+		self.obs = torch.from_numpy(self.obs).view(-1).float()
 		
 
 class CartPole(Games):
@@ -259,7 +308,7 @@ class CartPole(Games):
 
 		Inputs:
 
-			| :code:`a` (:code:`int`): Action to take in Space Invaders environment.
+			| :code:`a` (:code:`int`): Action to take in the cartpole environment.
 
 		Returns:
 
@@ -280,7 +329,7 @@ class CartPole(Games):
 						max(obs[3], 0)])
 
 		# Convert to torch.Tensor, and then to Bernoulli-distributed spikes.
-		obs = torch.from_numpy(obs).view(1, -1).float()
+		obs = torch.from_numpy(obs).view(-1).float()
 
 		# Return converted observations and other information.
 		return obs, reward, done, info
@@ -306,7 +355,7 @@ class CartPole(Games):
 
 		# Convert to torch.Tensor, and
 		# convert to Bernoulli-distributed spikes.
-		obs = torch.from_numpy(obs).view(1, -1).float()
+		obs = torch.from_numpy(obs).view(-1).float()
 
 		# Return converted observations.
 		return obs

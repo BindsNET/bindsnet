@@ -128,7 +128,7 @@ class Pipeline:
 			self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
 		else:
 			self.encoded = self.encoding(self.obs, time=self.time)
-			
+		
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		

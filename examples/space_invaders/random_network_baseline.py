@@ -1,16 +1,12 @@
 import os
-import sys
-import torch
-import numpy             as np
+import pickle
 import argparse
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+import numpy as np
 
-from bindsnet                import *
-from timeit                  import default_timer
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from bindsnet import *
 
 parser = argparse.ArgumentParser()
+parser.add_argument('-n', type=int, default=1000000)
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
@@ -85,7 +81,7 @@ network.connections[('E', 'R')].normalize(exc_readout_norm)
 env = SpaceInvaders()
 env.reset()
 
-p = Pipeline(network,
+pipeline = Pipeline(network,
 			 env,
 			 encoding=bernoulli,
 			 plot=plot,
@@ -97,14 +93,21 @@ p = Pipeline(network,
 			 feedback=select_multinomial,
 			 output='R')
 
-print()
+total = 0
+rewards = []
+avg_rewards = []
+lengths = []
+avg_lengths = []
 
+i, j, k = 0, 0, 0
 try:
-	while True:
-		p.step()
-		p.normalize('E', 'R', exc_readout_norm)
-
-		if p.done == True:
-			env.reset()
+	while i < n:
+		pipeline.step()
+		
+		if pipeline.done == True:
+			pipeline._reset()
 except KeyboardInterrupt:
 	env.close()
+
+save = (total, rewards, avg_rewards, lengths, avg_lengths)
+p.dump(save, open(os.path.join('..', '..', 'results', 'SI_random_baseline_%d.p' % n), 'wb'))
