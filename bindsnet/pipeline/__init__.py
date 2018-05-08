@@ -3,8 +3,9 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .feedback  import *
-from ..encoding import bernoulli
+from .feedback           import *
+from ..analysis.plotting import *
+from ..encoding          import bernoulli
 
 plt.ion()
 
@@ -38,7 +39,8 @@ class Pipeline:
 		self.feedback = feedback
 		
 		self.iteration = 0
-		self.ims, self.axes = None, None
+		self.ims_s, self.axes_s = None, None
+		self.ims_v, self.axes_v = None, None
 		
 		# Setting kwargs.
 		if 'time' in kwargs:
@@ -84,12 +86,10 @@ class Pipeline:
 		self.first = True
 
 	def set_spike_data(self):
-		for layer in self.layers_to_plot:
-			self.spike_record[layer] = self.network.monitors['%s_spikes' % layer].get('s')
+		self.spike_record = {layer: self.network.monitors['%s_spikes' % layer].get('s') for layer in self.layer_to_plot}
 
-	def get_voltage_data(self):
-		voltage_record = {layer : voltages[layer].get('v') for layer in voltages}
-		return voltage_record
+	def set_voltage_data(self):
+		self.voltage_record = {layer : self.network.monitors['%s_voltages' % layer].get('v') for layer in set(self.layer_to_plot) - {'X'}}
 
 	def step(self):
 		'''
@@ -104,72 +104,99 @@ class Pipeline:
 		
 		# Run a step of the environment.
 		self.obs, self.reward, self.done, info = self.env.step(action)
-		
+
 		# Store frame of history and encode the inputs
 		if len(self.history) > 0:
-			# Recording initial observations
-			if self.iteration < len(self.history) * self.delta:
-				# Store observation based on delta value
-				if self.iteration % self.delta == 0:
-					self.history[self.history_index] = self.obs
-			else:
-				# Take difference between stored frames and current frame
-				temp = torch.clamp(self.obs - sum(self.history.values()), 0, 1)
-								
-				# Store observation based on delta value.
-				if self.iteration % self.delta == 0:
-					self.history[self.history_index] = self.obs
-					
-				self.obs = temp
-		
+			self.update_history()
+			self.update_index()
+			
 		# Encode the observation using given encoder function
-		self.encoded = self.encoding(self.obs, max_prob=self.env.max_prob)
-
+		if 'max_prob' in self.env.__dict__:
+			self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
+		else:
+			self.encoded = self.encoding(self.obs, time=self.time)
+		
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
-		# Update counter
+		# Plot relevant data
+		if self.plot and (self.iteration % self.plot_interval == 0):
+			self.plot_data()
+			
+			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
+				pass
+			
+		self.iteration += 1
+
+	def plot_obs(self):
+		'''
+		Plot the processed observation after difference against history
+		'''
+		if self.first:
+			self.fig = plt.figure()
+			axes = self.fig.add_subplot(111)
+			self.im = axes.imshow(self.obs.numpy().reshape(self.env.obs_shape), cmap='gray')
+			self.first = False
+		else:
+			self.im.set_data(self.obs.numpy().reshape(self.env.obs_shape))
+			
+	def plot_data(self):
+		'''
+		Plot desired variables.
+		'''
+		# Set latest data
+		self.set_spike_data()
+		self.set_voltage_data()
+		
+		# Initialize plots
+		if self.ims_s is None and self.axes_s is None and self.ims_v is None and self.axes_v is None:
+			self.ims_s, self.axes_s = plot_spikes(self.spike_record)
+			self.ims_v, self.axes_v = plot_voltages(self.voltage_record)
+		else: 
+			# Update the plots dynamically
+			self.ims_s, self.axes_s = plot_spikes(self.spike_record, ims=self.ims_s, axes=self.axes_s)
+			self.ims_v, self.axes_v = plot_voltages(self.voltage_record, ims=self.ims_v, axes=self.axes_v)
+		
+		plt.pause(1e-8)
+
+	def update_history(self):
+		'''
+		Updates the observations inside history by performing subtraction from 
+		most recent observation and the sum of previous observations.
+		
+		If there are not enough observations to take a difference from, simply 
+		store the observation without any subtraction.
+		'''
+		# Recording initial observations
+		if self.iteration < len(self.history) * self.delta:
+			# Store observation based on delta value
+			if self.iteration % self.delta == 0:
+				self.history[self.history_index] = self.obs
+		else:
+			# Take difference between stored frames and current frame
+			temp = torch.clamp(self.obs - sum(self.history.values()), 0, 1)
+							
+			# Store observation based on delta value.
+			if self.iteration % self.delta == 0:
+				self.history[self.history_index] = self.obs
+				
+			self.obs = temp
+				
+	def update_index(self):
+		'''
+		Updates the index to keep track of history.
+		
+		For example: history = 4, delta = 3 will produce self.history = {0, 3, 6, 9}
+						  and self.history_index will be updated according to self.delta
+						  and will wrap around the history dictionary.
+		'''
 		if self.iteration % self.delta == 0:
 			if self.history_index != max(self.history.keys()):
 				self.history_index += self.delta
 			# Wrap around the history
 			else:
 				self.history_index %= max(self.history.keys())	
-						
-		# Plot relevant data
-		if self.plot and (self.iteration % self.plot_interval == 0):
-			self.plot_data()
-			
-			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
-				self.plot_obs(self.obs)
-			
-		self.iteration += 1
-
-	def plot_obs(self, obs):
-		if self.first:
-			self.fig = plt.figure()
-			axes = self.fig.add_subplot(111)
-			self.im = axes.imshow(obs.numpy().reshape(78, 84), cmap='gray')
-			self.first = False
-		else:
-			self.im.set_data(obs.numpy().reshape(78, 84))
-			
-	def plot_data(self):
-		'''
-		Plot desired variables.
-		'''
-		# Set data
-		self.set_spike_data()
-		
-		# Initialize plots
-		if self.ims == None and self.axes == None:
-			self.ims, self.axes = plot_spikes(self.spike_record)
-		else: 
-			# Update the plots dynamically
-			self.ims, self.axes = plot_spikes(self.spike_record, ims=self.ims, axes=self.axes)
-		
-		plt.pause(1e-8)
-
+					
 	def normalize(self, source, target, norm):
 		'''
 		Normalize a connection in the pipeline's :code:`Network`.
@@ -182,7 +209,7 @@ class Pipeline:
 		'''
 		self.network.connections[(source, target)].normalize(norm)
 	
-	def reset(self):
+	def _reset(self):
 		'''
 		Reset the pipeline.
 		'''
