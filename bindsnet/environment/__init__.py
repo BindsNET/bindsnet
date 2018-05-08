@@ -4,11 +4,11 @@ import gym
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from abc import ABC, abstractmethod
 
 from ..datasets.preprocess import *
 from ..encoding            import *
 from ..datasets            import *
+from abc                   import ABC, abstractmethod
 
 
 class Games(ABC):
@@ -61,75 +61,31 @@ class Games(ABC):
 		pass
 
 
-class DatasetEnvironment(ABC):
+class DatasetEnvironment:
 	'''
-	Abstract base class for dataset environment wrappers.
+	A wrapper around any object from the :code:`datasets` module to pass to the :code:`Pipeline` object.
 	'''
-	def __init__(self):
+	def __init__(self, dataset=MNIST, train=True, time=350, intensity=0.25):
 		'''
-		Abstract constructor for the DatasetEnvironment class.
-		'''
-		super().__init__()
-	
-	@abstractmethod
-	def reset(self):
-		'''
-		Wrapper around the OpenAI Gym environment :code:`reset()` function.
-		'''
-		pass
-	
-	@abstractmethod
-	def step(self, a):
-		'''
-		Wrapper around the OpenAI Gym environment :code:`step()` function.
+		Initializes the environment wrapper around the dataset.
 		
 		Inputs:
 		
-			:code:`a` (:code:`int`): Action to enact on environment.
-		'''
-		pass
-	
-	@abstractmethod
-	def close(self):
-		'''
-		Wrapper around the OpenAI Gym environment :code:`close()` function.
-		'''
-		self.env.close()
-
-	@abstractmethod
-	def preprocess(self):
-		'''
-		Pre-processing steps for every observation.
-		'''
-		pass
-
-
-class MNISTEnv(DatasetEnvironment):
-	'''
-	A wrapper around the :code:`MNIST` dataset object to pass to the :code:`Pipeline` object.
-	'''
-	def __init__(self, train=True, time=350, intensity=0.25, data_path=os.path.join('..', '..', 'data', 'MNIST')):
-		'''
-		Initializes the environment wrapper around the MNIST dataset.
-		
-		Inputs:
-		
+			| :code:`dataset` (:code:`bindsnet.dataset.Dataset`): Object from datasets module.
 			| :code:`train` (:code:`bool`): Whether to use train or test dataset.
 			| :code:`time` (:code:`time`): Length of spike train per example.
 			| :code:`intensity` (:code:`intensity`): Raw data is multiplied by this value.
-			| :code:`data_path` (:code:`str`): Whether to put or look for the MNIST data.
 		'''
-		super(MNISTEnv).__init__()
-		
+		self.dataset = dataset
 		self.train = train
 		self.time = time
 		self.intensity = intensity
 		
 		if train:
-			self.data, self.labels = MNIST(data_path).get_train()
+			self.data, self.labels = self.dataset.get_train()
 			self.label_loader = iter(self.labels)
 		else:
-			self.data, self.labels = MNIST(data_path).get_test()
+			self.data, self.labels = self.dataset.get_test()
 			self.label_loader = iter(self.labels)
 		
 		self.env = iter(self.data)
@@ -198,7 +154,7 @@ class MNISTEnv(DatasetEnvironment):
 
 			| (:code:`torch.Tensor`): Pre-processed observation.
 		'''
-		self.obs = self.obs.view(784)
+		self.obs = self.obs.view(-1)
 		self.obs *= self.intensity
 
 

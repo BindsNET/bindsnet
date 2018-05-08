@@ -30,18 +30,22 @@ def select_multinomial(pipeline, **kwargs):
 	try:
 		output = kwargs['output']
 	except KeyError:
-		raise KeyError('select_action requires an output layer of size equal to the action space.')
+		raise KeyError('select_action requires an output layer of size a multiple of the action space.')
 	
-	assert pipeline.network.layers[output].n == pipeline.env.action_space.n, 'Output layer size not equal to size of action space.'
+	assert pipeline.network.layers[output].n % pipeline.env.action_space.n == 0, 'Output layer size not equal to size of action space.'
+	
+	pop_size = int(pipeline.network.layers[output].n / pipeline.env.action_space.n)
 	
 	spikes = pipeline.network.layers[output].s
-	_sum = spikes.sum()
+	_sum = spikes.sum().float()
 	
-	# Choose action based on readout neuron spiking
+	# Choose action based on population's spiking.
 	if _sum == 0:
 		action = np.random.choice(range(pipeline.env.action_space.n))
 	else:
-		action = torch.multinomial((spikes.float() / _sum.float()).view(-1), 1)[0]
+		pop_spikes = torch.Tensor([spikes[(i * pop_size):(i * pop_size) + pop_size].sum() \
+										  for i in range(pipeline.network.layers[output].n)]).float()
+		action = torch.multinomial((pop_spikes / _sum).view(-1), 1)[0]
 	
 	return action
 

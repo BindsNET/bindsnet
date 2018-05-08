@@ -20,9 +20,9 @@ parser.add_argument('--print_interval', type=int, default=1000)
 parser.add_argument('--a_plus', type=int, default=1)
 parser.add_argument('--a_minus', type=int, default=-0.5)
 parser.add_argument('--plot', dest='plot', action='store_true')
-parser.add_argument('--env_plot', dest='env_plot', action='store_true')
+parser.add_argument('--render', dest='render', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
-parser.set_defaults(plot=False, env_plot=False, gpu=False)
+parser.set_defaults(plot=False, render=False, gpu=False)
 
 locals().update(vars(parser.parse_args()))
 
@@ -37,25 +37,19 @@ network = Network(dt=dt)
 
 # Layers of neurons.
 inpt = Input(n=6552, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refrac=0, traces=True,
-			   thresh=-52.0 + torch.randn(n_neurons))  # Excitatory layer
-readout = LIFNodes(n=5, refrac=0, traces=True, thresh=-40.0)  # Readout layer
+exc = LIFNodes(n=n_neurons, refrac=0, traces=True, thresh=-52.0 + torch.randn(n_neurons))  # Excitatory layer
+readout = LIFNodes(n=60, refrac=0, traces=True, thresh=-40.0)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
 # Input -> excitatory.
-w = 4e-3 * torch.rand(layers['X'].n, layers['E'].n)
+w = 1e-3 * torch.rand(layers['X'].n, layers['E'].n)
 input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=1e-2)
 
 # Excitatory -> readout.
 w = 0.01 * torch.rand(layers['E'].n, layers['R'].n)
-exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=w,
-							  update_rule=m_stdp_et, nu=2e-2)
-exc_readout_norm = 0.5 * layers['E'].n
-
-# Readout -> readout.
-w = -10 * torch.ones(layers['R'].n, layers['R'].n) + 10 * torch.diag(torch.ones(layers['R'].n))
-readout_readout_conn = Connection(source=layers['R'], target=layers['R'], w=w, wmin=-10.0)
+exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=w, wmax=0.5, update_rule=m_stdp_et, nu=2e-2)
+exc_readout_norm = 0.25 * layers['E'].n
 
 # Spike recordings for all layers.
 spikes = {}
@@ -73,7 +67,6 @@ for layer in layers:
 
 network.add_connection(input_exc_conn, source='X', target='E')
 network.add_connection(exc_readout_conn, source='E', target='R')
-network.add_connection(readout_readout_conn, source='R', target='R')
 
 # Add all monitors to the network.
 for layer in layers:
@@ -110,7 +103,7 @@ while True:
 		for m in network.monitors:
 			network.monitors[m]._reset()
 	
-	if plot or env_plot:
+	if render:
 		env.render()
 	
 	if i % print_interval == 0 and i > 0:
@@ -120,7 +113,8 @@ while True:
 	if s == {} or s['R'].sum() == 0:
 		action = 0
 	else:
-		action = torch.multinomial((s['R'] / s['R'].sum()).view(-1), 1)[0]
+		_sum = torch.Tensor([s['R'][i*10:i*10+10].sum() for i in range(6)])
+		action = torch.multinomial((_sum / _sum.sum()).view(-1), 1)[0]
 	
 	# Get observations, reward, done flag, and other information.
 	obs, reward, done, info = env.step(action)
