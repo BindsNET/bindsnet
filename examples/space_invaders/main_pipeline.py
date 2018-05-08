@@ -169,18 +169,21 @@ p = Pipeline(network,
 			 history=5,
 			 delta=10,
 			 render=False,
-			 plot_interval=100,
-			 layer=['X', 'E', 'R'],
+			 layer = ['X', 'E', 'R'],
+			 plot_interval=plot_interval,
 			 feedback=select_multinomial,
 			 output='R')
 
 print()
 
-while True:
-	p.step()
-	p.normalize('E', 'R', exc_readout_norm)
+try:
+	while True:
+		p.step()
+		p.normalize('E', 'R', exc_readout_norm)
+
+		if p.done == True:
+			env.reset()
+except KeyboardInterrupt:
+	env.close()
+	raise KeyboardInterrupt
 	
-	if p.done == True:
-		env.reset()
-else:
-	raise KeyboardInterrupt	

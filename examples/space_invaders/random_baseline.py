@@ -2,6 +2,7 @@ import os
 import pickle
 import argparse
 import numpy as np
+
 from bindsnet import *
 
 parser = argparse.ArgumentParser()

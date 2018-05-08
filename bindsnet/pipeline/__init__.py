@@ -123,18 +123,16 @@ class Pipeline:
 			self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
 		else:
 			self.encoded = self.encoding(self.obs, time=self.time)
-			
+		
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts={'X' : self.encoded}, time=self.time)
 		
 		# Plot relevant data
 		if self.plot and (self.iteration % self.plot_interval == 0):
 			self.plot_data()
-			#print ('sum of inhibition spikes: %d'%torch.sum(self.network.layers['I'].s))
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
-#				self.plot_obs()
-				pass
+				self.plot_obs()
 			
 		self.iteration += 1
 
