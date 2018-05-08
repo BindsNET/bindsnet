@@ -156,7 +156,7 @@ for i in range(n_train):
 	if plot:
 		if gpu:
 			image = pipeline.obs.view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / intensity
-			inpt = pipeline.encoded.view(time, 3*32*32).sum(0).view(3, 32, 32).float().cpu().numpy()
+			inpt = pipeline.encoded.view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0).float().cpu().numpy()
 		else:   
 			image = pipeline.obs.view(3, 32, 32).numpy().transpose(1, 2, 0) / intensity
 			inpt = pipeline.encoded.view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0).float().numpy()
