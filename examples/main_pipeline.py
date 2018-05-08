@@ -155,7 +155,7 @@ def network_2():
 	
 	return network, exc_readout_norm
 
-network, exc_readout_norm = network_1()
+network, exc_readout_norm = network_2()
 
 # Load SpaceInvaders environment.
 env = SpaceInvaders()
@@ -166,7 +166,7 @@ p = Pipeline(network,
 			 encoding=bernoulli,
 			 plot=True,
 			 time=1,
-			 history=3,
+			 history=5,
 			 delta=10,
 			 render=False,
 			 plot_interval=100,

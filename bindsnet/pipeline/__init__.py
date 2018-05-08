@@ -120,7 +120,8 @@ class Pipeline:
 			#print ('sum of inhibition spikes: %d'%torch.sum(self.network.layers['I'].s))
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
-				self.plot_obs()
+#				self.plot_obs()
+				pass
 			
 		self.iteration += 1
 
@@ -140,7 +141,7 @@ class Pipeline:
 		'''
 		Plot desired variables.
 		'''
-		# Set data
+		# Set latest data
 		self.set_spike_data()
 		self.set_voltage_data()
 		
