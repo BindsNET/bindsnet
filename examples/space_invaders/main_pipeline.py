@@ -155,7 +155,7 @@ def network_2():
 	
 	return network, exc_readout_norm
 
-network, exc_readout_norm = network_1()
+network, exc_readout_norm = network_2()
 
 # Load SpaceInvaders environment.
 env = SpaceInvaders()
@@ -183,4 +183,5 @@ try:
 		if p.done == True:
 			env.reset()
 except KeyboardInterrupt:
+	plt.close('all')
 	env.close()
