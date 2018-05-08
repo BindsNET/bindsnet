@@ -169,7 +169,6 @@ p = Pipeline(network,
 			 history=5,
 			 delta=10,
 			 render=False,
-			 layer = ['X', 'E', 'R'],
 			 plot_interval=plot_interval,
 			 feedback=select_multinomial,
 			 output='R')
@@ -185,5 +184,3 @@ try:
 			env.reset()
 except KeyboardInterrupt:
 	env.close()
-	raise KeyboardInterrupt
-	
