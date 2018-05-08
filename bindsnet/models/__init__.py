@@ -35,7 +35,7 @@ class DiehlAndCook(Network):
 							 trace_tc=5e-2),
 					   name='X')
 		
-		self.add_layer(AdaptiveLIFNodes(n=self.n_neurons,
+		self.add_layer(DiehlAndCookNodes(n=self.n_neurons,
 										traces=True,
 										rest=-65.0,
 										reset=-65.0,

@@ -32,9 +32,7 @@ def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
 		else:
 			axes[0].set_title('Current image (label = %d)' % label)
 		
-		axes[1].set_title('Poisson spiking representation')
-		axes[1].set_xlabel('Simulation time'); axes[1].set_ylabel('Neuron index')
-		axes[1].set_aspect('auto')
+		axes[1].set_title('Reconstruction')
 		
 		for ax in axes:
 			ax.set_xticks(()); ax.set_yticks(())

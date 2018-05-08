@@ -12,9 +12,45 @@ import numpy  as np
 
 from struct         import unpack
 from urllib.request import urlretrieve
+from abc            import ABC, abstractmethod
 
 
-class MNIST:
+class Dataset(ABC):
+	'''
+	Abstract base class for dataset.
+	'''
+	def __init__(self):
+		'''
+		Abstract constructor for the Games class.
+		'''
+		super().__init__()
+	
+	@abstractmethod
+	def get_train(self):
+		'''
+		Fetches training data from this dataset.
+		
+		Returns:
+		
+			| (:code:`numpy.ndarray`): Inputs to a machine learning model.
+			| (:code:`numpy.ndarray`): Corresponding desired outputs.
+		'''
+		pass
+	
+	@abstractmethod
+	def get_test(self, a):
+		'''
+		Fetches test data from this dataset.
+		
+		Returns:
+		
+			| (:code:`numpy.ndarray`): Inputs to a machine learning model.
+			| (:code:`numpy.ndarray`): Corresponding desired outputs.
+		'''
+		pass
+	
+
+class MNIST(Dataset):
 	'''
 	Handles loading and saving of the MNIST handwritten digits
 	`(link) <http://yann.lecun.com/exdb/mnist/>`_.
@@ -206,7 +242,7 @@ class MNIST:
 		return labels
 
 
-class CIFAR10:
+class CIFAR10(Dataset):
 	'''
 	Handles loading and saving of the CIFAR-10 image dataset
 	`(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
@@ -333,7 +369,7 @@ class CIFAR10:
 		return np.concatenate(d['data']), np.concatenate(d['labels'])
 
 
-class CIFAR100:
+class CIFAR100(Dataset):
 	'''
 	Handles loading and saving of the CIFAR-100 image dataset
 	`(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.

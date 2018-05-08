@@ -68,7 +68,7 @@ start_intensity = intensity
 	
 # Build network, create environment, and specify data encoding.
 network = DiehlAndCook(n_inpt=784, n_neurons=n_neurons, exc=excite, inh=inhib, time=time, dt=dt)
-environment = MNISTEnv(data_path=os.path.join('..', '..', 'data'))
+environment = DatasetEnvironment(dataset=MNIST(path=os.path.join('..', '..', 'data', 'MNIST')), train=train, intensity=intensity)
 encoding = poisson
 feedback = no_feedback
 
@@ -142,25 +142,23 @@ for i in range(n_train):
 	
 	# Optionally plot various simulation information.
 	if plot:
-		# inpt = inpts['X'].view(time, 784)
+		image = pipeline.obs.view(28, 28)
+		inpt = pipeline.encoded.view(time, 784).sum(0).view(28, 28)
 		input_exc_weights = network.connections[('X', 'Ae')].w
 		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
-		_voltages = {'Ae' : voltages['Ae'].get('v'), 'Ai' : voltages['Ai'].get('v')}
 		
 		if i == 0:
-			# inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt.t(), label=labels[i])
+			inpt_axes, inpt_ims = plot_input(image, inpt, label=labels[i])
 			weights_im = plot_weights(square_weights)
 			assigns_im = plot_assignments(square_assignments)
 			perf_ax = plot_performance(accuracy)
-			voltage_ims, voltage_axes = plot_voltages(_voltages)
 			
 		else:
-			# inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt.t(), label=labels[i], axes=inpt_axes, ims=inpt_ims)
+			inpt_axes, inpt_ims = plot_input(image, inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			weights_im = plot_weights(square_weights, im=weights_im)
 			assigns_im = plot_assignments(square_assignments, im=assigns_im)
 			perf_ax = plot_performance(accuracy, ax=perf_ax)
-			voltage_ims, voltage_axes = plot_voltages(_voltages, ims=voltage_ims, axes=voltage_axes)
 		
 		plt.pause(1e-8)
 	
