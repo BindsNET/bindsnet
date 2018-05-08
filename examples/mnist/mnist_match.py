@@ -69,7 +69,7 @@ lbls = []
 for j in range(0, i, change_interval):
 	lbls.extend([int(labels[j % 60000])] * change_interval)
 
-loader = get_bernoulli(data=torch.stack(ims), time=1, max_prob=0.05)
+loader = bernoulli_loader(data=torch.stack(ims), time=1, max_prob=0.05)
 
 reward = 0
 a_plus = 1
