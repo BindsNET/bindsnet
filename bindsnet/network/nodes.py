@@ -290,7 +290,7 @@ class LIFNodes(Nodes):
 		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh) * (self.refrac_count <= 0)
+		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
 		self.refrac_count[self.s] = self.refrac
 		
 		self.v[self.s] = self.reset
@@ -381,7 +381,7 @@ class AdaptiveLIFNodes(Nodes):
 		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count <= 0)
+		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
@@ -472,7 +472,7 @@ class DiehlAndCookNodes(Nodes):
 		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count <= 0)
+		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
