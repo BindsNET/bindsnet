@@ -29,15 +29,8 @@ class DatasetEnvironment:
 		self.train = train
 		self.time = time
 		
-		if 'intensity' in kwargs:
-			self.intensity = kwargs['intensity']
-		else:
-			self.intensity = 1
-		
-		if 'max_prob' in kwargs:
-			self.max_prob = max_prob
-		else:
-			self.max_prob = 1
+		self.intensity = kwargs.get('intensity', 1)
+		self.max_prob = kwargs.get('max_prob', 1)		
 		
 		if train:
 			self.data, self.labels = self.dataset.get_train()
@@ -133,10 +126,7 @@ class GymEnvironment:
 		self.env = gym.make(name)
 		self.action_space = self.env.action_space
 		
-		if 'max_prob' in kwargs:
-			self.max_prob = kwargs['max_prob']
-		else:
-			self.max_prob = 1
+		self.max_prob = kwargs.get('max_prob', 1)		
 		
 		assert self.max_prob > 0 and self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 

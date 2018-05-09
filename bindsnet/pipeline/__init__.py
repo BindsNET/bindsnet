@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 
 from .feedback           import *
 from ..analysis.plotting import *
+from ..network.nodes     import Input
 from ..encoding          import bernoulli
+
 
 plt.ion()
 
@@ -39,45 +41,30 @@ class Pipeline:
 		self.feedback = feedback
 		
 		self.iteration = 0
+		self.history_index = 1
 		
 		self.ims_s, self.axes_s     = None, None
 		self.ims_v, self.axes_v     = None, None
 		self.ims_obs, self.axes_obs = None, None
 		
 		# Setting kwargs.
-		if 'time' in kwargs:
-			self.time = kwargs['time']
-		else:
-			self.time = 1
+		self.time = kwargs.get('time', 1)
+		self.render = kwargs.get('render', False)
+		self.delta = kwargs.get('delta', 1)
+		self.history = kwargs.get('history', 0)
+		self.plot = kwargs.get('plot', False)
+		self.plot_interval = kwargs.get('plot_interval', 100)
+		self.output = kwargs.get('output', None)
 		
-		if 'render' in kwargs:
-			self.render = kwargs['render']
-		else:
-			self.render = False
+		assert self.time >= 1, 'Time must be greater than or equal to 1'
+		assert self.render == True or self.render == False, 'Render only accepts boolean values' 
+		assert self.delta >= 1, 'Delta must be greater than or equal to 1'
+		assert self.history >= 0 , 'Delta must be greater than or equal to 0'
+		assert self.plot == True or self.plot == False, 'Plot only accepts boolean values' 
+		assert self.plot_interval >= 10 and self.plot_interval <= 200, 'Plot interval must be greater than or equal to 10 and less than or equal to 200'
+		assert self.output is not None, 'output layer must be defined'
 		
-		if 'history' in kwargs and 'delta' in kwargs:
-			self.delta = kwargs['delta']
-			self.history_index = 1
-			self.history = {i : torch.Tensor() for i in range(1, kwargs['history']*self.delta + 1, self.delta)}
-		else:
-			self.history_index = 1
-			self.history = {}
-			self.delta = 1
-		
-		if 'plot' in kwargs:
-			self.plot = kwargs['plot']
-		else:
-			self.plot = False
-		
-		if 'plot_interval' in kwargs:
-			self.plot_interval = kwargs['plot_interval']
-		else:
-			self.plot_interval = 100
-		
-		if 'output' in kwargs:
-			self.output = kwargs['output']
-		else:
-			self.output = None
+		self.history = {i : torch.Tensor() for i in range(1, kwargs['history']*self.delta + 1, self.delta)}
 		
 		# Initial plot setup
 		if self.plot:
@@ -86,6 +73,9 @@ class Pipeline:
 			self.plot_data()
 
 		self.print_interval = 100
+		
+		# Set up for multiple layers of input layers
+		self.encoded = {key: torch.Tensor() for key, val in network.layers.items() if type(val) == Input}
 		
 	def set_spike_data(self):
 		'''
@@ -132,10 +122,11 @@ class Pipeline:
 			self.update_index()
 		
 		# Encode the observation using given encoding function.
-		self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
+		for inpt in self.encoded:
+			self.encoded[inpt] = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
 		
 		# Run the network on the spike train-encoded inputs.
-		self.network.run(inpts={'X' : self.encoded}, time=self.time, reward=self.reward)
+		self.network.run(inpts=self.encoded, time=self.time, reward=self.reward)
 		
 		# Plot relevant data.
 		if self.plot and (self.iteration % self.plot_interval == 0):
