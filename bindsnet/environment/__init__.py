@@ -30,7 +30,7 @@ class DatasetEnvironment:
 		self.time = time
 		
 		if 'intensity' in kwargs:
-			self.intensity = intensity
+			self.intensity = kwargs['intensity']
 		else:
 			self.intensity = 1
 		
