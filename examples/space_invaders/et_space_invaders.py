@@ -79,7 +79,7 @@ for layer in layers:
 network.connections[('E', 'R')].normalize(exc_readout_norm)
 
 # Load SpaceInvaders environment.
-env = SpaceInvaders()
+env = GymEnvironment('SpaceInvaders-v0')
 env.reset()
 
 i = 0

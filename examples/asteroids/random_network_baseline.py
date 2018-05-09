@@ -3,6 +3,7 @@ import pickle
 import argparse
 import numpy as np
 
+from time     import sleep
 from bindsnet import *
 
 parser = argparse.ArgumentParser()
@@ -28,9 +29,9 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(n=6552, traces=True)  # Input layer
+inpt = Input(n=110*84, traces=True)  # Input layer
 exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=6, refrac=0, traces=True)  # Readout layer
+readout = LIFNodes(n=14, refrac=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
@@ -78,7 +79,7 @@ for layer in layers:
 network.connections[('E', 'R')].normalize(exc_readout_norm)
 	
 # Load SpaceInvaders environment.
-environment = GymEnvironment('SpaceInvaders-v0')
+environment = GymEnvironment('Asteroids-v0')
 environment.reset()
 
 pipeline = Pipeline(network,
@@ -106,6 +107,7 @@ try:
 		
 		if pipeline.done == True:
 			pipeline._reset()
+		
 except KeyboardInterrupt:
 	environment.close()
 
