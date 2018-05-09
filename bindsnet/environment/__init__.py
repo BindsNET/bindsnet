@@ -14,7 +14,7 @@ class DatasetEnvironment:
 	'''
 	A wrapper around any object from the :code:`datasets` module to pass to the :code:`Pipeline` object.
 	'''
-	def __init__(self, dataset=MNIST, train=True, time=350, intensity=0.25):
+	def __init__(self, dataset=MNIST, train=True, time=350, **kwargs):
 		'''
 		Initializes the environment wrapper around the dataset.
 		
@@ -28,7 +28,16 @@ class DatasetEnvironment:
 		self.dataset = dataset
 		self.train = train
 		self.time = time
-		self.intensity = intensity
+		
+		if 'intensity' in kwargs:
+			self.intensity = intensity
+		else:
+			self.intensity = 1
+		
+		if 'max_prob' in kwargs:
+			self.max_prob = max_prob
+		else:
+			self.max_prob = 1
 		
 		if train:
 			self.data, self.labels = self.dataset.get_train()
@@ -111,7 +120,7 @@ class GymEnvironment:
 	'''
 	A wrapper around the OpenAI :code:`gym` environments.
 	'''
-	def __init__(self, name, max_prob=1.0):
+	def __init__(self, name, **kwargs):
 		'''
 		Initializes the environment wrapper.
 
@@ -120,12 +129,16 @@ class GymEnvironment:
 			| :code:`name` (:code:`str`): The name of an OpenAI :code:`gym` environment.
 			| :code:`max_prob` (:code:`float`): Maximum spiking probability.
 		'''
-		assert max_prob > 0 and max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
-		
 		self.name = name
-		self.max_prob = max_prob
 		self.env = gym.make(name)
 		self.action_space = self.env.action_space
+		
+		if 'max_prob' in kwargs:
+			self.max_prob = kwargs['max_prob']
+		else:
+			self.max_prob = 1
+		
+		assert self.max_prob > 0 and self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 
 	def step(self, a):
 		'''
