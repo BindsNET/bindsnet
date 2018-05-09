@@ -203,7 +203,7 @@ class IFNodes(Nodes):
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
 		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
+		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
@@ -287,7 +287,7 @@ class LIFNodes(Nodes):
 		self.v -= dt * self.decay * (self.v - self.rest)
 		
 		# Decrement refrac counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
+		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh) * (self.refrac_count <= 0)
@@ -378,7 +378,7 @@ class AdaptiveLIFNodes(Nodes):
 		self.theta -= dt * self.theta_decay * self.theta
 		
 		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
+		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count <= 0)
@@ -469,7 +469,7 @@ class DiehlAndCookNodes(Nodes):
 		self.theta -= dt * self.theta_decay * self.theta
 		
 		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
+		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count <= 0)
@@ -571,7 +571,7 @@ class IzhikevichNodes(Nodes):
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
 		# Decrement refrac counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
+		self.refrac_count[self.refrac_count != 0] -= dt
 		
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
