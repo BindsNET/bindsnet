@@ -281,7 +281,6 @@ class SpaceInvaders(Games):
 		self.obs = subsample(gray_scale(self.obs), 84, 110)
 		self.obs = self.obs[26:104, :]
 		self.obs = binary_image(self.obs)
-		self.obs = np.reshape(self.obs, (78, 84, 1))
 		self.obs_shape = (78, 84)
 		self.obs = torch.from_numpy(self.obs).view(-1).float()
 		

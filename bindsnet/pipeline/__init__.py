@@ -159,7 +159,7 @@ class Pipeline:
 			self.ims_obs = self.axes_obs.imshow(self.obs.numpy().reshape(self.env.obs_shape), cmap='gray')
 		else:
 			self.ims_obs.set_data(self.obs.numpy().reshape(self.env.obs_shape))
-			
+	
 	def plot_data(self):
 		'''
 		Plot desired variables.
@@ -178,6 +178,7 @@ class Pipeline:
 			self.ims_v, self.axes_v = plot_voltages(self.voltage_record, ims=self.ims_v, axes=self.axes_v)
 		
 		plt.pause(1e-3)
+		plt.show()
 
 	def update_history(self):
 		'''

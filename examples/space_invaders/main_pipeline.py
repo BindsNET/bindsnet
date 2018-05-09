@@ -164,22 +164,31 @@ env.reset()
 p = Pipeline(network,
 			 env,
 			 encoding=bernoulli,
-			 plot=False,
+			 plot=True,
 			 time=1,
-			 history=5,
-			 delta=3,
+			 history=4,
+			 delta=10,
 			 render=False,
 			 plot_interval=plot_interval,
-			 feedback=select_softmax,
+			 feedback=select_multinomial,
 			 output='R')
 
 print()
+first = True
+plot = True
 
 try:
 	while True:
 		p.step()
 		p.normalize('E', 'R', exc_readout_norm)
 
+#		if plot:
+#			if first:
+#				im = plot_weights(p.network.connections[('E', 'R')])
+#				first = False
+#			else:
+#				plot_weights(p.network.connections[('E', 'R')], im=im)
+			
 		if p.done == True:
 			env.reset()
 except KeyboardInterrupt:
