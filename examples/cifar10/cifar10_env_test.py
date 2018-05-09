@@ -72,7 +72,9 @@ network = DiehlAndCook(n_inpt=32*32*3,
 					   exc=exc,
 					   inh=inh,
 					   time=time,
-					   dt=dt)
+					   dt=dt,
+					   nu_pre=2e-5,
+					   nu_post=2e-3)
 
 # Initialize data "environment".
 environment = DatasetEnvironment(dataset=CIFAR10(path=path),

@@ -94,8 +94,7 @@ class Connection:
 	
 	def normalize(self, norm=78.0):
 		'''
-		Normalize weights along the first axis according
-		to some desired summed weight per target neuron.
+		Normalize weights along the first axis according to total weight per target neuron.
 		
 		Inputs:
 		
