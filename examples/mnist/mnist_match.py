@@ -56,7 +56,7 @@ for layer in spike_monitors:
 	network.add_monitor(spike_monitors[layer], '%s' % layer)
 
 # Load MNIST data.
-images, labels = MNIST(path=os.path.join('..', '..', 'data')).get_train()
+images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST')).get_train()
 images *= intensity
 images /= 4
 
@@ -96,7 +96,7 @@ for i in range(i):
 			target_rates[j] = target_rate
 		
 	inpts = {'X' : next(loader).view(1, 784)}
-	kwargs = {str(('X', 'Y')) : {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}}
+	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
 	
 	network.run(inpts, 1, **kwargs)
 	econn.normalize()

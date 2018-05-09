@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 
-def bernoulli(datum, time=None, max_prob=1.0):
+def bernoulli(datum, time=None, **kwargs):
 	'''
 	Generates Bernoulli-distributed spike trains based on input intensity. Inputs must be non-negative. Spikes correspond to successful Bernoulli trials, with success probability equal to (normalized in [0, 1]) input value.
 
@@ -16,6 +16,11 @@ def bernoulli(datum, time=None, max_prob=1.0):
 	
 		| (:code:`torch.Tensor`): Tensor of shape :code:`[time, n_1, ..., n_k]` of Bernoulli-distributed spikes.
 	'''
+	if 'max_prob' in kwargs:
+		max_prob = kwargs['max_prob']
+	else:
+		max_prob = 1.0
+	
 	datum = np.copy(datum)
 	shape, size = datum.shape, datum.size
 	datum = datum.ravel()
@@ -36,7 +41,7 @@ def bernoulli(datum, time=None, max_prob=1.0):
 	
 	return torch.Tensor(s).byte()
 
-def bernoulli_loader(data, time=None, max_prob=1.0):
+def bernoulli_loader(data, time=None, **kwargs):
 	'''
 	Lazily invokes :code:`bindsnet.encoding.bernoulli` to iteratively encode a sequence of data.
 
@@ -50,10 +55,15 @@ def bernoulli_loader(data, time=None, max_prob=1.0):
 	
 		| (:code:`torch.Tensor`): Tensor of shape :code:`[time, n_1, ..., n_k]` of Bernoulli-distributed spikes.
 	'''
+	if 'max_prob' in kwargs:
+		max_prob = kwargs['max_prob']
+	else:
+		max_prob = 1.0
+	
 	for i in range(data.size(0)):
-		yield bernoulli(data[i], time, max_prob)  # Encode datum as Bernoulli spike trains.
+		yield bernoulli(data[i], time, max_prob=max_prob)  # Encode datum as Bernoulli spike trains.
 
-def poisson(datum, time):
+def poisson(datum, time, **kwargs):
 	'''
 	Generates Poisson-distributed spike trains based on input intensity. Inputs must be non-negative.
 
@@ -89,7 +99,7 @@ def poisson(datum, time):
 	
 	return torch.Tensor(s).byte()
    
-def poisson_loader(data, time):
+def poisson_loader(data, time, **kwargs):
 	'''
 	Lazily invokes :code:`bindsnet.encoding.poisson` to iteratively encode a sequence of data.
 	

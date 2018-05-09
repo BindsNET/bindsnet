@@ -8,15 +8,15 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
-def get_square_weights(weights, n_sqrt):
-	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
+def get_square_weights(weights, n_sqrt, side):
+	square_weights = torch.zeros_like(torch.Tensor(side * n_sqrt, side * n_sqrt))
 	for i in range(n_sqrt):
 		for j in range(n_sqrt):
 			if not i * n_sqrt + j < weights.size(1):
 				break
 			
-			fltr = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
-			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = fltr
+			fltr = weights[:, i * n_sqrt + j].contiguous().view(side, side)
+			square_weights[i * side : (i + 1) * side, (j % n_sqrt) * side : ((j % n_sqrt) + 1) * side] = fltr
 	
 	return square_weights
 
@@ -67,12 +67,14 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 path = os.path.join('..', '..', 'data', 'CIFAR10')
 	
 # Build network.
-network = DiehlAndCook(n_inpt=3*32*32,
+network = DiehlAndCook(n_inpt=32*32*3,
 					   n_neurons=n_neurons,
 					   exc=exc,
 					   inh=inh,
 					   time=time,
-					   dt=dt)
+					   dt=dt,
+					   nu_pre=2e-5,
+					   nu_post=2e-3)
 
 # Initialize data "environment".
 environment = DatasetEnvironment(dataset=CIFAR10(path=path),
@@ -157,21 +159,28 @@ for i in range(n_train):
 		if gpu:
 			image = pipeline.obs.view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / intensity
 			inpt = pipeline.encoded.view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0).float().cpu().numpy()
-		else:   
+			weights = network.connections[('X', 'Ae')].w.view(3, 32, 32, n_neurons).cpu().numpy()
+		else:
 			image = pipeline.obs.view(3, 32, 32).numpy().transpose(1, 2, 0) / intensity
 			inpt = pipeline.encoded.view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0).float().numpy()
+			weights = network.connections[('X', 'Ae')].w.view(3, 32, 32, n_neurons).numpy()
+		
+		weights = weights.transpose(1, 2, 0, 3).sum(2).reshape(32*32, n_neurons)
+		weights = torch.from_numpy(weights)
 			
 		square_assignments = get_square_assignments(assignments, n_sqrt)
+		square_weights = get_square_weights(weights, n_sqrt, 32)
 		
 		if i == 0:
 			inpt_axes, inpt_ims = plot_input(image, inpt, label=labels[i])
 			assigns_im = plot_assignments(square_assignments)
 			perf_ax = plot_performance(accuracy)
-			
+			weights_ax = plot_weights(square_weights, wmin=0.0, wmax=0.025)
 		else:
 			inpt_axes, inpt_ims = plot_input(image, inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			assigns_im = plot_assignments(square_assignments, im=assigns_im)
 			perf_ax = plot_performance(accuracy, ax=perf_ax)
+			weights_im = plot_weights(square_weights, im=weights_ax)
 		
 		plt.pause(1e-8)
 	

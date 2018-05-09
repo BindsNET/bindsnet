@@ -237,10 +237,7 @@ class Network:
 
 			# Run synapse updates.
 			for synapse in self.connections:
-				if str(synapse) in kwargs:
-					self.connections[synapse].update(kwargs[str(synapse)])
-				else:
-					self.connections[synapse].update({})
+				self.connections[synapse].update(kwargs)
 
 			# Get input to all layers.
 			inpts.update(self.get_inputs())

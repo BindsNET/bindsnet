@@ -74,20 +74,20 @@ def m_stdp_et(conn, **kwargs):
 	`(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
 	'''
 	# Get arguments to MSTDPET update.
-	try:
+	if 'reward' in kwargs:
 		reward = kwargs['reward']
-	except KeyError:
+	else:
 		raise KeyError('function m_stdp_et requires a reward kwarg')
 	
-	try:
+	if 'a_plus' in kwargs:
 		a_plus = kwargs['a_plus']
-	except KeyError:
-		raise KeyError('function m_stdp_et requires an a_plus kwarg')
+	else:
+		a_plus = 1
 	
-	try:
+	if 'a_minus' in kwargs:
 		a_minus = kwargs['a_minus']
-	except KeyError:
-		raise KeyError('function m_stdp_et requires an a_minus kwarg')
+	else:
+		a_minus = -1
 	
 	# Get P^+ and P^- values (function of firing traces).
 	conn.p_plus = -(conn.tc_plus * conn.p_plus) + a_plus * conn.source.x.unsqueeze(-1)
