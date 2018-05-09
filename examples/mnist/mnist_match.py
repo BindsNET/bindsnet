@@ -56,7 +56,7 @@ for layer in spike_monitors:
 	network.add_monitor(spike_monitors[layer], '%s' % layer)
 
 # Load MNIST data.
-images, labels = MNIST(path=os.path.join('..', '..', 'data')).get_train()
+images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST')).get_train()
 images *= intensity
 images /= 4
 
@@ -69,7 +69,7 @@ lbls = []
 for j in range(0, i, change_interval):
 	lbls.extend([int(labels[j % 60000])] * change_interval)
 
-loader = get_bernoulli(data=torch.stack(ims), time=1, max_prob=0.05)
+loader = bernoulli_loader(data=torch.stack(ims), time=1, max_prob=0.05)
 
 reward = 0
 a_plus = 1
@@ -96,7 +96,7 @@ for i in range(i):
 			target_rates[j] = target_rate
 		
 	inpts = {'X' : next(loader).view(1, 784)}
-	kwargs = {str(('X', 'Y')) : {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}}
+	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
 	
 	network.run(inpts, 1, **kwargs)
 	econn.normalize()

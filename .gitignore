@@ -109,3 +109,6 @@ lsm/
 
 # Results from network monitoring test.
 results/
+
+# pytest cache
+.pytest_cache/

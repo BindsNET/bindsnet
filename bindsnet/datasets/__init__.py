@@ -6,14 +6,51 @@ import gzip
 import torch
 import urllib
 import shutil
+import tarfile
 import pickle as p
 import numpy  as np
 
 from struct         import unpack
 from urllib.request import urlretrieve
+from abc            import ABC, abstractmethod
 
 
-class MNIST:
+class Dataset(ABC):
+	'''
+	Abstract base class for dataset.
+	'''
+	def __init__(self):
+		'''
+		Abstract constructor for the Games class.
+		'''
+		super().__init__()
+	
+	@abstractmethod
+	def get_train(self):
+		'''
+		Fetches training data from this dataset.
+		
+		Returns:
+		
+			| (:code:`numpy.ndarray`): Inputs to a machine learning model.
+			| (:code:`numpy.ndarray`): Corresponding desired outputs.
+		'''
+		pass
+	
+	@abstractmethod
+	def get_test(self, a):
+		'''
+		Fetches test data from this dataset.
+		
+		Returns:
+		
+			| (:code:`numpy.ndarray`): Inputs to a machine learning model.
+			| (:code:`numpy.ndarray`): Corresponding desired outputs.
+		'''
+		pass
+	
+
+class MNIST(Dataset):
 	'''
 	Handles loading and saving of the MNIST handwritten digits
 	`(link) <http://yann.lecun.com/exdb/mnist/>`_.
@@ -203,3 +240,257 @@ class MNIST:
 		print('Progress: %d / %d' % (n_labels, n_labels))
 
 		return labels
+
+
+class CIFAR10(Dataset):
+	'''
+	Handles loading and saving of the CIFAR-10 image dataset
+	`(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
+	'''
+	data_directory = 'cifar-10-batches-py'
+	data_archive = 'cifar-10-python.tar.gz'
+	
+	train_pickle = 'train.p'
+	test_pickle = 'test.p'
+	
+	train_files = ['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5']
+	test_files = ['test_batch']
+	
+	url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
+	
+	def __init__(self, path=os.path.join('data', 'CIFAR10')):
+		'''
+		Constructor for the :code:`CIFAR10` object. Makes the data directory if it doesn't already exist.
+
+		Inputs:
+		
+			| :code:`path` (:code:`str`): pathname of directory in which to store the CIFAR-10 dataset.
+		'''
+		if not os.path.isdir(path):
+			os.makedirs(path)
+		
+		self.path = path
+		self.data_path = os.path.join(self.path, CIFAR10.data_directory)
+		
+	def get_train(self):
+		'''
+		Gets the CIFAR-10 training images and labels.
+
+		Returns:
+		
+			| :code:`images` (:code:`torch.Tensor`): The CIFAR-10 training images.
+			| :code:`labels` (:code:`torch.Tensor`): The CIFAR-10 training labels.
+		'''
+		if not os.path.isdir(os.path.join(self.path, CIFAR10.data_directory)):
+			# Download data if it isn't on disk.
+			print('Downloading CIFAR-10 data.\n')
+			self.download(CIFAR10.url, CIFAR10.data_archive)
+			images, labels = self.process_data(CIFAR10.train_files)
+
+			# Serialize image data on disk for next time.
+			p.dump((images, labels), open(os.path.join(self.path, CIFAR10.train_pickle), 'wb'))
+		else:
+			if not os.path.isdir(os.path.join(self.path, CIFAR10.train_pickle)):
+				# Process image and label data if pickled file doesn't exist.
+				images, labels = self.process_data(CIFAR10.train_files)
+				
+				# Serialize image data on disk for next time.
+				p.dump((images, labels), open(os.path.join(self.path, CIFAR10.train_pickle), 'wb'))
+			else:
+				# Load image data from disk if it has already been processed.
+				print('Loading training images from serialized object file.\n')
+				images, labels = p.load(open(os.path.join(self.path, CIFAR10.train_pickle), 'rb'))
+			
+		return torch.Tensor(images), torch.Tensor(labels)
+
+	def get_test(self):
+		'''
+		Gets the CIFAR-10 test images and labels.
+
+		Returns:
+		
+			| :code:`images` (:code:`torch.Tensor`): The CIFAR-10 test images.
+			| :code:`labels` (:code:`torch.Tensor`): The CIFAR-10 test labels.
+		'''
+		if not os.path.isdir(os.path.join(self.path, CIFAR10.data_directory)):
+			# Download data if it isn't on disk.
+			print('Downloading CIFAR-10 data.\n')
+			self.download(CIFAR10.url, CIFAR10.data_archive)
+			images, labels = self.process_data(CIFAR10.test_files)
+
+			# Serialize image data on disk for next time.
+			p.dump((images, labels), open(os.path.join(self.path, CIFAR10.test_pickle), 'wb'))
+		else:
+			if not os.path.isdir(os.path.join(self.path, CIFAR10.test_pickle)):
+				# Process image and label data if pickled file doesn't exist.
+				images, labels = self.process_data(CIFAR10.test_files)
+				
+				# Serialize image data on disk for next time.
+				p.dump((images, labels), open(os.path.join(self.path, CIFAR10.test_pickle), 'wb'))
+			else:
+				# Load image data from disk if it has already been processed.
+				print('Loading test images from serialized object file.\n')
+				images, labels = p.load(open(os.path.join(self.path, CIFAR10.test_pickle), 'rb'))
+			
+		return torch.Tensor(images), torch.Tensor(labels)
+				
+	def download(self, url, filename):
+		'''
+		Downloads and unzips all CIFAR-10 data.
+		
+		Inputs:
+		
+			| :code:`url` (:code:`str`): The URL of the data archive to be downloaded.
+		'''
+		data = urlretrieve(url, os.path.join(self.path, filename))
+		tar = tarfile.open(os.path.join(self.path, filename), 'r:gz')
+		tar.extractall(path=self.path)
+		tar.close()
+	
+	def process_data(self, filenames):
+		'''
+		Opens files of CIFAR-10 data and processes them into :code:`numpy` arrays.
+		
+		Inputs:
+		
+			| :code:`filename` (:code:`str`): Name of the file containing CIFAR-10 images and labels to load.
+		
+		Returns:
+		
+			| (:code:`tuple(numpy.ndarray)`): Two :code:`numpy` arrays with image and label data, respectively.
+		'''
+		d = {'data' : [], 'labels' : []}
+		for filename in filenames:
+			with open(os.path.join(self.data_path, filename), 'rb') as f:
+				temp = p.load(f, encoding='bytes')
+				d['data'].append(temp[b'data'].reshape(-1, 3, 32, 32))
+				d['labels'].append(temp[b'labels'])
+		
+		return np.concatenate(d['data']), np.concatenate(d['labels'])
+
+
+class CIFAR100(Dataset):
+	'''
+	Handles loading and saving of the CIFAR-100 image dataset
+	`(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
+	'''
+	data_directory = 'cifar-100-python'
+	data_archive = 'cifar-100-python.tar.gz'
+	
+	train_pickle = 'train.p'
+	test_pickle = 'test.p'
+	
+	train_files = ['train']
+	test_files = ['test']
+	
+	url = 'https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz'
+	
+	def __init__(self, path=os.path.join('data', 'CIFAR100')):
+		'''
+		Constructor for the :code:`CIFAR100` object. Makes the data directory if it doesn't already exist.
+
+		Inputs:
+		
+			| :code:`path` (:code:`str`): pathname of directory in which to store the CIFAR-10 handwritten digit dataset.
+		'''
+		if not os.path.isdir(path):
+			os.makedirs(path)
+		
+		self.path = path
+		self.data_path = os.path.join(self.path, CIFAR100.data_directory)
+		
+	def get_train(self):
+		'''
+		Gets the MNIST training images and labels.
+
+		Returns:
+		
+			| :code:`images` (:code:`torch.Tensor`): The CIFAR-100 training images.
+			| :code:`labels` (:code:`torch.Tensor`): The CIFAR-100 training labels.
+		'''
+		if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
+			# Download data if it isn't on disk.
+			print('Downloading CIFAR-100 data.\n')
+			self.download(CIFAR100.url, CIFAR100.data_archive)
+			images, labels = self.process_data(CIFAR100.train_files)
+
+			# Serialize image data on disk for next time.
+			p.dump((images, labels), open(os.path.join(self.path, CIFAR100.train_pickle), 'wb'))
+		else:
+			if not os.path.isdir(os.path.join(self.path, CIFAR100.train_pickle)):
+				# Process image and label data if pickled file doesn't exist.
+				images, labels = self.process_data(CIFAR100.train_files)
+				
+				# Serialize image data on disk for next time.
+				p.dump((images, labels), open(os.path.join(self.path, CIFAR100.train_pickle), 'wb'))
+			else:
+				# Load image data from disk if it has already been processed.
+				print('Loading training images from serialized object file.\n')
+				images, labels = p.load(open(os.path.join(self.path, CIFAR100.train_pickle), 'rb'))
+			
+		return torch.Tensor(images), torch.Tensor(labels)
+
+	def get_test(self):
+		'''
+		Gets the CIFAR-100 test images and labels.
+
+		Returns:
+		
+			| :code:`images` (:code:`torch.Tensor`): The MNIST test images.
+			| :code:`labels` (:code:`torch.Tensor`): The MNIST test labels.
+		'''
+		if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
+			# Download data if it isn't on disk.
+			print('Downloading CIFAR-100 data.\n')
+			self.download(CIFAR100.url, CIFAR100.data_archive)
+			images, labels = self.process_data(CIFAR100.test_files)
+
+			# Serialize image data on disk for next time.
+			p.dump((images, labels), open(os.path.join(self.path, CIFAR100.test_pickle), 'wb'))
+		else:
+			if not os.path.isdir(os.path.join(self.path, CIFAR10.test_pickle)):
+				# Process image and label data if pickled file doesn't exist.
+				images, labels = self.process_data(CIFAR100.test_files)
+				
+				# Serialize image data on disk for next time.
+				p.dump((images, labels), open(os.path.join(self.path, CIFAR100.test_pickle), 'wb'))
+			else:
+				# Load image data from disk if it has already been processed.
+				print('Loading test images from serialized object file.\n')
+				images, labels = p.load(open(os.path.join(self.path, CIFAR100.test_pickle), 'rb'))
+			
+		return torch.Tensor(images), torch.Tensor(labels)
+				
+	def download(self, url, filename):
+		'''
+		Downloads and unzips all CIFAR-100 data.
+		
+		Inputs:
+		
+			| :code:`url` (:code:`str`): The URL of the data archive to be downloaded.
+		'''
+		data = urlretrieve(url, os.path.join(self.path, filename))
+		tar = tarfile.open(os.path.join(self.path, filename), 'r:gz')
+		tar.extractall(path=self.path)
+		tar.close()
+	
+	def process_data(self, filenames):
+		'''
+		Opens files of CIFAR-100 data and processes them into :code:`numpy` arrays.
+		
+		Inputs:
+		
+			| :code:`filename` (:code:`str`): Name of the file containing CIFAR-100 images and labels to load.
+		
+		Returns:
+		
+			| (:code:`tuple(numpy.ndarray)`): Two :code:`numpy` arrays with image and label data, respectively.
+		'''
+		d = {'data' : [], 'labels' : []}
+		for filename in filenames:
+			with open(os.path.join(self.data_path, filename), 'rb') as f:
+				temp = p.load(f, encoding='bytes')
+				d['data'].append(temp[b'data'].reshape(-1, 3, 32, 32))
+				d['labels'].append(temp[b'fine_labels'])
+		
+		return np.concatenate(d['data']), np.concatenate(d['labels'])

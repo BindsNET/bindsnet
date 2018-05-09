@@ -164,11 +164,11 @@ env.reset()
 p = Pipeline(network,
 			 env,
 			 encoding=bernoulli,
-			 plot=True,
+			 plot=plot,
 			 time=1,
 			 history=4,
 			 delta=10,
-			 render=False,
+			 render=render,
 			 plot_interval=plot_interval,
 			 feedback=select_multinomial,
 			 output='R')

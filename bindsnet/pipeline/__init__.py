@@ -132,13 +132,10 @@ class Pipeline:
 			self.update_index()
 		
 		# Encode the observation using given encoding function.
-		if 'max_prob' in self.env.__dict__:
-			self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
-		else:
-			self.encoded = self.encoding(self.obs, time=self.time)
+		self.encoded = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
 		
 		# Run the network on the spike train-encoded inputs.
-		self.network.run(inpts={'X' : self.encoded}, time=self.time)
+		self.network.run(inpts={'X' : self.encoded}, time=self.time, reward=self.reward)
 		
 		# Plot relevant data.
 		if self.plot and (self.iteration % self.plot_interval == 0):

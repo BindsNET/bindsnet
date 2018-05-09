@@ -32,9 +32,9 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(n=6216, traces=True)  # Input layer
-exc = LIFNodes(n=n_neurons, refractory=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=5, refractory=0, traces=True)  # Readout layer
+inpt = Input(n=6552, traces=True)  # Input layer
+exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
+readout = LIFNodes(n=5, refrac=0, traces=True)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
@@ -125,7 +125,7 @@ while True:
 	rewards.append(reward)
 	
 	# Get next input sample.
-	inpts.update({'X' : obs})
+	inpts.update({'X' : obs.view(1, -1)})
 	
 	# Run the network on the input.
 	network.run(inpts=inpts, time=1)
@@ -145,13 +145,13 @@ while True:
 			
 			g_fig = plt.figure()
 			g_axes = g_fig.add_subplot(111)
-			g_pic = g_axes.imshow(obs.numpy().reshape(74, 84), cmap='gray')
+			g_pic = g_axes.imshow(obs.numpy().reshape(78, 84), cmap='gray')
 
 			w_fig, w_axes = plt.subplots(2, 1)
-			
-			i_e_w_im = w_axes[0].matshow(input_exc_conn.w.t(), cmap='hot_r', vmax=input_exc_conn.wmax)
-			e_r_w_im = w_axes[1].matshow(exc_readout_conn.w.t(), cmap='hot_r', vmax=exc_readout_conn.wmax)
-			
+		
+			i_e_w_im = w_axes[0].matshow(input_exc_conn.w.t(), cmap='hot_r', vmax=float(input_exc_conn.wmax))
+			e_r_w_im = w_axes[1].matshow(exc_readout_conn.w.t(), cmap='hot_r', vmax=float(exc_readout_conn.wmax))
+
 			d1 = make_axes_locatable(w_axes[0])
 			d2 = make_axes_locatable(w_axes[1])
 			c1 = d1.append_axes("right", size="5%", pad=0.05)
@@ -185,7 +185,7 @@ while True:
 				spike_ims, spike_axes = plot_spikes(spike_record, ims=spike_ims, axes=spike_axes)
 				voltage_ims, voltage_axes = plot_voltages(voltage_record, ims=voltage_ims, axes=voltage_axes)
 				
-				g_pic.set_data(obs.numpy().reshape(84, 84))
+				g_pic.set_data(obs.numpy().reshape(78, 84))
 
 				i_e_w_im.set_data(input_exc_conn.w.t())
 				e_r_w_im.set_data(exc_readout_conn.w.t())

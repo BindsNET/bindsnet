@@ -322,7 +322,7 @@ class AdaptiveLIFNodes(Nodes):
 	def __init__(self, n, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0, refrac=5,
 							decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
 		'''
-		Instantiates a layer of LIF neurons.
+		Instantiates a layer of LIF neurons with adaptive firing thresholds.
 		
 		Inputs:
 		
@@ -385,6 +385,103 @@ class AdaptiveLIFNodes(Nodes):
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
+		
+		# Integrate inputs.
+		self.v += inpts
+
+		if self.traces:
+			# Decay and set spike traces.
+			self.x -= dt * self.trace_tc * self.x
+			self.x[self.s] = 1.0
+
+	def _reset(self):
+		'''
+		Resets relevant state variables.
+		'''
+		self.s[self.s != 0] = 0                        # Spike occurences.
+		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
+		self.refrac_count[self.refrac_count != 0] = 0  # refrac period counters.
+
+		if self.traces:
+			self.x[self.x != 0] = 0  # Firing traces.
+
+
+class DiehlAndCookNodes(Nodes):
+	'''
+	Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds (modified for Diehl & Cook 2015 replication).
+	'''
+	def __init__(self, n, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0, refrac=5,
+							decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
+		'''
+		Instantiates a layer of Diehl & Cook 2015 neurons.
+		
+		Inputs:
+		
+			| :code:`n` (:code:`int`): The number of neurons in the layer.
+			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+			| :code:`traces` (:code:`bool`): Whether to record spike traces.
+			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`reset` (:code:`float`): Post-spike reset voltage.
+			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
+			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+			| :code:`theta_plus` (`float`): Voltage increase of threshold after spiking.
+			| :code:`theta_decay` (`float`): Time constant of adaptive threshold decay.
+		'''
+		super().__init__()
+
+		self.n = n  # No. of neurons.
+		if shape is None:
+			self.shape = [self.n]  # Shape is equal to the size of the layer.
+		else:
+			self.shape = shape     # Shape is passed in as an argument.
+		
+		self.traces = traces            # Whether to record synpatic traces.
+		self.rest = rest                # Rest voltage.
+		self.reset = reset              # Post-spike reset voltage.
+		self.thresh = thresh            # Spike threshold voltage.
+		self.refrac = refrac            # Post-spike refractory period.
+		self.decay = decay              # Rate of decay of neuron voltage.
+		self.theta_plus = theta_plus    # Constant threshold increase on spike.
+		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
+
+		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+		self.s = torch.zeros(self.shape)             # Spike occurences.
+		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
+
+		if traces:
+			self.x = torch.zeros(self.shape)  # Firing traces.
+			self.trace_tc = trace_tc          # Rate of decay of spike trace time constant.
+
+		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+	def step(self, inpts, dt):
+		'''
+		Runs a single simulation step.
+
+		Inputs:
+		
+			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+			| :code:`dt` (:code:`float`): Simulation time step.
+		'''
+		# Decay voltages and adaptive thresholds.
+		self.v -= dt * self.decay * (self.v - self.rest)
+		self.theta -= dt * self.theta_decay * self.theta
+		
+		# Decrement refractory counters.
+		self.refrac_count[self.refrac_count > 0] -= dt
+
+		# Check for spiking neurons.
+		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count <= 0)
+		self.refrac_count[self.s] = self.refrac
+		self.v[self.s] = self.reset
+		self.theta += self.theta_plus * self.s.float()
+		
+		# Choose only a single neuron to spike.
+		if torch.sum(self.s) > 0:
+			s = torch.zeros(self.s.size())
+			s[torch.multinomial(self.s.float(), 1)] = 1
+			self.s = s.byte()
 		
 		# Integrate inputs.
 		self.v += inpts

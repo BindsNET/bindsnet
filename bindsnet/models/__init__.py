@@ -8,18 +8,18 @@ class DiehlAndCook(Network):
 	'''
 	Implements the spiking neural network architecture from `(Diehl & Cook 2015) <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
 	'''
-	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, time=350, dt=1.0):
+	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, time=350, dt=1.0, nu_pre=1e-4, nu_post=1e-2):
 		'''
 		Constructs the :code:`DiehlAndCook` network architecture.
 		
 		Inputs:
 		
-			:code:`n_input` (:code:`int`): Number of input neurons. Matches the 1D size of the input data.
-			:code:`n_neurons` (:code:`int`): Number of excitatory, inhibitory neurons.
-			:code:`exc` (:code:`float`): Strength of synapse weights from excitatory to inhibitory layer.
-			:code:`inh` (:code:`float`): Strength of synapse weights from inhibitory to excitatory layer.
-			:code:`time` (:code:`int`): Number of simulation timesteps per input example.
-			:code:`dt` (:code:`float`): Simulation time step.
+			| :code:`n_input` (:code:`int`): Number of input neurons. Matches the 1D size of the input data.
+			| :code:`n_neurons` (:code:`int`): Number of excitatory, inhibitory neurons.
+			| :code:`exc` (:code:`float`): Strength of synapse weights from excitatory to inhibitory layer.
+			| :code:`inh` (:code:`float`): Strength of synapse weights from inhibitory to excitatory layer.
+			| :code:`time` (:code:`int`): Number of simulation timesteps per input example.
+			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
 		super().__init__(dt=dt)
 		
@@ -35,7 +35,7 @@ class DiehlAndCook(Network):
 							 trace_tc=5e-2),
 					   name='X')
 		
-		self.add_layer(AdaptiveLIFNodes(n=self.n_neurons,
+		self.add_layer(DiehlAndCookNodes(n=self.n_neurons,
 										traces=True,
 										rest=-65.0,
 										reset=-65.0,
@@ -61,6 +61,8 @@ class DiehlAndCook(Network):
 									   target=self.layers['Ae'],
 									   w=0.3 * torch.rand(self.n_inpt, self.n_neurons),
 									   update_rule=post_pre,
+									   nu_pre=nu_pre,
+									   nu_post=nu_post,
 									   wmin=0,
 									   wmax=1),
 						    source='X',
