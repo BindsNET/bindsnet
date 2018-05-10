@@ -8,7 +8,7 @@ class DiehlAndCook(Network):
 	'''
 	Implements the spiking neural network architecture from `(Diehl & Cook 2015) <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
 	'''
-	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, time=350, dt=1.0, nu_pre=1e-4, nu_post=1e-2):
+	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, time=350, dt=1.0, nu_pre=1e-4, nu_post=1e-2, wmin=0, wmax=1):
 		'''
 		Constructs the :code:`DiehlAndCook` network architecture.
 		
@@ -63,8 +63,8 @@ class DiehlAndCook(Network):
 									   update_rule=post_pre,
 									   nu_pre=nu_pre,
 									   nu_post=nu_post,
-									   wmin=0,
-									   wmax=1),
+									   wmin=wmin,
+									   wmax=wmax),
 						    source='X',
 						    target='Ae')
 		
