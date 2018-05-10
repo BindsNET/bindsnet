@@ -53,7 +53,7 @@ def bernoulli_loader(data, time=None, **kwargs):
 	
 	Yields:
 	
-		| (:code:`torch.Tensor`): Tensors of shape :code:`[n_1, ..., n_k]` of Bernoulli-distributed spikes.
+		| (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]` of Bernoulli-distributed spikes.
 	'''
 	if 'max_prob' in kwargs:
 		max_prob = kwargs['max_prob']
@@ -110,7 +110,7 @@ def poisson_loader(data, time, **kwargs):
 
 	Yields:
 	
-		| (:code:`torch.Tensor`): Tensors of shape :code:`[n_1, ..., n_k]` of Poisson-distributed spikes.
+		| (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]` of Poisson-distributed spikes.
 	'''
 	for i in range(data.size(0)):
 		yield poisson(data[i], time)  # Encode datum as Poisson spike trains.
@@ -162,7 +162,7 @@ def rank_order_loader(data, time, **kwargs):
 
 	Yields:
 	
-		| (:code:`torch.Tensor`): Tensors of shape :code:`[n_1, ..., n_k]` of rank order-encoded spikes.
+		| (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]` of rank order-encoded spikes.
 	'''
 	for i in range(data.size(0)):
 		yield rank_order(data[i], time)  # Encode datum as rank order-encoded spike trains.
