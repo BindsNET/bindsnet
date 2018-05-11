@@ -34,6 +34,7 @@ class Pipeline:
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
 				| :code:`output` (:code:`str`): String name of the layer from which to take output from.
+				| :code:`save_interval` (:code:`int`): How often to save the network to disk.
 		'''
 		self.network = network
 		self.env = environment
@@ -45,37 +46,29 @@ class Pipeline:
 		self.ims_v, self.axes_v = None, None
 		
 		# Setting kwargs.
-		self.time = kwargs.get('time', '1')
-		
-		self.render = kwargs.get('render', 'False')
+		self.time = kwargs.get('time', 1)
+		self.output = kwargs.get('output', None)
+		self.plot_interval = kwargs.get('plot_interval', None)
+		self.save_interval = kwargs.get('save_interval', None)
+		self.print_interval = kwargs.get('print_interval', None)
+		self.render_interval = kwargs.get('render_interval', None)
 		
 		if 'history' in kwargs and 'delta' in kwargs:
 			self.delta = kwargs['delta']
 			self.history_index = 0
-			self.history = {i : torch.Tensor() for i in range(0, kwargs['history']*self.delta, self.delta)}
+			self.history = {i : torch.Tensor() for i in range(0, kwargs['history'] * self.delta, self.delta)}
 		else:
 			self.history_index = 0
 			self.history = {}
 			self.delta = 1
 		
-
-		self.plot = kwargs.get('plot', 'False')
-
-		self.plot_interval = kwargs.get('plot_interval', '100')
-		
-		self.output = kwargs.get('output', 'None')
-					
-		if self.plot:
+		if self.plot_interval is not None:
 			self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
 			self.set_spike_data()
 			self.plot_data()
 
 		self.first = True
 
-		self.print_interval = kwargs.get('print_interval', '100')
-
-		self.render_interval = kwargs.get('render_interval', '1')
-		
 	def set_spike_data(self):
 		'''
 		Get the spike data from all layers in the pipeline's network.
@@ -102,11 +95,11 @@ class Pipeline:
 		'''
 		Run an iteration of the pipeline.
 		'''
-		# Temporary printing
-		self.print_iteration()
+		if self.print_interval is not None:
+			self.print_iteration()
 		
 		# Render game.
-		if self.render and self.iteration > 0 and self.iteration % self.render_interval == 0:
+		if self.render_interval is not None and self.iteration % self.render_interval == 0 and self.iteration > 0:
 			self.env.render()
 			
 		# Choose action based on output neuron spiking.
@@ -127,7 +120,7 @@ class Pipeline:
 		self.network.run(inpts={'X' : self.encoded}, time=self.time, reward=self.reward)
 		
 		# Plot relevant data.
-		if self.plot and (self.iteration % self.plot_interval == 0):
+		if self.plot_interval is not None and (self.iteration % self.plot_interval == 0):
 			self.plot_data()
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  

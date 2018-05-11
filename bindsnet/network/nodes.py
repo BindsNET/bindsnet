@@ -135,7 +135,7 @@ class McCullochPitts(Nodes):
 		'''
 		self.v = inpts                  # Voltages are equal to the inputs.
 		self.s = self.v >= self.thresh  # Check for spiking neurons.
-
+			
 		if self.traces:
 			# Decay and set spike traces.
 			self.x -= dt * self.trace_tc * self.x
@@ -204,9 +204,11 @@ class IFNodes(Nodes):
 		'''
 		# Decrement refractory counters.
 		self.refrac_count[self.refrac_count != 0] -= dt
-
+	
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+
+		# Refractoriness and voltage reset.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 
@@ -288,11 +290,12 @@ class LIFNodes(Nodes):
 		
 		# Decrement refrac counters.
 		self.refrac_count[self.refrac_count != 0] -= dt
-
+		
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+
+		# Refractoriness and voltage reset.
 		self.refrac_count[self.s] = self.refrac
-		
 		self.v[self.s] = self.reset
 		
 		# Integrate inputs.
@@ -355,7 +358,7 @@ class AdaptiveLIFNodes(Nodes):
 		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
 		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.s = torch.zeros(self.shape)             # Spike occurences.
+		self.s = torch.zeros(self.shape).byte()      # Spike occurences.
 		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
 
 		if traces:
@@ -382,6 +385,8 @@ class AdaptiveLIFNodes(Nodes):
 
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
+
+		# Refractoriness, voltage reset, and adaptive thresholds.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
@@ -446,7 +451,7 @@ class DiehlAndCookNodes(Nodes):
 		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
 		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.s = torch.zeros(self.shape)             # Spike occurences.
+		self.s = torch.zeros(self.shape).byte()      # Spike occurences.
 		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
 
 		if traces:
@@ -473,6 +478,8 @@ class DiehlAndCookNodes(Nodes):
 
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
+
+		# Refractoriness, voltage reset, and adaptive thresholds.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
@@ -553,7 +560,7 @@ class IzhikevichNodes(Nodes):
 		
 		self.v = self.rest * torch.ones(n)  # Neuron voltages.
 		self.u = self.b * self.v            # Neuron recovery.
-		self.s = torch.zeros(n)             # Spike occurences.
+		self.s = torch.zeros(n).byte()      # Spike occurences.
 
 		if traces:
 			self.x = torch.zeros(n)   # Firing traces.
@@ -575,6 +582,8 @@ class IzhikevichNodes(Nodes):
 		
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+		
+		# Refractoriness and voltage reset.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		
