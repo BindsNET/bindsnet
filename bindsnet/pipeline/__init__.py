@@ -32,6 +32,7 @@ class Pipeline:
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
 				| :code:`output` (:code:`str`): String name of the layer from which to take output from.
+				| :code:`save_interval` (:code:`int`): How often to save the network to disk.
 		'''
 		self.network = network
 		self.env = environment
@@ -48,11 +49,12 @@ class Pipeline:
 		self.plot = kwargs.get('plot', False)
 		self.plot_interval = kwargs.get('plot_interval', 100)
 		self.output = kwargs.get('output', None)
+		self.save_interval = kwargs.get('save_interval', None)
 		
 		if 'history' in kwargs and 'delta' in kwargs:
 			self.delta = kwargs['delta']
 			self.history_index = 0
-			self.history = {i : torch.Tensor() for i in range(0, kwargs['history']*self.delta, self.delta)}
+			self.history = {i : torch.Tensor() for i in range(0, kwargs['history'] * self.delta, self.delta)}
 		else:
 			self.history_index = 0
 			self.history = {}
