@@ -84,7 +84,11 @@ class Pipeline:
 			self.plot_data()
 
 		self.first = True
-		self.print_interval = 100
+
+		if 'print_interval' in kwargs:
+			self.print_interval = kwargs['print_interval']
+		else:
+			self.print_interval = 100
 		
 	def set_spike_data(self):
 		'''
