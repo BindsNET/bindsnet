@@ -115,7 +115,7 @@ class Pipeline:
 		'''
 		Prints the current iteration to standard output.
 		'''
-		if (self.iteration > 0) & (self.iteration % self.print_interval == 0):
+		if self.iteration > 0 and self.iteration % self.print_interval == 0:
 			print('Iteration: %d' % self.iteration)
 
 	def step(self):
@@ -126,7 +126,7 @@ class Pipeline:
 		self.print_iteration()
 		
 		# Render game.
-		if ((self.render) & (self.iteration > 0) & (self.iteration % self.render_interval == 0)):
+		if self.render and self.iteration > 0 and self.iteration % self.render_interval == 0:
 			self.env.render()
 			
 		# Choose action based on output neuron spiking.
