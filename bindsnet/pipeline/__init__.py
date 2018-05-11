@@ -109,7 +109,7 @@ class Pipeline:
 		'''
 		Prints the current iteration to standard output.
 		'''
-		if self.iteration % self.print_interval == 0:
+		if (self.iteration > 0) & (self.iteration % self.print_interval == 0):
 			print('Iteration: %d' % self.iteration)
 
 	def step(self):
