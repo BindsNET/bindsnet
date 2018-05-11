@@ -31,7 +31,7 @@ class Pipeline:
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
 				| :code:`output` (:code:`str`): String name of the layer from which to take output from.
 				| :code:`save_dir` (:code:`str`): Directory to save network object to.
-				| :code:`render_interval` (:code:`bool`): Interval tp show the environment.
+				| :code:`render_interval` (:code:`bool`): Interval to render the environment.
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
 				| :code:`print_interval` (:code:`int`): Interval to print text output.
 				| :code:`save_interval` (:code:`int`): How often to save the network to disk.
