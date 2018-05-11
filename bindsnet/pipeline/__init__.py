@@ -27,7 +27,9 @@ class Pipeline:
 			
 				| :code:`plot` (:code:`bool`): Plot monitor variables.
 				| :code:`render` (:code:`bool`): Show the environment.
+				| :code:`render_interval` (:code:`bool`): Interval tp show the environment.
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
+				| :code:`print_interval` (:code:`int`): Interval to print text output.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
@@ -83,7 +85,16 @@ class Pipeline:
 			self.plot_data()
 
 		self.first = True
-		self.print_interval = 100
+
+		if 'print_interval' in kwargs:
+			self.print_interval = kwargs['print_interval']
+		else:
+			self.print_interval = 100
+
+		if 'render_interval' in kwargs:
+			self.render_interval = kwargs['render_interval']
+		else:
+			self.render_interval = 1
 		
 	def set_spike_data(self):
 		'''
@@ -104,7 +115,7 @@ class Pipeline:
 		'''
 		Prints the current iteration to standard output.
 		'''
-		if self.iteration % self.print_interval == 0:
+		if self.iteration > 0 and self.iteration % self.print_interval == 0:
 			print('Iteration: %d' % self.iteration)
 
 	def step(self):
@@ -115,7 +126,7 @@ class Pipeline:
 		self.print_iteration()
 		
 		# Render game.
-		if self.render:
+		if self.render and self.iteration > 0 and self.iteration % self.render_interval == 0:
 			self.env.render()
 			
 		# Choose action based on output neuron spiking.
