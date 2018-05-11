@@ -67,7 +67,13 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
 	
 # Build network.
-network = DiehlAndCook(n_inpt=784, n_neurons=n_neurons, exc=excite, inh=inhib, time=time, dt=dt)
+network = DiehlAndCook(n_inpt=784,
+					   n_neurons=n_neurons,
+					   exc=excite,
+					   inh=inhib,
+					   time=time,
+					   dt=dt,
+					   norm=78.4)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -141,8 +147,6 @@ for i in range(n_train):
 	
 	# Add to spikes recording.
 	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
-	
-	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	
 	# Optionally plot various simulation information.
 	if plot:

@@ -35,21 +35,14 @@ def m_stdp(conn, **kwargs):
 	Reward-modulated STDP. Adapted from
 	`(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
 	'''
-	# Get arguments to MSTDPET function.
+	# Parse keyword arguments.
 	try:
 		reward = kwargs['reward']
 	except KeyError:
-		raise KeyError('function m_stdp_et requires a reward kwarg')
+		raise KeyError('function m_stdp requires a reward kwarg')
 	
-	try:
-		a_plus = kwargs['a_plus']
-	except KeyError:
-		raise KeyError('function m_stdp_et requires an a_plus kwarg')
-	
-	try:
-		a_minus = kwargs['a_minus']
-	except KeyError:
-		raise KeyError('function m_stdp_et requires an a_minus kwarg')
+	a_plus = kwargs.get('a_plus', 1)
+	a_minus = kwargs.get('a_plus', -1)
 	
 	# Get P^+ and P^- values (function of firing traces).
 	p_plus = a_plus * conn.source.x.unsqueeze(-1)
@@ -73,21 +66,14 @@ def m_stdp_et(conn, **kwargs):
 	Reward-modulated STDP with eligibility trace. Adapted from
 	`(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
 	'''
-	# Get arguments to MSTDPET update.
-	if 'reward' in kwargs:
+	# Parse keyword arguments.
+	try:
 		reward = kwargs['reward']
-	else:
+	except KeyError:
 		raise KeyError('function m_stdp_et requires a reward kwarg')
 	
-	if 'a_plus' in kwargs:
-		a_plus = kwargs['a_plus']
-	else:
-		a_plus = 1
-	
-	if 'a_minus' in kwargs:
-		a_minus = kwargs['a_minus']
-	else:
-		a_minus = -1
+	a_plus = kwargs.get('a_plus', 1)
+	a_minus = kwargs.get('a_plus', -1)
 	
 	# Get P^+ and P^- values (function of firing traces).
 	conn.p_plus = -(conn.tc_plus * conn.p_plus) + a_plus * conn.source.x.unsqueeze(-1)
