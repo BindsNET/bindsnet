@@ -28,6 +28,7 @@ class Pipeline:
 				| :code:`plot` (:code:`bool`): Plot monitor variables.
 				| :code:`render` (:code:`bool`): Show the environment.
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
+				| :code:`print_interval` (:code:`int`): Interval to print text output.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
