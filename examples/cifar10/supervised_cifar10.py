@@ -40,9 +40,10 @@ parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
+parser.add_argument('--n_clamp', type=int, default=3)
 parser.add_argument('--exc', type=float, default=22.5)
 parser.add_argument('--inh', type=float, default=17.5)
-parser.add_argument('--time', type=int, default=350)
+parser.add_argument('--time', type=int, default=50)
 parser.add_argument('--dt', type=int, default=1.0)
 parser.add_argument('--intensity', type=float, default=0.25)
 parser.add_argument('--progress_interval', type=int, default=10)
@@ -66,7 +67,8 @@ if not train:
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
-	
+per_class = int(n_neurons / 10)
+
 # Build network.
 network = DiehlAndCook(n_inpt=32*32*3,
 					   n_neurons=n_neurons,
@@ -75,7 +77,7 @@ network = DiehlAndCook(n_inpt=32*32*3,
 					   time=time,
 					   dt=dt,
 					   nu_pre=0,
-					   nu_post=1,
+					   nu_post=1e-1,
 					   wmin=0,
 					   wmax=10)
 
@@ -143,8 +145,9 @@ for i in range(n_train):
 	inpts = {'X' : sample}
 	
 	# Run the network on the input.
-	choice = np.random.choice(int(n_neurons / 10))
-	network.run(inpts=inpts, time=time, clamp={'Ae' : int(n_neurons / 10) * labels[i].long() + choice})
+	choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
+	clamp = {'Ae' : per_class * labels[i].long() + torch.Tensor(choice).long()}
+	network.run(inpts=inpts, time=time, clamp=clamp)
 	
 	# Get voltage recording.
 	exc_voltages = exc_voltage_monitor.get('v')
