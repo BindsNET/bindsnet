@@ -91,6 +91,7 @@ pipeline = Pipeline(network,
 			 history=5,
 			 delta=10,
 			 plot_interval=plot_interval,
+			 print_interval=print_interval,
 			 feedback=select_multinomial,
 			 output='R')
 
