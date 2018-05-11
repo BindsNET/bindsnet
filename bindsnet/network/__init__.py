@@ -221,7 +221,11 @@ class Network:
 			plt.title('Input spiking')
 			plt.show()
 		'''
-		timesteps = int(time / self.dt)  # effective no. of timesteps
+		# Keyword arguments.
+		clamps = kwargs.get('clamp', {})
+		
+		# Effective number of timesteps
+		timesteps = int(time / self.dt)
 
 		# Get input to all layers.
 		inpts.update(self.get_inputs())
@@ -234,6 +238,10 @@ class Network:
 					self.layers[key].step(inpts[key][timestep, :], self.dt)
 				else:
 					self.layers[key].step(inpts[key], self.dt)
+				
+				clamp = clamps.get(key, None)
+				if clamp is not None:
+					self.layers[key].s[clamp] = 1
 
 			# Run synapse updates.
 			for synapse in self.connections:
