@@ -43,15 +43,11 @@ class Pipeline:
 		self.ims_v, self.axes_v = None, None
 		
 		# Setting kwargs.
-		if 'time' in kwargs:
-			self.time = kwargs['time']
-		else:
-			self.time = 1
-		
-		if 'render' in kwargs:
-			self.render = kwargs['render']
-		else:
-			self.render = False
+		self.time = kwargs.get('time', 1)
+		self.render = kwargs.get('render', False)
+		self.plot = kwargs.get('plot', False)
+		self.plot_interval = kwargs.get('plot_interval', 100)
+		self.output = kwargs.get('output', None)
 		
 		if 'history' in kwargs and 'delta' in kwargs:
 			self.delta = kwargs['delta']
@@ -62,21 +58,6 @@ class Pipeline:
 			self.history = {}
 			self.delta = 1
 		
-		if 'plot' in kwargs:
-			self.plot = kwargs['plot']
-		else:
-			self.plot = False
-		
-		if 'plot_interval' in kwargs:
-			self.plot_interval = kwargs['plot_interval']
-		else:
-			self.plot_interval = 100
-		
-		if 'output' in kwargs:
-			self.output = kwargs['output']
-		else:
-			self.output = None
-			
 		if self.plot:
 			self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
 			self.set_spike_data()
