@@ -15,12 +15,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--dt', type=float, default=1.0)
-parser.add_argument('--plot_interval', type=int, default=None)
-parser.add_argument('--print_interval', type=int, default=None)
 parser.add_argument('--a_plus', type=int, default=1)
 parser.add_argument('--a_minus', type=int, default=-0.5)
-parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--render_interval', type=int, default=None)
+parser.add_argument('--plot_interval', type=int, default=None)
+parser.add_argument('--print_interval', type=int, default=None)
 parser.add_argument('--gpu', dest='gpu', action='store_true')
 parser.set_defaults(plot=False, render=False, gpu=False)
 
@@ -85,12 +84,12 @@ environment.reset()
 pipeline = Pipeline(network,
 			 environment,
 			 encoding=bernoulli,
-			 plot=plot,
 			 time=1,
-			 render=render,
 			 history=5,
 			 delta=10,
 			 plot_interval=plot_interval,
+			 print_interval=print_interval,
+			 render_interval=render_interval,
 			 feedback=select_multinomial,
 			 output='R')
 
