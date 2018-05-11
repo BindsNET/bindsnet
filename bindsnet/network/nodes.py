@@ -14,7 +14,7 @@ class Nodes(ABC):
 		super().__init__()
 
 	@abstractmethod
-	def step(self, inpts, dt):
+	def step(self, inpts, dt, **kwargs):
 		'''
 		Abstract base class method for a single simulation step.
 		
@@ -64,7 +64,7 @@ class Input(Nodes):
 			self.x = torch.zeros(self.shape)  # Firing traces.
 			self.trace_tc = trace_tc          # Rate of decay of spike trace time constant.
 
-	def step(self, inpts, dt):
+	def step(self, inpts, dt, **kwargs):
 		'''
 		On each simulation step, set the spikes of the population equal to the inputs.
 
@@ -124,7 +124,7 @@ class McCullochPitts(Nodes):
 			self.x = torch.zeros(self.shape)  # Firing traces.
 			self.trace_tc = trace_tc          # Rate of decay of spike trace time constant.
 
-	def step(self, inpts, dt):
+	def step(self, inpts, dt, **kwargs):
 		'''
 		Runs a single simulation step.
 
@@ -133,9 +133,14 @@ class McCullochPitts(Nodes):
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
+		clamp = kwargs.get('clamp', None)
+		
 		self.v = inpts                  # Voltages are equal to the inputs.
-		self.s = self.v >= self.thresh  # Check for spiking neurons.
-
+		if clamp is None:
+			self.s = self.v >= self.thresh  # Check for spiking neurons.
+		else:
+			self.s[clamp] = 1
+			
 		if self.traces:
 			# Decay and set spike traces.
 			self.x -= dt * self.trace_tc * self.x
@@ -193,7 +198,7 @@ class IFNodes(Nodes):
 
 		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-	def step(self, inpts, dt):
+	def step(self, inpts, dt, **kwargs):
 		'''
 		Runs a single simulation step.
 
@@ -202,11 +207,17 @@ class IFNodes(Nodes):
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
+		clamp = kwargs.get('clamp', None)
+		
 		# Decrement refractory counters.
 		self.refrac_count[self.refrac_count != 0] -= dt
+		
+		if clamp is None:
+			self.s = (self.v >= self.thresh) * (self.refrac_count == 0)  # Check for spiking neurons.
+		else:
+			self.s[clamp] = 1
 
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+		# Refractoriness and voltage reset.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 
@@ -274,7 +285,7 @@ class LIFNodes(Nodes):
 
 		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-	def step(self, inpts, dt):
+	def step(self, inpts, dt, **kwargs):
 		'''
 		Runs a single simulation step.
 
@@ -283,16 +294,21 @@ class LIFNodes(Nodes):
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
+		clamp = kwargs.get('clamp', None)
+		
 		# Decay voltages.
 		self.v -= dt * self.decay * (self.v - self.rest)
 		
 		# Decrement refrac counters.
 		self.refrac_count[self.refrac_count != 0] -= dt
-
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
-		self.refrac_count[self.s] = self.refrac
 		
+		if clamp is None:
+			self.s = (self.v >= self.thresh) * (self.refrac_count == 0)  # Check for spiking neurons.
+		else:
+			self.s[clamp] = 1
+
+		# Refractoriness and voltage reset.
+		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		
 		# Integrate inputs.
@@ -355,7 +371,7 @@ class AdaptiveLIFNodes(Nodes):
 		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
 		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.s = torch.zeros(self.shape)             # Spike occurences.
+		self.s = torch.zeros(self.shape).byte()      # Spike occurences.
 		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
 
 		if traces:
@@ -364,7 +380,7 @@ class AdaptiveLIFNodes(Nodes):
 
 		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-	def step(self, inpts, dt):
+	def step(self, inpts, dt, **kwargs):
 		'''
 		Runs a single simulation step.
 
@@ -373,6 +389,8 @@ class AdaptiveLIFNodes(Nodes):
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
+		clamp = kwargs.get('clamp', None)
+		
 		# Decay voltages and adaptive thresholds.
 		self.v -= dt * self.decay * (self.v - self.rest)
 		self.theta -= dt * self.theta_decay * self.theta
@@ -380,8 +398,12 @@ class AdaptiveLIFNodes(Nodes):
 		# Decrement refractory counters.
 		self.refrac_count[self.refrac_count != 0] -= dt
 
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
+		if clamp is None:
+			self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)  # Check for spiking neurons.
+		else:
+			self.s[clamp] = 1
+
+		# Refractoriness, voltage reset, and adaptive thresholds.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
@@ -446,7 +468,7 @@ class DiehlAndCookNodes(Nodes):
 		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
 		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.s = torch.zeros(self.shape)             # Spike occurences.
+		self.s = torch.zeros(self.shape).byte()      # Spike occurences.
 		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
 
 		if traces:
@@ -455,7 +477,7 @@ class DiehlAndCookNodes(Nodes):
 
 		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-	def step(self, inpts, dt):
+	def step(self, inpts, dt, **kwargs):
 		'''
 		Runs a single simulation step.
 
@@ -464,6 +486,8 @@ class DiehlAndCookNodes(Nodes):
 			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
+		clamp = kwargs.get('clamp', None)
+		
 		# Decay voltages and adaptive thresholds.
 		self.v -= dt * self.decay * (self.v - self.rest)
 		self.theta -= dt * self.theta_decay * self.theta
@@ -471,8 +495,12 @@ class DiehlAndCookNodes(Nodes):
 		# Decrement refractory counters.
 		self.refrac_count[self.refrac_count != 0] -= dt
 
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
+		if clamp is None:
+			self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)  # Check for spiking neurons.
+		else:
+			self.s[clamp] = 1
+
+		# Refractoriness, voltage reset, and adaptive thresholds.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
@@ -553,7 +581,7 @@ class IzhikevichNodes(Nodes):
 		
 		self.v = self.rest * torch.ones(n)  # Neuron voltages.
 		self.u = self.b * self.v            # Neuron recovery.
-		self.s = torch.zeros(n)             # Spike occurences.
+		self.s = torch.zeros(n).byte()      # Spike occurences.
 
 		if traces:
 			self.x = torch.zeros(n)   # Firing traces.
