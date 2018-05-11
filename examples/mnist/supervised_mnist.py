@@ -36,9 +36,10 @@ print()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
-parser.add_argument('--n_neurons', type=int, default=10)
+parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
+parser.add_argument('--n_clamp', type=int, default=3)
 parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--time', type=int, default=50)
@@ -65,9 +66,17 @@ if not train:
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
+per_class = int(n_neurons / 10)
 	
 # Build network.
-network = DiehlAndCook(n_inpt=784, n_neurons=n_neurons, exc=excite, inh=inhib, time=time, dt=dt)
+network = DiehlAndCook(n_inpt=784,
+					   n_neurons=n_neurons,
+					   exc=excite,
+					   inh=inhib,
+					   time=time,
+					   dt=dt,
+					   nu_pre=0,
+					   nu_post=5e-2)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -133,8 +142,9 @@ for i in range(n_train):
 	inpts = {'X' : sample}
 	
 	# Run the network on the input.
-	choice = np.random.choice(int(n_neurons / 10))
-	network.run(inpts=inpts, time=time, clamp={'Ae' : int(n_neurons / 10) * labels[i].long() + choice})
+	choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
+	clamp = {'Ae' : per_class * labels[i].long() + torch.Tensor(choice).long()}
+	network.run(inpts=inpts, time=time, clamp=clamp)
 	
 	# Get voltage recording.
 	exc_voltages = exc_voltage_monitor.get('v')
