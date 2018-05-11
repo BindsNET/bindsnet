@@ -74,7 +74,8 @@ network = DiehlAndCook(n_inpt=784,
 					   nu_pre=0,
 					   nu_post=1,
 					   wmin=0,
-					   wmax=10)
+					   wmax=10,
+					   norm=1500)
 
 # Create environment.
 environment = DatasetEnvironment(dataset=MNIST(path=os.path.join('..', '..', 'data', 'MNIST')),
@@ -150,9 +151,6 @@ for i in range(n_train):
 	
 	# Add to spikes recording.
 	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
-	
-	# Normalize input -> excitatory weights
-	pipeline.normalize(source='X', target='Ae', norm=1500.0)
 	
 	# Optionally plot various simulation information.
 	if plot:

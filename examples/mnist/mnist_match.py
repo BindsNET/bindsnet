@@ -45,7 +45,7 @@ inpt = Input(n=784, traces=True)
 exc = AdaptiveLIFNodes(n=n, traces=True)
 
 ew = 0.3 * torch.rand(784, n)
-econn = Connection(inpt, exc, w=ew, update_rule=m_stdp_et, nu=0.1, wmin=0, wmax=1)
+econn = Connection(inpt, exc, w=ew, update_rule=m_stdp_et, nu=0.1, wmin=0, wmax=1, norm=78.4)
 
 network.add_layer(inpt, 'X')
 network.add_layer(exc, 'Y')
@@ -99,7 +99,6 @@ for i in range(i):
 	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
 	
 	network.run(inpts, 1, **kwargs)
-	econn.normalize()
 	
 	spikes = {layer : spike_monitors[layer].get('s').view(-1) for layer in spike_monitors}
 	for layer in spike_record:

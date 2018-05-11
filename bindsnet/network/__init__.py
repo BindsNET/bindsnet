@@ -231,28 +231,33 @@ class Network:
 		inpts.update(self.get_inputs())
 		
 		# Simulate network activity for `time` timesteps.
-		for timestep in range(timesteps):
+		for t in range(timesteps):
 			# Update each layer of nodes.
-			for key in self.layers:
-				if type(self.layers[key]) is Input:
-					self.layers[key].step(inpts[key][timestep, :], self.dt)
+			for l in self.layers:
+				if type(self.layers[l]) is Input:
+					self.layers[l].step(inpts[l][t, :], self.dt)
 				else:
-					self.layers[key].step(inpts[key], self.dt)
+					self.layers[l].step(inpts[l], self.dt)
 				
-				clamp = clamps.get(key, None)
+				# Force neurons to spike.
+				clamp = clamps.get(l, None)
 				if clamp is not None:
-					self.layers[key].s[clamp] = 1
+					self.layers[l].s[clamp] = 1
 
 			# Run synapse updates.
-			for synapse in self.connections:
-				self.connections[synapse].update(kwargs)
+			for c in self.connections:
+				self.connections[c].update(kwargs)
 
 			# Get input to all layers.
 			inpts.update(self.get_inputs())
 
 			# Record state variables of interest.
-			for monitor in self.monitors:
-				self.monitors[monitor].record()
+			for m in self.monitors:
+				self.monitors[m].record()
+		
+		# Re-normalize connections (with norms).
+		for c in self.connections:
+			self.connections[c].normalize()
 
 	def _reset(self):
 		'''

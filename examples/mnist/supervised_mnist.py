@@ -39,7 +39,7 @@ parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
-parser.add_argument('--n_clamp', type=int, default=3)
+parser.add_argument('--n_clamp', type=int, default=1)
 parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--time', type=int, default=50)
@@ -76,7 +76,8 @@ network = DiehlAndCook(n_inpt=784,
 					   time=time,
 					   dt=dt,
 					   nu_pre=0,
-					   nu_post=5e-2)
+					   nu_post=1e-2,
+					   norm=78.4)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -152,8 +153,6 @@ for i in range(n_train):
 	
 	# Add to spikes recording.
 	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
-	
-	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	
 	# Optionally plot various simulation information.
 	if plot:

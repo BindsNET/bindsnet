@@ -95,6 +95,7 @@ class Pipeline:
 			self.clock = time()
 		
 		if self.save_interval is not None and self.iteration % self.save_interval == 0:
+			print('Saving network to %s' % self.save_dir)
 			self.network.save(self.save_dir)
 		
 		# Render game.
@@ -196,18 +197,6 @@ class Pipeline:
 			else:
 				self.history_index %= max(self.history.keys())	
 					
-	def normalize(self, source, target, norm):
-		'''
-		Normalize a connection in the pipeline's :code:`Network`.
-		
-		Inputs:
-		
-			| :code:`source` (:code:`str`): Name of the pre-connection population.
-			| :code:`source` (:code:`str`): Name of the post-connection population.
-			| :code:`norm` (:code:`float`): Normalization constant of the connection weights.
-		'''
-		self.network.connections[(source, target)].normalize(norm)
-	
 	def _reset(self):
 		'''
 		Reset the pipeline.

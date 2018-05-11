@@ -8,7 +8,7 @@ class DiehlAndCook(Network):
 	'''
 	Implements the spiking neural network architecture from `(Diehl & Cook 2015) <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
 	'''
-	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, time=350, dt=1.0, nu_pre=1e-4, nu_post=1e-2, wmin=0, wmax=1):
+	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, time=350, dt=1.0, nu_pre=1e-4, nu_post=1e-2, wmin=0, wmax=1, norm=78.4):
 		'''
 		Constructs the :code:`DiehlAndCook` network architecture.
 		
@@ -20,6 +20,7 @@ class DiehlAndCook(Network):
 			| :code:`inh` (:code:`float`): Strength of synapse weights from inhibitory to excitatory layer.
 			| :code:`time` (:code:`int`): Number of simulation timesteps per input example.
 			| :code:`dt` (:code:`float`): Simulation time step.
+			| :code:`norm` (:code:`float`): Input to excitatory layer connection weights norm.
 		'''
 		super().__init__(dt=dt)
 		
@@ -64,14 +65,14 @@ class DiehlAndCook(Network):
 									   nu_pre=nu_pre,
 									   nu_post=nu_post,
 									   wmin=wmin,
-									   wmax=wmax),
+									   wmax=wmax,
+									   norm=norm),
 						    source='X',
 						    target='Ae')
 		
 		self.add_connection(Connection(source=self.layers['Ae'],
 									   target=self.layers['Ai'],
 									   w=self.exc * torch.diag(torch.ones(self.n_neurons)),
-									   update_rule=None,
 									   wmin=0,
 									   wmax=self.exc),
 						    source='Ae',
@@ -80,7 +81,6 @@ class DiehlAndCook(Network):
 		self.add_connection(Connection(source=self.layers['Ai'],
 									   target=self.layers['Ae'],
 									   w=-self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons))),
-									   update_rule=None,
 									   wmin=-self.inh,
 									   wmax=0),
 						    source='Ai',
