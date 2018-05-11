@@ -27,7 +27,7 @@ class Pipeline:
 			
 				| :code:`plot` (:code:`bool`): Plot monitor variables.
 				| :code:`render` (:code:`bool`): Show the environment.
-				| :code:`render_interval` (:code:`bool`): Interval tp show the environment.
+				| :code:`render_interval` (:code:`bool`): Interval to show the environment.
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
 				| :code:`print_interval` (:code:`int`): Interval to print text output.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
