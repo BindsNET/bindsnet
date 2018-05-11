@@ -27,7 +27,7 @@ class Pipeline:
 			
 				| :code:`plot` (:code:`bool`): Plot monitor variables.
 				| :code:`render` (:code:`bool`): Show the environment.
-				| :code:`render_interval` (:code:`bool`): Interval tp show the environment.
+				| :code:`render_interval` (:code:`bool`): Interval to show the environment.
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
 				| :code:`print_interval` (:code:`int`): Interval to print text output.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
@@ -45,15 +45,9 @@ class Pipeline:
 		self.ims_v, self.axes_v = None, None
 		
 		# Setting kwargs.
-		if 'time' in kwargs:
-			self.time = kwargs['time']
-		else:
-			self.time = 1
+		self.time = kwargs.get('time', '1')
 		
-		if 'render' in kwargs:
-			self.render = kwargs['render']
-		else:
-			self.render = False
+		self.render = kwargs.get('render', 'False')
 		
 		if 'history' in kwargs and 'delta' in kwargs:
 			self.delta = kwargs['delta']
@@ -64,21 +58,13 @@ class Pipeline:
 			self.history = {}
 			self.delta = 1
 		
-		if 'plot' in kwargs:
-			self.plot = kwargs['plot']
-		else:
-			self.plot = False
+
+		self.plot = kwargs.get('plot', 'False')
+
+		self.plot_interval = kwargs.get('plot_interval', '100')
 		
-		if 'plot_interval' in kwargs:
-			self.plot_interval = kwargs['plot_interval']
-		else:
-			self.plot_interval = 100
-		
-		if 'output' in kwargs:
-			self.output = kwargs['output']
-		else:
-			self.output = None
-			
+		self.output = kwargs.get('output', 'None')
+					
 		if self.plot:
 			self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
 			self.set_spike_data()
@@ -86,15 +72,9 @@ class Pipeline:
 
 		self.first = True
 
-		if 'print_interval' in kwargs:
-			self.print_interval = kwargs['print_interval']
-		else:
-			self.print_interval = 100
+		self.print_interval = kwargs.get('print_interval', '100')
 
-		if 'render_interval' in kwargs:
-			self.render_interval = kwargs['render_interval']
-		else:
-			self.render_interval = 1
+		self.render_interval = kwargs.get('render_interval', '1')
 		
 	def set_spike_data(self):
 		'''
