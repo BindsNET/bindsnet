@@ -85,12 +85,12 @@ environment.reset()
 pipeline = Pipeline(network,
 			 environment,
 			 encoding=bernoulli,
-			 plot=plot,
 			 time=1,
-			 render=render,
 			 history=5,
 			 delta=10,
 			 plot_interval=plot_interval,
+			 print_interval=print_interval,
+			 render_interval=render_interval,
 			 feedback=select_multinomial,
 			 output='R')
 
