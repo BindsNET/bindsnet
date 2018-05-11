@@ -87,9 +87,8 @@ pipeline = Pipeline(network=network,
 					environment=environment,
 					encoding=encoding,
 					feedback=feedback,
-					plot=plot,
 					time=time,
-				    plot_interval=1)
+				    print_interval=1)
 
 # Neuron assignments and spike proportions.
 assignments = -torch.ones_like(torch.Tensor(n_neurons))

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from .feedback           import *
 from ..analysis.plotting import *
+from time                import time
 from ..encoding          import bernoulli
 
 plt.ion()
@@ -25,15 +26,14 @@ class Pipeline:
 			| :code:`feedback` (:code:`function`): Function to convert network outputs into environment inputs.
 			| :code:`kwargs`:
 			
-				| :code:`plot` (:code:`bool`): Plot monitor variables.
-				| :code:`render` (:code:`bool`): Show the environment.
-				| :code:`render_interval` (:code:`bool`): Interval tp show the environment.
-				| :code:`plot_interval` (:code:`int`): Interval to update plots.
-				| :code:`print_interval` (:code:`int`): Interval to print text output.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
 				| :code:`output` (:code:`str`): String name of the layer from which to take output from.
+				| :code:`save_dir` (:code:`str`): Directory to save network object to.
+				| :code:`render_interval` (:code:`bool`): Interval tp show the environment.
+				| :code:`plot_interval` (:code:`int`): Interval to update plots.
+				| :code:`print_interval` (:code:`int`): Interval to print text output.
 				| :code:`save_interval` (:code:`int`): How often to save the network to disk.
 		'''
 		self.network = network
@@ -48,6 +48,7 @@ class Pipeline:
 		# Setting kwargs.
 		self.time = kwargs.get('time', 1)
 		self.output = kwargs.get('output', None)
+		self.save_dir = kwargs.get('save_dir', 'network.p')
 		self.plot_interval = kwargs.get('plot_interval', None)
 		self.save_interval = kwargs.get('save_interval', None)
 		self.print_interval = kwargs.get('print_interval', None)
@@ -68,6 +69,7 @@ class Pipeline:
 			self.plot_data()
 
 		self.first = True
+		self.clock = time()
 
 	def set_spike_data(self):
 		'''
@@ -84,22 +86,19 @@ class Pipeline:
 			if 'v' in self.network.layers[layer].__dict__:
 				self.voltage_record[layer] = self.network.monitors['%s_voltages' % layer].get('v')
 
-	def print_iteration(self):
-		'''
-		Prints the current iteration to standard output.
-		'''
-		if self.iteration > 0 and self.iteration % self.print_interval == 0:
-			print('Iteration: %d' % self.iteration)
-
 	def step(self):
 		'''
 		Run an iteration of the pipeline.
 		'''
-		if self.print_interval is not None:
-			self.print_iteration()
+		if self.print_interval is not None and self.iteration % self.print_interval == 0:
+			print('Iteration: %d (Time: %.4f)' % (self.iteration, time() - self.clock))
+			self.clock = time()
+		
+		if self.save_interval is not None and self.iteration % self.save_interval == 0:
+			self.network.save(self.save_dir)
 		
 		# Render game.
-		if self.render_interval is not None and self.iteration % self.render_interval == 0 and self.iteration > 0:
+		if self.render_interval is not None and self.iteration % self.render_interval == 0:
 			self.env.render()
 			
 		# Choose action based on output neuron spiking.
