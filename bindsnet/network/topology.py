@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import torch.nn.functional as F
 
 from ..learning import *
 from ..network.nodes import Nodes
@@ -38,7 +39,7 @@ class Connection:
 		assert isinstance(source, Nodes), 'Source is not a Nodes object'
 		assert isinstance(target, Nodes), 'Target is not a Nodes object'
 		
-		self.update_rule = kwargs.get('update_rule', no_update)
+		self.update_rule = kwargs.get('update_rule', None)
 		self.w = kwargs.get('w', torch.rand(*source.shape, *target.shape))
 		self.wmin = kwargs.get('wmin', float('-inf'))
 		self.wmax = kwargs.get('wmax', float('inf'))
@@ -53,26 +54,123 @@ class Connection:
 			self.tc_minus = 0.05
 
 		self.w = torch.clamp(self.w, self.wmin, self.wmax)
-
-	def get_weights(self):
+	
+	def compute(self, s):
 		'''
-		Retrieve weight matrix of the connection.
-		
-		Returns:
-		
-			| (:code:`torch.Tensor`): Weight matrix of the connection.
-		'''
-		return self.w
-
-	def set_weights(self, w):
-		'''
-		Set weight matrix of the connection.
+		Compute pre-activations given spikes using layer weights.
 		
 		Inputs:
 		
-			| :code:`w` (:code:`torch.Tensor`): Weight matrix to set to connection.
+			| :code:`s` (:code:`torch.Tensor`): Incoming spikes.
 		'''
-		self.w = w
+		s = s.float().view(-1)
+		w = self.w.view(self.source.n, self.target.n)
+		a = s @ w
+		return a.view(*self.target.shape)
+
+	def update(self, **kwargs):
+		'''
+		Compute connection's update rule.
+		'''
+		reward = kwargs.get('reward', None)
+		
+		if self.update_rule is not None:
+			self.update_rule(self, reward=reward)
+	
+	def normalize(self):
+		'''
+		Normalize weights along the first axis according to total weight per target neuron.
+		'''
+		if self.norm is not None:
+			self.w = self.w.view(self.source.n, self.target.n)
+			self.w *= self.norm / self.w.sum(0).view(1, -1)
+			self.w = self.w.view(*self.source.shape, *self.target.shape)
+		
+	def _reset(self):
+		'''
+		Contains resetting logic for the connection.
+		'''
+		pass
+
+
+class Conv2dConnection:
+	'''
+	Specifies convolutional synapses between one or two populations of neurons.
+	'''
+	def __init__(self, source, target, kernel_size, stride=1, padding=0,
+				 dilation=1, nu=1e-2, nu_pre=1e-4, nu_post=1e-2, **kwargs):
+		'''
+		Instantiates a :code:`Conv2dConnection` object.
+
+		Inputs:
+		
+			| :code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
+			| :code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
+			| :code:`kernel_size` (:code:`int`): Size of convolutional kernels.
+			| :code:`stride` (:code:`int`): Stride for convolution; a single number or tuple.
+			| :code:`out_channels` (:code:`int`): Number of output channels.
+			| :code:`nu` (:code:`float`): Learning rate for both pre- and post-synaptic events.
+			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
+			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
+			
+			Kwargs:
+			
+				| :code:`update_rule` (:code:`function`): Modifies connection parameters according to some rule.
+				| :code:`w` (:code:`torch.Tensor`): Effective strengths of synapses.
+				| :code:`wmin` (:code:`float`): The minimum value on the connection weights.
+				| :code:`wmax` (:code:`float`): The maximum value on the connection weights.
+				| :code:`norm` (:code:`float`): Total weight per target neuron normalization.
+		'''
+		self.source = source
+		self.target = target
+		self.kernel_size = kernel_size
+		self.stride = stride
+		self.padding = padding
+		self.dilation = dilation
+		self.nu = nu
+		self.nu_pre = nu_pre
+		self.nu_post = nu_post
+		
+		assert isinstance(source, Nodes), 'Source is not a Nodes object'
+		assert isinstance(target, Nodes), 'Target is not a Nodes object'
+		assert len(source.shape) == 4, 'Source dimensionality must be (minibatch, in_channels, input_height, input_width)'
+		assert len(target.shape) == 4, 'Target dimensionality must be (minibatch, out_channels, \
+										 input_width - filter_width + 2 * padding_width) / stride_width + 1, \
+										 (input_height - filter_height + 2 * padding_height) / stride_height + 1)'
+		
+		self.in_channels = source.shape[1]
+		self.out_channels = target.shape[1]
+		
+		self.update_rule = kwargs.get('update_rule', None)
+		
+		if type(kernel_size) == int:
+			self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, self.kernel_size, self.kernel_size))
+		elif type(kernel_size) == tuple:
+			self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, self.kernel_size[0], self.kernel_size[1]))
+		
+		self.wmin = kwargs.get('wmin', float('-inf'))
+		self.wmax = kwargs.get('wmax', float('inf'))
+		self.norm = kwargs.get('norm', None)
+
+		if self.update_rule is m_stdp or self.update_rule is m_stdp_et:
+			self.e_trace = 0
+			self.tc_e_trace = 0.04
+			self.p_plus = 0
+			self.tc_plus = 0.05
+			self.p_minus = 0
+			self.tc_minus = 0.05
+
+		self.w = torch.clamp(self.w, self.wmin, self.wmax)
+	
+	def compute(self, s):
+		'''
+		Compute convolutional pre-activations given spikes using layer weights.
+		
+		Inputs:
+		
+			| :code:`s` (:code:`torch.Tensor`): Incoming spikes.
+		'''
+		return F.conv2d(s.float(), self.w, stride=self.stride, padding=self.padding, dilation=self.dilation)
 
 	def update(self, kwargs):
 		'''
@@ -132,7 +230,7 @@ class SparseConnection:
 		
 		self.w = kwargs.get('w', None)
 		self.sparsity = kwargs.get('sparsity', None)
-		self.update_rule = kwargs.get('update_rule', no_update)
+		self.update_rule = kwargs.get('update_rule', None)
 		self.wmin = kwargs.get('wmin', float('-inf'))
 		self.wmax = kwargs.get('wmax', float('inf'))
 		self.norm = kwargs.get('norm', None)

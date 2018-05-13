@@ -34,7 +34,7 @@ class Monitor:
 		# allocate recordings in memory for speed.
 		else:
 			self.recording = {var : torch.zeros(*self.obj.__dict__[var].size(), self.time) for var in self.state_vars}
-
+		
 	def get(self, var):
 		'''
 		Return recording to user.
@@ -63,12 +63,17 @@ class Monitor:
 			for var in self.state_vars:
 				data = self.obj.__dict__[var].unsqueeze(-1)
 				
-				# 1D data.
 				if len(data.size()) - 1 == 1:
 					self.recording[var][:, self.i % self.time] = data.squeeze()
-				# 2D data.
+
 				elif len(data.size()) - 1 == 2:
 					self.recording[var][:, :, self.i % self.time] = data.squeeze()
+					
+				elif len(data.size()) - 1 == 3:
+					self.recording[var][:, :, :, self.i % self.time] = data.squeeze()
+				
+				elif len(data.size()) - 1 == 4:
+					self.recording[var][:, :, :, :, self.i % self.time] = data.squeeze()
 		
 			self.i += 1
 

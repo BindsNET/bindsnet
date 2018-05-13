@@ -175,11 +175,10 @@ class Network:
 			target = self.connections[key].target
 			
 			if not key[1] in inpts:
-				inpts[key[1]] = torch.zeros_like(torch.Tensor(target.n))
+				inpts[key[1]] = torch.zeros(target.shape)
 
 			# Add to input: source's spikes multiplied by connection weights.
-			inpt = source.s.float().view(-1) @ self.connections[key].w.view(source.n, target.n)
-			inpts[key[1]] += inpt.view(*target.shape)
+			inpts[key[1]] += self.connections[key].compute(source.s)
 			
 		return inpts
 
@@ -189,7 +188,7 @@ class Network:
 		
 		Inputs:
 		
-			| :code:`inpts` (:code:`dict`): Dictionary including :code:`Tensor`s of shape :code:`[time, n_input]` for :code:`n_input` per :code:`nodes.Input` instance.
+			| :code:`inpts` (:code:`dict`): Dictionary of :code:`Tensor`s of shape :code:`[time, n_input]`.
 			| :code:`time` (:code:`int`): Simulation time.
 		
 		**Example:**
@@ -221,7 +220,7 @@ class Network:
 			plt.title('Input spiking')
 			plt.show()
 		'''
-		# Keyword arguments.
+		# Parse keyword arguments.
 		clamps = kwargs.get('clamp', {})
 		
 		# Effective number of timesteps

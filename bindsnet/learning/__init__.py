@@ -1,22 +1,20 @@
 import torch
 
-def no_update(conn, **kwargs):
-	'''
-	No updates; weights are static.
-	'''
-	pass
+from ..network.topology import Connection
+
 
 def post_pre(conn, **kwargs):
 	'''
 	Simple STDP rule involving both pre- and post-synaptic spiking activity.
 	'''
-	# Post-synaptic.
-	conn.w += conn.nu_post * conn.source.x.unsqueeze(-1) * conn.target.s.float().unsqueeze(0)
-	# Pre-synaptic.
-	conn.w -= conn.nu_pre * conn.source.s.float().unsqueeze(-1) * conn.target.x.unsqueeze(0)
+	if isinstance(conn, Connection):
+		# Post-synaptic.
+		conn.w += conn.nu_post * conn.source.x.unsqueeze(-1) * conn.target.s.float().unsqueeze(0)
+		# Pre-synaptic.
+		conn.w -= conn.nu_pre * conn.source.s.float().unsqueeze(-1) * conn.target.x.unsqueeze(0)
 
-	# Bound weights.
-	conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+		# Bound weights.
+		conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
 
 def hebbian(conn, **kwargs):
 	'''
