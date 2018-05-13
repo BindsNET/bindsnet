@@ -1,3 +1,4 @@
+from .utils       import *
 from .models      import *
 from .network     import *
 from .analysis    import *

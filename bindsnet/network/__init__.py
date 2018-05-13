@@ -222,6 +222,7 @@ class Network:
 		'''
 		# Parse keyword arguments.
 		clamps = kwargs.get('clamp', {})
+		reward = kwargs.get('reward', None)
 		
 		# Effective number of timesteps
 		timesteps = int(time / self.dt)
@@ -245,7 +246,7 @@ class Network:
 
 			# Run synapse updates.
 			for c in self.connections:
-				self.connections[c].update(kwargs)
+				self.connections[c].update(reward=reward)
 
 			# Get input to all layers.
 			inpts.update(self.get_inputs())

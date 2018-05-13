@@ -2,9 +2,9 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 
-from ..learning import *
-from ..network.nodes import Nodes
-
+from ..learning             import *
+from ..network.nodes        import Nodes
+from torch.nn.modules.utils import _pair
 
 class Connection:
 	'''
@@ -106,9 +106,10 @@ class Conv2dConnection:
 		
 			| :code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
 			| :code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
-			| :code:`kernel_size` (:code:`int`): Size of convolutional kernels.
-			| :code:`stride` (:code:`int`): Stride for convolution; a single number or tuple.
-			| :code:`out_channels` (:code:`int`): Number of output channels.
+			| :code:`kernel_size` (:code:tuple(`int`)): Size of convolutional kernels.
+			| :code:`stride` (:code:tuple(`int`)): Stride for convolution; a single number or tuple.
+			| :code:`padding` (:code:tuple(`int`)): Padding for convolution; a single number or tuple.
+			| :code:`dilation` (:code:tuple(`int`)): Dilation for convolution; a single number or tuple.
 			| :code:`nu` (:code:`float`): Learning rate for both pre- and post-synaptic events.
 			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
 			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
@@ -123,10 +124,10 @@ class Conv2dConnection:
 		'''
 		self.source = source
 		self.target = target
-		self.kernel_size = kernel_size
-		self.stride = stride
-		self.padding = padding
-		self.dilation = dilation
+		self.kernel_size = _pair(kernel_size)
+		self.stride = _pair(stride)
+		self.padding = _pair(padding)
+		self.dilation = _pair(dilation)
 		self.nu = nu
 		self.nu_pre = nu_pre
 		self.nu_post = nu_post
@@ -135,19 +136,14 @@ class Conv2dConnection:
 		assert isinstance(target, Nodes), 'Target is not a Nodes object'
 		assert len(source.shape) == 4, 'Source dimensionality must be (minibatch, in_channels, input_height, input_width)'
 		assert len(target.shape) == 4, 'Target dimensionality must be (minibatch, out_channels, \
-										 input_width - filter_width + 2 * padding_width) / stride_width + 1, \
+										 (input_width - filter_width + 2 * padding_width) / stride_width + 1, \
 										 (input_height - filter_height + 2 * padding_height) / stride_height + 1)'
 		
 		self.in_channels = source.shape[1]
 		self.out_channels = target.shape[1]
 		
 		self.update_rule = kwargs.get('update_rule', None)
-		
-		if type(kernel_size) == int:
-			self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, self.kernel_size, self.kernel_size))
-		elif type(kernel_size) == tuple:
-			self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, self.kernel_size[0], self.kernel_size[1]))
-		
+		self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, self.kernel_size[0], self.kernel_size[1]))
 		self.wmin = kwargs.get('wmin', float('-inf'))
 		self.wmax = kwargs.get('wmax', float('inf'))
 		self.norm = kwargs.get('norm', None)
@@ -172,20 +168,23 @@ class Conv2dConnection:
 		'''
 		return F.conv2d(s.float(), self.w, stride=self.stride, padding=self.padding, dilation=self.dilation)
 
-	def update(self, kwargs):
+	def update(self, **kwargs):
 		'''
 		Compute connection's update rule.
 		'''
-		self.update_rule(self, **kwargs)
+		if self.update_rule is not None:
+			reward = kwargs.get('reward', None)
+			self.update_rule(self, reward=reward)
 	
 	def normalize(self):
 		'''
 		Normalize weights along the first axis according to total weight per target neuron.
 		'''
 		if self.norm is not None:
-			self.w = self.w.view(self.source.n, self.target.n)
+			shape = self.w.size()
+			self.w = self.w.view(self.w.size(0), self.w.size(2) * self.w.size(3))
 			self.w *= self.norm / self.w.sum(0).view(1, -1)
-			self.w = self.w.view(*self.source.shape, *self.target.shape)
+			self.w = self.w.view(*shape)
 		
 	def _reset(self):
 		'''

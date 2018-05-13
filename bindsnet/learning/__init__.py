@@ -1,17 +1,45 @@
 import torch
 
-from ..network.topology import Connection
+from ..utils import im2col_indices
 
 
 def post_pre(conn, **kwargs):
 	'''
 	Simple STDP rule involving both pre- and post-synaptic spiking activity.
 	'''
-	if isinstance(conn, Connection):
+	if not 'kernel_size' in conn.__dict__:
+		x_source, x_target = conn.source.x.unsqueeze(-1), conn.target.x.unsqueeze(0)
+		s_source, s_target = conn.source.s.float().unsqueeze(-1), conn.target.s.float().unsqueeze(0)
+		
 		# Post-synaptic.
-		conn.w += conn.nu_post * conn.source.x.unsqueeze(-1) * conn.target.s.float().unsqueeze(0)
+		conn.w += conn.nu_post * x_source * s_target
 		# Pre-synaptic.
-		conn.w -= conn.nu_pre * conn.source.s.float().unsqueeze(-1) * conn.target.x.unsqueeze(0)
+		conn.w -= conn.nu_pre * s_source * x_target
+
+		# Bound weights.
+		conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+	else:
+		out_channels, _, kernel_height, kernel_width = conn.w.size()
+		padding, stride = conn.padding, conn.stride
+		
+		x_source = im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
+		x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+		s_source = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
+		s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+		
+		# Post-synaptic.
+		post = (x_source @ s_target.t()).view(conn.w.size())
+		if post.max() > 0:
+			post = post / post.max()
+		
+		conn.w += conn.nu_post * post
+		
+		# Pre-synaptic.
+		pre = (s_source @ x_target.t()).view(conn.w.size())
+		if pre.max() > 0:
+			pre = pre / pre.max()
+		
+		conn.w -= conn.nu_pre * pre
 
 		# Bound weights.
 		conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)

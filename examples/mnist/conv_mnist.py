@@ -8,40 +8,16 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
-def get_square_weights(weights, n_sqrt):
-	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < weights.size(1):
-				break
-			
-			fltr = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
-			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = fltr
-	
-	return square_weights
-
-def get_square_assignments(assignments, n_sqrt):
-	square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < assignments.size(0):
-				break
-			
-			assignment = assignments[i * n_sqrt + j]
-			square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
-	
-	return square_assignments
-
 print()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
-parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
-parser.add_argument('--excite', type=float, default=22.5)
-parser.add_argument('--inhib', type=float, default=17.5)
-parser.add_argument('--time', type=int, default=350)
+parser.add_argument('--kernel_size', type=int, default=5)
+parser.add_argument('--stride', type=int, default=1)
+parser.add_argument('--n_filters', type=int, default=16)
+parser.add_argument('--time', type=int, default=100)
 parser.add_argument('--dt', type=int, default=1.0)
 parser.add_argument('--intensity', type=float, default=0.25)
 parser.add_argument('--progress_interval', type=int, default=10)
@@ -63,28 +39,41 @@ else:
 if not train:
 	update_interval = n_test
 
-n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
-start_intensity = intensity
-	
+conv_size = int((28 - kernel_size + 1) / stride)
+
 # Build network.
 network = Network()
 input_layer = Input(n=784,
 					shape=(1, 1, 28, 28),
 					traces=True)
 
-output_layer = LIFNodes(n=16*24*24,
-						shape=(1, 16, 24, 24),
+conv_layer = LIFNodes(n=n_filters * conv_size * conv_size,
+						shape=(1, n_filters, conv_size, conv_size),
 						traces=True)
 
-conv_layer = Conv2dConnection(input_layer,
-							  output_layer,
-							  kernel_size=(5, 5),
-							  stride=(1, 1),
-							  update_rule=post_pre)
+output_layer = LIFNodes(n=10,
+						traces=True)
+
+conv_weights = Conv2dConnection(input_layer,
+							    conv_layer,
+							    kernel_size=kernel_size,
+							    stride=stride,
+							    update_rule=post_pre,
+							    norm=0.2 * conv_layer.shape[1],
+							    nu_pre=0,
+							    nu_post=1e-3,
+							    wmax=0.5)
+
+output_weights = Connection(conv_layer,
+						    output_layer,
+						    update_rule=post_pre,
+						    wmax=1.0)
 
 network.add_layer(input_layer, name='X')
-network.add_layer(output_layer, name='Y')
-network.add_connection(conv_layer, source='X', target='Y')
+network.add_layer(conv_layer, name='Y')
+network.add_layer(output_layer, name='Z')
+network.add_connection(conv_weights, source='X', target='Y')
+network.add_connection(output_weights, source='Y', target='Z')
 
 # Voltage recording for excitatory and inhibitory layers.
 voltage_monitor = Monitor(network.layers['Y'], ['v'], time=time)
@@ -92,20 +81,10 @@ network.add_monitor(voltage_monitor, name='output_voltage')
 
 # Load MNIST data.
 images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST')).get_train()
+images *= intensity
 
 # Lazily encode data as Poisson spike trains.
 data_loader = poisson_loader(data=images, time=time)
-
-# Record spikes during the simulation.
-spike_record = torch.zeros(update_interval, time, n_neurons)
-
-# Neuron assignments and spike proportions.
-assignments = -torch.ones_like(torch.Tensor(n_neurons))
-proportions = torch.zeros_like(torch.Tensor(n_neurons, 10))
-rates = torch.zeros_like(torch.Tensor(n_neurons, 10))
-
-# Sequence of accuracy estimates.
-accuracy = {'all' : [], 'proportion' : []}
 
 spikes = {}
 for layer in set(network.layers):
@@ -113,71 +92,45 @@ for layer in set(network.layers):
 	network.add_monitor(spikes[layer], name='%s_spikes' % layer)
 
 # Train the network.
-print('Begin training.\n')
-start = t()
+print('Begin training.\n'); start = t()
 
 for i in range(n_train):    
 	if i % progress_interval == 0:
-		print('Progress: %d / %d (%.4f seconds)' % (i, n_train, t() - start))
-		start = t()
-	
-	if i % update_interval == 0 and i > 0:
-		# Get network predictions.
-		all_activity_pred = all_activity(spike_record, assignments, 10)
-		proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
-
-		# Compute network accuracy according to available classification strategies.
-		accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long() \
-												== all_activity_pred) / update_interval)
-		accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long() \
-														== proportion_pred) / update_interval)
-
-		print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)' \
-						% (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))
-		print('Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n' \
-						% (accuracy['proportion'][-1], np.mean(accuracy['proportion']),
-						  np.max(accuracy['proportion'])))
-
-		# Assign labels to excitatory layer neurons.
-		assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
+		print('Progress: %d / %d (%.4f seconds)' % (i, n_train, t() - start)); start = t()
 	
 	# Get next input sample.
 	sample = next(data_loader).unsqueeze(1).unsqueeze(1)
 	inpts = {'X' : sample}
 	
 	# Run the network on the input.
-	network.run(inpts=inpts, time=time)
+	clamp = {'Z' : labels[i].long()}
+	network.run(inpts=inpts, time=time, clamp=clamp)
 	
 	# Get voltage recording.
 	voltages = voltage_monitor.get('v')
 	
-	# Add to spikes recording.
-	# spike_record[i % update_interval] = spikes['Y'].get('s').t()
-	
 	# Optionally plot various simulation information.
 	if plot:
 		inpt = inpts['X'].view(time, 784).sum(0).view(28, 28)
-		weights = network.connections[('X', 'Y')].w.view(16, 25)
-		square_assignments = get_square_assignments(assignments, n_sqrt)
+		weights1 = conv_weights.w.view(conv_weights.w.size(0), conv_weights.w.size(2) * conv_weights.w.size(3))
+		weights2 = output_weights.w.view(output_weights.w.size(1) * output_weights.w.size(2) * output_weights.w.size(3),
+									   output_weights.w.size(4))
 		voltages = {'Y' : voltages}
 		_spikes = {'X' : spikes['X'].get('s').view(time, 28 ** 2),
-				   'Y' : spikes['Y'].get('s').view(time, 16 * 24 ** 2)}
+				   'Y' : spikes['Y'].get('s').view(time, n_filters * conv_size ** 2),
+				   'Z' : spikes['Z'].get('s').view(time, 10)}
 		
 		if i == 0:
-			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt.view(28, 28), label=labels[i])
+			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
 			spike_ims, spike_axes = plot_spikes(_spikes)
-			weights_im = plot_weights(weights)
-			assigns_im = plot_assignments(square_assignments)
-			perf_ax = plot_performance(accuracy)
-			# voltage_ims, voltage_axes = plot_voltages(voltages)
+			weights1_im = plot_weights(weights1, wmax=conv_weights.wmax)
+			weights2_im = plot_weights(weights2, wmax=output_weights.wmax)
 			
 		else:
 			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			spike_ims, spike_axes = plot_spikes(_spikes, ims=spike_ims, axes=spike_axes)
-			weights_im = plot_weights(weights, im=weights_im)
-			assigns_im = plot_assignments(square_assignments, im=assigns_im)
-			perf_ax = plot_performance(accuracy, ax=perf_ax)
-			# voltage_ims, voltage_axes = plot_voltages(voltages, ims=voltage_ims, axes=voltage_axes)
+			weights1_im = plot_weights(weights1, im=weights1_im)
+			weights2_im = plot_weights(weights2, im=weights2_im)
 		
 		plt.pause(1e-8)
 	
