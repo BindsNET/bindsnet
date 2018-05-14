@@ -487,8 +487,9 @@ class DiehlAndCookNodes(Nodes):
 		# Choose only a single neuron to spike.
 		if torch.sum(self.s) > 0:
 			s = torch.zeros(self.s.size())
-			s[torch.multinomial(self.s.float(), 1)] = 1
-			self.s = s.byte()
+			s = s.view(-1)
+			s[torch.multinomial(self.s.float().view(-1), 1)] = 1
+			self.s = s.view(self.s.size()).byte()
 		
 		# Integrate inputs.
 		self.v += inpts

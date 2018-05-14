@@ -106,10 +106,10 @@ class Conv2dConnection:
 		
 			| :code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
 			| :code:`target` (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
-			| :code:`kernel_size` (:code:tuple(`int`)): Size of convolutional kernels.
-			| :code:`stride` (:code:tuple(`int`)): Stride for convolution; a single number or tuple.
-			| :code:`padding` (:code:tuple(`int`)): Padding for convolution; a single number or tuple.
-			| :code:`dilation` (:code:tuple(`int`)): Dilation for convolution; a single number or tuple.
+			| :code:`kernel_size` (:code:tuple(`int`)): Size of convolutional kernels; single number or tuple (height, width).
+			| :code:`stride` (:code:tuple(`int`)): Stride for convolution; a single number or tuple (height, width).
+			| :code:`padding` (:code:tuple(`int`)): Padding for convolution; a single number or tuple (height, width).
+			| :code:`dilation` (:code:tuple(`int`)): Dilation for convolution; a single number or tuple (height, width).
 			| :code:`nu` (:code:`float`): Learning rate for both pre- and post-synaptic events.
 			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
 			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
@@ -136,8 +136,8 @@ class Conv2dConnection:
 		assert isinstance(target, Nodes), 'Target is not a Nodes object'
 		assert len(source.shape) == 4, 'Source dimensionality must be (minibatch, in_channels, input_height, input_width)'
 		assert len(target.shape) == 4, 'Target dimensionality must be (minibatch, out_channels, \
-										 (input_width - filter_width + 2 * padding_width) / stride_width + 1, \
-										 (input_height - filter_height + 2 * padding_height) / stride_height + 1)'
+										 (input_height - filter_height + 2 * padding_height) / stride_height + 1), \
+										 (input_width - filter_width + 2 * padding_width) / stride_width + 1'
 		
 		self.in_channels = source.shape[1]
 		self.out_channels = target.shape[1]
