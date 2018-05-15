@@ -28,18 +28,12 @@ def post_pre(conn, **kwargs):
 		s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
 		
 		# Post-synaptic.
-		post = (x_source @ s_target.t()).view(conn.w.size())
-		if post.max() > 0:
-			post = post / post.max()
-		
-		conn.w += conn.nu_post * post
+		post = s_target @ x_source.t()
+		conn.w += conn.nu_post * post.view(conn.w.size())
 		
 		# Pre-synaptic.
-		pre = (s_source @ x_target.t()).view(conn.w.size())
-		if pre.max() > 0:
-			pre = pre / pre.max()
-		
-		conn.w -= conn.nu_pre * pre
+		pre = x_target @ s_source.t()
+		conn.w -= conn.nu_pre * pre.view(conn.w.size())
 
 		# Bound weights.
 		conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
