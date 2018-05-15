@@ -67,7 +67,7 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
 	
 # Build network.
-network = DiehlAndCook(n_inpt=784,
+network = DiehlAndCook2015(n_inpt=784,
 					   n_neurons=n_neurons,
 					   exc=excite,
 					   inh=inhib,
