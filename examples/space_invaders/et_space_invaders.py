@@ -42,13 +42,19 @@ layers = {'X' : inpt, 'E' : exc, 'R' : readout}
 
 # Connections between layers.
 # Input -> excitatory.
-w = 1e-3 * torch.rand(layers['X'].n, layers['E'].n)
-input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=w, wmax=1e-2)
+input_exc_conn = Connection(source=layers['X'],
+							target=layers['E'],
+							w=torch.rand(layers['X'].n, layers['E'].n),
+							wmax=1e-2)
 
 # Excitatory -> readout.
-w = 0.01 * torch.rand(layers['E'].n, layers['R'].n)
-exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=w, wmax=0.5, update_rule=m_stdp_et, nu=2e-2)
-exc_readout_norm = 0.15 * layers['E'].n
+exc_readout_conn = Connection(source=layers['E'],
+							  target=layers['R'],
+							  w=torch.rand(layers['E'].n, layers['R'].n),
+							  wmax=0.5,
+							  update_rule=m_stdp_et,
+							  nu=2e-2,
+							  norm=0.15 * layers['E'].n)
 
 # Spike recordings for all layers.
 spikes = {}
@@ -74,9 +80,6 @@ for layer in layers:
 	if layer in voltages:
 		network.add_monitor(voltages[layer], name='%s_voltages' % layer)
 
-# Normalize adaptable weights.
-network.connections[('E', 'R')].normalize(exc_readout_norm)
-
 # Load SpaceInvaders environment.
 environment = GymEnvironment('SpaceInvaders-v0')
 environment.reset()
@@ -85,7 +88,7 @@ pipeline = Pipeline(network,
 			 environment,
 			 encoding=bernoulli,
 			 time=1,
-			 history=5,
+			 history_length=5,
 			 delta=10,
 			 plot_interval=plot_interval,
 			 print_interval=print_interval,
@@ -96,7 +99,6 @@ pipeline = Pipeline(network,
 try:
 	while True:
 		pipeline.step()
-		pipeline.normalize('E', 'R', exc_readout_norm)
 
 		if pipeline.done == True:
 			pipeline._reset()

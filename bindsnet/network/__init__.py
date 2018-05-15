@@ -175,11 +175,10 @@ class Network:
 			target = self.connections[key].target
 			
 			if not key[1] in inpts:
-				inpts[key[1]] = torch.zeros_like(torch.Tensor(target.n))
+				inpts[key[1]] = torch.zeros(target.shape)
 
 			# Add to input: source's spikes multiplied by connection weights.
-			inpt = source.s.float().view(-1) @ self.connections[key].w.view(source.n, target.n)
-			inpts[key[1]] += inpt.view(*target.shape)
+			inpts[key[1]] += self.connections[key].compute(source.s)
 			
 		return inpts
 
@@ -189,7 +188,7 @@ class Network:
 		
 		Inputs:
 		
-			| :code:`inpts` (:code:`dict`): Dictionary including :code:`Tensor`s of shape :code:`[time, n_input]` for :code:`n_input` per :code:`nodes.Input` instance.
+			| :code:`inpts` (:code:`dict`): Dictionary of :code:`Tensor`s of shape :code:`[time, n_input]`.
 			| :code:`time` (:code:`int`): Simulation time.
 		
 		**Example:**
@@ -221,8 +220,9 @@ class Network:
 			plt.title('Input spiking')
 			plt.show()
 		'''
-		# Keyword arguments.
+		# Parse keyword arguments.
 		clamps = kwargs.get('clamp', {})
+		reward = kwargs.get('reward', None)
 		
 		# Effective number of timesteps
 		timesteps = int(time / self.dt)
@@ -231,28 +231,33 @@ class Network:
 		inpts.update(self.get_inputs())
 		
 		# Simulate network activity for `time` timesteps.
-		for timestep in range(timesteps):
+		for t in range(timesteps):
 			# Update each layer of nodes.
-			for key in self.layers:
-				if type(self.layers[key]) is Input:
-					self.layers[key].step(inpts[key][timestep, :], self.dt)
+			for l in self.layers:
+				if type(self.layers[l]) is Input:
+					self.layers[l].step(inpts[l][t, :], self.dt)
 				else:
-					self.layers[key].step(inpts[key], self.dt)
+					self.layers[l].step(inpts[l], self.dt)
 				
-				clamp = clamps.get(key, None)
+				# Force neurons to spike.
+				clamp = clamps.get(l, None)
 				if clamp is not None:
-					self.layers[key].s[clamp] = 1
+					self.layers[l].s[clamp] = 1
 
 			# Run synapse updates.
-			for synapse in self.connections:
-				self.connections[synapse].update(kwargs)
+			for c in self.connections:
+				self.connections[c].update(reward=reward)
 
 			# Get input to all layers.
 			inpts.update(self.get_inputs())
 
 			# Record state variables of interest.
-			for monitor in self.monitors:
-				self.monitors[monitor].record()
+			for m in self.monitors:
+				self.monitors[m].record()
+		
+		# Re-normalize connections (with norms).
+		for c in self.connections:
+			self.connections[c].normalize()
 
 	def _reset(self):
 		'''

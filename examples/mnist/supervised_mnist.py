@@ -8,30 +8,6 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
-def get_square_weights(weights, n_sqrt):
-	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < weights.size(1):
-				break
-			
-			fltr = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
-			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = fltr
-	
-	return square_weights
-
-def get_square_assignments(assignments, n_sqrt):
-	square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < assignments.size(0):
-				break
-			
-			assignment = assignments[i * n_sqrt + j]
-			square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
-	
-	return square_assignments
-
 print()
 
 parser = argparse.ArgumentParser()
@@ -39,7 +15,7 @@ parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
-parser.add_argument('--n_clamp', type=int, default=3)
+parser.add_argument('--n_clamp', type=int, default=1)
 parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
 parser.add_argument('--time', type=int, default=50)
@@ -69,14 +45,15 @@ start_intensity = intensity
 per_class = int(n_neurons / 10)
 	
 # Build network.
-network = DiehlAndCook(n_inpt=784,
-					   n_neurons=n_neurons,
-					   exc=excite,
-					   inh=inhib,
-					   time=time,
-					   dt=dt,
-					   nu_pre=0,
-					   nu_post=5e-2)
+network = DiehlAndCook2015(n_inpt=784,
+						   n_neurons=n_neurons,
+						   exc=excite,
+						   inh=inhib,
+						   time=time,
+						   dt=dt,
+						   nu_pre=0,
+						   nu_post=1e-2,
+						   norm=78.4)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -153,13 +130,11 @@ for i in range(n_train):
 	# Add to spikes recording.
 	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
 	
-	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
-	
 	# Optionally plot various simulation information.
 	if plot:
 		inpt = inpts['X'].view(time, 784).sum(0).view(28, 28)
 		input_exc_weights = network.connections[('X', 'Ae')].w
-		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt)
+		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt, 28)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		
