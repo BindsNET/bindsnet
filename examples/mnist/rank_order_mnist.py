@@ -65,17 +65,17 @@ if not train:
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 	
 # Build network.
-network = DiehlAndCook(n_inpt=784,
-					   n_neurons=n_neurons,
-					   exc=excite,
-					   inh=inhib,
-					   time=time,
-					   dt=dt,
-					   nu_pre=0,
-					   nu_post=1,
-					   wmin=0,
-					   wmax=10,
-					   norm=1500)
+network = DiehlAndCook2015(n_inpt=784,
+						   n_neurons=n_neurons,
+						   exc=excite,
+						   inh=inhib,
+						   time=time,
+						   dt=dt,
+						   nu_pre=0,
+						   nu_post=1,
+						   wmin=0,
+						   wmax=10,
+						   norm=1500)
 
 # Create environment.
 environment = DatasetEnvironment(dataset=MNIST(path=os.path.join('..', '..', 'data', 'MNIST')),

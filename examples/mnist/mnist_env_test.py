@@ -67,7 +67,7 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
 	
 # Build network, create environment, and specify data encoding.
-network = DiehlAndCook(n_inpt=784, n_neurons=n_neurons, exc=excite, inh=inhib, time=time, dt=dt, norm=78.4)
+network = DiehlAndCook2015(n_inpt=784, n_neurons=n_neurons, exc=excite, inh=inhib, time=time, dt=dt, norm=78.4)
 environment = DatasetEnvironment(dataset=MNIST(path=os.path.join('..', '..', 'data', 'MNIST')), train=train, intensity=intensity)
 encoding = poisson
 feedback = no_feedback

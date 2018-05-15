@@ -45,15 +45,15 @@ start_intensity = intensity
 per_class = int(n_neurons / 10)
 	
 # Build network.
-network = DiehlAndCook(n_inpt=784,
-					   n_neurons=n_neurons,
-					   exc=excite,
-					   inh=inhib,
-					   time=time,
-					   dt=dt,
-					   nu_pre=0,
-					   nu_post=1e-2,
-					   norm=78.4)
+network = DiehlAndCook2015(n_inpt=784,
+						   n_neurons=n_neurons,
+						   exc=excite,
+						   inh=inhib,
+						   time=time,
+						   dt=dt,
+						   nu_pre=0,
+						   nu_post=1e-2,
+						   norm=78.4)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
