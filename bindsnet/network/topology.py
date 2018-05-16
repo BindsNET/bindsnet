@@ -183,7 +183,9 @@ class Conv2dConnection:
 		if self.norm is not None:
 			shape = self.w.size()
 			self.w = self.w.view(self.w.size(0), self.w.size(2) * self.w.size(3))
-			self.w *= self.norm / self.w.sum(0).view(1, -1)
+			for fltr in range(self.w.size(0)):
+				self.w[fltr] *= self.norm / self.w[fltr].sum(0)
+		
 			self.w = self.w.view(*shape)
 		
 	def _reset(self):

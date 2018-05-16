@@ -98,7 +98,7 @@ class DatasetEnvironment:
 	
 	def preprocess(self):
 		'''
-		Preprocessing step for a state specific to the MNIST dataset.
+		Preprocessing step for a state specific to dataset objects.
 
 		Inputs:
 

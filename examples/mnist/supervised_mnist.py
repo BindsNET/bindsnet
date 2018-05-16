@@ -18,7 +18,7 @@ parser.add_argument('--n_test', type=int, default=10000)
 parser.add_argument('--n_clamp', type=int, default=1)
 parser.add_argument('--excite', type=float, default=22.5)
 parser.add_argument('--inhib', type=float, default=17.5)
-parser.add_argument('--time', type=int, default=50)
+parser.add_argument('--time', type=int, default=40)
 parser.add_argument('--dt', type=int, default=1.0)
 parser.add_argument('--intensity', type=float, default=0.25)
 parser.add_argument('--progress_interval', type=int, default=10)
@@ -49,7 +49,6 @@ network = DiehlAndCook2015(n_inpt=784,
 						   n_neurons=n_neurons,
 						   exc=excite,
 						   inh=inhib,
-						   time=time,
 						   dt=dt,
 						   nu_pre=0,
 						   nu_post=1e-2,
