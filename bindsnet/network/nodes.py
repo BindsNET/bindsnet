@@ -249,7 +249,7 @@ class LIFNodes(Nodes):
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
 		'''
 		super().__init__()
@@ -335,10 +335,10 @@ class AdaptiveLIFNodes(Nodes):
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-			| :code:`theta_plus` (`float`): Voltage increase of threshold after spiking.
-			| :code:`theta_decay` (`float`): Time constant of adaptive threshold decay.
+			| :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
+			| :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
 		'''
 		super().__init__()
 
@@ -428,10 +428,10 @@ class DiehlAndCookNodes(Nodes):
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-			| :code:`theta_plus` (`float`): Voltage increase of threshold after spiking.
-			| :code:`theta_decay` (`float`): Time constant of adaptive threshold decay.
+			| :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
+			| :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
 		'''
 		super().__init__()
 
@@ -528,7 +528,7 @@ class IzhikevichNodes(Nodes):
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): refrac (non-firing) period of the neuron.
-			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
 		'''
 		super().__init__()
