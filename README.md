@@ -11,7 +11,7 @@ We are interested in applying SNNs to machine learning (ML) and reinforcement le
 
 ## Setting things up
 
-To build the `spiketorch` package from source, change directory to the top level of this project and issue
+To build the `bindsnet` package from source, change directory to the top level of this project and issue
 
 ```
 pip install .
