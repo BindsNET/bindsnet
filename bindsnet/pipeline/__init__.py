@@ -9,8 +9,6 @@ from time                import time
 from ..encoding          import bernoulli
 from ..network.monitors  import Monitor
 
-plt.ion()
-
 class Pipeline:
 	'''
 	Abstracts the interaction between network, environment (or dataset), input encoding, and environment feedback.
@@ -66,9 +64,9 @@ class Pipeline:
 		
 		if self.plot_interval is not None:
 			for layer in self.network.layers:
-				self.network.add_monitor(Monitor(self.network.layers[layer], 's', self.time), name='%s_spikes' % layer)
+				self.network.add_monitor(Monitor(self.network.layers[layer], 's', self.plot_interval), name='%s_spikes' % layer)
 				if 'v' in self.network.layers[layer].__dict__:
-					self.network.add_monitor(Monitor(self.network.layers[layer], 'v', self.time), name='%s_voltages' % layer)
+					self.network.add_monitor(Monitor(self.network.layers[layer], 'v', self.plot_interval), name='%s_voltages' % layer)
 			
 			self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
 			self.set_spike_data()
