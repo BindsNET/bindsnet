@@ -117,18 +117,3 @@ def plot_voltage(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
 		plt.axhline(threshold, linestyle='--', color='black', zorder=0)
 		
 	plt.show()
-	
-def main():
-	np.random.seed(0)
-	#data = np.random.binomial(1, 0.25, size=(5, 20, 20))
-	data = np.random.uniform(0, 20, size=(5, 10, 50))
-	data = np.sort(data, axis=2)
-	
-	plot_voltage(data, n_ex=2, n_neuron=3, threshold=15.)
-#	plot_spike_trains_for_example(data, n_ex=2)
-#	plot_weights_movie(data)
-	
-if __name__ == '__main__':
-	main()
-		
-	

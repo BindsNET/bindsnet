@@ -44,6 +44,7 @@ class Pipeline:
 		self.feedback = feedback
 		
 		self.iteration = 0
+		self.history_index = 1
 		self.ims_s, self.axes_s = None, None
 		self.ims_v, self.axes_v = None, None
 		self.ims_obs, self.axes_obs = None, None
@@ -61,11 +62,10 @@ class Pipeline:
 		self.delta = kwargs.get('delta', 1)
 		
 		if self.history_length is not None and self.delta is not None:
-			self.history_index = 1
 			self.history = {i : torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
 		else:
-			self.history_index = 1
 			self.history = {}
+		
 		
 		if self.plot_interval is not None:
 			for layer in self.network.layers:
@@ -87,7 +87,7 @@ class Pipeline:
 		'''
 		Get the spike data from all layers in the pipeline's network.
 		'''
-		self.spike_record = {layer: self.network.monitors['%s_spikes' % layer].get('s') for layer in self.network.layers}
+		self.spike_record = {layer : self.network.monitors['%s_spikes' % layer].get('s') for layer in self.network.layers}
 
 	def set_voltage_data(self):
 		'''
