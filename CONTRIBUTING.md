@@ -73,7 +73,7 @@ git push  # concise; again, depends on push.default behavior
 
 where `[origin]` is the name of the remote repository, and `[branch-name]` is the name of the branch you have developed on.
 
-__Note__: See (push.default)[https://git-scm.com/docs/git-config#git-config-pushdefault] for more information.
+__Note__: See [push.default](https://git-scm.com/docs/git-config#git-config-pushdefault) for more information.
 
 To merge your changes into the `master` branch (the definitive version of the project's code), open a pull request on the [webpage](https://github.com/djsaunde/spiketorch) of the project. You can select the `base` branch (typically `master`, to merge changes _into_ the definitive version of the code) and the `compare` branch (say, `dan`, if I added a new feature locally and want to add it to the project code). You may add an optional extended description of your pull request changes. If there are merge conflicts at this stage, you may fix these using GitHub's pull request review interface.
 
