@@ -54,7 +54,7 @@ We have provided some simple starter scripts for doing unsupervised learning (le
 
 ## Contributors
 
-- Daniel Saunders ([email](mailto:djsaunde@cs.umass.com))
+- Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu))
 
 - Hananel Hazan ([email](mailto:hananel@hazan.org.il))
 
