@@ -5,8 +5,8 @@ addons:
 python:
  - "3.6"
 install:
- - pip install .
+ - pip install . -q
  - apt-get install -y python-numpy python-dev cmake zlib1g-dev libjpeg-dev xvfb libav-tools xorg-dev python-opengl libboost-all-dev libsdl2-dev swig
- - pip install gym[all]
+ - pip install gym[all] -q
 script:
  - python -m pytest test
