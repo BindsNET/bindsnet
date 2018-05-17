@@ -3,8 +3,7 @@ import torch
 
 def assign_labels(spikes, labels, n_labels, rates=None, alpha=1.0):
 	'''
-	Given a sequence of recorded spikes and corresponding labels, assign
-		labels to the neurons based on highest average spiking activity.
+	Assign labels to the neurons based on highest average spiking activity.
 	
 	Inputs:
 	
@@ -49,19 +48,17 @@ def assign_labels(spikes, labels, n_labels, rates=None, alpha=1.0):
 
 def all_activity(spikes, assignments, n_labels):
 	'''
-	Given neuron assignments and the network spiking activity, new
-	data is classified with the label giving the highest average
-	spiking activity over all neurons with the label assignment.
+	Classify data with the label with highest average spiking activity over all neurons.
 	
 	Inputs:
 	
-		| :code:`spikes` (:code:`torch.Tensor`): Binary tensor of shape :code:`(n_samples, time, n_neurons)` of a single layer's spiking activity.
+		| :code:`spikes` (:code:`torch.Tensor`): Binary tensor of shape :code:`(n_samples, time, n_neurons)` of a layer's spiking activity.
 		| :code:`assignments` (:code:`torch.Tensor`): A vector of shape :code:`(n_neurons,)` of neuron label assignments.
 		| :code:`n_labels` (:code:`int`): The number of target labels in the data.
 	
 	Returns:
 	
-		| (:code:`torch.Tensor`): Predictions tensor of shape `(n_samples,)` resulting from the "all activity" classification scheme.
+		| (:code:`torch.Tensor`): Predictions tensor of shape :code:`(n_samples,)` resulting from the "all activity" classification scheme.
 	'''
 	n_samples = spikes.size(0)
 	
@@ -90,7 +87,7 @@ def all_activity(spikes, assignments, n_labels):
 
 def proportion_weighting(spikes, assignments, proportions, n_labels):
 	'''
-	Given neuron assignments and the network spiking activity, new data is classified with the label giving the highest average spiking activity over all neurons with the label assignment, weighted by the class-wise proportion of spiking activity.
+	Classify data with the label with highest average spiking activity over all neurons, weighted by class-wise proportion..
 	
 	Inputs:
 	

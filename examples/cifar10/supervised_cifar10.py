@@ -8,6 +8,31 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
+def get_square_weights(weights, n_sqrt, side):
+	square_weights = torch.zeros_like(torch.Tensor(side * n_sqrt, side * n_sqrt))
+	for i in range(n_sqrt):
+		for j in range(n_sqrt):
+			if not i * n_sqrt + j < weights.size(1):
+				break
+			
+			fltr = weights[:, i * n_sqrt + j].contiguous().view(side, side)
+			square_weights[i * side : (i + 1) * side, (j % n_sqrt) * side : ((j % n_sqrt) + 1) * side] = fltr
+	
+	return square_weights
+
+
+def get_square_assignments(assignments, n_sqrt):
+	square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
+	for i in range(n_sqrt):
+		for j in range(n_sqrt):
+			if not i * n_sqrt + j < assignments.size(0):
+				break
+			
+			assignment = assignments[i * n_sqrt + j]
+			square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
+	
+	return square_assignments
+
 print()
 
 parser = argparse.ArgumentParser()
@@ -15,9 +40,10 @@ parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
-parser.add_argument('--excite', type=float, default=22.5)
-parser.add_argument('--inhib', type=float, default=17.5)
-parser.add_argument('--time', type=int, default=350)
+parser.add_argument('--n_clamp', type=int, default=3)
+parser.add_argument('--exc', type=float, default=22.5)
+parser.add_argument('--inh', type=float, default=17.5)
+parser.add_argument('--time', type=int, default=50)
 parser.add_argument('--dt', type=int, default=1.0)
 parser.add_argument('--intensity', type=float, default=0.25)
 parser.add_argument('--progress_interval', type=int, default=10)
@@ -41,14 +67,19 @@ if not train:
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
-	
+per_class = int(n_neurons / 10)
+
 # Build network.
-network = DiehlAndCook2015(n_inpt=784,
+network = DiehlAndCook(n_inpt=32*32*3,
 					   n_neurons=n_neurons,
-					   exc=excite,
-					   inh=inhib,
+					   exc=exc,
+					   inh=inh,
+					   time=time,
 					   dt=dt,
-					   norm=78.4)
+					   nu_pre=0,
+					   nu_post=1e-1,
+					   wmin=0,
+					   wmax=10)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -57,8 +88,8 @@ network.add_monitor(exc_voltage_monitor, name='exc_voltage')
 network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 
 # Load MNIST data.
-images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST')).get_train()
-images = images.view(-1, 784)
+images, labels = CIFAR10(path=os.path.join('..', '..', 'data', 'CIFAR10')).get_train()
+images = images.view(-1, 32*32*3)
 images *= intensity
 
 # Lazily encode data as Poisson spike trains.
@@ -114,7 +145,9 @@ for i in range(n_train):
 	inpts = {'X' : sample}
 	
 	# Run the network on the input.
-	network.run(inpts=inpts, time=time)
+	choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
+	clamp = {'Ae' : per_class * labels[i].long() + torch.Tensor(choice).long()}
+	network.run(inpts=inpts, time=time, clamp=clamp)
 	
 	# Get voltage recording.
 	exc_voltages = exc_voltage_monitor.get('v')
@@ -123,24 +156,33 @@ for i in range(n_train):
 	# Add to spikes recording.
 	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
 	
+	network.connections[('X', 'Ae')].normalize(3500)  # Normalize input -> excitatory weights
+	
 	# Optionally plot various simulation information.
 	if plot:
-		inpt = inpts['X'].view(time, 784).sum(0).view(28, 28)
+		print(inpts['X'].size())
+		
+		if gpu:
+			inpt = inpts['X'].view(time, 3, 32, 32).sum(0).cpu().numpy().transpose(1, 2, 0)
+		else:
+			inpt = inpts['X'].view(time, 3, 32, 32).sum(0).numpy().transpose(1, 2, 0)
+		
 		input_exc_weights = network.connections[('X', 'Ae')].w
-		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt, 28)
+		print(input_exc_weights.size())
+		square_weights = get_square_weights(input_exc_weights.view(3, 32*32, n_neurons).sum(0), n_sqrt, 32)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		
 		if i == 0:
-			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
+			inpt_axes, inpt_ims = plot_input(images[i].view(3, 32, 32).sum(0), inpt, label=labels[i])
 			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes})
-			weights_im = plot_weights(square_weights)
+			weights_im = plot_weights(square_weights, wmax=10)
 			assigns_im = plot_assignments(square_assignments)
 			perf_ax = plot_performance(accuracy)
 			voltage_ims, voltage_axes = plot_voltages(voltages)
 			
 		else:
-			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
+			inpt_axes, inpt_ims = plot_input(images[i].view(3, 32, 32).sum(0), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes},
 												ims=spike_ims, axes=spike_axes)
 			weights_im = plot_weights(square_weights, im=weights_im)

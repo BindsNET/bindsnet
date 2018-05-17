@@ -143,7 +143,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 
 def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 	'''
-	Plot a (possibly reshaped) connection weight matrix.
+	Plot a connection weight matrix.
 	
 	Inputs:
 		
@@ -171,6 +171,57 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 		fig.tight_layout()
 	else:
 		im.set_data(weights)
+
+	return im
+
+
+def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
+	'''
+	Plot a connection weight matrix of a Conv2dConnection.
+	
+	Inputs:
+		
+		| :code:`weights` (:code:`torch.Tensor`): Weight matrix of Conv2dConnection object.
+		| :code:`wmin` (:code:`float`): Minimum allowed weight value.
+		| :code:`wmax` (:code:`float`): Maximum allowed weight value.
+		| :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
+	
+	Returns:
+		
+		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+	'''
+	n_sqrt = int(np.ceil(np.sqrt(weights.size(0))))
+	height = weights.size(2)
+	width = weights.size(3)
+	reshaped = torch.zeros(n_sqrt * weights.size(2), n_sqrt * weights.size(3))
+	
+	for i in range(n_sqrt):
+		for j in range(n_sqrt):
+			if i * n_sqrt + j < weights.size(0):
+				fltr = weights[i * n_sqrt + j].view(height, width)
+				reshaped[i * height : (i + 1) * height, (j % n_sqrt) * width : ((j % n_sqrt) + 1) * width] = fltr
+	
+	if not im:
+		fig, ax = plt.subplots(figsize=figsize)
+		
+		im = ax.imshow(reshaped, cmap='hot_r', vmin=wmin, vmax=wmax)
+		div = make_axes_locatable(ax)
+		cax = div.append_axes("right", size="5%", pad=0.05)
+		
+		for i in range(height, n_sqrt * height, height):
+			ax.axhline(i, color='g', linestyle='--')
+		
+		for i in range(width, n_sqrt * width, width):
+			ax.axvline(i, color='g', linestyle='--')
+		
+		ax.set_xticks(()); ax.set_yticks(())
+		ax.set_aspect('auto')
+		
+		plt.colorbar(im, cax=cax)
+		fig.tight_layout()
+	else:
+		im.set_data(reshaped)
 
 	return im
 

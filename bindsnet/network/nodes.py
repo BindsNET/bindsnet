@@ -135,7 +135,7 @@ class McCullochPitts(Nodes):
 		'''
 		self.v = inpts                  # Voltages are equal to the inputs.
 		self.s = self.v >= self.thresh  # Check for spiking neurons.
-
+			
 		if self.traces:
 			# Decay and set spike traces.
 			self.x -= dt * self.trace_tc * self.x
@@ -203,10 +203,12 @@ class IFNodes(Nodes):
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
 		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
-
+		self.refrac_count[self.refrac_count != 0] -= dt
+	
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+
+		# Refractoriness and voltage reset.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 
@@ -247,7 +249,7 @@ class LIFNodes(Nodes):
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
 		'''
 		super().__init__()
@@ -287,12 +289,13 @@ class LIFNodes(Nodes):
 		self.v -= dt * self.decay * (self.v - self.rest)
 		
 		# Decrement refrac counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
-
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh) * (self.refrac_count <= 0)
-		self.refrac_count[self.s] = self.refrac
+		self.refrac_count[self.refrac_count != 0] -= dt
 		
+		# Check for spiking neurons.
+		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+
+		# Refractoriness and voltage reset.
+		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		
 		# Integrate inputs.
@@ -332,10 +335,10 @@ class AdaptiveLIFNodes(Nodes):
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-			| :code:`theta_plus` (`float`): Voltage increase of threshold after spiking.
-			| :code:`theta_decay` (`float`): Time constant of adaptive threshold decay.
+			| :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
+			| :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
 		'''
 		super().__init__()
 
@@ -355,7 +358,7 @@ class AdaptiveLIFNodes(Nodes):
 		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
 		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.s = torch.zeros(self.shape)             # Spike occurences.
+		self.s = torch.zeros(self.shape).byte()      # Spike occurences.
 		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
 
 		if traces:
@@ -378,10 +381,12 @@ class AdaptiveLIFNodes(Nodes):
 		self.theta -= dt * self.theta_decay * self.theta
 		
 		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
+		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count <= 0)
+		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
+
+		# Refractoriness, voltage reset, and adaptive thresholds.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
@@ -423,10 +428,10 @@ class DiehlAndCookNodes(Nodes):
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-			| :code:`theta_plus` (`float`): Voltage increase of threshold after spiking.
-			| :code:`theta_decay` (`float`): Time constant of adaptive threshold decay.
+			| :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
+			| :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
 		'''
 		super().__init__()
 
@@ -446,7 +451,7 @@ class DiehlAndCookNodes(Nodes):
 		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
 		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.s = torch.zeros(self.shape)             # Spike occurences.
+		self.s = torch.zeros(self.shape).byte()      # Spike occurences.
 		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
 
 		if traces:
@@ -469,10 +474,12 @@ class DiehlAndCookNodes(Nodes):
 		self.theta -= dt * self.theta_decay * self.theta
 		
 		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
+		self.refrac_count[self.refrac_count != 0] -= dt
 
 		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count <= 0)
+		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
+
+		# Refractoriness, voltage reset, and adaptive thresholds.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		self.theta += self.theta_plus * self.s.float()
@@ -480,8 +487,9 @@ class DiehlAndCookNodes(Nodes):
 		# Choose only a single neuron to spike.
 		if torch.sum(self.s) > 0:
 			s = torch.zeros(self.s.size())
-			s[torch.multinomial(self.s.float(), 1)] = 1
-			self.s = s.byte()
+			s = s.view(-1)
+			s[torch.multinomial(self.s.float().view(-1), 1)] = 1
+			self.s = s.view(self.s.size()).byte()
 		
 		# Integrate inputs.
 		self.v += inpts
@@ -520,7 +528,7 @@ class IzhikevichNodes(Nodes):
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): refrac (non-firing) period of the neuron.
-			| :code:`decay` (`float`): Time constant of neuron voltage decay.
+			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
 		'''
 		super().__init__()
@@ -553,7 +561,7 @@ class IzhikevichNodes(Nodes):
 		
 		self.v = self.rest * torch.ones(n)  # Neuron voltages.
 		self.u = self.b * self.v            # Neuron recovery.
-		self.s = torch.zeros(n)             # Spike occurences.
+		self.s = torch.zeros(n).byte()      # Spike occurences.
 
 		if traces:
 			self.x = torch.zeros(n)   # Firing traces.
@@ -571,10 +579,12 @@ class IzhikevichNodes(Nodes):
 			| :code:`dt` (:code:`float`): Simulation time step.
 		'''
 		# Decrement refrac counters.
-		self.refrac_count[self.refrac_count > 0] -= dt
+		self.refrac_count[self.refrac_count != 0] -= dt
 		
 		# Check for spiking neurons.
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+		
+		# Refractoriness and voltage reset.
 		self.refrac_count[self.s] = self.refrac
 		self.v[self.s] = self.reset
 		

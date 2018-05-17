@@ -29,8 +29,11 @@ class DatasetEnvironment:
 		self.train = train
 		self.time = time
 		
+		# Keyword arguments.
 		self.intensity = kwargs.get('intensity', 1)
-		self.max_prob = kwargs.get('max_prob', 1)		
+		self.max_prob = kwargs.get('max_prob', 1)
+		
+		assert self.max_prob > 0 and self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 		
 		if train:
 			self.data, self.labels = self.dataset.get_train()
@@ -95,7 +98,7 @@ class DatasetEnvironment:
 	
 	def preprocess(self):
 		'''
-		Preprocessing step for a state specific to the MNIST dataset.
+		Preprocessing step for a state specific to dataset objects.
 
 		Inputs:
 
@@ -126,7 +129,8 @@ class GymEnvironment:
 		self.env = gym.make(name)
 		self.action_space = self.env.action_space
 		
-		self.max_prob = kwargs.get('max_prob', 1)		
+		# Keyword arguments.
+		self.max_prob = kwargs.get('max_prob', 1)
 		
 		assert self.max_prob > 0 and self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 
@@ -189,12 +193,9 @@ class GymEnvironment:
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = self.obs[26:104, :]
 			self.obs = binary_image(self.obs)
-			self.obs_shape = (78, 84)
 		else:
-			assert self.obs.shape == (210, 160, 3), 'Environment not supported.'
-			
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = binary_image(self.obs)
-			self.obs_shape = (110, 84)
 		
+		self.obs_shape = self.obs.shape
 		self.obs = torch.from_numpy(self.obs).view(-1).float()

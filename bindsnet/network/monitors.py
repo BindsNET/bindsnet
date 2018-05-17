@@ -34,7 +34,7 @@ class Monitor:
 		# allocate recordings in memory for speed.
 		else:
 			self.recording = {var : torch.zeros(*self.obj.__dict__[var].size(), self.time) for var in self.state_vars}
-
+		
 	def get(self, var):
 		'''
 		Return recording to user.
@@ -63,12 +63,17 @@ class Monitor:
 			for var in self.state_vars:
 				data = self.obj.__dict__[var].unsqueeze(-1)
 				
-				# 1D data.
 				if len(data.size()) - 1 == 1:
 					self.recording[var][:, self.i % self.time] = data.squeeze()
-				# 2D data.
+
 				elif len(data.size()) - 1 == 2:
 					self.recording[var][:, :, self.i % self.time] = data.squeeze()
+					
+				elif len(data.size()) - 1 == 3:
+					self.recording[var][:, :, :, self.i % self.time] = data.squeeze()
+				
+				elif len(data.size()) - 1 == 4:
+					self.recording[var][:, :, :, :, self.i % self.time] = data.squeeze()
 		
 			self.i += 1
 
@@ -98,6 +103,8 @@ class NetworkMonitor:
 		Inputs:
 		
 			| :code:`network` (:code:`bindsnet.network.Network`): Network to record state variables from.
+			| :code:`layers` (:code:`list(bindsnet.network.nodes.Nodes)`): Layers to record state variables from.
+			| :code:`connections` (:code:`list(bindsnet.network.topology objects)`): Connections to record state variables from.
 			| :code:`state_vars` (:code:`list`): List of strings indicating names of state variables to record.
 			| :code:`time` (:code:`int`): If not :code:`None`, pre-allocate memory for state variable recording.
 		'''
@@ -173,12 +180,12 @@ class NetworkMonitor:
 			for var in self.state_vars:
 				for layer in self.layers:
 					if var in self.network.layers[layer].__dict__:
-						data = self.network.layers[layer].__dict__[var].unsqueeze(-1).float()
+						data = self.network.layers[layer].__dict__[var].float()
 						self.recording[layer][var][:, self.i % self.time] = data
 
 				for connection in self.connections:
 					if var in self.network.connections[connection].__dict__:
-						data = self.network.connections[connection].__dict__[var].unsqueeze(-1)
+						data = self.network.connections[connection].__dict__[var]
 						self.recording[connection][var][:, :, self.i % self.time] = data
 			
 			self.i += 1

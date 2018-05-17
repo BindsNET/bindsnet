@@ -1,19 +1,6 @@
 import torch
 import numpy as np
 
-def no_feedback(pipeline, **kwargs):
-	'''
-	Returns no action; suitable for dataset wrapper "environments."
-	
-	Inputs:
-	
-		| :code:`pipeline` (:code:`bindsnet.pipeline.Pipeline`): Pipeline whose environment accepts no feedback.
-	
-	Returns:
-	
-		| :code:`None`.
-	'''
-	return None
 
 def select_multinomial(pipeline, **kwargs):
 	'''

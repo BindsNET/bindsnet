@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 
 from .feedback           import *
 from ..analysis.plotting import *
+from time                import time
 from ..network.nodes     import Input
+from ..network.monitors  import Monitor
 from ..encoding          import bernoulli
-
 
 plt.ion()
 
@@ -15,7 +16,7 @@ class Pipeline:
 	'''
 	Abstracts the interaction between network, environment (or dataset), input encoding, and environment feedback.
 	'''
-	def __init__(self, network, environment, encoding=bernoulli, feedback=no_feedback, **kwargs):
+	def __init__(self, network, environment, encoding=bernoulli, feedback=None, **kwargs):
 		'''
 		Initializes the pipeline.
 		
@@ -27,12 +28,14 @@ class Pipeline:
 			| :code:`feedback` (:code:`function`): Function to convert network outputs into environment inputs.
 			| :code:`kwargs`:
 			
-				| :code:`plot` (:code:`bool`): Plot monitor variables.
-				| :code:`render` (:code:`bool`): Show the environment.
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
+				| :code:`save_dir` (:code:`str`): Directory to save network object to.
+				| :code:`print_interval` (:code:`int`): Interval to print text output.
 				| :code:`time` (:code:`int`): Time input is presented for to the network.
 				| :code:`history` (:code:`int`): Number of observations to keep track of.
 				| :code:`delta` (:code:`int`): Step size to save observations in history. 
+				| :code:`render_interval` (:code:`bool`): Interval to render the environment.
+				| :code:`save_interval` (:code:`int`): How often to save the network to disk.
 				| :code:`output` (:code:`str`): String name of the layer from which to take output from.
 		'''
 		self.network = network
@@ -41,42 +44,45 @@ class Pipeline:
 		self.feedback = feedback
 		
 		self.iteration = 0
-		self.history_index = 1
-		
-		self.ims_s, self.axes_s     = None, None
-		self.ims_v, self.axes_v     = None, None
+		self.ims_s, self.axes_s = None, None
+		self.ims_v, self.axes_v = None, None
 		self.ims_obs, self.axes_obs = None, None
 		
 		# Setting kwargs.
 		self.time = kwargs.get('time', 1)
-		self.render = kwargs.get('render', False)
-		self.delta = kwargs.get('delta', 1)
-		self.history = kwargs.get('history', 0)
-		self.plot = kwargs.get('plot', False)
-		self.plot_interval = kwargs.get('plot_interval', 100)
 		self.output = kwargs.get('output', None)
+		self.save_dir = kwargs.get('save_dir', 'network.p')
+		self.plot_interval = kwargs.get('plot_interval', None)
+		self.save_interval = kwargs.get('save_interval', None)
+		self.print_interval = kwargs.get('print_interval', None)
+		self.history_length = kwargs.get('history_length', None)
+		self.render_interval = kwargs.get('render_interval', None)
 		
-		assert self.time >= 1, 'Time must be greater than or equal to 1'
-		assert self.render == True or self.render == False, 'Render only accepts boolean values' 
-		assert self.delta >= 1, 'Delta must be greater than or equal to 1'
-		assert self.history >= 0 , 'Delta must be greater than or equal to 0'
-		assert self.plot == True or self.plot == False, 'Plot only accepts boolean values' 
-		assert self.plot_interval >= 10 and self.plot_interval <= 200, 'Plot interval must be greater than or equal to 10 and less than or equal to 200'
-		assert self.output is not None, 'output layer must be defined'
+		self.delta = kwargs.get('delta', 1)
 		
-		self.history = {i : torch.Tensor() for i in range(1, kwargs['history']*self.delta + 1, self.delta)}
+		if self.history_length is not None and self.delta is not None:
+			self.history_index = 1
+			self.history = {i : torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
+		else:
+			self.history_index = 1
+			self.history = {}
 		
-		# Initial plot setup
-		if self.plot:
+		if self.plot_interval is not None:
+			for layer in self.network.layers:
+				self.network.add_monitor(Monitor(self.network.layers[layer], 's', self.plot_interval * self.time), name='%s_spikes' % layer)
+				if 'v' in self.network.layers[layer].__dict__:
+					self.network.add_monitor(Monitor(self.network.layers[layer], 'v', self.plot_interval * self.time), name='%s_voltages' % layer)
+			
 			self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
 			self.set_spike_data()
 			self.plot_data()
 
-		self.print_interval = 100
-		
 		# Set up for multiple layers of input layers
 		self.encoded = {key: torch.Tensor() for key, val in network.layers.items() if type(val) == Input}
 		
+		self.first = True
+		self.clock = time()
+
 	def set_spike_data(self):
 		'''
 		Get the spike data from all layers in the pipeline's network.
@@ -92,26 +98,29 @@ class Pipeline:
 			if 'v' in self.network.layers[layer].__dict__:
 				self.voltage_record[layer] = self.network.monitors['%s_voltages' % layer].get('v')
 
-	def print_iteration(self):
-		'''
-		Prints the current iteration to standard output.
-		'''
-		if self.iteration % self.print_interval == 0:
-			print('Iteration: %d' % self.iteration)
-
-	def step(self):
+	def step(self, **kwargs):
 		'''
 		Run an iteration of the pipeline.
 		'''
-		# Temporary printing
-		self.print_iteration()
+		clamp = kwargs.get('clamp', {})
+		
+		if self.print_interval is not None and self.iteration % self.print_interval == 0:
+			print('Iteration: %d (Time: %.4f)' % (self.iteration, time() - self.clock))
+			self.clock = time()
+		
+		if self.save_interval is not None and self.iteration % self.save_interval == 0:
+			print('Saving network to %s' % self.save_dir)
+			self.network.save(self.save_dir)
 		
 		# Render game.
-		if self.render:
+		if self.render_interval is not None and self.iteration % self.render_interval == 0:
 			self.env.render()
 			
 		# Choose action based on output neuron spiking.
-		action = self.feedback(self, output=self.output)
+		if self.feedback is not None:
+			action = self.feedback(self, output=self.output)
+		else:
+			action = None
 		
 		# Run a step of the environment.
 		self.obs, self.reward, self.done, info = self.env.step(action)
@@ -123,13 +132,18 @@ class Pipeline:
 		
 		# Encode the observation using given encoding function.
 		for inpt in self.encoded:
-			self.encoded[inpt] = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
+			self.encoded[inpt] = self.encoding(self.obs, 
+														time=self.time, 
+														max_prob=self.env.max_prob)
 		
 		# Run the network on the spike train-encoded inputs.
-		self.network.run(inpts=self.encoded, time=self.time, reward=self.reward)
+		self.network.run(inpts=self.encoded,
+						 time=self.time,
+						 reward=self.reward,
+						 clamp=clamp)
 		
 		# Plot relevant data.
-		if self.plot and (self.iteration % self.plot_interval == 0):
+		if self.plot_interval is not None and self.iteration % self.plot_interval == 0:
 			self.plot_data()
 			
 			if self.iteration > len(self.history) * self.delta:  
@@ -206,18 +220,6 @@ class Pipeline:
 			else:
 				self.history_index = (self.history_index % max(self.history.keys())) + 1 
 					
-	def normalize(self, source, target, norm):
-		'''
-		Normalize a connection in the pipeline's :code:`Network`.
-		
-		Inputs:
-		
-			| :code:`source` (:code:`str`): Name of the pre-connection population.
-			| :code:`source` (:code:`str`): Name of the post-connection population.
-			| :code:`norm` (:code:`float`): Normalization constant of the connection weights.
-		'''
-		self.network.connections[(source, target)].normalize(norm)
-	
 	def _reset(self):
 		'''
 		Reset the pipeline.
