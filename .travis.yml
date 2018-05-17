@@ -5,7 +5,7 @@ addons:
 python:
  - "3.6"
 before_install:
- - sudo apt-get install -y python-numpy python-dev cmake zlib1g-dev libjpeg-dev xvfb libav-tools xorg-dev python-opengl libboost-all-dev libsdl2-dev swig
+ - sudo apt-get install -y python-numpy python-dev cmake zlib1g-dev libjpeg-dev xvfb libav-tools xorg-dev python-opengl libboost-all-dev libegl1-mesa-dev libgles2-mesa-dev libsdl2-dev swig
 install:
  - pip install . -q
  - pip install gym[all] -q
