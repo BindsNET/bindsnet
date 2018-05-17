@@ -8,30 +8,6 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
-def get_square_weights(weights, n_sqrt):
-	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < weights.size(1):
-				break
-			
-			fltr = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
-			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = fltr
-	
-	return square_weights
-
-def get_square_assignments(assignments, n_sqrt):
-	square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < assignments.size(0):
-				break
-			
-			assignment = assignments[i * n_sqrt + j]
-			square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
-	
-	return square_assignments
-
 print()
 
 parser = argparse.ArgumentParser()
@@ -71,7 +47,6 @@ network = DiehlAndCook2015(n_inpt=784,
 					   n_neurons=n_neurons,
 					   exc=excite,
 					   inh=inhib,
-					   time=time,
 					   dt=dt,
 					   norm=78.4)
 
@@ -152,7 +127,7 @@ for i in range(n_train):
 	if plot:
 		inpt = inpts['X'].view(time, 784).sum(0).view(28, 28)
 		input_exc_weights = network.connections[('X', 'Ae')].w
-		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt)
+		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt, 28)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		
