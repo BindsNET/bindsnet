@@ -8,32 +8,6 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
-def get_square_weights(weights, n_sqrt):
-	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < weights.size(1):
-				break
-			
-			fltr = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
-			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = fltr
-	
-	return square_weights
-
-def get_square_assignments(assignments, n_sqrt):
-	square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < assignments.size(0):
-				break
-			
-			assignment = assignments[i * n_sqrt + j]
-			square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
-	
-	return square_assignments
-
-print()
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
@@ -69,7 +43,6 @@ network = DiehlAndCook2015(n_inpt=784,
 						   n_neurons=n_neurons,
 						   exc=excite,
 						   inh=inhib,
-						   time=time,
 						   dt=dt,
 						   nu_pre=0,
 						   nu_post=1,
@@ -83,9 +56,6 @@ environment = DatasetEnvironment(dataset=MNIST(path=os.path.join('..', '..', 'da
 
 # Specify spike train encoding.
 encoding = rank_order
-
-# Feedback to environment.
-feedback = no_feedback
 
 spikes = {}
 for layer in set(network.layers):
@@ -101,7 +71,6 @@ for layer in set(network.layers) - {'X'}:
 pipeline = Pipeline(network=network,
 					environment=environment,
 					encoding=encoding,
-					feedback=feedback,
 					plot=plot,
 					time=time,
 				    plot_interval=1)
@@ -157,7 +126,7 @@ for i in range(n_train):
 		image = pipeline.obs.view(28, 28)
 		inpt = pipeline.encoded.view(time, 784).sum(0).view(28, 28)
 		input_exc_weights = network.connections[('X', 'Ae')].w
-		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt)
+		square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt, 28)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
 		
 		if i == 0:

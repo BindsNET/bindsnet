@@ -64,9 +64,9 @@ class Pipeline:
 		
 		if self.plot_interval is not None:
 			for layer in self.network.layers:
-				self.network.add_monitor(Monitor(self.network.layers[layer], 's', self.plot_interval), name='%s_spikes' % layer)
+				self.network.add_monitor(Monitor(self.network.layers[layer], 's', self.plot_interval * self.time), name='%s_spikes' % layer)
 				if 'v' in self.network.layers[layer].__dict__:
-					self.network.add_monitor(Monitor(self.network.layers[layer], 'v', self.plot_interval), name='%s_voltages' % layer)
+					self.network.add_monitor(Monitor(self.network.layers[layer], 'v', self.plot_interval * self.time), name='%s_voltages' % layer)
 			
 			self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
 			self.set_spike_data()
@@ -134,7 +134,7 @@ class Pipeline:
 						 clamp=clamp)
 		
 		# Plot relevant data.
-		if self.plot_interval is not None and (self.iteration % self.plot_interval == 0):
+		if self.plot_interval is not None and self.iteration % self.plot_interval == 0:
 			self.plot_data()
 			
 			if len(self.history) > 0 and not self.iteration < len(self.history) * self.delta:  
