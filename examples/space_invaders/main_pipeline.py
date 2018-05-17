@@ -158,7 +158,8 @@ def network_2():
 network, exc_readout_norm = network_2()
 
 # Load SpaceInvaders environment.
-env = SpaceInvaders(max_prob=1)
+#CartPole-v0'
+env = GymEnvironment('SpaceInvaders-v0', max_prob=1)
 env.reset()
 
 p = Pipeline(network,
@@ -181,7 +182,6 @@ try:
 	while True:
 		p.step()
 		p.normalize('E', 'R', exc_readout_norm)
-
 #		if plot:
 #			if first:
 #				im = plot_weights(p.network.connections[('E', 'R')])

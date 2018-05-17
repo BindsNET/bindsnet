@@ -2,50 +2,58 @@ import sys
 import numpy as np
 
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import matplotlib.animation as animation
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import matplotlib.animation as animation
-import matplotlib.gridspec as gridspec
 
-def spike_trains_main(data=None, n_ex=None, top_k=None, indices=None):
-	for j in range(top_k):
-		plot_spike_trains_examples(data, n_ex=n_ex)
-
-def create_movie(weights):
+def plot_weights_movie(ws, sample_every=1):
+	"""
+	Create and plot movie of weights (ws).
+	
+	Inputs:
+	
+		| :code:`ws` (:code:`numpy.array`): Numpy array of shape :code:`[N_examples, source, target, time]`
+		| :code:`sample_every` (:code:`int`): Sub-sample using this parameter. For example if :code:`time` is
+																  too large (500), set this parameter to 20 to sample weights 
+																  every 20 iterations. 
+	
+	"""
+	weights = []
+	
+	# Obtain samples from the weights for every example
+	for i in range(ws.shape[0]):
+		sub_sampled_weight = ws[i, :, :, range(0, ws[i].shape[2], sample_every)]
+		weights.append(sub_sampled_weight)
+	else:
+		weights = np.concatenate(weights, axis=0)
+	
+	# Initialize plot
 	fig = plt.figure()
-	im = plt.imshow(weights[:, :, 0], cmap='hot_r', animated=True, vmin=0, vmax=1)
+	im = plt.imshow(weights[0, :, :], cmap='hot_r', animated=True, vmin=0, vmax=1)
 	plt.axis('off'); plt.colorbar(im)
 		
+	# Update function for the animation
 	def update(j):
-		im.set_data(weights[:, :, j])
+		im.set_data(weights[j, :, :])
 		return [im]
 	
+	# Initialize animatino
 	global ani; ani=0
 	ani = animation.FuncAnimation(fig, update, frames=weights.shape[-1], interval=1000, blit=True)
 	plt.show()
-
-def plot_weights_movie(weights):
-	n_examples = weights.shape[0]
-	ws = []
-	for i in range(n_examples):
-		ws.append(get_weights_for_example(weights[i]))
-	ws = np.concatenate(ws, axis=2)
-	create_movie(ws)
-		
-def get_weights_for_example(w, sample_every=1):
-	return w[:, :, range(0, w.shape[2], sample_every)]
-
+	
 def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	'''
 	Plot spike trains for top-k neurons or for specific indices.
 	
 	Inputs:
 	
-		| :code:`spikes` (:code:`torch.tensor (N_examples, N_neurons, time)`): Spiking train data for a population of neurons for one example
-		| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot spikes for. Must be >= 0
-		| :code:`top_k` (:code:`int`): Plot k neurons that spiked the most for n_ex example
+		| :code:`top_k` (:code:`int`): Plot k neurons that spiked the most for n_ex example.
+		| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot spikes for. Must be >= 0.
 		| :code:`indices` (:code:`list(int)`): Plot specific neurons' spiking activity instead of top_k. Meant to replace top_k. 
+		| :code:`spikes` (:code:`torch.tensor (n_examples, n_neurons, time)`): Spiking train data for a population of neurons for one example.
 	'''
 
 	assert (n_ex is not None and n_ex >= 0 and n_ex < spikes.shape[0])
@@ -54,6 +62,7 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	
 	if top_k is None and indices is None: # Plot all neurons' spiking activity
 		spike_per_neuron = [np.argwhere(i==1).flatten() for i in spikes[n_ex, :, :]]
+		plt.title('Spiking activity for all %d neurons'%spikes.shape[1])
 		
 	elif top_k is None: # Plot based on indices parameter
 		assert (indices is not None)
@@ -75,12 +84,13 @@ def plot_voltage(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
 	Plot voltage for a single neuron on a specific example.
 	
 	Inputs:
-
-		| :code:`voltage` (:code:`torch.Tensor`): Membrane voltage data for a population of neurons.
+		
+		| :code:`n_neuron` (:code:`int`): Neuron index for which to plot voltages for.
 		| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot voltage for.
-		| :code:`n_neuron` (:code:`int`): Neuron index for which to plot voltages for
-		| :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons between the given range of time. 
 		| :code:`threshold` (:code:`float`): Neuron spiking threshold. Will be shown on the plot.
+		| :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons between the given range of time. 
+		| :code:`voltage` (:code:`torch.Tensor` or :code:`numpy.array`): Tensor or array of shape :code:`[n_examples, n_neurons, time]`.
+		
 	'''
 	
 	assert (n_ex >= 0 and n_neuron >= 0)
@@ -110,10 +120,13 @@ def plot_voltage(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
 	
 def main():
 	np.random.seed(0)
-	data = np.random.binomial(1, 0.25, size=(5, 20, 100))
-	data = np.random.uniform(0, 30, size=(5, 20, 100))
+	#data = np.random.binomial(1, 0.25, size=(5, 20, 20))
+	data = np.random.uniform(0, 20, size=(5, 10, 50))
 	data = np.sort(data, axis=2)
-	plot_voltages(data, n_ex=2, n_neuron=15, threshold=20)
+	
+	plot_voltage(data, n_ex=2, n_neuron=3, threshold=15.)
+#	plot_spike_trains_for_example(data, n_ex=2)
+#	plot_weights_movie(data)
 	
 if __name__ == '__main__':
 	main()

@@ -165,7 +165,7 @@ class Pipeline:
 			self.ims_s, self.axes_s = plot_spikes(self.spike_record, ims=self.ims_s, axes=self.axes_s)
 			self.ims_v, self.axes_v = plot_voltages(self.voltage_record, ims=self.ims_v, axes=self.axes_v)
 		
-		plt.pause(1e-3)
+		plt.pause(1e-8)
 		plt.show()
 
 	def update_history(self):
