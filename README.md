@@ -18,7 +18,7 @@ To build the `bindsnet` package from source, change directory to the top level o
 pip install .
 ```
 
-Or, to install in editable mode:
+Or, to install in editable mode (allows modification of package with re-installing):
 
 ```
 pip install -e .
@@ -33,9 +33,17 @@ cd examples/mnist
 python eth_mnist.py
 ```
 
-There are a number of optional command-line arguments which can be passed in, including `--plot` (displays useful monitoring figures), `--n_neurons [int]` (number of excitatory, inhibitory neurons simulated), `--mode ['train' | 'test']` (sets network operation to the training or testing phase), and more. Run the script with the `--help` or `-h` flag for more options.
+There are a number of optional command-line arguments which can be passed in, including `--plot` (displays useful monitoring figures), `--n_neurons [int]` (number of excitatory, inhibitory neurons simulated), `--mode ['train' | 'test']` (sets network operation to the training or testing phase), and more. Run the script with the `--help` or `-h` flag for more information.
 
 A number of other examples are available in the `examples` directory that are meant to showcase BindsNET's functionality. Take a look, and let us know what you think!
+
+## Running the tests
+
+Issue the following to run the tests:
+
+```
+python -m pytest test
+```
 
 ## Background
 
