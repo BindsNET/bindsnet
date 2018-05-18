@@ -113,7 +113,7 @@ class Connection(AbstractConnection):
 				| :code:`wmax` (:code:`float`): The maximum value on the connection weights.
 				| :code:`norm` (:code:`float`): Total weight per target neuron normalization.
 		'''
-		super().__init__(source, target, nu_pre, nu_post, **kwargs)
+		super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 
 		self.w = kwargs.get('w', torch.rand(*source.shape, *target.shape))
 		self.w = torch.clamp(self.w, self.wmin, self.wmax)
@@ -182,7 +182,7 @@ class Conv2dConnection:
 				| :code:`wmax` (:code:`float`): The maximum value on the connection weights.
 				| :code:`norm` (:code:`float`): Total weight per target neuron normalization.
 		'''
-		super().__init__(source, target, nu_pre, nu_post, **kwargs)
+		super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 		
 		self.kernel_size = _pair(kernel_size)
 		self.stride = _pair(stride)
@@ -265,7 +265,7 @@ class SparseConnection:
 				| :code:`wmax` (:code:`float`): The maximum value on the connection weights.
 				| :code:`norm` (:code:`float`): Total weight per target neuron normalization.
 		'''
-		super().__init__(source, target, nu_pre, nu_post, **kwargs)
+		super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 		
 		self.w = kwargs.get('w', None)
 		self.sparsity = kwargs.get('sparsity', None)

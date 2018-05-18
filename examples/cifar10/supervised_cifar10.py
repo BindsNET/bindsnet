@@ -49,7 +49,7 @@ network = DiehlAndCook2015(n_inpt=32*32*3,
 					   inh=inh,
 					   dt=dt,
 					   nu_pre=0,
-					   nu_post=1e-1,
+					   nu_post=0.5,
 					   wmin=0,
 					   wmax=10,
 					   norm=3500)
@@ -134,21 +134,18 @@ for i in range(n_train):
 	
 	# Optionally plot various simulation information.
 	if plot:
-		print(inpts['X'].size())
-		
 		if gpu:
 			inpt = inpts['X'].view(time, 3, 32, 32).sum(0).cpu().numpy().transpose(1, 2, 0)
 		else:
 			inpt = inpts['X'].view(time, 3, 32, 32).sum(0).numpy().transpose(1, 2, 0)
 		
 		input_exc_weights = network.connections[('X', 'Ae')].w
-		print(input_exc_weights.size())
 		square_weights = get_square_weights(input_exc_weights.view(3, 32*32, n_neurons).sum(0), n_sqrt, 32)
 		square_assignments = get_square_assignments(assignments, n_sqrt)
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		
 		if i == 0:
-			inpt_axes, inpt_ims = plot_input(images[i].view(3, 32, 32).sum(0), inpt, label=labels[i])
+			# inpt_axes, inpt_ims = plot_input(images[i].view(3, 32, 32).sum(0), inpt, label=labels[i])
 			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes})
 			weights_im = plot_weights(square_weights, wmax=10)
 			assigns_im = plot_assignments(square_assignments)
@@ -156,7 +153,7 @@ for i in range(n_train):
 			voltage_ims, voltage_axes = plot_voltages(voltages)
 			
 		else:
-			inpt_axes, inpt_ims = plot_input(images[i].view(3, 32, 32).sum(0), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
+			# inpt_axes, inpt_ims = plot_input(images[i].view(3, 32, 32).sum(0), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes},
 												ims=spike_ims, axes=spike_axes)
 			weights_im = plot_weights(square_weights, im=weights_im)

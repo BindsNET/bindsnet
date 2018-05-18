@@ -10,7 +10,7 @@ class Nodes(ABC):
 	def __init__(self, n, shape=None, traces=False, trace_tc=5e-2):
 		super().__init__()
 		
-		self.n = n  # No. of neurons.
+		self.n = n                               # No. of neurons.
 		
 		if shape is None:
 			self.shape = [self.n]                # Shape is equal to the size of the layer.
@@ -329,7 +329,7 @@ class AdaptiveLIFNodes(Nodes):
 		'''
 		super()._reset()
 		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
-		self.refrac_count[self.refrac_count != 0] = 0  # refrac period counters.
+		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
 
 
 class DiehlAndCookNodes(Nodes):
@@ -410,7 +410,7 @@ class DiehlAndCookNodes(Nodes):
 		'''
 		super()._reset()
 		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
-		self.refrac_count[self.refrac_count != 0] = 0  # refrac period counters.
+		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
 
 
 class IzhikevichNodes(Nodes):
@@ -438,7 +438,7 @@ class IzhikevichNodes(Nodes):
 		self.rest = rest      # Rest voltage.
 		self.reset = reset    # Post-spike reset voltage.
 		self.thresh = thresh  # Spike threshold voltage.
-		self.refrac = refrac  # Post-spike refrac period.
+		self.refrac = refrac  # Post-spike refractory period.
 		self.decay = decay    # Rate of decay of neuron voltage.
 		
 		if excitatory:
@@ -490,4 +490,4 @@ class IzhikevichNodes(Nodes):
 		super()._reset()
 		self.v = self.rest * torch.ones(self.n)  # Neuron voltages.
 		self.u = self.b * self.v                 # Neuron recovery.
-		self.refrac_count = torch.zeros(self.n)  # refrac period counters.
+		self.refrac_count = torch.zeros(self.n)  # Refractory period counters.

@@ -273,7 +273,7 @@ class SpokenMNIST(Dataset):
 			os.makedirs(path)
 		
 		self.path = path
-		self.data_path = os.path.join(self.path, CIFAR10.data_directory)
+		self.data_path = os.path.join(self.path, SpokenMNIST.data_directory)
 	
 	def get_train(self, split=0.8):
 		'''
