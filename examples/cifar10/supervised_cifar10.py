@@ -8,33 +8,6 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
-def get_square_weights(weights, n_sqrt, side):
-	square_weights = torch.zeros_like(torch.Tensor(side * n_sqrt, side * n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < weights.size(1):
-				break
-			
-			fltr = weights[:, i * n_sqrt + j].contiguous().view(side, side)
-			square_weights[i * side : (i + 1) * side, (j % n_sqrt) * side : ((j % n_sqrt) + 1) * side] = fltr
-	
-	return square_weights
-
-
-def get_square_assignments(assignments, n_sqrt):
-	square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < assignments.size(0):
-				break
-			
-			assignment = assignments[i * n_sqrt + j]
-			square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
-	
-	return square_assignments
-
-print()
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
@@ -70,16 +43,17 @@ start_intensity = intensity
 per_class = int(n_neurons / 10)
 
 # Build network.
-network = DiehlAndCook(n_inpt=32*32*3,
+network = DiehlAndCook2015(n_inpt=32*32*3,
 					   n_neurons=n_neurons,
 					   exc=exc,
 					   inh=inh,
-					   time=time,
 					   dt=dt,
 					   nu_pre=0,
 					   nu_post=1e-1,
 					   wmin=0,
-					   wmax=10)
+					   wmax=10,
+					   norm=3500)
+
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -156,7 +130,7 @@ for i in range(n_train):
 	# Add to spikes recording.
 	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
 	
-	network.connections[('X', 'Ae')].normalize(3500)  # Normalize input -> excitatory weights
+	network.connections[('X', 'Ae')].normalize()  # Normalize input -> excitatory weights
 	
 	# Optionally plot various simulation information.
 	if plot:

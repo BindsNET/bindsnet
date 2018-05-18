@@ -14,7 +14,7 @@ class DatasetEnvironment:
 	'''
 	A wrapper around any object from the :code:`datasets` module to pass to the :code:`Pipeline` object.
 	'''
-	def __init__(self, dataset=MNIST, train=True, time=350, **kwargs):
+	def __init__(self, dataset, train=True, time=350, **kwargs):
 		'''
 		Initializes the environment wrapper around the dataset.
 		
@@ -110,6 +110,13 @@ class DatasetEnvironment:
 		'''
 		self.obs = self.obs.view(-1)
 		self.obs *= self.intensity
+		
+		if type(self.dataset) == MNIST:
+			self.obs_shape = (28, 28)
+		if type(self.dataset) in [CIFAR10, CIFAR100]:
+			self.obs_shape = (32, 32, 3)
+		else:
+			self.obs_shape = self.obs.shape
 
 
 class GymEnvironment:

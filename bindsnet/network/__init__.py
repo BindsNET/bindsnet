@@ -23,7 +23,7 @@ def load_network(fname):
 
 class Network:
 	'''
-	Combines nodes and connections to create a network.
+	Most important object of the :code:`bindsnet` package. Responsible for the simulatio and interaction of nodes and connections.
 	
 	**Example:**
 	
@@ -76,11 +76,11 @@ class Network:
 	'''
 	def __init__(self, dt=1.0):
 		'''
-		Initializes network object.
+		Initializes network object. 
 		
 		Inputs:
 		
-			| :code:`dt` (:code:`float`): Simulation timestep. All other
+			| :code:`dt` (:code:`float`): Simulation timestep. All other 
 				objects' time constants are relative to this value.
 		'''
 		self.dt = dt
@@ -190,6 +190,11 @@ class Network:
 		
 			| :code:`inpts` (:code:`dict`): Dictionary of :code:`Tensor`s of shape :code:`[time, n_input]`.
 			| :code:`time` (:code:`int`): Simulation time.
+
+			Keyword arguments:
+
+				| :code:`clamps` (:code:`dict`): Mapping of layer names to neurons which to "clamp" to spiking.
+				| :code:`reward` (:code:`float`): Scalar value used in reward-modulated learning.
 		
 		**Example:**
 	
@@ -255,7 +260,7 @@ class Network:
 			for m in self.monitors:
 				self.monitors[m].record()
 		
-		# Re-normalize connections (with norms).
+		# Re-normalize connections.
 		for c in self.connections:
 			self.connections[c].normalize()
 

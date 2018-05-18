@@ -8,32 +8,6 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
-def get_square_weights(weights, n_sqrt, side):
-	square_weights = torch.zeros_like(torch.Tensor(side * n_sqrt, side * n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < weights.size(1):
-				break
-			
-			fltr = weights[:, i * n_sqrt + j].contiguous().view(side, side)
-			square_weights[i * side : (i + 1) * side, (j % n_sqrt) * side : ((j % n_sqrt) + 1) * side] = fltr
-	
-	return square_weights
-
-def get_square_assignments(assignments, n_sqrt):
-	square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < assignments.size(0):
-				break
-			
-			assignment = assignments[i * n_sqrt + j]
-			square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
-	
-	return square_assignments
-
-print()
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
@@ -67,14 +41,14 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 path = os.path.join('..', '..', 'data', 'CIFAR10')
 	
 # Build network.
-network = DiehlAndCook(n_inpt=32*32*3,
+network = DiehlAndCook2015(n_inpt=32*32*3,
 					   n_neurons=n_neurons,
 					   exc=exc,
 					   inh=inh,
-					   time=time,
 					   dt=dt,
 					   nu_pre=2e-5,
-					   nu_post=2e-3)
+					   nu_post=2e-3,
+					   norm=10.0)
 
 # Initialize data "environment".
 environment = DatasetEnvironment(dataset=CIFAR10(path=path),
@@ -82,9 +56,8 @@ environment = DatasetEnvironment(dataset=CIFAR10(path=path),
 								 time=time,
 								 intensity=intensity)
 
-# Specify data encoding and network to environment feedback.
+# Specify data encoding.
 encoding = poisson
-feedback = no_feedback
 
 spikes = {}
 for layer in set(network.layers):
@@ -100,7 +73,6 @@ for layer in set(network.layers) - {'X'}:
 pipeline = Pipeline(network=network,
 					environment=environment,
 					encoding=encoding,
-					feedback=feedback,
 					plot=plot,
 					time=time,
 				    plot_interval=1)
@@ -150,9 +122,6 @@ for i in range(n_train):
 	
 	# Add to spikes recording.
 	spike_record[i % update_interval] = spikes['Ae'].get('s').t()
-	
-	# Normalize input -> excitatory weights
-	pipeline.normalize(source='X', target='Ae', norm=10.0)
 	
 	# Optionally plot various simulation info.
 	if plot:
