@@ -98,7 +98,7 @@ class DatasetEnvironment:
 	
 	def preprocess(self):
 		'''
-		Preprocessing step for a state specific to the MNIST dataset.
+		Preprocessing step for a state specific to dataset objects.
 
 		Inputs:
 
@@ -193,12 +193,9 @@ class GymEnvironment:
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = self.obs[26:104, :]
 			self.obs = binary_image(self.obs)
-			self.obs_shape = (78, 84)
 		else:
-			assert self.obs.shape == (210, 160, 3), 'Environment not supported.'
-			
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = binary_image(self.obs)
-			self.obs_shape = (110, 84)
 		
+		self.obs_shape = self.obs.shape
 		self.obs = torch.from_numpy(self.obs).view(-1).float()

@@ -22,22 +22,20 @@ class TestNodes:
 				
 				assert layer.n == n
 				assert all(layer.s.float() == torch.zeros(n))
-				assert all(layer.get_spikes().float() == torch.zeros(n))
 				
 				if nodes in [LIFNodes,
 							 AdaptiveLIFNodes]:
-					assert all(layer.get_voltages() == layer.rest * torch.ones(n))
+					assert all(layer.v == layer.rest * torch.ones(n))
 
 				layer = nodes(n, traces=True, trace_tc=1e-5)
 				
 				assert layer.n == n; assert layer.trace_tc == 1e-5
 				assert all(layer.s.float() == torch.zeros(n)); assert all(layer.x == torch.zeros(n))
-				assert all(layer.get_spikes().float() == torch.zeros(n))
-				assert all(layer.get_traces() == torch.zeros(n))
+				assert all(layer.x == torch.zeros(n))
 				
 				if nodes in [LIFNodes,
 							 AdaptiveLIFNodes]:
-					assert all(layer.get_voltages() == layer.rest * torch.ones(n))
+					assert all(layer.v == layer.rest * torch.ones(n))
 
 		for nodes in [LIFNodes,
 					  AdaptiveLIFNodes]:
@@ -46,5 +44,5 @@ class TestNodes:
 				
 				assert layer.rest == 0.0; assert layer.reset == -10.0; assert layer.thresh == 10.0
 				assert layer.refrac == 3; assert layer.decay == 7e-4
-				assert all(layer.get_spikes().float() == torch.zeros(n))
-				assert all(layer.get_voltages() == layer.rest * torch.ones(n))
+				assert all(layer.s.float() == torch.zeros(n))
+				assert all(layer.v == layer.rest * torch.ones(n))

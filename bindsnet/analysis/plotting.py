@@ -454,7 +454,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 				
 				axes.set_aspect('auto')
 
-		else:
+		else: # Plot each layer at a time
 			for i, datum in enumerate(voltages.items()):
 				axes[i].clear()
 				axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
@@ -462,7 +462,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 
 			for ax in axes:
 				ax.set_aspect('auto')
-			
+		
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
 		plt.tight_layout()
 	

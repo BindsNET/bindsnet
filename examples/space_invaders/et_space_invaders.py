@@ -103,4 +103,5 @@ try:
 		if pipeline.done == True:
 			pipeline._reset()
 except KeyboardInterrupt:
+	plt.close("all")
 	environment.close()
