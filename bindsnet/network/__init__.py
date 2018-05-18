@@ -23,7 +23,7 @@ def load_network(fname):
 
 class Network:
 	'''
-	Most important object of the :code:`bindsnet` package. Responsible for the simulatio and interaction of nodes and connections.
+	Most important object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and connections.
 	
 	**Example:**
 	
