@@ -1,17 +1,10 @@
 import torch
-# import torch.nn as nn
+import torch.nn as nn
 import matplotlib.pyplot as plt
-# import torchvision.datasets as dsets
-# import torchvision.transforms as transforms
+import torchvision.datasets as dsets
+import torchvision.transforms as transforms
 
-from bindsnet.datasets         import MNIST
-from bindsnet.network          import Network
-from bindsnet.pipeline         import Pipeline
-from bindsnet.network.topology import Connection
-from bindsnet.encoding         import poisson_loader
-from bindsnet.network.nodes    import Input, LIFNodes
-from bindsnet.environment      import DatasetEnvironment
-from bindsnet.network.monitors import Monitor
+from bindsnet import *
 
 # from torch.autograd import Variable
 
@@ -46,25 +39,31 @@ inpt_ims = None
 spike_axes = None
 spike_ims = None
 weights_im = None
+weights_im2 = None
 voltage_ims = None
 voltage_axes = None
 
 # Run training data on reservoir computer and store (spikes per neuron, label) per example.
+n_iters = 500
 training_pairs = []
 for i, (datum, label) in enumerate(loader):
+	if i % 100 == 0:
+		print('Train progress: (%d / %d)' % (i, n_iters))
+	
 	network.run(inpts={'I' : datum}, time=250)
 	training_pairs.append([spikes['O'].get('s').sum(-1), label])
 	
-	# inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
-	# spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
-	# voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
-	# weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im)
+	inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
+	spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
+	voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
+	weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im)
+	weights_im2 = plot_weights(C2.w, im=weights_im2)
 	
 	plt.pause(1e-8)
 	
 	network._reset()
 	
-	if i > 1000:
+	if i > n_iters:
 		break
 
 # Define logistic regression model using PyTorch.
@@ -80,30 +79,57 @@ class LogisticRegression(nn.Module):
 # Create and train logistic regression model on reservoir outputs.
 model = LogisticRegression(625, 10)
 criterion = nn.CrossEntropyLoss()  
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)  
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)  
 
 # Training the Model
 for epoch in range(10):
-    for i, (spikes, label) in enumerate(train_pairs):
-        # Forward + Backward + Optimize
-        optimizer.zero_grad()
-        outputs = model(image)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        
-        if (i+1) % 100 == 0:
-            print ('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' 
-                   % (epoch+1, 10, i+1, len(training_pairs), loss.data[0]))
+	for i, (s, label) in enumerate(training_pairs):
+		# Forward + Backward + Optimize
+		optimizer.zero_grad()
+		outputs = model(s)
+		loss = criterion(outputs.unsqueeze(0), label.unsqueeze(0).long())
+		loss.backward()
+		optimizer.step()
+
+		if (i+1) % 100 == 0:
+			print ('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' 
+				   % (epoch+1, 10, i+1, len(training_pairs), loss.data[0]))
+
+# Get MNIST test images and labels.
+images, labels = MNIST(path='../../data/MNIST').get_test()
+images *= 0.25
+
+# Create lazily iterating Poisson-distributed data loader.
+loader = zip(poisson_loader(images, time=250), iter(labels))
+
+n_iters = 500
+test_pairs = []
+for i, (datum, label) in enumerate(loader):
+	if i % 100 == 0:
+		print('Test progress: (%d / %d)' % (i, n_iters))
+	
+	network.run(inpts={'I' : datum}, time=250)
+	test_pairs.append([spikes['O'].get('s').sum(-1), label])
+	
+	inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
+	spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
+	voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
+	weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im)
+	weights_im2 = plot_weights(C2.w, im=weights_im2)
+	
+	plt.pause(1e-8)
+	
+	network._reset()
+	
+	if i > n_iters:
+		break
 
 # Test the Model
-correct = 0
-total = 0
-for images, labels in test_loader:
-    images = Variable(images.view(-1, 28*28))
-    outputs = model(images)
-    _, predicted = torch.max(outputs.data, 1)
-    total += labels.size(0)
-    correct += (predicted == labels).sum()
+correct, total = 0, 0
+for s, label in test_pairs:
+    outputs = model(s)
+    _, predicted = torch.max(outputs.data.unsqueeze(0), 1)
+    total += 1
+    correct += int(predicted == label.long())
     
-print('Accuracy of the model on the 10000 test images: %d %%' % (100 * correct / total))
+print('Accuracy of the model on %d test images: %.2f %%' % (n_iters, 100 * correct / total))

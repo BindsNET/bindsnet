@@ -205,7 +205,7 @@ class MNIST(Dataset):
 			
 			images[i] = [[unpack('>B', data.read(1))[0] for _ in range(cols)] for _ in range(rows)]
 			
-		print('Progress: %d / %d' % (n_images, n_images))
+		print('Progress: %d / %d\n' % (n_images, n_images))
 
 		return images
 	
@@ -239,7 +239,7 @@ class MNIST(Dataset):
 				
 			labels[i] = unpack('>B', data.read(1))[0]
 
-		print('Progress: %d / %d' % (n_labels, n_labels))
+		print('Progress: %d / %d\n' % (n_labels, n_labels))
 
 		return labels
 
