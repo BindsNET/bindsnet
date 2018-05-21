@@ -47,7 +47,7 @@ def bernoulli_loader(data, time=None, **kwargs):
 
 	Inputs:
 	
-		| :code:`data` (:code:`torch.Tensor`): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`.
+		| :code:`data` (:code:`torch.Tensor` or iterable of :code:`torch.Tensor`s): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`.
 		| :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
 		| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
 	
@@ -60,7 +60,7 @@ def bernoulli_loader(data, time=None, **kwargs):
 	else:
 		max_prob = 1.0
 	
-	for i in range(data.size(0)):
+	for i in range(len(data)):
 		yield bernoulli(data[i], time, max_prob=max_prob)  # Encode datum as Bernoulli spike trains.
 
 def poisson(datum, time, **kwargs):
@@ -105,14 +105,14 @@ def poisson_loader(data, time, **kwargs):
 	
 	Inputs:
 	
-		| :code:`data` (:code:`torch.Tensor`): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`
+		| :code:`data` (:code:`torch.Tensor` or iterable of :code:`torch.Tensor`s): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`
 		| :code:`time` (:code:`int`): Length of Poisson spike train per input variable.
 
 	Yields:
 	
 		| (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]` of Poisson-distributed spikes.
 	'''
-	for i in range(data.size(0)):
+	for i in range(len(data)):
 		yield poisson(data[i], time)  # Encode datum as Poisson spike trains.
 
 
@@ -157,12 +157,12 @@ def rank_order_loader(data, time, **kwargs):
 	
 	Inputs:
 	
-		| :code:`data` (:code:`torch.Tensor`): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`
+		| :code:`data` (:code:`torch.Tensor` or iterable of :code:`torch.Tensor`s): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`
 		| :code:`time` (:code:`int`): Length of Poisson spike train per input variable.
 
 	Yields:
 	
 		| (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]` of rank order-encoded spikes.
 	'''
-	for i in range(data.size(0)):
+	for i in range(len(data)):
 		yield rank_order(data[i], time)  # Encode datum as rank order-encoded spike trains.
