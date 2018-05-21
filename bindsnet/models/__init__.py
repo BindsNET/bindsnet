@@ -55,7 +55,8 @@ class DiehlAndCook2015(Network):
 	'''
 	Implements the spiking neural network architecture from `(Diehl & Cook 2015) <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
 	'''
-	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, dt=1.0, nu_pre=1e-4, nu_post=1e-2, wmin=0, wmax=1, norm=78.4):
+	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, dt=1.0, nu_pre=1e-4,
+				 nu_post=1e-2, wmin=0, wmax=1, norm=78.4, theta_plus=0.05, theta_decay=1e-7):
 		'''
 		Inputs:
 		
@@ -82,13 +83,13 @@ class DiehlAndCook2015(Network):
 		self.add_layer(DiehlAndCookNodes(n=self.n_neurons,
 										traces=True,
 										rest=-65.0,
-										reset=-65.0,
+										reset=-60.0,
 										thresh=-52.0,
 										refrac=5,
 										decay=1e-2,
 										trace_tc=5e-2,
-										theta_plus=0.05,
-										theta_decay=1e-7),
+										theta_plus=theta_plus,
+										theta_decay=theta_decay),
 					   name='Ae')
 		
 		self.add_layer(LIFNodes(n=self.n_neurons,

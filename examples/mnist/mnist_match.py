@@ -25,18 +25,6 @@ locals().update(vars(parser.parse_args()))
 
 clamped = min(clamped, int(n / 10))
 
-def get_square_weights(weights, n_sqrt):
-	square_weights = torch.zeros_like(torch.Tensor(28 * n_sqrt, 28 * n_sqrt))
-	for i in range(n_sqrt):
-		for j in range(n_sqrt):
-			if not i * n_sqrt + j < weights.size(1):
-				break
-			
-			fltr = weights[:, i * n_sqrt + j].contiguous().view(28, 28)
-			square_weights[i * 28 : (i + 1) * 28, (j % n_sqrt) * 28 : ((j % n_sqrt) + 1) * 28] = fltr
-	
-	return square_weights
-
 sqrt = int(np.ceil(np.sqrt(n)))
 
 network = Network(dt=1.0)
@@ -97,7 +85,7 @@ for i in range(i):
 		
 	inpts = {'X' : next(loader).view(1, 784)}
 	kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
-	
+
 	network.run(inpts, 1, **kwargs)
 	
 	spikes = {layer : spike_monitors[layer].get('s').view(-1) for layer in spike_monitors}
@@ -151,7 +139,7 @@ for i in range(i):
 	if plot:
 		if i == 0:
 			spike_ims, spike_axes = plot_spikes(spike_record)
-			weights_im = plot_weights(get_square_weights(econn.w, sqrt))
+			weights_im = plot_weights(get_square_weights(econn.w, sqrt, side=28))
 
 			fig, ax = plt.subplots()
 			im = ax.matshow(torch.stack([avg_rates, target_rates]), cmap='hot_r')
@@ -186,7 +174,7 @@ for i in range(i):
 
 		elif (i + 1) % plot_interval == 0:
 			spike_ims, spike_axes = plot_spikes(spike_record, spike_ims, spike_axes)
-			weights_im = plot_weights(get_square_weights(econn.w, sqrt), im=weights_im)
+			weights_im = plot_weights(get_square_weights(econn.w, sqrt, side=28), im=weights_im)
 			
 			im.set_data(torch.stack([avg_rates, target_rates]))
 			

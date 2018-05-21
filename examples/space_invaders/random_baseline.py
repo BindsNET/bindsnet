@@ -12,7 +12,7 @@ parser.set_defaults(render=False)
 locals().update(vars(parser.parse_args()))
 
 # Load SpaceInvaders environment.
-env = SpaceInvaders()
+env = GymEnvironment('SpaceInvaders-v0')
 env.reset()
 
 total = 0
