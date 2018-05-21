@@ -112,3 +112,6 @@ results/
 
 # pytest cache
 .pytest_cache/
+
+# Swap files.
+*.swp

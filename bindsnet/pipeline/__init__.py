@@ -1,11 +1,11 @@
 import sys
+import time
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
 from .feedback           import *
 from ..analysis.plotting import *
-from time                import time
 from ..network.nodes     import Input
 from ..network.monitors  import Monitor
 from ..encoding          import bernoulli
@@ -81,7 +81,7 @@ class Pipeline:
 		self.encoded = {key: torch.Tensor() for key, val in network.layers.items() if type(val) == Input}
 		
 		self.first = True
-		self.clock = time()
+		self.clock = time.time()
 
 	def set_spike_data(self):
 		'''
@@ -105,8 +105,8 @@ class Pipeline:
 		clamp = kwargs.get('clamp', {})
 		
 		if self.print_interval is not None and self.iteration % self.print_interval == 0:
-			print('Iteration: %d (Time: %.4f)' % (self.iteration, time() - self.clock))
-			self.clock = time()
+			print('Iteration: %d (Time: %.4f)' % (self.iteration, time.time() - self.clock))
+			self.clock = time.time()
 		
 		if self.save_interval is not None and self.iteration % self.save_interval == 0:
 			print('Saving network to %s' % self.save_dir)

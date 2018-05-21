@@ -8,18 +8,16 @@ import matplotlib.pyplot as plt
 from bindsnet import *
 from time     import time as t
 
-print()
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
 parser.add_argument('--excite', type=float, default=22.5)
-parser.add_argument('--inhib', type=float, default=17.5)
+parser.add_argument('--inhib', type=float, default=50.0)
 parser.add_argument('--time', type=int, default=350)
 parser.add_argument('--dt', type=int, default=1.0)
-parser.add_argument('--intensity', type=float, default=0.25)
+parser.add_argument('--intensity', type=float, default=0.5)
 parser.add_argument('--progress_interval', type=int, default=10)
 parser.add_argument('--update_interval', type=int, default=250)
 parser.add_argument('--train', dest='train', action='store_true')
@@ -48,7 +46,8 @@ network = DiehlAndCook2015(n_inpt=784,
 					   exc=excite,
 					   inh=inhib,
 					   dt=dt,
-					   norm=78.4)
+					   norm=78.4,
+					   theta_plus=1)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -81,7 +80,7 @@ for layer in set(network.layers) - {'X'}:
 	network.add_monitor(spikes[layer], name='%s_spikes' % layer)
 
 # Train the network.
-print('Begin training.\n')
+print('\nBegin training.\n')
 start = t()
 
 for i in range(n_train):    

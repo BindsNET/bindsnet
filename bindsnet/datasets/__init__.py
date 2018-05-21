@@ -8,8 +8,10 @@ import urllib
 import shutil
 import tarfile
 import pickle as p
-import numpy  as np
+import numpy as np
+import multiprocessing as mp
 
+from tqdm           import tqdm
 from struct         import unpack
 from urllib.request import urlretrieve
 from abc            import ABC, abstractmethod
@@ -166,7 +168,7 @@ class MNIST(Dataset):
 			| :code:`url` (:code:`str`): The URL of the data file to be downloaded.
 			| :code:`filename` (:code:`str`): The name of the file to save the downloaded data to.
 		'''
-		data = urlretrieve(url, os.path.join(self.path, filename + '.gz'))
+		urlretrieve(url, os.path.join(self.path, filename + '.gz'))
 		with gzip.open(os.path.join(self.path, filename + '.gz'), 'rb') as _in:
 			with open(os.path.join(self.path, filename), 'wb') as _out:
 				shutil.copyfileobj(_in, _out)
@@ -203,7 +205,7 @@ class MNIST(Dataset):
 			
 			images[i] = [[unpack('>B', data.read(1))[0] for _ in range(cols)] for _ in range(rows)]
 			
-		print('Progress: %d / %d' % (n_images, n_images))
+		print('Progress: %d / %d\n' % (n_images, n_images))
 
 		return images
 	
@@ -237,15 +239,149 @@ class MNIST(Dataset):
 				
 			labels[i] = unpack('>B', data.read(1))[0]
 
-		print('Progress: %d / %d' % (n_labels, n_labels))
+		print('Progress: %d / %d\n' % (n_labels, n_labels))
 
 		return labels
 
 
+class SpokenMNIST(Dataset):
+	'''
+	Handles loading and saving of the Spoken MNIST audio dataset `(link) <https://github.com/Jakobovski/free-spoken-digit-dataset>`_.
+	'''
+	train_pickle = 'train.p'
+	test_pickle = 'test.p'
+	
+	url = 'https://github.com/Jakobovski/free-spoken-digit-dataset/tree/master/recordings'
+	
+	files = []
+	for digit in range(10):
+		for speaker in ['jackson', 'nicolas', 'theo']:
+			for example in range(50):
+				files.append('_'.join([str(digit), speaker, str(example)]) + '.wav')
+	
+	n_files = len(files)
+	
+	def __init__(self, path=os.path.join('data', 'SpokenMNIST')):
+		'''
+		Constructor for the :code:`SpokenMNIST` object. Makes the data directory if it doesn't already exist.
+		
+		Inputs:
+		
+			| :code:`path` (:code:`str`): pathname of directory in which to store the Spoken MNIST dataset.
+		'''
+		if not os.path.isdir(path):
+			os.makedirs(path)
+		
+		self.path = path
+		self.data_path = os.path.join(self.path, SpokenMNIST.data_directory)
+	
+	def get_train(self, split=0.8):
+		'''
+		Gets the Spoken MNIST training audio and labels.
+		
+		Inputs:
+		
+			| :code:`split` (:code:`float`): Train, test split; in range (0, 1).
+
+		Returns:
+		
+			| :code:`audio` (:code:`torch.Tensor`): The Spoken MNIST training audio.
+			| :code:`labels` (:code:`torch.Tensor`): The Spoken MNIST training labels.
+		'''
+		split_index = int(split * SpokenMNIST.n_files)
+		
+		if not all([os.path.isfile(os.path.join(self.path, f)) for f in self.files]):
+			# Download data if it isn't on disk.
+			print('Downloading Spoken MNIST data.\n')
+			self.download()
+			
+			# Process data into audio, label (input, output) pairs.
+			audio, labels = self.process_data(SpokenMNIST.files[:split_index])
+
+			# Serialize image data on disk for next time.
+			p.dump((audio, labels), open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)])), 'wb'))
+		else:
+			if not os.path.isdir(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))):
+				# Process image and label data if pickled file doesn't exist.
+				audio, labels = self.process_data(SpokenMNIST.files, split=split)
+				
+				# Serialize image data on disk for next time.
+				p.dump((audio, labels), open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))), 'wb')
+			else:
+				# Load image data from disk if it has already been processed.
+				print('Loading training data from serialized object file.\n')
+				audio, labels = p.load(open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))), 'rb')
+			
+		return torch.Tensor(audio), torch.Tensor(labels)
+
+	def get_test(self, split=0.8):
+		'''
+		Gets the Spoken MNIST training audio and labels.
+
+		Returns:
+		
+			| :code:`audio` (:code:`torch.Tensor`): The Spoken MNIST training audio.
+			| :code:`labels` (:code:`torch.Tensor`): The Spoken MNIST training labels.
+		'''
+		split_index = int(split * SpokenMNIST.n_files)
+		
+		if not all([os.path.isfile(os.path.join(self.path, f)) for f in self.files]):
+			# Download data if it isn't on disk.
+			print('Downloading Spoken MNIST data.\n')
+			self.download()
+			
+			# Process data into audio, label (input, output) pairs.
+			audio, labels = self.process_data(SpokenMNIST.files[split_index:])
+
+			# Serialize image data on disk for next time.
+			p.dump((audio, labels), open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)])), 'wb'))
+		else:
+			if not os.path.isdir(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))):
+				# Process image and label data if pickled file doesn't exist.
+				audio, labels = self.process_data(SpokenMNIST.files, split=split)
+				
+				# Serialize image data on disk for next time.
+				p.dump((audio, labels), open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))), 'wb')
+			else:
+				# Load image data from disk if it has already been processed.
+				print('Loading test data from serialized object file.\n')
+				audio, labels = p.load(open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))), 'rb')
+			
+		return torch.Tensor(audio), torch.Tensor(labels)
+				
+	def download(self):
+		'''
+		Downloads and unzips all CIFAR-10 data.
+		
+		Inputs:
+		
+			| :code:`url` (:code:`str`): The URL of the data archive to be downloaded.
+		'''
+		pool = mp.Pool(100)
+		pool.starmap(urlretrieve, zip([SpokenMNIST.url + '/' + f for f in SpokenMNIST.files],
+									  [os.path.join(self.path, f) for f in SpokenMNIST.files]))
+	
+	def process_data(self, filenames):
+		'''
+		Opens files of CIFAR-10 data and processes them into :code:`numpy` arrays.
+		
+		Inputs:
+		
+			| :code:`filenames` (:code:`str`): Name of the files containing Spoken MNIST audio to load.
+		
+		Returns:
+		
+			| (:code:`tuple(numpy.ndarray)`): Two :code:`numpy` arrays with audio and label data, respectively.
+		'''
+		labels = np.zeros(len(filenames))
+		
+		for f in filenames:
+			label = int(f.split('_')[0])
+
+
 class CIFAR10(Dataset):
 	'''
-	Handles loading and saving of the CIFAR-10 image dataset
-	`(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
+	Handles loading and saving of the CIFAR-10 image dataset `(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
 	'''
 	data_directory = 'cifar-10-batches-py'
 	data_archive = 'cifar-10-python.tar.gz'
@@ -342,7 +478,7 @@ class CIFAR10(Dataset):
 		
 			| :code:`url` (:code:`str`): The URL of the data archive to be downloaded.
 		'''
-		data = urlretrieve(url, os.path.join(self.path, filename))
+		urlretrieve(url, os.path.join(self.path, filename))
 		tar = tarfile.open(os.path.join(self.path, filename), 'r:gz')
 		tar.extractall(path=self.path)
 		tar.close()
@@ -469,7 +605,7 @@ class CIFAR100(Dataset):
 		
 			| :code:`url` (:code:`str`): The URL of the data archive to be downloaded.
 		'''
-		data = urlretrieve(url, os.path.join(self.path, filename))
+		urlretrieve(url, os.path.join(self.path, filename))
 		tar = tarfile.open(os.path.join(self.path, filename), 'r:gz')
 		tar.extractall(path=self.path)
 		tar.close()
