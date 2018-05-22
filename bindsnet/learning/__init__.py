@@ -6,6 +6,10 @@ from ..utils import im2col_indices
 def post_pre(conn, **kwargs):
 	'''
 	Simple STDP rule involving both pre- and post-synaptic spiking activity.
+	
+	Inputs:
+		
+		| :code:`conn` (:code:`bindsnet.network.topology.Connection`): An instance of class :code:`Connection`.
 	'''
 	if not 'kernel_size' in conn.__dict__:
 		x_source, x_target = conn.source.x.unsqueeze(-1), conn.target.x.unsqueeze(0)
@@ -41,6 +45,10 @@ def post_pre(conn, **kwargs):
 def hebbian(conn, **kwargs):
 	'''
 	Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
+	
+	Inputs:
+		
+		| :code:`conn` (:code:`bindsnet.network.topology.Connection`): An instance of class :code:`Connection`.
 	'''
 	if not 'kernel_size' in conn.__dict__:
 		# Post-synaptic.
@@ -81,6 +89,10 @@ def m_stdp(conn, **kwargs):
 	'''
 	Reward-modulated STDP. Adapted from
 	`(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
+	
+	Inputs:
+		
+		| :code:`conn` (:code:`bindsnet.network.topology.Connection`): An instance of class :code:`Connection`.
 	'''
 	# Parse keyword arguments.
 	try:
@@ -141,6 +153,15 @@ def m_stdp_et(conn, **kwargs):
 	'''
 	Reward-modulated STDP with eligibility trace. Adapted from
 	`(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
+	
+	Inputs:
+		
+		| :code:`conn` (:code:`bindsnet.network.topology.Connection`): An instance of class :code:`Connection`.
+		
+		| :code:`kwargs`:
+			
+			:code:`a_plus` (:code:`int`): Learning rate (positive).
+			:code:`a_minus` (:code:`int`): Learning rate (negative).
 	'''
 	if not 'kernel_size' in conn.__dict__:
 		# Parse keyword arguments.

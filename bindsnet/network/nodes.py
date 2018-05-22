@@ -205,6 +205,7 @@ class LIFNodes(Nodes):
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`rest` (:code:`float`): Resting membrane voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
 			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
@@ -271,8 +272,9 @@ class AdaptiveLIFNodes(Nodes):
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`rest` (:code:`float`): Resting membrane voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
+			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
 			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
@@ -346,8 +348,9 @@ class DiehlAndCookNodes(Nodes):
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`rest` (:code:`float`): Resting membrane voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
+			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
 			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
@@ -427,8 +430,10 @@ class IzhikevichNodes(Nodes):
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`excitatory` (:code:`bool`): Whether layer is excitatory.
+			| :code:`rest` (:code:`float`): Resting membrane voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
+			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`refrac` (:code:`int`): refrac (non-firing) period of the neuron.
 			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
