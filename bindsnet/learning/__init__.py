@@ -160,8 +160,8 @@ def m_stdp_et(conn, **kwargs):
 		
 		| :code:`kwargs`:
 			
-			:code:`a_plus` (:code:`int`): Learning rate (positive)
-			:code:`a_minus` (:code:`int`): Learning rate (negative)
+			:code:`a_plus` (:code:`int`): Learning rate (positive).
+			:code:`a_minus` (:code:`int`): Learning rate (negative).
 	'''
 	if not 'kernel_size' in conn.__dict__:
 		# Parse keyword arguments.

@@ -10,7 +10,8 @@ def bernoulli(datum, time=None, **kwargs):
 	
 		| :code:`datum` (:code:`torch.Tensor`): Tensor of shape :code:`[n_1, ..., n_k]`.
 		| :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
-		| :code:`kwargs`:
+		
+		Keyword arguments:
 			
 			| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
 	
@@ -49,7 +50,8 @@ def bernoulli_loader(data, time=None, **kwargs):
 	
 		| :code:`data` (:code:`torch.Tensor` or iterable of :code:`torch.Tensor`s): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`.
 		| :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
-		| :code:`kwargs`:
+		
+		Keyword arguments:
 			
 			| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
 	

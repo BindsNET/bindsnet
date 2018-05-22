@@ -49,7 +49,7 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
 	
 	Inputs:
 		
-		| :code:`spikes` (:code:`torch.tensor (n_examples, n_neurons, time)`): Spiking train data for a population of neurons for one example.
+		| :code:`spikes` (:code:`torch.Tensor (n_examples, n_neurons, time)`): Spiking train data for a population of neurons for one example.
 		| :code:`n_ex` (:code:`int`): Allows user to pick which example to plot spikes for. Must be >= 0.
 		| :code:`top_k` (:code:`int`): Plot k neurons that spiked the most for n_ex example.
 		| :code:`indices` (:code:`list(int)`): Plot specific neurons' spiking activity instead of top_k. Meant to replace top_k. 

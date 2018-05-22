@@ -111,6 +111,8 @@ class DatasetEnvironment:
 		self.obs = self.obs.view(-1)
 		self.obs *= self.intensity
 
+		if type(self.dataset) == MNIST:
+			self.obs_shape = (28, 28)
 
 class GymEnvironment:
 	'''
@@ -185,10 +187,6 @@ class GymEnvironment:
 	def preprocess(self):
 		'''
 		Preprocessing step for an observation from Gym environment.
-		
-		Currently supported environments:
-			CartPole-v0
-			SpaceInvaders-v0
 		'''
 		if self.name == 'CartPole-v0':
 			self.obs = np.array([self.obs[0] + 2.4, -min(self.obs[1], 0), max(self.obs[1], 0),
