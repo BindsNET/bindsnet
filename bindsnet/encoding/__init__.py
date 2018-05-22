@@ -10,16 +10,16 @@ def bernoulli(datum, time=None, **kwargs):
 	
 		| :code:`datum` (:code:`torch.Tensor`): Tensor of shape :code:`[n_1, ..., n_k]`.
 		| :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
-		| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
+		| :code:`kwargs`:
+			
+			| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
 	
 	Returns:
 	
 		| (:code:`torch.Tensor`): Tensor of shape :code:`[time, n_1, ..., n_k]` of Bernoulli-distributed spikes.
 	'''
-	if 'max_prob' in kwargs:
-		max_prob = kwargs['max_prob']
-	else:
-		max_prob = 1.0
+	# Setting kwargs.
+	max_prob = kwargs.get('max_prob', 1.0)
 	
 	datum = np.copy(datum)
 	shape, size = datum.shape, datum.size
@@ -49,16 +49,17 @@ def bernoulli_loader(data, time=None, **kwargs):
 	
 		| :code:`data` (:code:`torch.Tensor` or iterable of :code:`torch.Tensor`s): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`.
 		| :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
-		| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
+		| :code:`kwargs`:
+			
+			| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
 	
 	Yields:
 	
 		| (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]` of Bernoulli-distributed spikes.
 	'''
-	if 'max_prob' in kwargs:
-		max_prob = kwargs['max_prob']
-	else:
-		max_prob = 1.0
+	
+	# Setting kwargs.
+	max_prob = kwargs.get('max_prob', 1.0)
 	
 	for i in range(len(data)):
 		yield bernoulli(data[i], time, max_prob=max_prob)  # Encode datum as Bernoulli spike trains.
@@ -71,7 +72,6 @@ def poisson(datum, time, **kwargs):
 	
 		| :code:`datum` (:code:`torch.Tensor`): Tensor of shape :code:`[n_1, ..., n_k]`.
 		| :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
-		| :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
 	
 	Returns:
 	
@@ -123,7 +123,7 @@ def rank_order(datum, time, **kwargs):
 	Inputs:
 	
 		| :code:`data` (:code:`torch.Tensor`): Tensor of shape :code:`[n_samples, n_1, ..., n_k]`
-		| :code:`time` (:code:`int`): Maximum time of 
+		| :code:`time` (:code:`int`): Length of Poisson spike train per input variable.
 
 	Returns:
 	

@@ -22,7 +22,7 @@ class AbstractConnection(ABC):
 			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
 			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
 			
-			Keyword arguments:
+			| :code:`kwargs`:
 			
 				| :code:`update_rule` (:code:`function`): Modifies connection parameters according to some rule.
 				| :code:`wmin` (:code:`float`): The minimum value on the connection weights.
@@ -105,7 +105,7 @@ class Connection(AbstractConnection):
 			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
 			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
 			
-			Keyword arguments:
+			| :code:`kwargs`:
 			
 				| :code:`update_rule` (:code:`function`): Modifies connection parameters according to some rule.
 				| :code:`w` (:code:`torch.Tensor`): Effective strengths of synapses.
@@ -174,7 +174,7 @@ class Conv2dConnection:
 			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
 			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
 			
-			Keyword arguments:
+			| :code:`kwargs`:
 			
 				| :code:`update_rule` (:code:`function`): Modifies connection parameters according to some rule.
 				| :code:`w` (:code:`torch.Tensor`): Effective strengths of synapses.
@@ -256,7 +256,7 @@ class SparseConnection:
 			| :code:`nu_pre` (:code:`float`): Learning rate for pre-synaptic events.
 			| :code:`nu_post` (:code:`float`): Learning rate for post-synpatic events.
 			
-			Keyword arguments:
+			| :code:`kwargs`:
 			
 				| :code:`w` (:code:`torch.Tensor`): Effective strengths of synapses.
 				| :code:`sparsity` (:code:`float`): Fraction of sparse connections to use.
