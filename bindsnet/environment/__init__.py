@@ -14,7 +14,7 @@ class DatasetEnvironment:
 	'''
 	A wrapper around any object from the :code:`datasets` module to pass to the :code:`Pipeline` object.
 	'''
-	def __init__(self, dataset, train=True, time=350, **kwargs):
+	def __init__(self, dataset=MNIST, train=True, time=350, **kwargs):
 		'''
 		Initializes the environment wrapper around the dataset.
 		
@@ -110,14 +110,9 @@ class DatasetEnvironment:
 		'''
 		self.obs = self.obs.view(-1)
 		self.obs *= self.intensity
-		
+
 		if type(self.dataset) == MNIST:
 			self.obs_shape = (28, 28)
-		if type(self.dataset) in [CIFAR10, CIFAR100]:
-			self.obs_shape = (32, 32, 3)
-		else:
-			self.obs_shape = self.obs.shape
-
 
 class GymEnvironment:
 	'''
@@ -147,7 +142,7 @@ class GymEnvironment:
 
 		Inputs:
 
-			| :code:`a` (:code:`int`): Action to take in SpaceInvaders environment.
+			| :code:`a` (:code:`int`): Action to take in the environment.
 
 		Returns:
 
@@ -191,7 +186,7 @@ class GymEnvironment:
 
 	def preprocess(self):
 		'''
-		Preprocessing step for an observation from the Space Invaders environment.
+		Preprocessing step for an observation from Gym environment.
 		'''
 		if self.name == 'CartPole-v0':
 			self.obs = np.array([self.obs[0] + 2.4, -min(self.obs[1], 0), max(self.obs[1], 0),
@@ -200,7 +195,7 @@ class GymEnvironment:
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = self.obs[26:104, :]
 			self.obs = binary_image(self.obs)
-		else:
+		else: # Default pre-processing step
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = binary_image(self.obs)
 		

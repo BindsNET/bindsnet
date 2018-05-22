@@ -21,7 +21,8 @@ def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
 	
 	Returns:
 		
-		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the input plots.
+		| (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the input plots.
+		| (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the input plots.
 	'''
 	if axes is None:
 		fig, axes = plt.subplots(1, 2, figsize=figsize)
@@ -58,13 +59,14 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
 		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
 		| :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons in the given time range. Default is entire simulation time.
-		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 		| :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 	
 	Returns:
 		
-		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
-		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
+		| (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
+		| (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
+		
 	'''
 	n_subplots = len(spikes.keys())
    
@@ -152,10 +154,10 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 		| :code:`wmax` (:code:`float`): Maximum allowed weight value.
 		| :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-	
+		
 	Returns:
 		
-		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+		| (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 	'''
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
@@ -186,10 +188,10 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 		| :code:`wmax` (:code:`float`): Maximum allowed weight value.
 		| :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-	
+		
 	Returns:
 		
-		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+		| (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 	'''
 	n_sqrt = int(np.ceil(np.sqrt(weights.size(0))))
 	height = weights.size(2)
@@ -238,7 +240,7 @@ def plot_assignments(assignments, im=None, figsize=(5, 5)):
 	
 	Returns:
 		
-		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assigments plot.
+		| (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assigments plot.
 	'''
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
@@ -269,7 +271,7 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 	
 	Returns:
 		
-		| (:code:`matplotlib.axes.Axes`): Used for re-drawing the performance plot.
+		| (:code:`ax` (:code:`matplotlib.axes.Axes`): Used for re-drawing the performance plot.
 	'''
 	if not ax:
 		_, ax = plt.subplots(figsize=figsize)
@@ -303,8 +305,9 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
 		
 	Returns:
 		
-		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing plots.
-		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing plots.
+		| (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing plots.
+		| (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing plots.
+		
 	'''
 	default = {'xlabel' : 'Simulation time', 'ylabel' : 'Index'}
 	
@@ -389,13 +392,14 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
 		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
 		| :code:`time` (:code:`tuple(int)`): Plot voltages of neurons in given time range. Default is entire simulation time.
-		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 		| :code:`n_neurons` (:code:`dict(tuple(int))`): Plot voltages of neurons in given range of neurons. Default is all neurons.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 	
 	Returns:
 		
-		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
-		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the voltage plots.
+		| (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the voltage plots.
+		| (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
+		
 	'''
 	n_subplots = len(voltages.keys())
     

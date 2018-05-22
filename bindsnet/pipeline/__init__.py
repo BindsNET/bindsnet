@@ -51,6 +51,7 @@ class Pipeline:
 		
 		# Setting kwargs.
 		self.time = kwargs.get('time', 1)
+		self.delta = kwargs.get('delta', 1)
 		self.output = kwargs.get('output', None)
 		self.save_dir = kwargs.get('save_dir', 'network.p')
 		self.plot_interval = kwargs.get('plot_interval', None)
@@ -59,13 +60,16 @@ class Pipeline:
 		self.history_length = kwargs.get('history_length', None)
 		self.render_interval = kwargs.get('render_interval', None)
 		
-		self.delta = kwargs.get('delta', 1)
+		# Make sure inputs are valid.
+		assert (self.time >= 1), "Invalid input %d; Time presented to the input cannot be 0 or negative"%(self.time)
+		assert (self.delta >= 1), "Invalid input %d; Delta cannot be 0 or negative"%(self.delta)
+		if self.output is not None:
+			assert (self.output in self.network.layers), "Layer '%s' not found inside network"%(self.output)
 		
 		if self.history_length is not None and self.delta is not None:
 			self.history = {i : torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
 		else:
 			self.history = {}
-		
 		
 		if self.plot_interval is not None:
 			for layer in self.network.layers:
@@ -77,7 +81,7 @@ class Pipeline:
 			self.set_spike_data()
 			self.plot_data()
 
-		# Set up for multiple layers of input layers
+		# Set up for multiple layers of input layers.
 		self.encoded = {key: torch.Tensor() for key, val in network.layers.items() if type(val) == Input}
 		
 		self.first = True
@@ -202,7 +206,8 @@ class Pipeline:
 			# Store observation based on delta value.
 			if self.iteration % self.delta == 0:
 				self.history[self.history_index] = self.obs
-				
+			
+			assert (len(self.history) == self.history_length), "History size is out of bounds"
 			self.obs = temp
 			
 	def update_index(self):
