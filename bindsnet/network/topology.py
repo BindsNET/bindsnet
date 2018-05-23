@@ -28,6 +28,7 @@ class AbstractConnection(ABC):
 				| :code:`wmin` (:code:`float`): The minimum value on the connection weights.
 				| :code:`wmax` (:code:`float`): The maximum value on the connection weights.
 				| :code:`norm` (:code:`float`): Total weight per target neuron normalization.
+				| :code:`decay` (:code:`float`): Decay factor of old spikes.
 		'''
 		super().__init__()
 		
@@ -44,6 +45,7 @@ class AbstractConnection(ABC):
 		self.wmin = kwargs.get('wmin', float('-inf'))
 		self.wmax = kwargs.get('wmax', float('inf'))
 		self.norm = kwargs.get('norm', None)
+		self.decay = kwargs.get('decay', None)
 		
 		if self.update_rule is m_stdp or self.update_rule is m_stdp_et:
 			self.e_trace = 0
@@ -52,6 +54,8 @@ class AbstractConnection(ABC):
 			self.tc_plus = 0.05
 			self.p_minus = 0
 			self.tc_minus = 0.05
+			
+		self.old_s = torch.zeros(*source.shape)
 	
 	@abstractmethod
 	def compute(self, s):
@@ -126,7 +130,12 @@ class Connection(AbstractConnection):
 		
 			| :code:`s` (:code:`torch.Tensor`): Incoming spikes.
 		'''
+		
 		s = s.float().view(-1)
+		
+		if self.decay is not None:
+			s = (self.old_s * self.decay) + s	    
+			
 		w = self.w.view(self.source.n, self.target.n)
 		a = s @ w
 		return a.view(*self.target.shape)
