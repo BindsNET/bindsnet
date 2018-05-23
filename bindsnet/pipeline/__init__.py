@@ -61,10 +61,12 @@ class Pipeline:
 		self.render_interval = kwargs.get('render_interval', None)
 		
 		# Make sure inputs are valid.
-		assert (self.time >= 1), "Invalid input %d; Time presented to the input cannot be 0 or negative"%(self.time)
-		assert (self.delta >= 1), "Invalid input %d; Delta cannot be 0 or negative"%(self.delta)
+		assert type(self.time == int and self.time >= 1), "Invalid input %d; Time \
+																						presented to the network cannot be \
+																					   0 or negative and must be an integer"%(self.time)
+		assert self.delta >= 1, "Invalid input %d; Delta cannot be 0 or negative"%(self.delta)
 		if self.output is not None:
-			assert (self.output in self.network.layers), "Layer '%s' not found inside network"%(self.output)
+			assert self.output in self.network.layers, "Layer '%s' not found inside network"%(self.output)
 		
 		if self.history_length is not None and self.delta is not None:
 			self.history = {i : torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}

@@ -1,6 +1,6 @@
+from bindsnet.datasets    import MNIST
 from torch                import Tensor
 from numpy.random         import choice
-from bindsnet.datasets    import MNIST
 from bindsnet.encoding    import poisson
 from bindsnet.pipeline    import Pipeline
 from bindsnet.models      import DiehlAndCook2015
