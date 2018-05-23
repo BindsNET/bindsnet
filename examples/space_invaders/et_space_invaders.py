@@ -35,7 +35,7 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(n=6552, traces=True)  # Input layer
+inpt = Input(n=6552, shape=[78, 84], traces=True)  # Input layer
 exc = LIFNodes(n=n_neurons, refrac=0, traces=True, thresh=-52.0 + torch.randn(n_neurons))  # Excitatory layer
 readout = LIFNodes(n=60, refrac=0, traces=True, thresh=-40.0)  # Readout layer
 layers = {'X' : inpt, 'E' : exc, 'R' : readout}
