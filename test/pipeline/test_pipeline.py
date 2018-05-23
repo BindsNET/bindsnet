@@ -28,12 +28,10 @@ class TestPipeline:
 		p = Pipeline(network=network,
 							environment=environment,
 							encoding=poisson,
-							time=350,
-						   plot_interval=1)
+							time=350)
 		
 		assert p.network == network
 		assert p.env == environment
-		assert p.plot_interval == 1
 		assert p.encoding == poisson
 		assert p.time == 350
 		assert p.history_length is None
