@@ -56,8 +56,8 @@ for i, (datum, label) in enumerate(loader):
 	inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
 	spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
 	voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
-	weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im)
-	weights_im2 = plot_weights(C2.w, im=weights_im2)
+	weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2)
+	weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
 	
 	plt.pause(1e-8)
 	
@@ -114,8 +114,8 @@ for i, (datum, label) in enumerate(loader):
 	inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
 	spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
 	voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
-	weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im)
-	weights_im2 = plot_weights(C2.w, im=weights_im2)
+	weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2)
+	weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
 	
 	plt.pause(1e-8)
 	
