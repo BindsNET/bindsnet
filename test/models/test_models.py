@@ -17,7 +17,7 @@ class TestTwoLayerNetwork:
 					assert (network.dt == dt)
 					
 					assert (isinstance(network.layers['X'], Input) and network.layers['X'].n == n_inpt)
-					assert (isinstance(network.layers['X'], LIFNodes) and network.layers['Y'].n == n_neurons)
+					assert (isinstance(network.layers['Y'], LIFNodes) and network.layers['Y'].n == n_neurons)
 					assert (isinstance(network.connections[('X', 'Y')], Connection))
 					assert (network.connections[('X', 'Y')].source.n == n_inpt and network.connections[('X', 'Y')].target.n == n_neurons)
 					
