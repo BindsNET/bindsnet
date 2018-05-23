@@ -99,20 +99,25 @@ class DatasetEnvironment:
 	def preprocess(self):
 		'''
 		Preprocessing step for a state specific to dataset objects.
-
-		Inputs:
-
-			| (:code:`numpy.array`): Observation from the environment.
-
-		Returns:
-
-			| (:code:`torch.Tensor`): Pre-processed observation.
 		'''
 		self.obs = self.obs.view(-1)
 		self.obs *= self.intensity
-
+	
+	def reshape(self):
+		'''
+		Reshaped observation for plotting purposes.
+		
+		Returns:
+		
+			| (:code:`torch.Tensor`): Reshaped observation to plot in :code:`plt.imshow()` call.
+		'''
 		if type(self.dataset) == MNIST:
-			self.obs_shape = (28, 28)
+			return self.obs.view(28, 28)
+		elif type(self.dataset) in [CIFAR10, CIFAR100]:
+			return 255 - self.obs.view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / self.intensity
+		elif type(self.dataset) in SpokenMNIST:
+			return self.obs.view(-1, 40)
+
 
 class GymEnvironment:
 	'''
@@ -198,6 +203,15 @@ class GymEnvironment:
 		else: # Default pre-processing step
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = binary_image(self.obs)
+			
+		self.obs = torch.from_numpy(self.obs).float()
 		
-		self.obs_shape = self.obs.shape
-		self.obs = torch.from_numpy(self.obs).view(-1).float()
+	def reshape(self):
+		'''
+		Reshape observation for plotting purposes.
+
+		Returns:
+		
+			| (:code:`torch.Tensor`): Reshaped observation to plot in :code:`plt.imshow()` call.
+		'''
+		return self.obs
