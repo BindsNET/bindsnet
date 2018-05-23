@@ -31,12 +31,12 @@ class TestPipeline:
 							time=350,
 						   plot_interval=1)
 		
-		assert (p.network == network)
-		assert (p.env == environment)
-		assert (p.plot_interval == 1)
-		assert (p.encoding == poisson)
-		assert (p.time == 350)
-		assert (p.history_length is None)
+		assert p.network == network
+		assert p.env == environment
+		assert p.plot_interval == 1
+		assert p.encoding == poisson
+		assert p.time == 350
+		assert p.history_length is None
 		
 		def test_Gym_pipeline(self):
 			# Build network.
@@ -71,9 +71,9 @@ class TestPipeline:
 										feedback=select_multinomial, output='Z',
 										time=1, history_length=2, delta=4)
 					
-					assert (p.feedback == select_multinomial)
-					assert (p.history_length == history_length)
-					assert (p.delta == delta)
+					assert p.feedback == select_multinomial
+					assert p.history_length == history_length
+					assert p.delta == delta
 					
 			
 			# Checking assertion errors
@@ -83,7 +83,7 @@ class TestPipeline:
 											feedback=select_multinomial, output='Z',
 											time=time, history_length=2, delta=4)
 				except Exception as es:
-					assert (es == AssertionError)
+					assert es == AssertionError
 					
 			for delta in [0, -1]:
 				try:
@@ -91,7 +91,7 @@ class TestPipeline:
 											feedback=select_multinomial, output='Z',
 											time=time, history_length=2, delta=delta)
 				except Exception as es:
-					assert (es == AssertionError)
+					assert es == AssertionError
 			
 			for output in ['K']:
 				try:
@@ -99,18 +99,18 @@ class TestPipeline:
 											feedback=select_multinomial, output=output,
 											time=time, history_length=2, delta=4)
 				except Exception as es:
-					assert (es == AssertionError)			
+					assert es == AssertionError
 	
 			p = Pipeline(network, environment, encoding=bernoulli,
 											feedback=select_random, output='Z',
 											time=1, history_length=2, delta=4,
-											plot_interval=100, render_interval=5)
+											save_interval=50, render_interval=5)
 	
-			assert (p.feedback == select_random)
-			assert (p.encoding == bernoulli)
-			assert (p.plot_interval == 100)
-			assert (p.render_interval == 5)
-			assert (p.time == 1)
+			assert p.feedback == select_random
+			assert p.encoding == bernoulli
+			assert p.save_interval == 50
+			assert p.render_interval == 5
+			assert p.time == 1
 	
 	
 	
