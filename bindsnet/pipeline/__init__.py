@@ -45,9 +45,9 @@ class Pipeline:
 		
 		self.iteration = 0
 		self.history_index = 1
-		self.ims_s, self.axes_s = None, None
-		self.ims_v, self.axes_v = None, None
-		self.ims_obs, self.axes_obs = None, None
+		self.s_ims, self.s_axes = None, None
+		self.v_ims, self.v_axes = None, None
+		self.obs_im, self.obs_ax = None, None
 		
 		# Setting kwargs.
 		self.time = kwargs.get('time', 1)
@@ -139,8 +139,8 @@ class Pipeline:
 		# Encode the observation using given encoding function.
 		for inpt in self.encoded:
 			self.encoded[inpt] = self.encoding(self.obs, 
-														time=self.time, 
-														max_prob=self.env.max_prob)
+											   time=self.time, 
+											   max_prob=self.env.max_prob)
 		
 		# Run the network on the spike train-encoded inputs.
 		self.network.run(inpts=self.encoded,
@@ -161,12 +161,12 @@ class Pipeline:
 		'''
 		Plot the processed observation after difference against history
 		'''
-		if self.ims_obs is None and self.axes_obs is None:
-			fig = plt.figure()
-			self.axes_obs = fig.add_subplot(111)
-			self.ims_obs = self.axes_obs.imshow(self.obs.numpy().reshape(self.env.obs_shape), cmap='gray')
+		if self.obs_im is None and self.obs_ax is None:
+			fig, self.obs_ax = plt.subplots(); self.obs_ax.set_title('Observation')
+			self.obs_ax.set_xticks(()); self.obs_ax.set_yticks(())
+			self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap='gray')
 		else:
-			self.ims_obs.set_data(self.obs.numpy().reshape(self.env.obs_shape))
+			self.obs_im.set_data(self.env.reshape())
 	
 	def plot_data(self):
 		'''
@@ -177,13 +177,13 @@ class Pipeline:
 		self.set_voltage_data()
 		
 		# Initialize plots
-		if self.ims_s is None and self.axes_s is None and self.ims_v is None and self.axes_v is None:
-			self.ims_s, self.axes_s = plot_spikes(self.spike_record)
-			self.ims_v, self.axes_v = plot_voltages(self.voltage_record)
+		if self.s_ims is None and self.s_axes is None and self.v_ims is None and self.v_axes is None:
+			self.s_ims, self.s_axes = plot_spikes(self.spike_record)
+			self.v_ims, self.v_axes = plot_voltages(self.voltage_record)
 		else: 
 			# Update the plots dynamically
-			self.ims_s, self.axes_s = plot_spikes(self.spike_record, ims=self.ims_s, axes=self.axes_s)
-			self.ims_v, self.axes_v = plot_voltages(self.voltage_record, ims=self.ims_v, axes=self.axes_v)
+			self.s_ims, self.s_axes = plot_spikes(self.spike_record, ims=self.s_ims, axes=self.s_axes)
+			self.v_ims, self.v_axes = plot_voltages(self.voltage_record, ims=self.v_ims, axes=self.v_axes)
 		
 		plt.pause(1e-8)
 		plt.show()
@@ -209,7 +209,7 @@ class Pipeline:
 			if self.iteration % self.delta == 0:
 				self.history[self.history_index] = self.obs
 			
-			assert (len(self.history) == self.history_length), "History size is out of bounds"
+			assert (len(self.history) == self.history_length), 'History size is out of bounds'
 			self.obs = temp
 			
 	def update_index(self):
