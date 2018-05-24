@@ -132,12 +132,10 @@ class Connection(AbstractConnection):
 		'''
 		
 		s = s.float().view(-1)
-		print(s)
-		
+				
 		if self.decay is not None:
 			s = self.old_s  = (self.old_s * self.decay) + s	    
-		
-		print(s)
+				
 		w = self.w.view(self.source.n, self.target.n)
 		a = s @ w
 		return a.view(*self.target.shape)
