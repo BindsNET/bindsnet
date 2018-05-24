@@ -153,7 +153,7 @@ class Connection(AbstractConnection):
 		super()._reset()
 
 
-class Conv2dConnection:
+class Conv2dConnection(AbstractConnection):
 	'''
 	Specifies convolutional synapses between one or two populations of neurons.
 	'''
@@ -240,7 +240,7 @@ class Conv2dConnection:
 		super()._reset()
 
 
-class SparseConnection:
+class SparseConnection(AbstractConnection):
 	'''
 	Specifies sparse synapses between one or two populations of neurons.
 	'''
