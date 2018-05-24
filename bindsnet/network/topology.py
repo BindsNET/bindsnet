@@ -132,9 +132,10 @@ class Connection(AbstractConnection):
 		'''
 		
 		s = s.float().view(-1)
-				
-		if self.decay is not None:
-			s = self.old_s  = (self.old_s * self.decay) + s	    
+		
+		# save and decaying the last spiking 
+		if self.decay is not None: 
+			self.old_s  = s = torch.max((self.old_s * self.decay) + s, torch.ones_like(s))
 				
 		w = self.w.view(self.source.n, self.target.n)
 		a = s @ w

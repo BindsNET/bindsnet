@@ -110,7 +110,8 @@ class DiehlAndCook2015(Network):
 									   nu_post=nu_post,
 									   wmin=wmin,
 									   wmax=wmax,
-									   norm=norm),
+									   norm=norm,
+		                                                           decay=0.8),
 						    source='X',
 						    target='Ae')
 		
