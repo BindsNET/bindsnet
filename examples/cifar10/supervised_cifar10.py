@@ -13,9 +13,9 @@ parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
-parser.add_argument('--n_clamp', type=int, default=3)
+parser.add_argument('--n_clamp', type=int, default=1)
 parser.add_argument('--exc', type=float, default=22.5)
-parser.add_argument('--inh', type=float, default=17.5)
+parser.add_argument('--inh', type=float, default=22.5)
 parser.add_argument('--time', type=int, default=50)
 parser.add_argument('--dt', type=int, default=1.0)
 parser.add_argument('--intensity', type=float, default=0.25)
@@ -49,7 +49,7 @@ network = DiehlAndCook2015(n_inpt=32*32*3,
 					   inh=inh,
 					   dt=dt,
 					   nu_pre=0,
-					   nu_post=0.5,
+					   nu_post=0.25,
 					   wmin=0,
 					   wmax=10,
 					   norm=3500)
@@ -84,6 +84,9 @@ spikes = {}
 for layer in set(network.layers) - {'X'}:
 	spikes[layer] = Monitor(network.layers[layer], state_vars=['s'], time=time)
 	network.add_monitor(spikes[layer], name='%s_spikes' % layer)
+
+# Image categories.
+classes = ['none', 'plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 # Train the network.
 print('Begin training.\n')
@@ -135,30 +138,38 @@ for i in range(n_train):
 	# Optionally plot various simulation information.
 	if plot:
 		if gpu:
-			inpt = inpts['X'].view(time, 3, 32, 32).sum(0).cpu().numpy().transpose(1, 2, 0)
+			image = images[i].view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / intensity
+			image /= image.max()
+			inpt = 255 - inpts['X'].sum(0).view(3, 32, 32).sum(0).cpu()
+			weights = network.connections[('X', 'Ae')].w.view(3, 32, 32, n_neurons).cpu().numpy()
 		else:
-			inpt = inpts['X'].view(time, 3, 32, 32).sum(0).numpy().transpose(1, 2, 0)
-		
-		input_exc_weights = network.connections[('X', 'Ae')].w
-		square_weights = get_square_weights(input_exc_weights.view(3, 32*32, n_neurons).sum(0), n_sqrt, 32)
+			image = images[i].view(3, 32, 32).numpy().transpose(1, 2, 0) / intensity
+			image /= image.max()
+			inpt = 255 - inpts['X'].sum(0).view(3, 32, 32).sum(0)
+			weights = network.connections[('X', 'Ae')].w.view(3, 32, 32, n_neurons).numpy()
+				
+		weights = weights.transpose(1, 2, 0, 3).sum(2).reshape(32*32, n_neurons)
+		weights = torch.from_numpy(weights)
+			
 		square_assignments = get_square_assignments(assignments, n_sqrt)
+		square_weights = get_square_weights(weights, n_sqrt, 32)
+		
 		voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
 		
 		if i == 0:
-			# inpt_axes, inpt_ims = plot_input(images[i].view(3, 32, 32).sum(0), inpt, label=labels[i])
-			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes})
-			weights_im = plot_weights(square_weights, wmax=10)
-			assigns_im = plot_assignments(square_assignments)
+			inpt_axes, inpt_ims = plot_input(image, inpt, label=labels[i])
+			assigns_im = plot_assignments(square_assignments, classes=classes)
 			perf_ax = plot_performance(accuracy)
+			weights_ax = plot_weights(square_weights, wmin=0.0, wmax=10.0)
+			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes})
 			voltage_ims, voltage_axes = plot_voltages(voltages)
-			
 		else:
-			# inpt_axes, inpt_ims = plot_input(images[i].view(3, 32, 32).sum(0), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
-			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes},
-												ims=spike_ims, axes=spike_axes)
-			weights_im = plot_weights(square_weights, im=weights_im)
+			inpt_axes, inpt_ims = plot_input(image, inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
 			assigns_im = plot_assignments(square_assignments, im=assigns_im)
 			perf_ax = plot_performance(accuracy, ax=perf_ax)
+			weights_im = plot_weights(square_weights, im=weights_ax)
+			spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes},
+												ims=spike_ims, axes=spike_axes)
 			voltage_ims, voltage_axes = plot_voltages(voltages, ims=voltage_ims, axes=voltage_axes)
 		
 		plt.pause(1e-8)

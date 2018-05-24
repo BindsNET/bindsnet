@@ -128,11 +128,13 @@ for i in range(n_train):
 	# Optionally plot various simulation info.
 	if plot:
 		if gpu:
-			image = 255 - pipeline.obs.view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / intensity
+			image = pipeline.obs.view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / intensity
+			image /= image.max()
 			inpt = 255 - pipeline.encoded['X'].view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0).cpu()
 			weights = network.connections[('X', 'Ae')].w.view(3, 32, 32, n_neurons).cpu().numpy()
 		else:
-			image = 255 - pipeline.obs.view(3, 32, 32).numpy().transpose(1, 2, 0) / intensity
+			image = pipeline.obs.view(3, 32, 32).numpy().transpose(1, 2, 0) / intensity
+			image /= image.max()
 			inpt = 255 - pipeline.encoded['X'].view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0)
 			weights = network.connections[('X', 'Ae')].w.view(3, 32, 32, n_neurons).numpy()
 				
