@@ -31,7 +31,7 @@ def select_multinomial(pipeline, **kwargs):
 		action = np.random.choice(range(pipeline.env.action_space.n))
 	else:
 		pop_spikes = torch.Tensor([spikes[(i * pop_size):(i * pop_size) + pop_size].sum() \
-										  for i in range(pipeline.env.action_space.n)]).float()
+										  for i in range(pipeline.network.layers[output].n)]).float()
 		action = torch.multinomial((pop_spikes / _sum).view(-1), 1)[0]
 	
 	return action

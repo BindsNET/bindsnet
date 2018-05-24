@@ -55,7 +55,7 @@ class AbstractConnection(ABC):
 			self.p_minus = 0
 			self.tc_minus = 0.05
 			
-		self.old_s = torch.zeros(*source.shape)
+		self.s = torch.zeros(*source.shape)
 	
 	@abstractmethod
 	def compute(self, s):
@@ -133,12 +133,12 @@ class Connection(AbstractConnection):
 		
 		s = s.float().view(-1)
 		
-		# save and decaying the last spiking 
+		# Decaying spike activation from previous iteration.
 		if self.decay is not None: 
-			self.old_s  = s = torch.max((self.old_s * self.decay) + s, torch.ones_like(s))
+			self.s = self.s * self.decay + s
 				
 		w = self.w.view(self.source.n, self.target.n)
-		a = s @ w
+		a = self.s @ w
 		return a.view(*self.target.shape)
 
 	def update(self, **kwargs):
