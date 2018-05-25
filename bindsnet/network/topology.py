@@ -131,12 +131,12 @@ class Connection(AbstractConnection):
 			| :code:`s` (:code:`torch.Tensor`): Incoming spikes.
 		'''
 		
-		s = s.float().view(-1)
-		
 		# Decaying spike activation from previous iteration.
 		if self.decay is not None: 
-			self.s = self.s * self.decay + s
-				
+			self.s = self.s * self.decay + s.float().view(-1)
+		else:
+			self.s = s.float().view(-1)
+		
 		w = self.w.view(self.source.n, self.target.n)
 		a = self.s @ w
 		return a.view(*self.target.shape)
