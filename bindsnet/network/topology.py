@@ -120,7 +120,8 @@ class Connection(AbstractConnection):
 		super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 
 		self.w = kwargs.get('w', torch.rand(*source.shape, *target.shape))
-		self.w = torch.clamp(self.w, self.wmin, self.wmax)
+		#self.w = torch.clamp(self.w, self.wmin, self.wmax)
+		self.w = self.wmin + self.w*(self.wmax-self.wmin)
 	
 	def compute(self, s):
 		'''
