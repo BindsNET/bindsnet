@@ -56,7 +56,7 @@ class DiehlAndCook2015(Network):
 	Implements the spiking neural network architecture from `(Diehl & Cook 2015) <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
 	'''
 	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, dt=1.0, nu_pre=1e-4,
-				 nu_post=1e-2, wmin=0, wmax=1, norm=78.4, theta_plus=0.05, theta_decay=1e-7):
+				 nu_post=1e-2, wmin=0, wmax=1, norm=78.4, theta_plus=0.05, theta_decay=1e-7,X_Ae_decay=None,Ae_Ai_decay=None ):
 		'''
 		Inputs:
 		
@@ -111,7 +111,7 @@ class DiehlAndCook2015(Network):
 									   wmin=wmin,
 									   wmax=wmax,
 									   norm=norm,
-									   decay=0.5),
+									   decay=X_Ae_decay),
 						    source='X',
 						    target='Ae')
 		
@@ -119,7 +119,8 @@ class DiehlAndCook2015(Network):
 									   target=self.layers['Ai'],
 									   w=self.exc * torch.diag(torch.ones(self.n_neurons)),
 									   wmin=0,
-									   wmax=self.exc),
+									   wmax=self.exc,
+		                                                           decay=Ae_Ai_decay),
 						    source='Ae',
 						    target='Ai')
 		
