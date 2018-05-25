@@ -111,7 +111,7 @@ class DiehlAndCook2015(Network):
 									   wmin=wmin,
 									   wmax=wmax,
 									   norm=norm,
-									   decay=0),
+									   decay=0.5),
 						    source='X',
 						    target='Ae')
 		
