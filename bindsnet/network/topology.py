@@ -281,9 +281,6 @@ class SparseConnection(AbstractConnection):
 			self.w = torch.sparse.FloatTensor(i.nonzero().t(), v)
 		elif self.w is not None:
 			assert self.w.is_sparse, 'Weight matrix is not sparse (see torch.sparse module)'
-			
-			self.w[self.w < self.wmin] = self.wmin
-			self.w[self.w > self.wmax] = self.wmax
 	
 	def compute(self, s):
 		'''
@@ -294,7 +291,7 @@ class SparseConnection(AbstractConnection):
 			| :code:`s` (:code:`torch.Tensor`): Incoming spikes.
 		'''
 		s = s.float().view(-1)
-		a = s @ w
+		a = s @ self.w
 		return a.view(*self.target.shape)
 
 	def update(self, **kwargs):

@@ -205,10 +205,10 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 		cax = div.append_axes("right", size="5%", pad=0.05)
 		
 		for i in range(height, n_sqrt * height, height):
-			ax.axhline(i, color='g', linestyle='--')
+			ax.axhline(i - 0.5, color='g', linestyle='--')
 		
 		for i in range(width, n_sqrt * width, width):
-			ax.axvline(i, color='g', linestyle='--')
+			ax.axvline(i - 0.5, color='g', linestyle='--')
 		
 		ax.set_xticks(()); ax.set_yticks(())
 		ax.set_aspect('auto')
