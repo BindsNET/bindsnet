@@ -119,8 +119,23 @@ class Connection(AbstractConnection):
 		'''
 		super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 
-		self.w = kwargs.get('w', torch.rand(*source.shape, *target.shape))
-		self.w = self.wmin + self.w*(self.wmax-self.wmin)
+		self.w = kwargs.get('w', None)
+		
+		if self.w is None:
+			torch.rand(*source.shape, *target.shape)
+			self.w = self.wmin + self.w*(self.wmax-self.wmin)
+		else:
+			bo = False
+			if torch.max(self.w) >= self.wmax:
+				print("Warning: provided weights matrix contain values largers then :", self.wmax)
+				bo = True
+			if torch.max(self.w) <= self.wmin:
+				print("Warning: provided weights matrix contain values smaller then :", self.wmin)			
+				bo = True
+			if bo:
+				print("Warning: the weights matrix as been clamp between: ", self.wmin," to ", self.wmin," \n The matrix values can be bais to max and min values!!!")
+				self.w = torch.clamp(self.w, self.wmin, self.wmax)
+				
 	
 	def compute(self, s):
 		'''

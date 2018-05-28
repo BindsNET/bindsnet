@@ -92,7 +92,7 @@ class DiehlAndCook2015(Network):
 										theta_decay=theta_decay),
 					   name='Ae')
 		
-		self.add_layer(LIFNodes(n=self.n_neurons,
+		self.add_layer(DiehlAndCookNodes(n=self.n_neurons,
 							    traces=False,
 								rest=-60.0,
 								reset=-45.0,
