@@ -56,7 +56,7 @@ class DiehlAndCook2015(Network):
 	Implements the spiking neural network architecture from `(Diehl & Cook 2015) <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
 	'''
 	def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, dt=1.0, nu_pre=1e-4,
-				 nu_post=1e-2, wmin=0, wmax=1, norm=78.4, theta_plus=0.05, theta_decay=1e-7,X_Ae_decay=None,Ae_Ai_decay=None ):
+				 nu_post=1e-2, wmin=0, wmax=1, norm=78.4, theta_plus=0.05, theta_decay=1e-7,X_Ae_decay=None,Ae_Ai_decay=None, Ai_Ae_decay=None ):
 		'''
 		Inputs:
 		
@@ -78,7 +78,7 @@ class DiehlAndCook2015(Network):
 		self.add_layer(Input(n=self.n_inpt,
 							 traces=True,
 							 trace_tc=5e-2),
-					   name='X')
+		                        name='X')
 		
 		self.add_layer(DiehlAndCookNodes(n=self.n_neurons,
 										traces=True,
@@ -90,17 +90,17 @@ class DiehlAndCook2015(Network):
 										trace_tc=5e-2,
 										theta_plus=theta_plus,
 										theta_decay=theta_decay),
-					   name='Ae')
+		                        name='Ae')
 		
 		self.add_layer(DiehlAndCookNodes(n=self.n_neurons,
-							    traces=False,
-								rest=-60.0,
-								reset=-45.0,
-								thresh=-40.0,
-                                decay=1e-1,
-								refrac=2,
-								trace_tc=5e-2),
-					   name='Ai')
+		                                                                traces=True,
+		                                                                rest=-60.0,
+		                                                                reset=-45.0,
+		                                                                thresh=-40.0,
+		                                                                decay=1e-1,
+		                                                                refrac=2,
+		                                                                trace_tc=5e-2),
+		                        name='Ai')
 		
 		self.add_connection(Connection(source=self.layers['X'],
 									   target=self.layers['Ae'],
@@ -112,8 +112,8 @@ class DiehlAndCook2015(Network):
 									   wmax=wmax,
 									   norm=norm,
 									   decay=X_Ae_decay),
-						    source='X',
-						    target='Ae')
+		                                source='X',
+		                                target='Ae')
 		
 		self.add_connection(Connection(source=self.layers['Ae'],
 									   target=self.layers['Ai'],
@@ -121,13 +121,14 @@ class DiehlAndCook2015(Network):
 									   wmin=0,
 									   wmax=self.exc,
 		                                                           decay=Ae_Ai_decay),
-						    source='Ae',
-						    target='Ai')
+		                                source='Ae',
+		                                target='Ai')
 		
 		self.add_connection(Connection(source=self.layers['Ai'],
 									   target=self.layers['Ae'],
 									   w=-self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons))),
 									   wmin=-self.inh,
-									   wmax=0),
-						    source='Ai',
-						    target='Ae')
+									   wmax=0,
+		                                                           decay=Ai_Ae_decay),
+		                                source='Ai',
+		                                target='Ae')

@@ -126,10 +126,10 @@ class Connection(AbstractConnection):
 			self.w = self.wmin + self.w*(self.wmax-self.wmin)
 		else:
 			bo = False
-			if torch.max(self.w) >= self.wmax:
+			if torch.max(self.w) > self.wmax:
 				print("Warning: provided weights matrix contain values largers then :", self.wmax)
 				bo = True
-			if torch.max(self.w) <= self.wmin:
+			if torch.max(self.w) < self.wmin:
 				print("Warning: provided weights matrix contain values smaller then :", self.wmin)			
 				bo = True
 			if bo:
