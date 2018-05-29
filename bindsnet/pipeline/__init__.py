@@ -16,7 +16,7 @@ class Pipeline:
 	'''
 	Abstracts the interaction between network, environment (or dataset), input encoding, and environment feedback action.
 	'''
-	def __init__(self, network, environment, encoding=bernoulli, action=None, **kwargs):
+	def __init__(self, network, environment, encoding=bernoulli, action_function=None, **kwargs):
 		'''
 		Initializes the pipeline.
 		
@@ -25,7 +25,7 @@ class Pipeline:
 			| :code:`network` (:code:`bindsnet.Network`): Arbitrary network object.
 			| :code:`environment` (:code:`bindsnet.Environment`): Arbitrary environment.
 			| :code:`encoding` (:code:`function`): Function to encode observations into spike trains.
-			| :code:`action` (:code:`function`): Function to convert network outputs into environment inputs.
+			| :code:`action_function` (:code:`function`): Function to convert network outputs into environment inputs.
 			| :code:`kwargs`:
 			
 				| :code:`plot_interval` (:code:`int`): Interval to update plots.
@@ -41,7 +41,7 @@ class Pipeline:
 		self.network = network
 		self.env = environment
 		self.encoding = encoding
-		self.action = action
+		self.action_function = action_function
 		
 		self.iteration = 0
 		self.history_index = 1
@@ -123,8 +123,8 @@ class Pipeline:
 			self.env.render()
 			
 		# Choose action based on output neuron spiking.
-		if self.feedback_action is not None:
-			action = self.action(self, output=self.output)
+		if self.action_function is not None:
+			action = self.action_function(self, output=self.output)
 		else:
 			action = None
 		
