@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
+import warnings
 
 from ..learning             import *
 from ..network.nodes        import Nodes
@@ -115,8 +116,23 @@ class Connection(AbstractConnection):
 		'''
 		super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 
-		self.w = kwargs.get('w', torch.rand(*source.shape, *target.shape))
-		self.w = torch.clamp(self.w, self.wmin, self.wmax)
+		self.w = kwargs.get('w', None)
+		
+		if self.w is None:
+			torch.rand(*source.shape, *target.shape)
+			self.w = self.wmin + self.w*(self.wmax-self.wmin)
+		else:
+			bo = False
+			if torch.max(self.w) > self.wmax:
+				warnings.warn("Warning: provided weights matrix contain values largers then :", self.wmax)
+				bo = True
+			if torch.max(self.w) < self.wmin:
+				warnings.warn("Warning: provided weights matrix contain values smaller then :", self.wmin)			
+				bo = True
+			if bo:
+				warnings.warn("Warning: the weights matrix as been clamp between: ", self.wmin," to ", self.wmin," \n The matrix values can be bais to max and min values!!!")
+				self.w = torch.clamp(self.w, self.wmin, self.wmax)
+				
 	
 	def compute(self, s):
 		'''
@@ -126,7 +142,13 @@ class Connection(AbstractConnection):
 		
 			| :code:`s` (:code:`torch.Tensor`): Incoming spikes.
 		'''
-		s = s.float().view(-1)
+		
+		# Decaying spike activation from previous iteration.
+		if self.decay is not None: 
+			self.s = self.s * self.decay + s.float().view(-1)
+		else:
+			self.s = s.float().view(-1)
+
 		w = self.w.view(self.source.n, self.target.n)
 		a = s @ w
 		return a.view(*self.target.shape)
