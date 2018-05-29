@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .feedback_action           import *
+from .action        	 import *
 from ..analysis.plotting import *
 from ..network.nodes     import Input
 from ..network.monitors  import Monitor
