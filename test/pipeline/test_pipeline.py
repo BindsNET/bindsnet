@@ -1,7 +1,7 @@
 import torch
 from bindsnet.environment       import *
 from bindsnet.encoding          import *
-from bindsnet.pipeline.feedback import *
+from bindsnet.pipeline.action   import *
 from bindsnet.datasets          import MNIST
 from bindsnet.network           import Network
 from bindsnet.pipeline          import Pipeline
