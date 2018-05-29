@@ -1,7 +1,7 @@
 import torch
+import warnings
 import numpy as np
 import torch.nn.functional as F
-import warnings
 
 from ..learning             import *
 from ..network.nodes        import Nodes
