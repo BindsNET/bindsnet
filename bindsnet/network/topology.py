@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
+import warnings
 
 from ..learning             import *
 from ..network.nodes        import Nodes
@@ -127,13 +128,13 @@ class Connection(AbstractConnection):
 		else:
 			bo = False
 			if torch.max(self.w) > self.wmax:
-				print("Warning: provided weights matrix contain values largers then :", self.wmax)
+				warnings.warn("Warning: provided weights matrix contain values largers then :", self.wmax)
 				bo = True
 			if torch.max(self.w) < self.wmin:
-				print("Warning: provided weights matrix contain values smaller then :", self.wmin)			
+				warnings.warn("Warning: provided weights matrix contain values smaller then :", self.wmin)			
 				bo = True
 			if bo:
-				print("Warning: the weights matrix as been clamp between: ", self.wmin," to ", self.wmin," \n The matrix values can be bais to max and min values!!!")
+				warnings.warn("Warning: the weights matrix as been clamp between: ", self.wmin," to ", self.wmin," \n The matrix values can be bais to max and min values!!!")
 				self.w = torch.clamp(self.w, self.wmin, self.wmax)
 				
 	
