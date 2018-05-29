@@ -45,6 +45,7 @@ class AbstractConnection(ABC):
 		self.wmin = kwargs.get('wmin', float('-inf'))
 		self.wmax = kwargs.get('wmax', float('inf'))
 		self.norm = kwargs.get('norm', None)
+		self.decay = kwargs.get('decay', None)
 		
 		if self.update_rule is m_stdp or self.update_rule is m_stdp_et:
 			self.e_trace = 0
@@ -119,20 +120,11 @@ class Connection(AbstractConnection):
 		self.w = kwargs.get('w', None)
 		
 		if self.w is None:
-			torch.rand(*source.shape, *target.shape)
-			self.w = self.wmin + self.w*(self.wmax-self.wmin)
+			self.w = self.wmin + torch.rand(*source.shape, *target.shape) * (self.wmin - self.wmin)
 		else:
-			bo = False
-			if torch.max(self.w) > self.wmax:
-				warnings.warn("Warning: provided weights matrix contain values largers then :", self.wmax)
-				bo = True
-			if torch.max(self.w) < self.wmin:
-				warnings.warn("Warning: provided weights matrix contain values smaller then :", self.wmin)			
-				bo = True
-			if bo:
-				warnings.warn("Warning: the weights matrix as been clamp between: ", self.wmin," to ", self.wmin," \n The matrix values can be bais to max and min values!!!")
+			if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
+				warnings.warn('Weight matrix will be clamped between [%f, %f]; values may be biased to interval values.' % (self.wmin, self.wmax))
 				self.w = torch.clamp(self.w, self.wmin, self.wmax)
-				
 	
 	def compute(self, s):
 		'''
@@ -145,13 +137,13 @@ class Connection(AbstractConnection):
 		
 		# Decaying spike activation from previous iteration.
 		if self.decay is not None: 
-			self.s = self.s * self.decay + s.float().view(-1)
+			self.a_pre = self.a_pre * self.decay + s.float().view(-1)
 		else:
-			self.s = s.float().view(-1)
+			self.a_pre = s.float().view(-1)
 
 		w = self.w.view(self.source.n, self.target.n)
-		a = s @ w
-		return a.view(*self.target.shape)
+		a_post = self.a_pre @ w
+		return a_post.view(*self.target.shape)
 
 	def update(self, **kwargs):
 		'''
