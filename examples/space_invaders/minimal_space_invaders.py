@@ -12,7 +12,7 @@ from bindsnet.pipeline.feedback import select_multinomial
 network = Network(dt=1.0)
 
 # Layers of neurons.
-inpt = Input(n=6552, traces=True)
+inpt = Input(n=78*84, shape=[78, 84], traces=True)
 middle = LIFNodes(n=225, traces=True, thresh=-52.0 + torch.randn(225))
 out = LIFNodes(n=60, refrac=0, traces=True, thresh=-40.0)
 

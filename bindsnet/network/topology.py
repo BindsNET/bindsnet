@@ -153,7 +153,7 @@ class Connection(AbstractConnection):
 		super()._reset()
 
 
-class Conv2dConnection:
+class Conv2dConnection(AbstractConnection):
 	'''
 	Specifies convolutional synapses between one or two populations of neurons.
 	'''
@@ -189,7 +189,7 @@ class Conv2dConnection:
 		self.padding = _pair(padding)
 		self.dilation = _pair(dilation)
 		
-		assert source.size(0) == target.size(0), 'Minibatch size not equal across source and target populations'
+		assert source.shape[0] == target.shape[0], 'Minibatch size not equal across source and target populations'
 		
 		minibatch = source.shape[0]
 		self.in_channels, input_height, input_width = source.shape[1], source.shape[2], source.shape[3]
@@ -198,7 +198,8 @@ class Conv2dConnection:
 		error_message = 'Target dimensionality must be (minibatch, out_channels, \
 					    (input_height - filter_height + 2 * padding_height) / stride_height + 1, \
 					    (input_width - filter_width + 2 * padding_width) / stride_width + 1'
-		assert tuple(target.size()) == (minibatch, self.out_channels,
+		
+		assert tuple(target.shape) == (minibatch, self.out_channels,
 									   (input_height - self.kernel_size[0] + 2 * self.padding[0]) / self.stride[0] + 1,
 									   (input_width - self.kernel_size[1] + 2 * self.padding[1]) / self.stride[1] + 1), error_message
 									   
@@ -240,7 +241,7 @@ class Conv2dConnection:
 		super()._reset()
 
 
-class SparseConnection:
+class SparseConnection(AbstractConnection):
 	'''
 	Specifies sparse synapses between one or two populations of neurons.
 	'''
@@ -280,9 +281,6 @@ class SparseConnection:
 			self.w = torch.sparse.FloatTensor(i.nonzero().t(), v)
 		elif self.w is not None:
 			assert self.w.is_sparse, 'Weight matrix is not sparse (see torch.sparse module)'
-			
-			self.w[self.w < self.wmin] = self.wmin
-			self.w[self.w > self.wmax] = self.wmax
 	
 	def compute(self, s):
 		'''
@@ -293,7 +291,7 @@ class SparseConnection:
 			| :code:`s` (:code:`torch.Tensor`): Incoming spikes.
 		'''
 		s = s.float().view(-1)
-		a = s @ w
+		a = s @ self.w
 		return a.view(*self.target.shape)
 
 	def update(self, **kwargs):

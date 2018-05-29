@@ -14,9 +14,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_train', type=int, default=60000)
 parser.add_argument('--n_test', type=int, default=10000)
-parser.add_argument('--kernel_size', type=int, default=5)
-parser.add_argument('--stride', type=int, default=1)
-parser.add_argument('--n_filters', type=int, default=16)
+parser.add_argument('--kernel_size', type=int, default=16)
+parser.add_argument('--stride', type=int, default=4)
+parser.add_argument('--n_filters', type=int, default=25)
 parser.add_argument('--padding', type=int, default=0)
 parser.add_argument('--time', type=int, default=50)
 parser.add_argument('--dt', type=int, default=1.0)
@@ -53,19 +53,54 @@ conv_layer = DiehlAndCookNodes(n=n_filters * conv_size * conv_size,
 						shape=(1, n_filters, conv_size, conv_size),
 						traces=True)
 
-conv_weights = Conv2dConnection(input_layer,
-							    conv_layer,
-							    kernel_size=kernel_size,
-							    stride=stride,
-							    update_rule=post_pre,
-							    norm=0.4 * kernel_size ** 2,
-							    nu_pre=1e-3,
-							    nu_post=2.5e-2,
-							    wmax=1.0)
+conv_conn = Conv2dConnection(input_layer,
+							 conv_layer,
+							 kernel_size=kernel_size,
+							 stride=stride,
+							 update_rule=post_pre,
+							 norm=0.4 * kernel_size ** 2,
+							 nu_pre=1e-4,
+							 nu_post=1e-2,
+					         wmax=1.0)
+
+# indices, values = [], []
+# # w = torch.zeros(1, n_filters, conv_size, conv_size, 1, n_filters, conv_size, conv_size)
+# for fltr1 in range(n_filters):
+# 	for fltr2 in range(n_filters):
+# 		if fltr1 != fltr2:
+# 			for i in range(conv_size):
+# 				for j in range(conv_size):
+# 					# indices.append([0, fltr1, i, j, 0, fltr2, i, j])
+# 					indices.append([fltr1 * (i * conv_size) + j, fltr2 * (i + conv_size) + j])
+# 					values.append(-17.5)
+# 					# w[0, fltr1, i, j, 0, fltr2, i, j] = -17.5
+
+# w = torch.sparse.FloatTensor(torch.Tensor(indices).long().t(),
+# 							 torch.Tensor(values).float(),
+# 							 torch.Size([n_filters * conv_size ** 2, n_filters * conv_size ** 2]))
+					
+# recurrent_conn = Connection(conv_layer,
+# 							      conv_layer,
+# 							      w=w)
+
+w = torch.zeros(1, n_filters, conv_size, conv_size, 1, n_filters, conv_size, conv_size)
+for fltr1 in range(n_filters):
+	for fltr2 in range(n_filters):
+		if fltr1 != fltr2:
+			for i in range(conv_size):
+				for j in range(conv_size):
+					w[0, fltr1, i, j, 0, fltr2, i, j] = -100.0
+					
+print(w)
+
+recurrent_conn = Connection(conv_layer,
+					        conv_layer,
+							w=w)
 
 network.add_layer(input_layer, name='X')
 network.add_layer(conv_layer, name='Y')
-network.add_connection(conv_weights, source='X', target='Y')
+network.add_connection(conv_conn, source='X', target='Y')
+network.add_connection(recurrent_conn, source='Y', target='Y')
 
 # Voltage recording for excitatory and inhibitory layers.
 voltage_monitor = Monitor(network.layers['Y'], ['v'], time=time)
@@ -100,14 +135,14 @@ for i in range(n_train):
 	inpts = {'X' : sample}
 	
 	# Run the network on the input.
-	choice = np.random.choice(per_class, size=10, replace=False)
-	clamp = {'Y' : per_class * labels[i].long() + torch.Tensor(choice).long()}
-	network.run(inpts=inpts, time=time)
+	# choice = torch.bernoulli(0.01 * torch.rand(1, 16, 24, 24))
+	# clamp = {'Y' : choice.byte()}
+	network.run(inpts=inpts, time=time) # , clamp=clamp)
 	
 	# Optionally plot various simulation information.
 	if plot:
 		inpt = inpts['X'].view(time, 784).sum(0).view(28, 28)
-		weights1 = conv_weights.w
+		weights1 = conv_conn.w
 		_spikes = {'X' : spikes['X'].get('s').view(28 ** 2, time),
 				   'Y' : spikes['Y'].get('s').view(n_filters * conv_size ** 2, time)}
 		_voltages = {'Y' : voltages['Y'].get('v').view(n_filters * conv_size ** 2, time)}
@@ -115,7 +150,7 @@ for i in range(n_train):
 		if i == 0:
 			inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
 			spike_ims, spike_axes = plot_spikes(_spikes)
-			weights1_im = plot_conv2d_weights(weights1, wmax=conv_weights.wmax)
+			weights1_im = plot_conv2d_weights(weights1, wmax=conv_conn.wmax)
 			voltage_ims, voltage_axes = plot_voltages(_voltages)
 			
 		else:

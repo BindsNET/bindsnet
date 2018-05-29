@@ -1,21 +1,30 @@
 import torch
 
-from abc import ABC, abstractmethod
+from operator  import mul
+from functools import reduce
+from abc       import ABC, abstractmethod
 
 
 class Nodes(ABC):
 	'''
 	Abstract base class for groups of neurons.
 	'''
-	def __init__(self, n, shape=None, traces=False, trace_tc=5e-2):
+	def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
 		super().__init__()
 		
-		self.n = n                               # No. of neurons.
+		assert not n is None or not shape is None, 'Must provide either no. of neurons or shape of nodes'
+		
+		if n is None:
+			self.n = reduce(mul, shape)          # No. of neurons product of shape.
+		else:
+			self.n = n                           # No. of neurons provided.
 		
 		if shape is None:
 			self.shape = [self.n]                # Shape is equal to the size of the layer.
 		else:
 			self.shape = shape                   # Shape is passed in as an argument.
+		
+		assert self.n == reduce(mul, self.shape), 'No. of neurons and shape do not match'
 			
 		self.traces = traces                     # Whether to record synpatic traces.
 		self.s = torch.zeros(self.shape).byte()  # Spike occurences.
@@ -54,7 +63,7 @@ class Input(Nodes):
 	'''
 	Layer of nodes with user-specified spiking behavior.
 	'''
-	def __init__(self, n, shape=None, traces=False, trace_tc=5e-2):
+	def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
 		'''
 		Instantiates a layer of input neurons.
 		
@@ -92,7 +101,7 @@ class McCullochPitts(Nodes):
 	'''
 	Layer of `McCulloch-Pitts neurons <http://wwwold.ece.utep.edu/research/webfuzzy/docs/kk-thesis/kk-thesis-html/node12.html>`_.
 	'''
-	def __init__(self, n, shape=None, traces=False, thresh=1.0, trace_tc=5e-2):
+	def __init__(self, n=None, shape=None, traces=False, thresh=1.0, trace_tc=5e-2):
 		'''
 		Instantiates a McCulloch-Pitts layer of neurons.
 		
@@ -133,7 +142,7 @@ class IFNodes(Nodes):
 	'''
 	Layer of `integrate-and-fire (IF) neurons <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_.
 	'''
-	def __init__(self, n, shape=None, traces=False, thresh=-52.0, reset=-65.0, refrac=5, trace_tc=5e-2):
+	def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, reset=-65.0, refrac=5, trace_tc=5e-2):
 		'''
 		Instantiates a layer of IF neurons.
 		
@@ -194,7 +203,7 @@ class LIFNodes(Nodes):
 	'''
 	Layer of leaky integrate-and-fire (LIF) neurons.
 	'''
-	def __init__(self, n, shape=None, traces=False, thresh=-52.0, rest=-65.0,
+	def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, rest=-65.0,
 				 reset=-65.0, refrac=5, decay=1e-2, trace_tc=5e-2):
 		'''
 		Instantiates a layer of LIF neurons.
@@ -205,6 +214,7 @@ class LIFNodes(Nodes):
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
 			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`rest` (:code:`float`): Resting membrane voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
 			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
@@ -261,7 +271,7 @@ class AdaptiveLIFNodes(Nodes):
 	'''
 	Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds.
 	'''
-	def __init__(self, n, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
+	def __init__(self, n=None, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
 				 refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
 		'''
 		Instantiates a layer of LIF neurons with adaptive firing thresholds.
@@ -271,8 +281,9 @@ class AdaptiveLIFNodes(Nodes):
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`rest` (:code:`float`): Resting membrane voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
+			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
 			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
@@ -336,7 +347,7 @@ class DiehlAndCookNodes(Nodes):
 	'''
 	Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds (modified for Diehl & Cook 2015 replication).
 	'''
-	def __init__(self, n, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
+	def __init__(self, n=None, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
 				 refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
 		'''
 		Instantiates a layer of Diehl & Cook 2015 neurons.
@@ -346,8 +357,9 @@ class DiehlAndCookNodes(Nodes):
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`rest` (:code:`float`): Resting membrane voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
+			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
 			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
@@ -417,7 +429,7 @@ class IzhikevichNodes(Nodes):
 	'''
 	Layer of Izhikevich neurons.
 	'''
-	def __init__(self, n, shape=None, traces=False, excitatory=True, rest=-65.0, reset=-65.0,
+	def __init__(self, n=None, shape=None, traces=False, excitatory=True, rest=-65.0, reset=-65.0,
 					thresh=-52.0, refrac=5, decay=1e-2, trace_tc=5e-2):
 		'''
 		Instantiates a layer of Izhikevich neurons.
@@ -427,8 +439,10 @@ class IzhikevichNodes(Nodes):
 			| :code:`n` (:code:`int`): The number of neurons in the layer.
 			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
 			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
+			| :code:`excitatory` (:code:`bool`): Whether layer is excitatory.
+			| :code:`rest` (:code:`float`): Resting membrane voltage.
 			| :code:`reset` (:code:`float`): Post-spike reset voltage.
+			| :code:`thresh` (:code:`float`): Spike threshold voltage.
 			| :code:`refrac` (:code:`int`): refrac (non-firing) period of the neuron.
 			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
 			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.

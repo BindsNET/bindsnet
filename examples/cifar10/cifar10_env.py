@@ -73,9 +73,8 @@ for layer in set(network.layers) - {'X'}:
 pipeline = Pipeline(network=network,
 					environment=environment,
 					encoding=encoding,
-					plot=plot,
 					time=time,
-				    plot_interval=1)
+					plot_interval=1)
 
 # Neuron assignments and spike proportions.
 assignments = -torch.ones_like(torch.Tensor(n_neurons))
@@ -90,6 +89,9 @@ labels = pipeline.env.labels
 
 # Sequence of accuracy estimates.
 accuracy = {'all' : [], 'proportion' : []}
+
+# Image categories.
+classes = ['none', 'plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 # Train the network.
 print('Begin training.\n')
@@ -127,13 +129,15 @@ for i in range(n_train):
 	if plot:
 		if gpu:
 			image = pipeline.obs.view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / intensity
-			inpt = pipeline.encoded.view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0).float().cpu().numpy()
+			image /= image.max()
+			inpt = 255 - pipeline.encoded['X'].view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0).cpu()
 			weights = network.connections[('X', 'Ae')].w.view(3, 32, 32, n_neurons).cpu().numpy()
 		else:
 			image = pipeline.obs.view(3, 32, 32).numpy().transpose(1, 2, 0) / intensity
-			inpt = pipeline.encoded.view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0).float().numpy()
+			image /= image.max()
+			inpt = 255 - pipeline.encoded['X'].view(time, 3*32*32).sum(0).view(3, 32, 32).sum(0)
 			weights = network.connections[('X', 'Ae')].w.view(3, 32, 32, n_neurons).numpy()
-		
+				
 		weights = weights.transpose(1, 2, 0, 3).sum(2).reshape(32*32, n_neurons)
 		weights = torch.from_numpy(weights)
 			
@@ -142,7 +146,7 @@ for i in range(n_train):
 		
 		if i == 0:
 			inpt_axes, inpt_ims = plot_input(image, inpt, label=labels[i])
-			assigns_im = plot_assignments(square_assignments)
+			assigns_im = plot_assignments(square_assignments, classes=classes)
 			perf_ax = plot_performance(accuracy)
 			weights_ax = plot_weights(square_weights, wmin=0.0, wmax=0.025)
 		else:

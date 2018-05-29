@@ -21,7 +21,8 @@ def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
 	
 	Returns:
 		
-		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the input plots.
+		| (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the input plots.
+		| (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the input plots.
 	'''
 	if axes is None:
 		fig, axes = plt.subplots(1, 2, figsize=figsize)
@@ -58,38 +59,32 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
 		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
 		| :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons in the given time range. Default is entire simulation time.
-		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 		| :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 	
 	Returns:
 		
-		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
-		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
+		| (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
+		| (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
+		
 	'''
 	n_subplots = len(spikes.keys())
+	spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
    
-	# Time setup
 	if time is not None: 
-		# Confirm only 2 values for time were given
-		assert(len(time) == 2)
-		# First value must be less than the second 
-		assert(time[0] < time[1])
-	
-	else:  # Set it for entire duration
+		assert len(time) == 2, 'Need (start, stop) values for time argument'
+		assert time[0] < time[1], 'Need start < stop in time argument'
+	else:
+		# Set it for entire duration
 		for key in spikes.keys():
 			time = (0, spikes[key].shape[1])
 			break
 
-	# Number of neurons setup
 	if len(n_neurons.keys()) != 0:
-		# Don't have to give numbers for all keys
-		assert(len(n_neurons.keys()) <= n_subplots)
-		# Keys given must be same as the ones used in spikes dict
-		assert(all(key in spikes.keys() for key in n_neurons.keys())==True)
-		# Checking to that given n_neurons per neuron layer is valid
-		assert(all(n_neurons[key][0] >= 0 and n_neurons[key][1] <= val.shape[0] for key, val in spikes.items() if key in n_neurons.keys()) == True)
+		assert len(n_neurons.keys()) <= n_subplots, 'n_neurons argument needs fewer entries than n_subplots'
+		assert all(key in spikes.keys() for key in n_neurons.keys()), 'n_neurons keys must be subset of spikes keys'
 	
-	# Uses default values using spikes dict
+	# Use all neurons if no argument provided.
 	for key, val in spikes.items():
 		if key not in n_neurons.keys():
 			n_neurons[key] = (0, val.shape[0])
@@ -98,7 +93,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
 		ims = []
 		
-		if n_subplots == 1: # Plotting only one image
+		if n_subplots == 1:
 			for datum in spikes.items():
 				ims.append(axes.imshow(spikes[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]], cmap='binary'))
 				
@@ -106,8 +101,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 				plt.title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
 				plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
 				axes.set_aspect('auto')
-				
-		else: # Plot each layer at a time
+		else:
 			for i, datum in enumerate(spikes.items()):
 				ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]], cmap='binary'))
 				
@@ -120,7 +114,7 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 		plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
 		plt.tight_layout()
            
-	else: # Plotting figure given
+	else:
 		if n_subplots == 1:
 			for datum in spikes.items():
 				ims[0].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
@@ -152,13 +146,14 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 		| :code:`wmax` (:code:`float`): Maximum allowed weight value.
 		| :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-	
+		
 	Returns:
 		
-		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+		| (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 	'''
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
+		ax.set_title('Connection weights')
 		
 		im = ax.imshow(weights, cmap='hot_r', vmin=wmin, vmax=wmax)
 		div = make_axes_locatable(ax)
@@ -186,10 +181,10 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 		| :code:`wmax` (:code:`float`): Maximum allowed weight value.
 		| :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-	
+		
 	Returns:
 		
-		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+		| (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
 	'''
 	n_sqrt = int(np.ceil(np.sqrt(weights.size(0))))
 	height = weights.size(2)
@@ -210,10 +205,10 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 		cax = div.append_axes("right", size="5%", pad=0.05)
 		
 		for i in range(height, n_sqrt * height, height):
-			ax.axhline(i, color='g', linestyle='--')
+			ax.axhline(i - 0.5, color='g', linestyle='--')
 		
 		for i in range(width, n_sqrt * width, width):
-			ax.axvline(i, color='g', linestyle='--')
+			ax.axvline(i - 0.5, color='g', linestyle='--')
 		
 		ax.set_xticks(()); ax.set_yticks(())
 		ax.set_aspect('auto')
@@ -226,7 +221,7 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 	return im
 
 
-def plot_assignments(assignments, im=None, figsize=(5, 5)):
+def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
 	'''
 	Plot the two-dimensional neuron assignments.
 	
@@ -235,21 +230,27 @@ def plot_assignments(assignments, im=None, figsize=(5, 5)):
 		| :code:`assignments` (:code:`torch.Tensor`): Vector of neuron label assignments.
 		| :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assignments plot.
 		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
+		| :code:`classes` (:code:`iterable`): Iterable of labels for colorbar ticks corresponding to data labels.
 	
 	Returns:
 		
-		| (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assigments plot.
+		| (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assigments plot.
 	'''
 	if not im:
 		fig, ax = plt.subplots(figsize=figsize)
+		ax.set_title('Categorical assignments')
 
 		color = plt.get_cmap('RdBu', 11)
 		im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
 		div = make_axes_locatable(ax); cax = div.append_axes("right", size="5%", pad=0.05)
-		plt.colorbar(im, cax=cax, ticks=np.arange(-1, 10))
 		
+		if classes is None:
+			plt.colorbar(im, cax=cax, ticks=np.arange(-1, 10))
+		else:
+			cbar = plt.colorbar(im, cax=cax, ticks=np.arange(-1, len(classes)))
+			cbar.ax.set_yticklabels(classes)   
+			
 		ax.set_xticks(()); ax.set_yticks(())
-		
 		fig.tight_layout()
 	else:
 		im.set_data(assignments)
@@ -269,7 +270,7 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 	
 	Returns:
 		
-		| (:code:`matplotlib.axes.Axes`): Used for re-drawing the performance plot.
+		| (:code:`ax` (:code:`matplotlib.axes.Axes`): Used for re-drawing the performance plot.
 	'''
 	if not ax:
 		_, ax = plt.subplots(figsize=figsize)
@@ -303,8 +304,9 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
 		
 	Returns:
 		
-		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing plots.
-		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing plots.
+		| (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing plots.
+		| (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing plots.
+		
 	'''
 	default = {'xlabel' : 'Simulation time', 'ylabel' : 'Index'}
 	
@@ -389,13 +391,14 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 		| :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
 		| :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
 		| :code:`time` (:code:`tuple(int)`): Plot voltages of neurons in given time range. Default is entire simulation time.
-		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 		| :code:`n_neurons` (:code:`dict(tuple(int))`): Plot voltages of neurons in given range of neurons. Default is all neurons.
+		| :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 	
 	Returns:
 		
-		| (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
-		| (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the voltage plots.
+		| (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the voltage plots.
+		| (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
+		
 	'''
 	n_subplots = len(voltages.keys())
     

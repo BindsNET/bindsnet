@@ -353,7 +353,7 @@ class SpokenMNIST(Dataset):
 				
 	def download(self):
 		'''
-		Downloads and unzips all CIFAR-10 data.
+		Downloads and unzips all Spoken MNIST data.
 		
 		Inputs:
 		
@@ -375,7 +375,7 @@ class SpokenMNIST(Dataset):
 	
 	def process_data(self, filenames):
 		'''
-		Opens files of CIFAR-10 data and processes them into :code:`numpy` arrays.
+		Opens files of Spoken MNIST data and processes them into :code:`numpy` arrays.
 		
 		Inputs:
 		
@@ -604,7 +604,7 @@ class CIFAR100(Dataset):
 		
 	def get_train(self):
 		'''
-		Gets the MNIST training images and labels.
+		Gets the CIFAR-100 training images and labels.
 
 		Returns:
 		
@@ -639,8 +639,8 @@ class CIFAR100(Dataset):
 
 		Returns:
 		
-			| :code:`images` (:code:`torch.Tensor`): The MNIST test images.
-			| :code:`labels` (:code:`torch.Tensor`): The MNIST test labels.
+			| :code:`images` (:code:`torch.Tensor`): The CIFAR-100 test images.
+			| :code:`labels` (:code:`torch.Tensor`): The CIFAR-100 test labels.
 		'''
 		if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
 			# Download data if it isn't on disk.

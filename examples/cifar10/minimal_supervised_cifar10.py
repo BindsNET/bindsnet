@@ -6,7 +6,6 @@ from bindsnet.pipeline    import Pipeline
 from bindsnet.models      import DiehlAndCook2015
 from bindsnet.environment import DatasetEnvironment
 
-
 # Build network.
 network = DiehlAndCook2015(n_inpt=32*32*3,
 						   n_neurons=100,
@@ -18,9 +17,8 @@ network = DiehlAndCook2015(n_inpt=32*32*3,
 						   norm=78.4)
 
 # Specify dataset wrapper environment.
-environment = DatasetEnvironment(dataset=CIFAR10(path='data/CIFAR10'),
-								 train=True,
-								 intensity=0.25)
+environment = DatasetEnvironment(dataset=CIFAR10(path='../../data/CIFAR10'),
+								 train=True)
 
 # Build pipeline from components.
 pipeline = Pipeline(network=network,

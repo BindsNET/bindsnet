@@ -10,7 +10,7 @@ from bindsnet import *
 
 # Build a simple two-layer, input-output network.
 network = Network(dt=1.0)
-inpt = Input(784, shape=(28, 28)); network.add_layer(inpt, name='I')
+inpt = Input(shape=(3, 32, 32)); network.add_layer(inpt, name='I')
 output = LIFNodes(625, thresh=-52 + torch.randn(625)); network.add_layer(output, name='O')
 C1 = Connection(source=inpt, target=output, w=torch.randn(inpt.n, output.n));
 C2 = Connection(source=output, target=output, w=0.5*torch.randn(output.n, output.n))
@@ -28,7 +28,7 @@ network.add_monitor(voltages['O'], name='O_voltages')
 
 
 # Get MNIST training images and labels.
-images, labels = MNIST(path='../../data/MNIST').get_train()
+images, labels = CIFAR10(path='../../data/CIFAR10').get_train()
 images *= 0.25
 
 # Create lazily iterating Poisson-distributed data loader.
@@ -53,11 +53,21 @@ for i, (datum, label) in enumerate(loader):
 	network.run(inpts={'I' : datum}, time=250)
 	training_pairs.append([spikes['O'].get('s').sum(-1), label])
 	
-	inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
-	spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
-	voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
-	weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2)
-	weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
+	image = images[i].numpy().transpose(1, 2, 0)
+	image /= image.max()
+	datum = datum.sum(0).numpy().transpose(1, 2, 0).astype(np.float)
+	datum /= datum.max()
+	
+	w1 = torch.from_numpy(C1.w.numpy().reshape(3, 32 * 32, -1).sum(0))
+	w2 = C2.w
+	
+	inpt_axes, inpt_ims = plot_input(image, datum, label=label, axes=inpt_axes, ims=inpt_ims)
+	spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes},
+										axes=spike_axes, ims=spike_ims)
+	voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages},
+											  ims=voltage_ims, axes=voltage_axes)
+	weights_im = plot_weights(get_square_weights(w1, 23, 32), im=weights_im, wmin=-2, wmax=2)
+	weights_im2 = plot_weights(w2, im=weights_im2, wmin=-2, wmax=2)
 	
 	plt.pause(1e-8)
 	
@@ -96,7 +106,7 @@ for epoch in range(10):
 				   % (epoch+1, 10, i+1, len(training_pairs), loss.data[0]))
 
 # Get MNIST test images and labels.
-images, labels = MNIST(path='../../data/MNIST').get_test()
+images, labels = CIFAR10(path='../../data/CIFAR10').get_test()
 images *= 0.25
 
 # Create lazily iterating Poisson-distributed data loader.
@@ -111,11 +121,21 @@ for i, (datum, label) in enumerate(loader):
 	network.run(inpts={'I' : datum}, time=250)
 	test_pairs.append([spikes['O'].get('s').sum(-1), label])
 	
-	inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
-	spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
-	voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
-	weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2)
-	weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
+	image = images[i].numpy().transpose(1, 2, 0)
+	image /= image.max()
+	datum = datum.sum(0).numpy().transpose(1, 2, 0).astype(np.float)
+	datum /= datum.max()
+	
+	w1 = torch.from_numpy(C1.w.numpy().reshape(3, 32 * 32, -1).sum(0))
+	w2 = C2.w
+	
+	inpt_axes, inpt_ims = plot_input(image, datum, label=label, axes=inpt_axes, ims=inpt_ims)
+	spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes},
+										axes=spike_axes, ims=spike_ims)
+	voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages},
+											  ims=voltage_ims, axes=voltage_axes)
+	weights_im = plot_weights(get_square_weights(w1, 23, 32), im=weights_im, wmin=-2, wmax=2)
+	weights_im2 = plot_weights(w2, im=weights_im2, wmin=-2, wmax=2)
 	
 	plt.pause(1e-8)
 	

@@ -14,7 +14,7 @@ class DatasetEnvironment:
 	'''
 	A wrapper around any object from the :code:`datasets` module to pass to the :code:`Pipeline` object.
 	'''
-	def __init__(self, dataset, train=True, time=350, **kwargs):
+	def __init__(self, dataset=MNIST, train=True, time=350, **kwargs):
 		'''
 		Initializes the environment wrapper around the dataset.
 		
@@ -99,24 +99,25 @@ class DatasetEnvironment:
 	def preprocess(self):
 		'''
 		Preprocessing step for a state specific to dataset objects.
-
-		Inputs:
-
-			| (:code:`numpy.array`): Observation from the environment.
-
-		Returns:
-
-			| (:code:`torch.Tensor`): Pre-processed observation.
 		'''
 		self.obs = self.obs.view(-1)
 		self.obs *= self.intensity
+	
+	def reshape(self):
+		'''
+		Reshaped observation for plotting purposes.
 		
+		Returns:
+		
+			| (:code:`torch.Tensor`): Reshaped observation to plot in :code:`plt.imshow()` call.
+		'''
 		if type(self.dataset) == MNIST:
-			self.obs_shape = (28, 28)
-		if type(self.dataset) in [CIFAR10, CIFAR100]:
-			self.obs_shape = (32, 32, 3)
-		else:
-			self.obs_shape = self.obs.shape
+			return self.obs.view(28, 28)
+		elif type(self.dataset) in [CIFAR10, CIFAR100]:
+			temp = self.obs.view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / self.intensity
+			return temp / temp.max()
+		elif type(self.dataset) in SpokenMNIST:
+			return self.obs.view(-1, 40)
 
 
 class GymEnvironment:
@@ -147,7 +148,7 @@ class GymEnvironment:
 
 		Inputs:
 
-			| :code:`a` (:code:`int`): Action to take in SpaceInvaders environment.
+			| :code:`a` (:code:`int`): Action to take in the environment.
 
 		Returns:
 
@@ -191,7 +192,7 @@ class GymEnvironment:
 
 	def preprocess(self):
 		'''
-		Preprocessing step for an observation from the Space Invaders environment.
+		Preprocessing step for an observation from Gym environment.
 		'''
 		if self.name == 'CartPole-v0':
 			self.obs = np.array([self.obs[0] + 2.4, -min(self.obs[1], 0), max(self.obs[1], 0),
@@ -200,9 +201,18 @@ class GymEnvironment:
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = self.obs[26:104, :]
 			self.obs = binary_image(self.obs)
-		else:
+		else: # Default pre-processing step
 			self.obs = subsample(gray_scale(self.obs), 84, 110)
 			self.obs = binary_image(self.obs)
+			
+		self.obs = torch.from_numpy(self.obs).float()
 		
-		self.obs_shape = self.obs.shape
-		self.obs = torch.from_numpy(self.obs).view(-1).float()
+	def reshape(self):
+		'''
+		Reshape observation for plotting purposes.
+
+		Returns:
+		
+			| (:code:`torch.Tensor`): Reshaped observation to plot in :code:`plt.imshow()` call.
+		'''
+		return self.obs
