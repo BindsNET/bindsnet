@@ -29,7 +29,6 @@ class AbstractConnection(ABC):
 				| :code:`wmin` (:code:`float`): The minimum value on the connection weights.
 				| :code:`wmax` (:code:`float`): The maximum value on the connection weights.
 				| :code:`norm` (:code:`float`): Total weight per target neuron normalization.
-				| :code:`decay` (:code:`float`): Decay factor of old spikes.
 		'''
 		super().__init__()
 		
@@ -46,7 +45,6 @@ class AbstractConnection(ABC):
 		self.wmin = kwargs.get('wmin', float('-inf'))
 		self.wmax = kwargs.get('wmax', float('inf'))
 		self.norm = kwargs.get('norm', None)
-		self.decay = kwargs.get('decay', None)
 		
 		if self.update_rule is m_stdp or self.update_rule is m_stdp_et:
 			self.e_trace = 0
@@ -55,8 +53,6 @@ class AbstractConnection(ABC):
 			self.tc_plus = 0.05
 			self.p_minus = 0
 			self.tc_minus = 0.05
-			
-		self.s = torch.zeros(*source.shape)
 	
 	@abstractmethod
 	def compute(self, s):
@@ -152,9 +148,9 @@ class Connection(AbstractConnection):
 			self.s = self.s * self.decay + s.float().view(-1)
 		else:
 			self.s = s.float().view(-1)
-		
+
 		w = self.w.view(self.source.n, self.target.n)
-		a = self.s @ w
+		a = s @ w
 		return a.view(*self.target.shape)
 
 	def update(self, **kwargs):
@@ -179,7 +175,7 @@ class Connection(AbstractConnection):
 		super()._reset()
 
 
-class Conv2dConnection:
+class Conv2dConnection(AbstractConnection):
 	'''
 	Specifies convolutional synapses between one or two populations of neurons.
 	'''
@@ -215,7 +211,7 @@ class Conv2dConnection:
 		self.padding = _pair(padding)
 		self.dilation = _pair(dilation)
 		
-		assert source.size(0) == target.size(0), 'Minibatch size not equal across source and target populations'
+		assert source.shape[0] == target.shape[0], 'Minibatch size not equal across source and target populations'
 		
 		minibatch = source.shape[0]
 		self.in_channels, input_height, input_width = source.shape[1], source.shape[2], source.shape[3]
@@ -224,7 +220,8 @@ class Conv2dConnection:
 		error_message = 'Target dimensionality must be (minibatch, out_channels, \
 					    (input_height - filter_height + 2 * padding_height) / stride_height + 1, \
 					    (input_width - filter_width + 2 * padding_width) / stride_width + 1'
-		assert tuple(target.size()) == (minibatch, self.out_channels,
+		
+		assert tuple(target.shape) == (minibatch, self.out_channels,
 									   (input_height - self.kernel_size[0] + 2 * self.padding[0]) / self.stride[0] + 1,
 									   (input_width - self.kernel_size[1] + 2 * self.padding[1]) / self.stride[1] + 1), error_message
 									   
@@ -266,7 +263,7 @@ class Conv2dConnection:
 		super()._reset()
 
 
-class SparseConnection:
+class SparseConnection(AbstractConnection):
 	'''
 	Specifies sparse synapses between one or two populations of neurons.
 	'''
