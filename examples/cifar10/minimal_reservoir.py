@@ -13,14 +13,14 @@ class LogisticRegression(nn.Module):
 
 # Build a simple, two layer, "input-output" network.
 network = Network(dt=1.0)
-inpt = Input(784, shape=(28, 28)); network.add_layer(inpt, name='I')
+inpt = Input(3*32*32, shape=(3, 32, 32)); network.add_layer(inpt, name='I')
 output = LIFNodes(625, thresh=-52 + torch.randn(625)); network.add_layer(output, name='O')
 network.add_connection(Connection(inpt, output, w=torch.randn(inpt.n, output.n)), 'I', 'O')
 network.add_connection(Connection(output, output, w=0.5*torch.randn(output.n, output.n)), 'O', 'O')
 network.add_monitor(Monitor(output, ['s'], time=250), name='output_spikes')
 
 # Get MNIST training images and labels and create data loader.
-images, labels = MNIST(path='../../data/MNIST').get_train(); images *= 0.25
+images, labels = CIFAR10(path='../../data/CIFAR10').get_train(); images *= 0.25
 loader = zip(poisson_loader(images, time=250), iter(labels))
 
 # Run training data on reservoir and store (spikes per neuron, label) pairs.
@@ -45,7 +45,7 @@ for epoch in range(10):
 		loss.backward(); optimizer.step()
 
 # Get MNIST test images and labels and create data loader.
-images, labels = MNIST(path='../../data/MNIST').get_test(); images *= 0.25
+images, labels = CIFAR10(path='../../data/CIFAR10').get_test(); images *= 0.25
 loader = zip(poisson_loader(images, time=250), iter(labels))
 
 # Run test data on reservoir and store (spikes per neuron, label) pairs.
