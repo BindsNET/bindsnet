@@ -1,4 +1,5 @@
 import torch
+import warnings
 import numpy as np
 import torch.nn.functional as F
 
@@ -44,6 +45,7 @@ class AbstractConnection(ABC):
 		self.wmin = kwargs.get('wmin', float('-inf'))
 		self.wmax = kwargs.get('wmax', float('inf'))
 		self.norm = kwargs.get('norm', None)
+		self.decay = kwargs.get('decay', None)
 		
 		if self.update_rule is m_stdp or self.update_rule is m_stdp_et:
 			self.e_trace = 0
@@ -115,8 +117,14 @@ class Connection(AbstractConnection):
 		'''
 		super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 
-		self.w = kwargs.get('w', torch.rand(*source.shape, *target.shape))
-		self.w = torch.clamp(self.w, self.wmin, self.wmax)
+		self.w = kwargs.get('w', None)
+		
+		if self.w is None:
+			self.w = self.wmin + torch.rand(*source.shape, *target.shape) * (self.wmin - self.wmin)
+		else:
+			if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
+				warnings.warn('Weight matrix will be clamped between [%f, %f]; values may be biased to interval values.' % (self.wmin, self.wmax))
+				self.w = torch.clamp(self.w, self.wmin, self.wmax)
 	
 	def compute(self, s):
 		'''
@@ -126,10 +134,16 @@ class Connection(AbstractConnection):
 		
 			| :code:`s` (:code:`torch.Tensor`): Incoming spikes.
 		'''
-		s = s.float().view(-1)
+		
+		# Decaying spike activation from previous iteration.
+		if self.decay is not None: 
+			self.a_pre = self.a_pre * self.decay + s.float().view(-1)
+		else:
+			self.a_pre = s.float().view(-1)
+
 		w = self.w.view(self.source.n, self.target.n)
-		a = s @ w
-		return a.view(*self.target.shape)
+		a_post = self.a_pre @ w
+		return a_post.view(*self.target.shape)
 
 	def update(self, **kwargs):
 		'''
