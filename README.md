@@ -18,13 +18,15 @@ To build the `bindsnet` package from source, change directory to the top level o
 pip install .
 ```
 
-Or, to install in editable mode (allows modification of package with re-installing):
+Or, to install in editable mode (allows modification of package without re-installing):
 
 ```
 pip install -e .
 ```
 
 PyPI support (`pip install bindsnet`) *hopefully* coming soon.
+
+To install the packages necessary to interface with the [OpenAI gym RL environments library](https://github.com/openai/gym), follow their instructions for installing the packages needed to run the RL environments simulator (on Linux / MacOS).
 
 To run a near-replication of the SNN from [this paper](https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full#), issue
 
@@ -42,7 +44,7 @@ A number of other examples are available in the `examples` directory that are me
 Issue the following to run the tests:
 
 ```
-python -m pytest test
+python -m pytest test/
 ```
 
 ## Background
@@ -63,7 +65,7 @@ We have provided some simple starter scripts for doing unsupervised learning (le
 
 - Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu))
 
-- Hananel Hazan ([email](mailto:hananel@hazan.org.il))
+- Hananel Hazan ([email](mailto:hananel@cs.umass.edu))
 
 - Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu))
 

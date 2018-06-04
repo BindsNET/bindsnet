@@ -23,11 +23,20 @@ class Dataset(ABC):
 	'''
 	Abstract base class for dataset.
 	'''
-	def __init__(self):
+	def __init__(self, path='.', download=False):
 		'''
 		Abstract constructor for the Games class.
+		
+		Inputs:
+		
+			| :code:`path` (:code:`str`): Pathname of directory in which to store the dataset.
+			| :code:`download` (:code:`bool`): Whether or not to download the dataset (requires internet connection).
 		'''
-		super().__init__()
+		if not os.path.isdir(path):
+			os.makedirs(path)
+		
+		self.path = path
+		self.download = download
 	
 	@abstractmethod
 	def get_train(self):
@@ -74,18 +83,16 @@ class MNIST(Dataset):
 	test_images_url = 'http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz'
 	test_labels_url = 'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz'
 	
-	def __init__(self, path=os.path.join('data', 'MNIST')):
+	def __init__(self, path=os.path.join('data', 'MNIST'), download=False):
 		'''
 		Constructor for the :code:`MNIST` object. Makes the data directory if it doesn't already exist.
 
 		Inputs:
 		
-			| :code:`path` (:code:`str`): pathname of directory in which to store the MNIST handwritten digit dataset.
+			| :code:`path` (:code:`str`): Pathname of directory in which to store the dataset.
+			| :code:`download` (:code:`bool`): Whether or not to download the dataset (requires internet connection).
 		'''
-		if not os.path.isdir(path):
-			os.makedirs(path)
-		
-		self.path = path
+		super().__init__(path, download)
 		
 	def get_train(self):
 		'''
@@ -98,12 +105,15 @@ class MNIST(Dataset):
 		'''
 		if not os.path.isfile(os.path.join(self.path, MNIST.train_images_pickle)):
 			# Download training images if they aren't on disk.
-			print('Downloading training images.\n')
-			self.download(MNIST.train_images_url, MNIST.train_images_file)
-			images = self.process_images(MNIST.train_images_file)
-			
-			# Serialize image data on disk for next time.
-			p.dump(images, open(os.path.join(self.path, MNIST.train_images_pickle), 'wb'))
+			if self.download:
+				print('Downloading training images.\n')
+				self._download(MNIST.train_images_url, MNIST.train_images_file)
+				images = self.process_images(MNIST.train_images_file)
+
+				# Serialize image data on disk for next time.
+				p.dump(images, open(os.path.join(self.path, MNIST.train_images_pickle), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'MNIST(..., download=True, ...)\' to allow downloads.')
 		else:
 			# Load image data from disk if it has already been processed.
 			print('Loading training images from serialized object file.\n')
@@ -111,12 +121,15 @@ class MNIST(Dataset):
 		
 		if not os.path.isfile(os.path.join(self.path, MNIST.train_labels_pickle)):
 			# Download training labels if they aren't on disk.
-			print('Downloading training labels.\n')
-			self.download(MNIST.train_labels_url, MNIST.train_labels_file)
-			labels = self.process_labels(MNIST.train_labels_file)
-			
-			# Serialize label data on disk for next time.
-			p.dump(labels, open(os.path.join(self.path, MNIST.train_labels_pickle), 'wb'))
+			if self.download:
+				print('Downloading training labels.\n')
+				self._download(MNIST.train_labels_url, MNIST.train_labels_file)
+				labels = self.process_labels(MNIST.train_labels_file)
+
+				# Serialize label data on disk for next time.
+				p.dump(labels, open(os.path.join(self.path, MNIST.train_labels_pickle), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'MNIST(..., download=True, ...)\' to allow downloads.')
 		else:
 			# Load label data from disk if it has already been processed.
 			print('Loading training labels from serialized object file.\n')
@@ -135,25 +148,31 @@ class MNIST(Dataset):
 		'''
 		if not os.path.isfile(os.path.join(self.path, MNIST.test_images_pickle)):
 			# Download test images if they aren't on disk.
-			print('Downloading test images.\n')
-			self.download(MNIST.test_images_url, MNIST.test_images_file)
-			images = self.process_images(MNIST.test_images_file)
-			
-			# Serialize image data on disk for next time.
-			p.dump(images, open(os.path.join(self.path, MNIST.test_images_pickle), 'wb'))
+			if self.download:
+				print('Downloading test images.\n')
+				self._download(MNIST.test_images_url, MNIST.test_images_file)
+				images = self.process_images(MNIST.test_images_file)
+
+				# Serialize image data on disk for next time.
+				p.dump(images, open(os.path.join(self.path, MNIST.test_images_pickle), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'MNIST(..., download=True, ...)\' to allow downloads.')
 		else:
 			# Load image data from disk if it has already been processed.
 			print('Loading test images from serialized object file.\n')
 			images = p.load(open(os.path.join(self.path, MNIST.test_images_pickle), 'rb'))
 		
 		if not os.path.isfile(os.path.join(self.path, MNIST.test_labels_pickle)):
-			# Download test labels if they aren't on disk.
-			print('Downloading test labels.\n')
-			self.download(MNIST.test_labels_url, MNIST.test_labels_file)
-			labels = self.process_labels(MNIST.test_labels_file)
-			
-			# Serialize image data on disk for next time.
-			p.dump(labels, open(os.path.join(self.path, MNIST.test_labels_pickle), 'wb'))
+			if self.download:
+				# Download test labels if they aren't on disk.
+				print('Downloading test labels.\n')
+				self._download(MNIST.test_labels_url, MNIST.test_labels_file)
+				labels = self.process_labels(MNIST.test_labels_file)
+
+				# Serialize image data on disk for next time.
+				p.dump(labels, open(os.path.join(self.path, MNIST.test_labels_pickle), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'MNIST(..., download=True, ...)\' to allow downloads.')
 		else:
 			# Load label data from disk if it has already been processed.
 			print('Loading test labels from serialized object file.\n')
@@ -161,7 +180,7 @@ class MNIST(Dataset):
 		
 		return torch.Tensor(images), torch.Tensor(labels)
 				
-	def download(self, url, filename):
+	def _download(self, url, filename):
 		'''
 		Downloads and unzips an MNIST data file.
 		
@@ -263,18 +282,16 @@ class SpokenMNIST(Dataset):
 	
 	n_files = len(files)
 	
-	def __init__(self, path=os.path.join('data', 'SpokenMNIST')):
+	def __init__(self, path=os.path.join('data', 'SpokenMNIST'), download=False):
 		'''
 		Constructor for the :code:`SpokenMNIST` object. Makes the data directory if it doesn't already exist.
 		
 		Inputs:
 		
-			| :code:`path` (:code:`str`): pathname of directory in which to store the Spoken MNIST dataset.
+			| :code:`path` (:code:`str`): Pathname of directory in which to store the dataset.
+			| :code:`download` (:code:`bool`): Whether or not to download the dataset (requires internet connection).
 		'''
-		if not os.path.isdir(path):
-			os.makedirs(path)
-		
-		self.path = path
+		super().__init__(path, download)
 		self.zip_path = os.path.join(path, 'repo.zip')
 	
 	def get_train(self, split=0.8):
@@ -294,14 +311,17 @@ class SpokenMNIST(Dataset):
 		
 		if not all([os.path.isfile(os.path.join(self.path, f)) for f in self.files]):
 			# Download data if it isn't on disk.
-			print('Downloading Spoken MNIST data.\n')
-			self.download()
-			
-			# Process data into audio, label (input, output) pairs.
-			audio, labels = self.process_data(SpokenMNIST.files[:split_index])
+			if self.download:
+				print('Downloading Spoken MNIST data.\n')
+				self._download()
 
-			# Serialize image data on disk for next time.
-			p.dump((audio, labels), open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)])), 'wb'))
+				# Process data into audio, label (input, output) pairs.
+				audio, labels = self.process_data(SpokenMNIST.files[:split_index])
+
+				# Serialize image data on disk for next time.
+				p.dump((audio, labels), open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)])), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'SpokenMNIST(..., download=True, ...)\' to allow downloads.')
 		else:
 			if not os.path.isdir(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))):
 				# Process image and label data if pickled file doesn't exist.
@@ -329,14 +349,17 @@ class SpokenMNIST(Dataset):
 		
 		if not all([os.path.isfile(os.path.join(self.path, f)) for f in self.files]):
 			# Download data if it isn't on disk.
-			print('Downloading Spoken MNIST data.\n')
-			self.download()
-			
-			# Process data into audio, label (input, output) pairs.
-			audio, labels = self.process_data(SpokenMNIST.files[split_index:])
+			if self.download:
+				print('Downloading Spoken MNIST data.\n')
+				self._download()
 
-			# Serialize image data on disk for next time.
-			p.dump((audio, labels), open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)])), 'wb'))
+				# Process data into audio, label (input, output) pairs.
+				audio, labels = self.process_data(SpokenMNIST.files[split_index:])
+
+				# Serialize image data on disk for next time.
+				p.dump((audio, labels), open(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)])), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'SpokenMNIST(..., download=True, ...)\' to allow downloads.')
 		else:
 			if not os.path.isdir(os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))):
 				# Process image and label data if pickled file doesn't exist.
@@ -351,7 +374,7 @@ class SpokenMNIST(Dataset):
 			
 		return audio, torch.Tensor(labels)
 				
-	def download(self):
+	def _download(self):
 		'''
 		Downloads and unzips all Spoken MNIST data.
 		
@@ -461,18 +484,16 @@ class CIFAR10(Dataset):
 	
 	url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
 	
-	def __init__(self, path=os.path.join('data', 'CIFAR10')):
+	def __init__(self, path=os.path.join('data', 'CIFAR10'), download=False):
 		'''
 		Constructor for the :code:`CIFAR10` object. Makes the data directory if it doesn't already exist.
 
 		Inputs:
 		
-			| :code:`path` (:code:`str`): pathname of directory in which to store the CIFAR-10 dataset.
+			| :code:`path` (:code:`str`): Pathname of directory in which to store the dataset.
+			| :code:`download` (:code:`bool`): Whether or not to download the dataset (requires internet connection).
 		'''
-		if not os.path.isdir(path):
-			os.makedirs(path)
-		
-		self.path = path
+		super().__init__(path, download)
 		self.data_path = os.path.join(self.path, CIFAR10.data_directory)
 		
 	def get_train(self):
@@ -486,12 +507,15 @@ class CIFAR10(Dataset):
 		'''
 		if not os.path.isdir(os.path.join(self.path, CIFAR10.data_directory)):
 			# Download data if it isn't on disk.
-			print('Downloading CIFAR-10 data.\n')
-			self.download(CIFAR10.url, CIFAR10.data_archive)
-			images, labels = self.process_data(CIFAR10.train_files)
+			if self.download:
+				print('Downloading CIFAR-10 data.\n')
+				self._download(CIFAR10.url, CIFAR10.data_archive)
+				images, labels = self.process_data(CIFAR10.train_files)
 
-			# Serialize image data on disk for next time.
-			p.dump((images, labels), open(os.path.join(self.path, CIFAR10.train_pickle), 'wb'))
+				# Serialize image data on disk for next time.
+				p.dump((images, labels), open(os.path.join(self.path, CIFAR10.train_pickle), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'CIFAR10(..., download=True, ...)\' to allow downloads.')
 		else:
 			if not os.path.isdir(os.path.join(self.path, CIFAR10.train_pickle)):
 				# Process image and label data if pickled file doesn't exist.
@@ -517,12 +541,15 @@ class CIFAR10(Dataset):
 		'''
 		if not os.path.isdir(os.path.join(self.path, CIFAR10.data_directory)):
 			# Download data if it isn't on disk.
-			print('Downloading CIFAR-10 data.\n')
-			self.download(CIFAR10.url, CIFAR10.data_archive)
-			images, labels = self.process_data(CIFAR10.test_files)
+			if self.download:
+				print('Downloading CIFAR-10 data.\n')
+				self._download(CIFAR10.url, CIFAR10.data_archive)
+				images, labels = self.process_data(CIFAR10.test_files)
 
-			# Serialize image data on disk for next time.
-			p.dump((images, labels), open(os.path.join(self.path, CIFAR10.test_pickle), 'wb'))
+				# Serialize image data on disk for next time.
+				p.dump((images, labels), open(os.path.join(self.path, CIFAR10.test_pickle), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'CIFAR10(..., download=True, ...)\' to allow downloads.')
 		else:
 			if not os.path.isdir(os.path.join(self.path, CIFAR10.test_pickle)):
 				# Process image and label data if pickled file doesn't exist.
@@ -537,7 +564,7 @@ class CIFAR10(Dataset):
 			
 		return torch.Tensor(images), torch.Tensor(labels)
 				
-	def download(self, url, filename):
+	def _download(self, url, filename):
 		'''
 		Downloads and unzips all CIFAR-10 data.
 		
@@ -566,7 +593,7 @@ class CIFAR10(Dataset):
 		for filename in filenames:
 			with open(os.path.join(self.data_path, filename), 'rb') as f:
 				temp = p.load(f, encoding='bytes')
-				d['data'].append(temp[b'data'].reshape(-1, 3, 32, 32))
+				d['data'].append(temp[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1))
 				d['labels'].append(temp[b'labels'])
 		
 		return np.concatenate(d['data']), np.concatenate(d['labels'])
@@ -588,18 +615,16 @@ class CIFAR100(Dataset):
 	
 	url = 'https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz'
 	
-	def __init__(self, path=os.path.join('data', 'CIFAR100')):
+	def __init__(self, path=os.path.join('data', 'CIFAR100'), download=False):
 		'''
 		Constructor for the :code:`CIFAR100` object. Makes the data directory if it doesn't already exist.
 
 		Inputs:
 		
-			| :code:`path` (:code:`str`): pathname of directory in which to store the CIFAR-10 handwritten digit dataset.
+			| :code:`path` (:code:`str`): Pathname of directory in which to store the dataset.
+			| :code:`download` (:code:`bool`): Whether or not to download the dataset (requires internet connection).
 		'''
-		if not os.path.isdir(path):
-			os.makedirs(path)
-		
-		self.path = path
+		super().__init__(path, download)
 		self.data_path = os.path.join(self.path, CIFAR100.data_directory)
 		
 	def get_train(self):
@@ -613,12 +638,15 @@ class CIFAR100(Dataset):
 		'''
 		if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
 			# Download data if it isn't on disk.
-			print('Downloading CIFAR-100 data.\n')
-			self.download(CIFAR100.url, CIFAR100.data_archive)
-			images, labels = self.process_data(CIFAR100.train_files)
+			if self.download:
+				print('Downloading CIFAR-100 data.\n')
+				self._download(CIFAR100.url, CIFAR100.data_archive)
+				images, labels = self.process_data(CIFAR100.train_files)
 
-			# Serialize image data on disk for next time.
-			p.dump((images, labels), open(os.path.join(self.path, CIFAR100.train_pickle), 'wb'))
+				# Serialize image data on disk for next time.
+				p.dump((images, labels), open(os.path.join(self.path, CIFAR100.train_pickle), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'CIFAR100(..., download=True, ...)\' to allow downloads.')
 		else:
 			if not os.path.isdir(os.path.join(self.path, CIFAR100.train_pickle)):
 				# Process image and label data if pickled file doesn't exist.
@@ -644,12 +672,15 @@ class CIFAR100(Dataset):
 		'''
 		if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
 			# Download data if it isn't on disk.
-			print('Downloading CIFAR-100 data.\n')
-			self.download(CIFAR100.url, CIFAR100.data_archive)
-			images, labels = self.process_data(CIFAR100.test_files)
+			if self.download:
+				print('Downloading CIFAR-100 data.\n')
+				self._download(CIFAR100.url, CIFAR100.data_archive)
+				images, labels = self.process_data(CIFAR100.test_files)
 
-			# Serialize image data on disk for next time.
-			p.dump((images, labels), open(os.path.join(self.path, CIFAR100.test_pickle), 'wb'))
+				# Serialize image data on disk for next time.
+				p.dump((images, labels), open(os.path.join(self.path, CIFAR100.test_pickle), 'wb'))
+			else:
+				raise FileNotFoundError('Dataset not found on disk; specify \'CIFAR100(..., download=True, ...)\' to allow downloads.')
 		else:
 			if not os.path.isdir(os.path.join(self.path, CIFAR10.test_pickle)):
 				# Process image and label data if pickled file doesn't exist.
@@ -664,7 +695,7 @@ class CIFAR100(Dataset):
 			
 		return torch.Tensor(images), torch.Tensor(labels)
 				
-	def download(self, url, filename):
+	def _download(self, url, filename):
 		'''
 		Downloads and unzips all CIFAR-100 data.
 		
@@ -693,7 +724,7 @@ class CIFAR100(Dataset):
 		for filename in filenames:
 			with open(os.path.join(self.data_path, filename), 'rb') as f:
 				temp = p.load(f, encoding='bytes')
-				d['data'].append(temp[b'data'].reshape(-1, 3, 32, 32))
+				d['data'].append(temp[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1))
 				d['labels'].append(temp[b'fine_labels'])
 		
 		return np.concatenate(d['data']), np.concatenate(d['labels'])

@@ -42,16 +42,16 @@ path = os.path.join('..', '..', 'data', 'CIFAR10')
 	
 # Build network.
 network = DiehlAndCook2015(n_inpt=32*32*3,
-					   n_neurons=n_neurons,
-					   exc=exc,
-					   inh=inh,
-					   dt=dt,
-					   nu_pre=2e-5,
-					   nu_post=2e-3,
-					   norm=10.0)
+					       n_neurons=n_neurons,
+					       exc=exc,
+					       inh=inh,
+					       dt=dt,
+					       nu_pre=2e-5,
+					       nu_post=2e-3,
+					       norm=10.0)
 
 # Initialize data "environment".
-environment = DatasetEnvironment(dataset=CIFAR10(path=path),
+environment = DatasetEnvironment(dataset=CIFAR10(path=path, download=True),
 								 train=train,
 								 time=time,
 								 intensity=intensity)

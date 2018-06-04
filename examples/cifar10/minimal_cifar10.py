@@ -13,7 +13,7 @@ network = DiehlAndCook2015(n_inpt=32*32*3,
 						   norm=78.4)
 
 # Specify dataset wrapper environment.
-environment = DatasetEnvironment(dataset=CIFAR10(path='../../data/CIFAR10'),
+environment = DatasetEnvironment(dataset=CIFAR10(path='../../data/CIFAR10', download=True),
 								 train=True,
 								 intensity=0.25)
 

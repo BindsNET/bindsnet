@@ -44,7 +44,8 @@ for layer in spike_monitors:
 	network.add_monitor(spike_monitors[layer], '%s' % layer)
 
 # Load MNIST data.
-images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST')).get_train()
+images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST'),
+					   download=True).get_train()
 images *= intensity
 images /= 4
 

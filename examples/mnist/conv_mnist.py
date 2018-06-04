@@ -91,8 +91,6 @@ for fltr1 in range(n_filters):
 				for j in range(conv_size):
 					w[0, fltr1, i, j, 0, fltr2, i, j] = -100.0
 					
-print(w)
-
 recurrent_conn = Connection(conv_layer,
 					        conv_layer,
 							w=w)
@@ -107,7 +105,8 @@ voltage_monitor = Monitor(network.layers['Y'], ['v'], time=time)
 network.add_monitor(voltage_monitor, name='output_voltage')
 
 # Load MNIST data.
-images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST')).get_train()
+images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST'),
+					   download=True).get_train()
 images *= intensity
 
 # Lazily encode data as Poisson spike trains.
