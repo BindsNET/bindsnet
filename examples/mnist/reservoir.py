@@ -6,8 +6,6 @@ import torchvision.transforms as transforms
 
 from bindsnet import *
 
-# from torch.autograd import Variable
-
 # Build a simple two-layer, input-output network.
 network = Network(dt=1.0)
 inpt = Input(784, shape=(28, 28)); network.add_layer(inpt, name='I')
@@ -28,7 +26,8 @@ network.add_monitor(voltages['O'], name='O_voltages')
 
 
 # Get MNIST training images and labels.
-images, labels = MNIST(path='../../data/MNIST').get_train()
+images, labels = MNIST(path='../../data/MNIST',
+					   download=True).get_train()
 images *= 0.25
 
 # Create lazily iterating Poisson-distributed data loader.
@@ -96,7 +95,8 @@ for epoch in range(10):
 				   % (epoch+1, 10, i+1, len(training_pairs), loss.data[0]))
 
 # Get MNIST test images and labels.
-images, labels = MNIST(path='../../data/MNIST').get_test()
+images, labels = MNIST(path='../../data/MNIST',
+					   download=True).get_test()
 images *= 0.25
 
 # Create lazily iterating Poisson-distributed data loader.

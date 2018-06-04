@@ -20,6 +20,7 @@ network = DiehlAndCook2015(n_inpt=784,
 # Specify dataset wrapper environment.
 environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST'),
 								 train=True,
+								 download=True,
 								 intensity=0.25)
 
 # Build pipeline from components.

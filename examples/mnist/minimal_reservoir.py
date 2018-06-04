@@ -20,7 +20,7 @@ network.add_connection(Connection(output, output, w=0.5*torch.randn(output.n, ou
 network.add_monitor(Monitor(output, ['s'], time=250), name='output_spikes')
 
 # Get MNIST training images and labels and create data loader.
-images, labels = MNIST(path='../../data/MNIST').get_train(); images *= 0.25
+images, labels = MNIST(path='../../data/MNIST', download=True).get_train(); images *= 0.25
 loader = zip(poisson_loader(images, time=250), iter(labels))
 
 # Run training data on reservoir and store (spikes per neuron, label) pairs.
