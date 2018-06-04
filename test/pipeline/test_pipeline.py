@@ -15,20 +15,20 @@ class TestPipeline:
 	
 	def test_MNIST_pipeline(self):
 		network = DiehlAndCook2015(n_inpt=784,
-						   n_neurons=400,
-						   exc=22.5,
-						   inh=17.5,
-						   dt=1.0,
-						   norm=78.4)
+						           n_neurons=400,
+						           exc=22.5,
+						           inh=17.5,
+						           dt=1.0,
+						           norm=78.4)
 		
-		environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST'),
+		environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST', download=True),
 										 train=True,
 										 intensity=0.25)
 		
 		p = Pipeline(network=network,
-							environment=environment,
-							encoding=poisson,
-							time=350)
+					 environment=environment,
+					 encoding=poisson,
+					 time=350)
 		
 		assert p.network == network
 		assert p.env == environment
@@ -66,8 +66,8 @@ class TestPipeline:
 			for history_length in [3, 4, 5, 6]:
 				for delta in [2, 3, 4]:
 					p = Pipeline(network, environment, encoding=bernoulli,
-										feedback=select_multinomial, output='Z',
-										time=1, history_length=2, delta=4)
+								 feedback=select_multinomial, output='Z',
+								 time=1, history_length=2, delta=4)
 					
 					assert p.feedback == select_multinomial
 					assert p.history_length == history_length
@@ -78,31 +78,31 @@ class TestPipeline:
 			for time in [0, -1]:
 				try:
 					p = Pipeline(network, environment, encoding=bernoulli,
-											feedback=select_multinomial, output='Z',
-											time=time, history_length=2, delta=4)
+								 feedback=select_multinomial, output='Z',
+								 time=time, history_length=2, delta=4)
 				except Exception as es:
 					assert es == AssertionError
 					
 			for delta in [0, -1]:
 				try:
 					p = Pipeline(network, environment, encoding=bernoulli,
-											feedback=select_multinomial, output='Z',
-											time=time, history_length=2, delta=delta)
+								 feedback=select_multinomial, output='Z',
+								 time=time, history_length=2, delta=delta)
 				except Exception as es:
 					assert es == AssertionError
 			
 			for output in ['K']:
 				try:
 					p = Pipeline(network, environment, encoding=bernoulli,
-											feedback=select_multinomial, output=output,
-											time=time, history_length=2, delta=4)
+								 feedback=select_multinomial, output=output,
+								 time=time, history_length=2, delta=4)
 				except Exception as es:
 					assert es == AssertionError
 	
 			p = Pipeline(network, environment, encoding=bernoulli,
-											feedback=select_random, output='Z',
-											time=1, history_length=2, delta=4,
-											save_interval=50, render_interval=5)
+								 feedback=select_random, output='Z',
+								 time=1, history_length=2, delta=4,
+								 save_interval=50, render_interval=5)
 	
 			assert p.feedback == select_random
 			assert p.encoding == bernoulli
