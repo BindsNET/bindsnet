@@ -1,8 +1,14 @@
 from setuptools import setup, find_packages
 
+with open('README.md') as f:
+    long_description = f.read()
+
 setup(name='bindsnet',
       version='0.1',
       description='Spiking neural networks for ML in Python',
+	  license='AGPL-3.0',
+	  long_description=long_description,
+	  long_description_content_type='text/markdown',  # This is important!
       url='http://github.com/Hananel-Hazan/bindsnet',
       author='Daniel Saunders, Hananel Hazan, Darpan Sanghavi, Hassaan Khan',
       author_email='djsaunde@cs.umass.edu',
