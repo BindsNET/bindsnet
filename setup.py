@@ -8,7 +8,7 @@ setup(name='bindsnet',
       author_email='djsaunde@cs.umass.edu',
       packages=['bindsnet'],
 	  zip_safe=False,
-	  download_url='https://github.com/Hananel-Hazan/bindsnet/archive/0.1.tar.gz'
+	  download_url='https://github.com/Hananel-Hazan/bindsnet/archive/0.1.tar.gz',
 	  install_requires=['numpy>=1.14.2',
 						'torch>=0.4.0',
 						'tqdm>=4.19.9',
