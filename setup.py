@@ -3,8 +3,10 @@ from setuptools import setup, find_packages
 with open('README.md') as f:
     long_description = f.read()
 
+version='0.1.2'
+
 setup(name='bindsnet',
-      version='0.1',
+      version=version,
       description='Spiking neural networks for ML in Python',
 	  license='AGPL-3.0',
 	  long_description=long_description,
@@ -14,7 +16,7 @@ setup(name='bindsnet',
       author_email='djsaunde@cs.umass.edu',
       packages=['bindsnet'],
 	  zip_safe=False,
-	  download_url='https://github.com/Hananel-Hazan/bindsnet/archive/0.1.tar.gz',
+	  download_url='https://github.com/Hananel-Hazan/bindsnet/archive/%s.tar.gz' % version,
 	  install_requires=['numpy>=1.14.2',
 						'torch>=0.4.0',
 						'tqdm>=4.19.9',
