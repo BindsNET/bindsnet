@@ -44,16 +44,15 @@ per_class = int(n_neurons / 10)
 
 # Build network.
 network = DiehlAndCook2015(n_inpt=32*32*3,
-					   n_neurons=n_neurons,
-					   exc=exc,
-					   inh=inh,
-					   dt=dt,
-					   nu_pre=0,
-					   nu_post=0.25,
-					   wmin=0,
-					   wmax=10,
-					   norm=3500)
-
+					       n_neurons=n_neurons,
+					       exc=exc,
+					       inh=inh,
+					       dt=dt,
+					       nu_pre=0,
+					       nu_post=0.25,
+					       wmin=0,
+					       wmax=10,
+					       norm=3500)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -62,7 +61,8 @@ network.add_monitor(exc_voltage_monitor, name='exc_voltage')
 network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 
 # Load MNIST data.
-images, labels = CIFAR10(path=os.path.join('..', '..', 'data', 'CIFAR10')).get_train()
+images, labels = CIFAR10(path=os.path.join('..', '..', 'data', 'CIFAR10'),
+						 download=True).get_train()
 images = images.view(-1, 32*32*3)
 images *= intensity
 

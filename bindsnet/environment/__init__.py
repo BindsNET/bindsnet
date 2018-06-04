@@ -14,7 +14,7 @@ class DatasetEnvironment:
 	'''
 	A wrapper around any object from the :code:`datasets` module to pass to the :code:`Pipeline` object.
 	'''
-	def __init__(self, dataset=MNIST, train=True, time=350, **kwargs):
+	def __init__(self, dataset, train=True, time=350, **kwargs):
 		'''
 		Initializes the environment wrapper around the dataset.
 		

@@ -6,8 +6,6 @@ import torchvision.transforms as transforms
 
 from bindsnet import *
 
-# from torch.autograd import Variable
-
 # Build a simple two-layer, input-output network.
 network = Network(dt=1.0)
 inpt = Input(shape=(3, 32, 32)); network.add_layer(inpt, name='I')
@@ -28,7 +26,8 @@ network.add_monitor(voltages['O'], name='O_voltages')
 
 
 # Get MNIST training images and labels.
-images, labels = CIFAR10(path='../../data/CIFAR10').get_train()
+images, labels = CIFAR10(path='../../data/CIFAR10',
+						 download=True).get_train()
 images *= 0.25
 
 # Create lazily iterating Poisson-distributed data loader.

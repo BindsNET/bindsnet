@@ -52,6 +52,7 @@ network = DiehlAndCook2015(n_inpt=784,
 
 # Create environment.
 environment = DatasetEnvironment(dataset=MNIST(path=os.path.join('..', '..', 'data', 'MNIST')),
+								 download=True,
 								 train=train)
 
 # Specify spike train encoding.

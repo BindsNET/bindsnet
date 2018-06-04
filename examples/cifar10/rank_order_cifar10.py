@@ -54,6 +54,7 @@ network = DiehlAndCook2015(n_inpt=32*32*3,
 # Initialize data "environment".
 environment = DatasetEnvironment(dataset=CIFAR10(path=path),
 								 train=train,
+								 download=True,
 								 time=time)
 
 # Specify data encoding.
