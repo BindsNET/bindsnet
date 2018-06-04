@@ -70,3 +70,8 @@ We have provided some simple starter scripts for doing unsupervised learning (le
 - Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu))
 
 - Hassaan Khan ([email](mailto:hqkhan@umass.edu))
+
+
+
+## License
+GNU Affero General Public License v3.0
