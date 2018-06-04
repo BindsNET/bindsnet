@@ -195,7 +195,7 @@ class IFNodes(Nodes):
 		Resets relevant state variables.
 		'''
 		super()._reset()
-		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
+		self.v = torch.zeros(self.v.size()) + self.rest         # Neuron voltages.
 		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
 
 
@@ -228,7 +228,7 @@ class LIFNodes(Nodes):
 		self.refrac = refrac  # Post-spike refractory period.
 		self.decay = decay    # Rate of decay of neuron voltage.
 
-		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+		self.v = torch.zeros(self.v.size()) + self.rest         # Neuron voltages.
 		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 	def step(self, inpts, dt):
@@ -263,7 +263,7 @@ class LIFNodes(Nodes):
 		Resets relevant state variables.
 		'''
 		super()._reset()
-		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
+		self.v = torch.zeros(self.v.size()) + self.rest         # Neuron voltages.
 		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
 
 
@@ -339,7 +339,7 @@ class AdaptiveLIFNodes(Nodes):
 		Resets relevant state variables.
 		'''
 		super()._reset()
-		self.v = torch.ones(self.v.size()) * self.rest         # Neuron voltages.
+		self.v = torch.zeros(self.v.size()) + self.rest         # Neuron voltages.
 		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
 
 
@@ -421,7 +421,7 @@ class DiehlAndCookNodes(Nodes):
 		Resets relevant state variables.
 		'''
 		super()._reset()
-		self.v = torch.ones(self.v.size()) * self.rest        # Neuron voltages.
+		self.v = torch.zeros(self.v.size()) + self.rest        # Neuron voltages.
 		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
 
 
