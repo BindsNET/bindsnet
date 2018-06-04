@@ -228,8 +228,8 @@ class LIFNodes(Nodes):
 		self.refrac = refrac  # Post-spike refractory period.
 		self.decay = decay    # Rate of decay of neuron voltage.
 
-		self.v = torch.zeros(self.v.size()) + self.rest         # Neuron voltages.
-		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+		self.v = torch.zeros(self.shape) + self.rest  # Neuron voltages.
+		self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
 
 	def step(self, inpts, dt):
 		'''
