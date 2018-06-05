@@ -11,23 +11,23 @@ class TwoLayerNetwork(Network):
 	def __init__(self, n_inpt, n_neurons=100, dt=1.0, nu_pre=1e-4, nu_post=1e-2, wmin=0, wmax=1, norm=78.4):
 		'''
 		Inputs:
-		
+
 			| :code:`n_input` (:code:`int`): Number of input neurons. Matches the 1D size of the input data.
 			| :code:`n_neurons` (:code:`int`): Number of excitatory, inhibitory neurons.
 			| :code:`dt` (:code:`float`): Simulation time step.
 			| :code:`norm` (:code:`float`): Input to excitatory layer connection weights norm.
 		'''
 		super().__init__(dt=dt)
-		
+
 		self.n_inpt = n_inpt
 		self.n_neurons = n_neurons
 		self.dt = dt
-		
+
 		self.add_layer(Input(n=self.n_inpt,
 							 traces=True,
 							 trace_tc=5e-2),
 					   name='X')
-		
+
 		self.add_layer(LIFNodes(n=self.n_neurons,
 								traces=True,
 								rest=-65.0,
@@ -37,7 +37,7 @@ class TwoLayerNetwork(Network):
 								decay=1e-2,
 								trace_tc=5e-2),
 					   name='Y')
-		
+
 		self.add_connection(Connection(source=self.layers['X'],
 									   target=self.layers['Y'],
 									   w=0.3 * torch.rand(self.n_inpt, self.n_neurons),
@@ -49,7 +49,7 @@ class TwoLayerNetwork(Network):
 									   norm=norm),
 						    source='X',
 						    target='Y')
-		
+
 
 class DiehlAndCook2015(Network):
 	'''
@@ -60,7 +60,7 @@ class DiehlAndCook2015(Network):
 				 X_Ae_decay=None, Ae_Ai_decay=None, Ai_Ae_decay=None):
 		'''
 		Inputs:
-		
+
 			| :code:`n_input` (:code:`int`): Number of input neurons. Matches the 1D size of the input data.
 			| :code:`n_neurons` (:code:`int`): Number of excitatory, inhibitory neurons.
 			| :code:`exc` (:code:`float`): Strength of synapse weights from excitatory to inhibitory layer.
@@ -69,18 +69,18 @@ class DiehlAndCook2015(Network):
 			| :code:`norm` (:code:`float`): Input to excitatory layer connection weights norm.
 		'''
 		super().__init__(dt=dt)
-		
+
 		self.n_inpt = n_inpt
 		self.n_neurons = n_neurons
 		self.exc = exc
 		self.inh = inh
 		self.dt = dt
-		
+
 		self.add_layer(Input(n=self.n_inpt,
 							 traces=True,
 							 trace_tc=5e-2),
 		               name='X')
-		
+
 		self.add_layer(DiehlAndCookNodes(n=self.n_neurons,
 										 traces=True,
 										 rest=-65.0,
@@ -92,7 +92,7 @@ class DiehlAndCook2015(Network):
 										 theta_plus=theta_plus,
 										 theta_decay=theta_decay),
 		               name='Ae')
-		
+
 		self.add_layer(LIFNodes(n=self.n_neurons,
 								traces=True,
 								rest=-60.0,
@@ -102,7 +102,7 @@ class DiehlAndCook2015(Network):
 								refrac=2,
 								trace_tc=5e-2),
 		               name='Ai')
-		
+
 		self.add_connection(Connection(source=self.layers['X'],
 									   target=self.layers['Ae'],
 									   w=0.3 * torch.rand(self.n_inpt, self.n_neurons),
@@ -115,7 +115,7 @@ class DiehlAndCook2015(Network):
 									   decay=X_Ae_decay),
 						    source='X',
 						    target='Ae')
-		
+
 		self.add_connection(Connection(source=self.layers['Ae'],
 									   target=self.layers['Ai'],
 									   w=self.exc * torch.diag(torch.ones(self.n_neurons)),
@@ -124,7 +124,7 @@ class DiehlAndCook2015(Network):
 									   decay=Ae_Ai_decay),
 		                    source='Ae',
 		                    target='Ai')
-		
+
 		self.add_connection(Connection(source=self.layers['Ai'],
 									   target=self.layers['Ae'],
 									   w=-self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons))),
