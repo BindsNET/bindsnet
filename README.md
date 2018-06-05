@@ -12,7 +12,13 @@ We are interested in applying SNNs to machine learning (ML) and reinforcement le
 
 ## Setting things up
 
-To build the `bindsnet` package from source, change directory to the top level of this project and issue
+BindsNET is available on PyPI. Issue
+
+```
+pip install bindsnet
+```
+
+to get the most recent stable release. Or, to build the `bindsnet` package from source, clone the GitHub repository, change directory to the top level of this project, and issue
 
 ```
 pip install .
@@ -24,9 +30,9 @@ Or, to install in editable mode (allows modification of package without re-insta
 pip install -e .
 ```
 
-PyPI support (`pip install bindsnet`) *hopefully* coming soon.
-
 To install the packages necessary to interface with the [OpenAI gym RL environments library](https://github.com/openai/gym), follow their instructions for installing the packages needed to run the RL environments simulator (on Linux / MacOS).
+
+## Getting started
 
 To run a near-replication of the SNN from [this paper](https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full#), issue
 
@@ -70,8 +76,6 @@ We have provided some simple starter scripts for doing unsupervised learning (le
 - Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu))
 
 - Hassaan Khan ([email](mailto:hqkhan@umass.edu))
-
-
 
 ## License
 GNU Affero General Public License v3.0
