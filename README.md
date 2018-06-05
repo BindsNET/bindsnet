@@ -1,8 +1,10 @@
 # BindsNET
 
-Python package used for simulating spiking neural networks (SNNs) in [PyTorch](http://pytorch.org/).
+A Python package used for simulating spiking neural networks (SNNs) using [PyTorch](http://pytorch.org/) GPU core functions.
 
-We are interested in applying SNNs to machine learning (ML) and reinforcement learning (RL) problems, but the code (especially the core `network` functionality for building and simulating SNNs) can be used for any purpose.
+BindsNET is a spiking neural network simulation software, a critical component enabling the modeling of neural systems and the development of biologically inspired algorithms in the machine learning domain.
+
+The pacage is part of ongoing research in the Biologically Inspired Neural & Dynamical Systems ([BINDS lab])(http://binds.cs.umass.edu/) Laboratory development, applying SNNs to machine learning (ML) and reinforcement learning (RL) problems. 
 
 [![Build Status](https://travis-ci.com/Hananel-Hazan/bindsnet.svg?token=trym5Uzx1rs9Ez2yENEF&branch=master)](https://travis-ci.com/Hananel-Hazan/bindsnet)
 
@@ -12,19 +14,27 @@ We are interested in applying SNNs to machine learning (ML) and reinforcement le
 
 ## Setting things up
 
-To build the `bindsnet` package from source, change directory to the top level of this project and issue
+BindsNET is available on PyPI. Issue
+
+```
+pip install bindsnet
+```
+
+to get the most recent stable release. Or, to build the `bindsnet` package from source, clone the GitHub repository, change directory to the top level of this project, and issue
 
 ```
 pip install .
 ```
 
-Or, to install in editable mode (allows modification of package with re-installing):
+Or, to install in editable mode (allows modification of package without re-installing):
 
 ```
 pip install -e .
 ```
 
-PyPI support (`pip install bindsnet`) *hopefully* coming soon.
+To install the packages necessary to interface with the [OpenAI gym RL environments library](https://github.com/openai/gym), follow their instructions for installing the packages needed to run the RL environments simulator (on Linux / MacOS).
+
+## Getting started
 
 To run a near-replication of the SNN from [this paper](https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full#), issue
 
@@ -42,8 +52,10 @@ A number of other examples are available in the `examples` directory that are me
 Issue the following to run the tests:
 
 ```
-python -m pytest test
+python -m pytest test/
 ```
+
+Some tests will fail if Open AI `gym` is not installed on your machine.
 
 ## Background
 
@@ -63,8 +75,11 @@ We have provided some simple starter scripts for doing unsupervised learning (le
 
 - Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu))
 
-- Hananel Hazan ([email](mailto:hananel@hazan.org.il))
+- Hananel Hazan ([email](mailto:hananel@cs.umass.edu))
 
 - Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu))
 
 - Hassaan Khan ([email](mailto:hqkhan@umass.edu))
+
+## License
+GNU Affero General Public License v3.0
