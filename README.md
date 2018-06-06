@@ -72,6 +72,9 @@ We are interested in applying SNNs to ML and RL problems. We use STDP to modify 
 
 We have provided some simple starter scripts for doing unsupervised learning (learning a fully-connected or convolutional representation via STDP), supervised learning (clamping output neurons to desired spiking behavior depending on data labels), and reinforcement learning (converting observations from the Atari game Space Invaders to input to an SNN, and converting network activity back to actions in the game).
 
+## References
+ Hananel Hazan, Daniel J. Saunders, Hassaan Khan, Darpan T. Sanghavi, Hava T. Siegelmann, Robert Kozma, [BindsNET: A machine learning-oriented spiking neural networks library in Python.](https://arxiv.org/abs/1806.01423) 2018, Arxiv.
+
 ## Contributors
 
 - Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu))
