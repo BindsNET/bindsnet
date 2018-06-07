@@ -1,8 +1,8 @@
 # BindsNET
 
-A Python package used for simulating spiking neural networks (SNNs) using [PyTorch](http://pytorch.org/) GPU functionality.
+A Python package used for simulating spiking neural networks (SNNs) on CPUs or GPUs using [PyTorch](http://pytorch.org/) `Tensor` functionality.
 
-BindsNET is a spiking neural network simulation software, a critical component enabling the modeling of neural systems and the development of biologically inspired algorithms in the machine learning domain.
+BindsNET is a spiking neural network simulation library geared towards the development of biologically inspired algorithms for machine learning.
 
 This package is used as part of ongoing research on applying SNNs to machine learning (ML) and reinforcement learning (RL) problems in the [Biologically Inspired Neural & Dynamical Systems (BINDS) lab](http://binds.cs.umass.edu/).
 
@@ -12,6 +12,12 @@ This package is used as part of ongoing research on applying SNNs to machine lea
 ## Requirements
 
 - Python 3.6
+- `torch`
+- `numpy`
+- `matplotlib`
+- `scikit_image`
+- `opencv-python`
+- `gym` (optional)
 
 ## Setting things up
 
