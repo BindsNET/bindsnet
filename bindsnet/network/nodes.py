@@ -182,8 +182,8 @@ class IFNodes(Nodes):
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
 
 		# Refractoriness and voltage reset.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
+		self.refrac_count = self.refrac_count.masked_fill(self.s, self.refrac)
+		self.v = self.v.masked_fill(self.s, self.reset)
 
 		# Integrate input and decay voltages.
 		self.v += inpts
@@ -250,8 +250,8 @@ class LIFNodes(Nodes):
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
 
 		# Refractoriness and voltage reset.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
+		self.refrac_count = self.refrac_count.masked_fill(self.s, self.refrac)
+		self.v = self.v.masked_fill(self.s, self.reset)
 		
 		# Integrate inputs.
 		self.v += inpts
@@ -263,8 +263,8 @@ class LIFNodes(Nodes):
 		Resets relevant state variables.
 		'''
 		super()._reset()
-		self.v = torch.zeros(self.v.size()) + self.rest         # Neuron voltages.
-		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
+		self.v = torch.zeros(self.v.size()) + self.rest # Neuron voltages.
+		self.refrac_count = torch.zeros(self.v.size())  # Refractory period counters.
 
 
 class AdaptiveLIFNodes(Nodes):
@@ -325,8 +325,8 @@ class AdaptiveLIFNodes(Nodes):
 		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
 
 		# Refractoriness, voltage reset, and adaptive thresholds.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
+		self.refrac_count = self.refrac_count.masked_fill(self.s, self.refrac)
+		self.v = self.v.masked_fill(self.s, self.reset)
 		self.theta += self.theta_plus * self.s.float()
 		
 		# Integrate inputs.
@@ -400,8 +400,8 @@ class DiehlAndCookNodes(Nodes):
 		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
 
 		# Refractoriness, voltage reset, and adaptive thresholds.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
+		self.refrac_count = self.refrac_count.masked_fill(self.s, self.refrac)
+		self.v = self.v.masked_fill(self.s, self.reset)
 		self.theta += self.theta_plus * self.s.float()
 		
 		# Choose only a single neuron to spike.
@@ -488,8 +488,8 @@ class IzhikevichNodes(Nodes):
 		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
 		
 		# Refractoriness and voltage reset.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
+		self.refrac_count = self.refrac_count.masked_fill(self.s, self.refrac)
+		self.v = self.v.masked_fill(self.s, self.reset)
 		
 		# Apply v and u updates.
 		self.v += dt * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
