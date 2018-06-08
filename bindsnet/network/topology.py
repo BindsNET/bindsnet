@@ -89,7 +89,7 @@ class AbstractConnection(ABC):
         Contains resetting logic for the connection.
         '''
         pass
-    
+
 
 class Connection(AbstractConnection):
     '''
