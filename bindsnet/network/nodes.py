@@ -46,17 +46,17 @@ class Nodes(ABC):
         if self.traces:
             # Decay and set spike traces.
             self.x -= dt * self.trace_tc * self.x
-            self.x[self.s] = 1
+            self.x = self.x.masked_fill(self.s, 1)
     
     @abstractmethod
     def _reset(self):
         '''
         Abstract base class method for resetting state variables.
         '''
-        self.s[self.s != 0] = 0  # Spike occurences.
+        self.s = torch.zeros(self.shape).byte()  # Spike occurences.
 
         if self.traces:
-            self.x = torch.zeros(self.shape)  # Firing traces.
+            self.x = torch.zeros(self.shape)     # Firing traces.
 
 
 class Input(Nodes):
@@ -195,8 +195,8 @@ class IFNodes(Nodes):
         Resets relevant state variables.
         '''
         super()._reset()
-        self.v = torch.zeros(self.v.size()) + self.rest         # Neuron voltages.
-        self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
 class LIFNodes(Nodes):
@@ -263,8 +263,8 @@ class LIFNodes(Nodes):
         Resets relevant state variables.
         '''
         super()._reset()
-        self.v = torch.zeros(self.v.size()) + self.rest # Neuron voltages.
-        self.refrac_count = torch.zeros(self.v.size())  # Refractory period counters.
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
 class AdaptiveLIFNodes(Nodes):
@@ -339,8 +339,8 @@ class AdaptiveLIFNodes(Nodes):
         Resets relevant state variables.
         '''
         super()._reset()
-        self.v = torch.zeros(self.v.size()) + self.rest         # Neuron voltages.
-        self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
 class DiehlAndCookNodes(Nodes):
@@ -421,8 +421,8 @@ class DiehlAndCookNodes(Nodes):
         Resets relevant state variables.
         '''
         super()._reset()
-        self.v = torch.zeros(self.v.size()) + self.rest        # Neuron voltages.
-        self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
 class IzhikevichNodes(Nodes):
@@ -502,6 +502,6 @@ class IzhikevichNodes(Nodes):
         Resets relevant state variables.
         '''
         super()._reset()
-        self.v = self.rest * torch.ones(self.n)  # Neuron voltages.
-        self.u = self.b * self.v                 # Neuron recovery.
-        self.refrac_count = torch.zeros(self.n)  # Refractory period counters.
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.u = self.b * self.v                     # Neuron recovery.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
