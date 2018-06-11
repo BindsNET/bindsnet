@@ -120,7 +120,10 @@ class Connection(AbstractConnection):
         self.w = kwargs.get('w', None)
         
         if self.w is None:
-            self.w = self.wmin + torch.rand(*source.shape, *target.shape) * (self.wmin - self.wmin)
+            if self.wmin == -np.inf or self.wmax == np.inf:
+                self.w = torch.rand(*source.shape, *target.shape)
+            else:
+                self.w = self.wmin + torch.rand(*source.shape, *target.shape) * (self.wmin - self.wmin)
         else:
             if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
                 warnings.warn('Weight matrix will be clamped between [%f, %f]; values may be biased to interval values.' % (self.wmin, self.wmax))
