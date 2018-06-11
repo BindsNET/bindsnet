@@ -8,18 +8,20 @@ def select_multinomial(pipeline, **kwargs):
     
     Inputs:
     
-        | :code:`pipeline` (:code:`bindsnet.pipeline.Pipeline`): Pipeline with environment that accepts feedback in the form of actions.
+        | :code:`pipeline` (:code:`bindsnet.pipeline.Pipeline`): Pipeline
+        with environment that has an integer action space.
     
     Returns:
     
-        | (:code:`int`): Number indicating the desired action from the action space.
+        | (:code:`int`): Integer indicating an action from the action space.
     '''
     try:
         output = kwargs['output']
     except KeyError:
-        raise KeyError('select_action requires an output layer of size a multiple of the action space.')
+        raise KeyError('select_multinomial() requires an "output" layer argument.')
     
-    assert pipeline.network.layers[output].n % pipeline.env.action_space.n == 0, 'Output layer size not equal to size of action space.'
+    assert pipeline.network.layers[output].n % pipeline.env.action_space.n == 0, \
+           'Output layer size not equal to size of action space.'
     
     pop_size = int(pipeline.network.layers[output].n / pipeline.env.action_space.n)
     
@@ -38,11 +40,12 @@ def select_multinomial(pipeline, **kwargs):
 
 def select_softmax(pipeline, **kwargs):
     '''
-    Selects an action using softmax probability function based on spiking activity from a network layer.
+    Selects an action using softmax function based on spiking from a network layer.
     
     Inputs:
     
-        | :code:`pipeline` (:code:`bindsnet.pipeline.Pipeline`): Pipeline with environment that accepts feedback in the form of actions.
+        | :code:`pipeline` (:code:`bindsnet.pipeline.Pipeline`): Pipeline
+        with environment that accepts feedback in the form of actions.
     
     Returns:
     
@@ -51,9 +54,10 @@ def select_softmax(pipeline, **kwargs):
     try:
         output = kwargs['output']
     except KeyError:
-        raise KeyError('select_action requires an output layer of size equal to the action space.')
+        raise KeyError('select_softmax() requires an "output" layer argument.')
     
-    assert pipeline.network.layers[output].n == pipeline.env.action_space.n, 'Output layer size not equal to size of action space.'
+    assert pipeline.network.layers[output].n == pipeline.env.action_space.n, \
+           'Output layer size not equal to size of action space.'
     
     # Sum of previous iterations' spikes (Not yet implemented)
     spikes = pipeline.network.layers[output].s
@@ -73,7 +77,8 @@ def select_random(pipeline, **kwargs):
     
     Inputs:
     
-        | :code:`pipeline` (:code:`bindsnet.pipeline.Pipeline`): Pipeline with environment that accepts feedback in the form of actions.
+        | :code:`pipeline` (:code:`bindsnet.pipeline.Pipeline`): Pipeline
+        with environment that accepts feedback in the form of actions.
     
     Returns:
     

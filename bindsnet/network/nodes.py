@@ -12,7 +12,8 @@ class Nodes(ABC):
     def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
         super().__init__()
         
-        assert not n is None or not shape is None, 'Must provide either no. of neurons or shape of nodes'
+        assert not n is None or not shape is None, \
+            'Must provide either no. of neurons or shape of nodes'
         
         if n is None:
             self.n = reduce(mul, shape)          # No. of neurons product of shape.
@@ -24,7 +25,8 @@ class Nodes(ABC):
         else:
             self.shape = shape                   # Shape is passed in as an argument.
         
-        assert self.n == reduce(mul, self.shape), 'No. of neurons and shape do not match'
+        assert self.n == reduce(mul, self.shape), \
+            'No. of neurons and shape do not match'
             
         self.traces = traces                     # Whether to record synpatic traces.
         self.s = torch.zeros(self.shape).byte()  # Spike occurences.
@@ -114,8 +116,8 @@ class McCullochPitts(Nodes):
         '''
         super().__init__(n, shape, traces, trace_tc)
 
-        self.thresh = thresh                     # Spike threshold voltage.
-        self.v = torch.zeros(self.shape)         # Neuron voltages.
+        self.thresh = thresh             # Spike threshold voltage.
+        self.v = torch.zeros(self.shape) # Neuron voltages.
 
     def step(self, inpts, dt):
         '''
