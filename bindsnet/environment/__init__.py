@@ -33,7 +33,8 @@ class DatasetEnvironment:
         self.intensity = kwargs.get('intensity', 1)
         self.max_prob = kwargs.get('max_prob', 1)
         
-        assert self.max_prob > 0 and self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
+        assert self.max_prob > 0 and self.max_prob <= 1, \
+            'Maximum spiking probability must be in (0, 1].'
         
         if train:
             self.data, self.labels = self.dataset.get_train()
@@ -50,14 +51,14 @@ class DatasetEnvironment:
         
         Inputs:
         
-            | :code:`a` (:code:`None`): There is no interaction of the network with the MNIST dataset.
+            | :code:`a` (:code:`None`): There is no interaction of the network the dataset.
 
         Returns:
 
-            | :code:`obs` (:code:`torch.Tensor`): Observation from the environment (spike train-encoded MNIST digit).
+            | :code:`obs` (:code:`torch.Tensor`): Observation from the environment.
             | :code:`reward` (:code:`float`): Fixed to :code:`0`.
             | :code:`done` (:code:`bool`): Fixed to :code:`False`.
-            | :code:`info` (:code:`dict`): Contains label of MNIST digit.
+            | :code:`info` (:code:`dict`): Contains label of data item.
         '''
         try:
             # Attempt to fetch the next observation.
@@ -140,7 +141,8 @@ class GymEnvironment:
         # Keyword arguments.
         self.max_prob = kwargs.get('max_prob', 1)
         
-        assert self.max_prob > 0 and self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
+        assert self.max_prob > 0 and self.max_prob <= 1, \
+            'Maximum spiking probability must be in (0, 1].'
 
     def step(self, a):
         '''

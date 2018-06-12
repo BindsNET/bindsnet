@@ -120,10 +120,13 @@ class Connection(AbstractConnection):
         self.w = kwargs.get('w', None)
         
         if self.w is None:
-            self.w = self.wmin + torch.rand(*source.shape, *target.shape) * (self.wmin - self.wmin)
+            if self.wmin == -np.inf or self.wmax == np.inf:
+                self.w = torch.rand(*source.shape, *target.shape)
+            else:
+                self.w = self.wmin + torch.rand(*source.shape, *target.shape) * (self.wmin - self.wmin)
         else:
             if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
-                warnings.warn('Weight matrix will be clamped between [%f, %f]; values may be biased to interval values.' % (self.wmin, self.wmax))
+                warnings.warn(f'Weight matrix will be clamped between [{self.wmin}, {self.wmax}]')
                 self.w = torch.clamp(self.w, self.wmin, self.wmax)
     
     def compute(self, s):
@@ -203,22 +206,30 @@ class Conv2dConnection(AbstractConnection):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
         
-        assert source.shape[0] == target.shape[0], 'Minibatch size not equal across source and target populations'
+        assert source.shape[0] == target.shape[0], 'Minibatch size not equal across source and target'
         
         minibatch = source.shape[0]
         self.in_channels, input_height, input_width = source.shape[1], source.shape[2], source.shape[3]
         self.out_channels, output_height, output_width = target.shape[1], target.shape[2], target.shape[3]
         
-        error_message = 'Target dimensionality must be (minibatch, out_channels, \
+        error = 'Target dimensionality must be (minibatch, out_channels, \
                         (input_height - filter_height + 2 * padding_height) / stride_height + 1, \
                         (input_width - filter_width + 2 * padding_width) / stride_width + 1'
         
         assert tuple(target.shape) == (minibatch, self.out_channels,
-                                       (input_height - self.kernel_size[0] + 2 * self.padding[0]) / self.stride[0] + 1,
-                                       (input_width - self.kernel_size[1] + 2 * self.padding[1]) / self.stride[1] + 1), error_message
+                                      (input_height - self.kernel_size[0] + \
+                                       2 * self.padding[0]) / self.stride[0] + 1,
+                                      (input_width - self.kernel_size[1] + \
+                                       2 * self.padding[1]) / self.stride[1] + 1), error
                                        
-        self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, self.kernel_size[0], self.kernel_size[1]))
-        self.w = torch.clamp(self.w, self.wmin, self.wmax)
+        self.w = kwargs.get('w', torch.rand(self.out_channels,
+                                            self.in_channels,
+                                            self.kernel_size[0],
+                                            self.kernel_size[1]))
+
+        self.w = torch.clamp(self.w,
+                             self.wmin,
+                             self.wmax)
     
     def compute(self, s):
         '''
@@ -228,7 +239,11 @@ class Conv2dConnection(AbstractConnection):
         
             | :code:`s` (:code:`torch.Tensor`): Incoming spikes.
         '''
-        return F.conv2d(s.float(), self.w, stride=self.stride, padding=self.padding, dilation=self.dilation)
+        return F.conv2d(s.float(),
+                        self.w,
+                        stride=self.stride,
+                        padding=self.padding,
+                        dilation=self.dilation)
 
     def update(self, **kwargs):
         '''
@@ -242,7 +257,9 @@ class Conv2dConnection(AbstractConnection):
         '''
         if self.norm is not None:
             shape = self.w.size()
-            self.w = self.w.view(self.w.size(0), self.w.size(2) * self.w.size(3))
+            self.w = self.w.view(self.w.size(0),
+                                 self.w.size(2) * self.w.size(3))
+            
             for fltr in range(self.w.size(0)):
                 self.w[fltr] *= self.norm / self.w[fltr].sum(0)
         
