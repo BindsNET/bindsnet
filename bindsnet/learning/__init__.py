@@ -9,7 +9,8 @@ def post_pre(conn, **kwargs):
     
     Inputs:
         
-        | :code:`conn` (:code:`bindsnet.network.topology.Connection`): An instance of class :code:`Connection`.
+        | :code:`conn` (:code:`bindsnet.network.topology.AbstractConnection`):
+        An instance of class :code:`AbstractAbstractConnectionConnection`.
     '''
     if not 'kernel_size' in conn.__dict__:
         x_source, x_target = conn.source.x.unsqueeze(-1), conn.target.x.unsqueeze(0)
@@ -26,10 +27,22 @@ def post_pre(conn, **kwargs):
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
         
-        x_source = im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
-        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
-        s_source = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
-        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        x_source = im2col_indices(conn.source.x,
+                                  kernel_height,
+                                  kernel_width,
+                                  padding=padding,
+                                  stride=stride)
+
+        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels,
+                                                             -1)
+        s_source = im2col_indices(conn.source.s,
+                                  kernel_height,
+                                  kernel_width,
+                                  padding=padding,
+                                  stride=stride).float()
+
+        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels,
+                                                             -1).float()
         
         # Post-synaptic.
         post = s_target @ x_source.t()
@@ -48,7 +61,8 @@ def hebbian(conn, **kwargs):
     
     Inputs:
         
-        | :code:`conn` (:code:`bindsnet.network.topology.Connection`): An instance of class :code:`Connection`.
+        | :code:`conn` (:code:`bindsnet.network.topology.AbstractConnection`):
+        An instance of class :code:`AbstractConnection`.
     '''
     if not 'kernel_size' in conn.__dict__:
         # Post-synaptic.
@@ -62,10 +76,22 @@ def hebbian(conn, **kwargs):
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
         
-        x_source = im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
-        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
-        s_source = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
-        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        x_source = im2col_indices(conn.source.x,
+                                  kernel_height,
+                                  kernel_width,
+                                  padding=padding,
+                                  stride=stride)
+
+        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels,
+                                                             -1)
+        s_source = im2col_indices(conn.source.s,
+                                  kernel_height,
+                                  kernel_width,
+                                  padding=padding,
+                                  stride=stride).float()
+
+        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels,
+                                                             -1).float()
         
         # Post-synaptic.
         post = (x_source @ s_target.t()).view(conn.w.size())
@@ -92,7 +118,8 @@ def m_stdp(conn, **kwargs):
     
     Inputs:
         
-        | :code:`conn` (:code:`bindsnet.network.topology.Connection`): An instance of class :code:`Connection`.
+        | :code:`conn` (:code:`bindsnet.network.topology.AbstractConnection`):
+        An instance of class :code:`AbstractConnection`.
     '''
     # Parse keyword arguments.
     try:
@@ -124,10 +151,22 @@ def m_stdp(conn, **kwargs):
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
         
-        p_plus = a_plus * im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
-        p_minus = a_minus * conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
-        pre_fire = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
-        post_fire = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        p_plus = a_plus * im2col_indices(conn.source.x,
+                                         kernel_height,
+                                         kernel_width,
+                                         padding=padding,
+                                         stride=stride)
+        
+        p_minus = a_minus * conn.target.x.permute(1, 2, 3, 0).reshape(out_channels,
+                                                                      -1)
+        pre_fire = im2col_indices(conn.source.s,
+                                  kernel_height,
+                                  kernel_width,
+                                  padding=padding,
+                                  stride=stride).float()
+
+        post_fire = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels,
+                                                              -1).float()
         
         # Post-synaptic.
         post = (p_plus @ post_fire.t()).view(conn.w.size())
@@ -146,7 +185,9 @@ def m_stdp(conn, **kwargs):
         conn.w += conn.nu * reward * eligibility
             
         # Bound weights.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+        conn.w = torch.clamp(conn.w,
+                             conn.wmin,
+                             conn.wmax)
 
 
 def m_stdp_et(conn, **kwargs):
@@ -156,12 +197,13 @@ def m_stdp_et(conn, **kwargs):
     
     Inputs:
         
-        | :code:`conn` (:code:`bindsnet.network.topology.Connection`): An instance of class :code:`Connection`.
+        | :code:`conn` (:code:`bindsnet.network.topology.AbstractConnection`):
+        An instance of class :code:`AbstractConnection`.
         
-        | :code:`kwargs`:
+        | Keyword arguments:
             
-            :code:`a_plus` (:code:`int`): Learning rate (positive).
-            :code:`a_minus` (:code:`int`): Learning rate (negative).
+            | :code:`a_plus` (:code:`int`): Learning rate (positive).
+            | :code:`a_minus` (:code:`int`): Learning rate (negative).
     '''
     if not 'kernel_size' in conn.__dict__:
         # Parse keyword arguments.
@@ -182,7 +224,8 @@ def m_stdp_et(conn, **kwargs):
         post_fire = conn.target.s.float().unsqueeze(0)
 
         # Calculate value of eligibility trace.
-        conn.e_trace += -(conn.tc_e_trace * conn.e_trace) + (conn.p_plus * post_fire + pre_fire * conn.p_minus)
+        conn.e_trace += -(conn.tc_e_trace * conn.e_trace) + \
+                        conn.p_plus * post_fire + pre_fire * conn.p_minus
 
         # Compute weight update.
         conn.w += conn.nu * reward * conn.e_trace
@@ -193,10 +236,22 @@ def m_stdp_et(conn, **kwargs):
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
         
-        p_plus = a_plus * im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
-        p_minus = a_minus * conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
-        pre_fire = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
-        post_fire = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        p_plus = a_plus * im2col_indices(conn.source.x,
+                                         kernel_height,
+                                         kernel_width,
+                                         padding=padding,
+                                         stride=stride)
+
+        p_minus = a_minus * conn.target.x.permute(1, 2, 3, 0).reshape(out_channels,
+                                                                      -1)
+        pre_fire = im2col_indices(conn.source.s,
+                                  kernel_height,
+                                  kernel_width,
+                                  padding=padding,
+                                  stride=stride).float()
+
+        post_fire = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels,
+                                                              -1).float()
         
         # Post-synaptic.
         post = (p_plus @ post_fire.t()).view(conn.w.size())
@@ -215,4 +270,6 @@ def m_stdp_et(conn, **kwargs):
         conn.w += conn.nu * reward * conn.e_trace
             
         # Bound weights.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+        conn.w = torch.clamp(conn.w,
+                             conn.wmin,
+                             conn.wmax)

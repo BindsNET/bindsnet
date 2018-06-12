@@ -60,26 +60,27 @@ class Pipeline:
         self.history_length = kwargs.get('history_length', None)
         self.render_interval = kwargs.get('render_interval', None)
         
-        # Make sure inputs are valid.
-        assert type(self.time == int and self.time >= 1), "Invalid input %d; Time \
-                                                                                        presented to the network cannot be \
-                                                                                       0 or negative and must be an integer"%(self.time)
-        assert self.delta >= 1, "Invalid input %d; Delta cannot be 0 or negative"%(self.delta)
-        if self.output is not None:
-            assert self.output in self.network.layers, "Layer '%s' not found inside network"%(self.output)
-        
         if self.history_length is not None and self.delta is not None:
-            self.history = {i : torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
+            self.history = {i : torch.Tensor() for i in range(1, 
+                                                              self.history_length * self.delta + 1,
+                                                              self.delta)}
         else:
             self.history = {}
         
         if self.plot_interval is not None:
-            for layer in self.network.layers:
-                self.network.add_monitor(Monitor(self.network.layers[layer], 's', self.plot_interval * self.time), name='%s_spikes' % layer)
-                if 'v' in self.network.layers[layer].__dict__:
-                    self.network.add_monitor(Monitor(self.network.layers[layer], 'v', self.plot_interval * self.time), name='%s_voltages' % layer)
+            for l in self.network.layers:
+                self.network.add_monitor(Monitor(self.network.layers[l],
+                                                 's',
+                                                 self.plot_interval * self.time),
+                                         name=f'{l}_spikes')
+                
+                if 'v' in self.network.layers[l].__dict__:
+                    self.network.add_monitor(Monitor(self.network.layers[l],
+                                                     'v',
+                                                     self.plot_interval * self.time),
+                                             name=f'{l}_voltages')
             
-            self.spike_record = {layer : torch.ByteTensor() for layer in self.network.layers}
+            self.spike_record = {l : torch.ByteTensor() for l in self.network.layers}
             self.set_spike_data()
             self.plot_data()
 
@@ -93,16 +94,16 @@ class Pipeline:
         '''
         Get the spike data from all layers in the pipeline's network.
         '''
-        self.spike_record = {layer : self.network.monitors['%s_spikes' % layer].get('s') for layer in self.network.layers}
+        self.spike_record = {l : self.network.monitors[f'{l}_spikes'].get('s') for l in self.network.layers}
 
     def set_voltage_data(self):
         '''
         Get the voltage data from all applicable layers in the pipeline's network.
         '''
         self.voltage_record = {}
-        for layer in self.network.layers:
-            if 'v' in self.network.layers[layer].__dict__:
-                self.voltage_record[layer] = self.network.monitors['%s_voltages' % layer].get('v')
+        for l in self.network.layers:
+            if 'v' in self.network.layers[l].__dict__:
+                self.voltage_record[l] = self.network.monitors[f'{l}_voltages'].get('v')
 
     def step(self, **kwargs):
         '''
@@ -111,11 +112,11 @@ class Pipeline:
         clamp = kwargs.get('clamp', {})
         
         if self.print_interval is not None and self.iteration % self.print_interval == 0:
-            print('Iteration: %d (Time: %.4f)' % (self.iteration, time.time() - self.clock))
+            print(f'Iteration: {self.iteration} (Time: {time.time() - self.clock:.4f})')
             self.clock = time.time()
         
         if self.save_interval is not None and self.iteration % self.save_interval == 0:
-            print('Saving network to %s' % self.save_dir)
+            print(f'Saving network to {self.save_dir}')
             self.network.save(self.save_dir)
         
         # Render game.
@@ -234,4 +235,4 @@ class Pipeline:
         self.env.reset()
         self.network._reset()
         self.iteration = 0
-        self.history = self.history = {i: torch.Tensor() for i in self.history}
+        self.history = {i: torch.Tensor() for i in self.history}

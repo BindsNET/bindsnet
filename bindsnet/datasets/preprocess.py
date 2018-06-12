@@ -12,13 +12,12 @@ def gray_scale(im):
         
         | :code:`im` (:code:`numpy.array`): Grayscaled image
     '''
-    im = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
-    return im
+    return cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
 
 
 def crop(im, x1, x2, y1, y2):
     return im[x1:x2, y1:y2, :]
-    
+
 
 def binary_image(im):
     '''
@@ -32,7 +31,7 @@ def binary_image(im):
         
         | :code:`im` (:code:`numpy.array`): Black and white image. 
     '''
-    ret, im = cv2.threshold(im, 0, 1, cv2.THRESH_BINARY)
+    _, im = cv2.threshold(im, 0, 1, cv2.THRESH_BINARY)
     return im
 
 
@@ -50,6 +49,4 @@ def subsample(im, x, y):
         
         | :code:`im` (:code:`numpy.array`): Rescaled image. 
     '''
-    im = cv2.resize(im, (x, y))
-    return im 
-                         
+    return cv2.resize(im, (x, y))                         
