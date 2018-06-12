@@ -48,8 +48,8 @@ class Nodes(ABC):
         if self.traces:
             # Decay and set spike traces.
             self.x -= dt * self.trace_tc * self.x
-
             self.x.masked_fill_(self.s, 1)
+
     @abstractmethod
     def _reset(self):
         '''
@@ -188,7 +188,7 @@ class IFNodes(Nodes):
         self.v.masked_fill_(self.s, self.reset)
 
         # Integrate input and decay voltages.
-        self.v = self.v.masked_fill(self.refrac_count  ==0, self.v + inputs)
+        self.v += inpts
 
         super().step(inpts, dt)
 
@@ -252,12 +252,11 @@ class LIFNodes(Nodes):
         self.s = (self.v >= self.thresh) & (self.refrac_count == 0)
 
         # Refractoriness and voltage reset.
-
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
         # Integrate inputs.
-        self.v = self.v.masked_fill(self.refrac_count  ==0, self.v + inputs)
+        self.v += (self.refrac_count  == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -407,7 +406,7 @@ class AdaptiveLIFNodes(Nodes):
         self.theta += self.theta_plus * self.s.float()
 
         # Integrate inputs.
-        self.v = self.v.masked_fill(self.refrac_count  ==0, self.v + inputs)
+        self.v += (self.refrac_count  == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -489,7 +488,7 @@ class DiehlAndCookNodes(Nodes):
             self.s = s.view(self.s.size()).byte()
 
         # Integrate inputs.
-        self.v = self.v.masked_fill(self.refrac_count  ==0, self.v + inputs)
+        self.v += (self.refrac_count  == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -525,7 +524,6 @@ class IzhikevichNodes(Nodes):
             | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
         '''
         super().__init__(n, shape, traces, trace_tc)
-
 
         self.rest = rest       # Rest voltage.
         self.reset = reset     # Post-spike reset voltage.
@@ -563,7 +561,6 @@ class IzhikevichNodes(Nodes):
         self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
-
         self.s = (self.v >= self.thresh) & (self.refrac_count == 0)
 
         # Refractoriness and voltage reset.
