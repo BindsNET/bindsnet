@@ -540,8 +540,8 @@ class IzhikevichNodes(Nodes):
         else:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
-            self.b = 0.25 - 0.05 * torch.ones(n)
-            self.c = -65.0 * (self.r ** 2)
+            self.b = 0.25 - 0.05 * self.r
+            self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
 
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
