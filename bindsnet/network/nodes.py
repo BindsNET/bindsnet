@@ -561,7 +561,9 @@ class IzhikevichNodes(Nodes):
         self.s = (self.v >= self.thresh)
 
         # Refractoriness and voltage reset.
-        self.v.masked_fill_(self.s, self.reset)
+        self.v = torch.where(self.s, self.c, self.v)
+        self.u = torch.where(self.s, self.u + self.d, self.u)
+
 
         # Apply v and u updates.
         self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
