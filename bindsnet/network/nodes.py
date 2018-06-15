@@ -228,7 +228,7 @@ class LIFNodes(Nodes):
         self.reset = reset     # Post-spike reset voltage.
         self.thresh = thresh   # Spike threshold voltage.
         self.refrac = refrac   # Post-spike refractory period.
-        self.decay = decay # Rate of decay of neuron voltage.
+        self.decay = decay     # Rate of decay of neuron voltage.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -297,7 +297,7 @@ class CurrentLIFNodes(Nodes):
         self.reset = reset     # Post-spike reset voltage.
         self.thresh = thresh   # Spike threshold voltage.
         self.refrac = refrac   # Post-spike refractory period.
-        self.decay = decay # Rate of decay of neuron voltage.
+        self.decay = decay     # Rate of decay of neuron voltage.
         self.i_decay = i_decay # Rate of decay of synaptic input current.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
@@ -372,7 +372,7 @@ class AdaptiveLIFNodes(Nodes):
         self.reset = reset              # Post-spike reset voltage.
         self.thresh = thresh            # Spike threshold voltage.
         self.refrac = refrac            # Post-spike refractory period.
-        self.decay = decay          # Rate of decay of neuron voltage.
+        self.decay = decay              # Rate of decay of neuron voltage.
         self.theta_plus = theta_plus    # Constant threshold increase on spike.
         self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
@@ -448,7 +448,7 @@ class DiehlAndCookNodes(Nodes):
         self.reset = reset              # Post-spike reset voltage.
         self.thresh = thresh            # Spike threshold voltage.
         self.refrac = refrac            # Post-spike refractory period.
-        self.decay = decay          # Rate of decay of neuron voltage.
+        self.decay = decay              # Rate of decay of neuron voltage.
         self.theta_plus = theta_plus    # Constant threshold increase on spike.
         self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
@@ -525,11 +525,11 @@ class IzhikevichNodes(Nodes):
         '''
         super().__init__(n, shape, traces, trace_tc)
 
-        self.rest = rest         # Rest voltage.
+        self.rest = rest       # Rest voltage.
         self.reset = reset     # Post-spike reset voltage.
-        self.thresh = thresh # Spike threshold voltage.
+        self.thresh = thresh   # Spike threshold voltage.
         self.refrac = refrac   # Post-spike refractory period.
-        self.decay = decay  # Rate of decay of neuron voltage.
+        self.decay = decay     # Rate of decay of neuron voltage.
 
         if excitatory:
             self.r = torch.rand(n)
@@ -545,7 +545,7 @@ class IzhikevichNodes(Nodes):
             self.d = 2 * torch.ones(n)
 
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
-        self.u = self.b * self.v                   # Neuron recovery.
+        self.u = self.b * self.v            # Neuron recovery.
 
     def step(self, inpts, dt):
         '''
