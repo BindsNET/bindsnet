@@ -566,8 +566,7 @@ class IzhikevichNodes(Nodes):
 
 
         # Apply v and u updates.
-        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
-        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.v += dt * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
         self.u += self.a * (self.b * self.v - self.u)
 
         super().step(inpts, dt)
