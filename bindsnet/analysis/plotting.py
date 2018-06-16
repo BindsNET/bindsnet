@@ -55,11 +55,14 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
 
     Inputs:
         
-        | :code:`spikes` (:code:`dict(torch.Tensor)`): Contains spiking data for groups of neurons of interest.
+        | :code:`spikes` (:code:`dict(torch.Tensor)`): Contains
+        spiking data for groups of neurons of interest.
         | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
         | :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
-        | :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons in the given time range. Default is entire simulation time.
-        | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
+        | :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons
+        in the given time range. Default is entire simulation time.
+        | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity
+        of neurons in the given range of neurons. Default is all neurons.
         | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
     
     Returns:
@@ -81,8 +84,10 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
             break
 
     if len(n_neurons.keys()) != 0:
-        assert len(n_neurons.keys()) <= n_subplots, 'n_neurons argument needs fewer entries than n_subplots'
-        assert all(key in spikes.keys() for key in n_neurons.keys()), 'n_neurons keys must be subset of spikes keys'
+        assert len(n_neurons.keys()) <= n_subplots, \
+            'n_neurons argument needs fewer entries than n_subplots'
+        assert all(key in spikes.keys() for key in n_neurons.keys()), \
+            'n_neurons keys must be subset of spikes keys'
     
     # Use all neurons if no argument provided.
     for key, val in spikes.items():
@@ -95,15 +100,19 @@ def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8
         
         if n_subplots == 1:
             for datum in spikes.items():
-                ims.append(axes.imshow(spikes[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]], cmap='binary'))
-                
+                ims.append(axes.imshow(spikes[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                       time[0]:time[1]],
+                                       cmap='binary'))
+
                 args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
                 plt.title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
                 plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
                 axes.set_aspect('auto')
         else:
             for i, datum in enumerate(spikes.items()):
-                ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]], cmap='binary'))
+                ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                          time[0]:time[1]],
+                                          cmap='binary'))
                 
                 args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
                 axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
@@ -195,7 +204,8 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
         for j in range(n_sqrt):
             if i * n_sqrt + j < weights.size(0):
                 fltr = weights[i * n_sqrt + j].view(height, width)
-                reshaped[i * height : (i + 1) * height, (j % n_sqrt) * width : ((j % n_sqrt) + 1) * width] = fltr
+                reshaped[i * height : (i + 1) * height,
+                        (j % n_sqrt) * width : ((j % n_sqrt) + 1) * width] = fltr
     
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
@@ -228,13 +238,17 @@ def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
     Inputs:
         
         | :code:`assignments` (:code:`torch.Tensor`): Vector of neuron label assignments.
-        | :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assignments plot.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-        | :code:`classes` (:code:`iterable`): Iterable of labels for colorbar ticks corresponding to data labels.
+        | :code:`im` (:code:`matplotlib.image.AxesImage`):
+        Used for re-drawing the assignments plot.
+        | :code:`figsize` (:code:`tuple(int)`):
+        Horizontal, vertical figure size in inches.
+        | :code:`classes` (:code:`iterable`): Iterable of
+        labels for colorbar ticks corresponding to data labels.
     
     Returns:
         
-        | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the assigments plot.
+        | (:code:`im` (:code:`matplotlib.image.AxesImage`):
+        Used for re-drawing the assigments plot.
     '''
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
@@ -242,12 +256,17 @@ def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
 
         color = plt.get_cmap('RdBu', 11)
         im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
-        div = make_axes_locatable(ax); cax = div.append_axes("right", size="5%", pad=0.05)
+        div = make_axes_locatable(ax); cax = div.append_axes("right",
+                                                             size="5%",
+                                                             pad=0.05)
         
         if classes is None:
             plt.colorbar(im, cax=cax, ticks=np.arange(-1, 10))
         else:
-            cbar = plt.colorbar(im, cax=cax, ticks=np.arange(-1, len(classes)))
+            cbar = plt.colorbar(im,
+                                cax=cax,
+                                ticks=np.arange(-1, len(classes)))
+
             cbar.ax.set_yticklabels(classes)   
             
         ax.set_xticks(()); ax.set_yticks(())
@@ -264,13 +283,17 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
     
     Inputs:
         
-        | :code:`performances` (:code:`dict(list(float))`): Lists of training accuracy estimates per voting scheme.
-        | :code:`ax` (:code:`matplotlib.axes.Axes`): Used for re-drawing the performance plot.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
+        | :code:`performances` (:code:`dict(list(float))`):
+        Lists of training accuracy estimates per voting scheme.
+        | :code:`ax` (:code:`matplotlib.axes.Axes`):
+        Used for re-drawing the performance plot.
+        | :code:`figsize` (:code:`tuple(int)`):
+        Horizontal, vertical figure size in inches.
     
     Returns:
         
-        | (:code:`ax` (:code:`matplotlib.axes.Axes`): Used for re-drawing the performance plot.
+        | (:code:`ax` (:code:`matplotlib.axes.Axes`):
+        Used for re-drawing the performance plot.
     '''
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
@@ -295,18 +318,25 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
     
     Inputs:
         
-        | :code:`monitor` (:code:`monitors.Monitor`): Contains state variables to be plotted.
-        | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing plots.
-        | :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing plots.
-        | :code:`labels` (:code:`dict(dict(string))`): Used to set axis labels and titles for plotted variables.
-        | :code:`parameters` (:code:`dict(dict(tuples(int)))`): Set time, number of neurons for plotted variables.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
+        | :code:`monitor` (:code:`monitors.Monitor`):
+        Contains state variables to be plotted.
+        | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`):
+        Used for re-drawing plots.
+        | :code:`axes` (:code:`list(matplotlib.axes.Axes)`):
+        Used for re-drawing plots.
+        | :code:`labels` (:code:`dict(dict(string))`):
+        Used to set axis labels and titles for plotted variables.
+        | :code:`parameters` (:code:`dict(dict(tuples(int)))`):
+        Set time, number of neurons for plotted variables.
+        | :code:`figsize` (:code:`tuple(int)`):
+        Horizontal, vertical figure size in inches.
         
     Returns:
         
-        | (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing plots.
-        | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing plots.
-        
+        | (:code:`ims` (:code:`list(matplotlib.axes.Axes)):
+        Used for re-drawing plots.
+        | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`):
+        Used for re-drawing plots. 
     '''
     default = {'xlabel' : 'Simulation time', 'ylabel' : 'Index'}
     
@@ -357,30 +387,40 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
             for var in monitor.state_vars:
                 # For Weights
                 if parameters[var]['cmap'] == 'hot_r' or parameters[var]['cmap'] == 'hot':
-                    ims.append(axes.matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1], parameters[var]['time'][0]:parameters[var]['time'][1]]))
+                    ims.append(axes.matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
+                                            parameters[var]['time'][0]:parameters[var]['time'][1]]))
                 else:
-                    ims.append(axes.imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1], parameters[var]['time'][0]:parameters[var]['time'][1]]))
+                    ims.append(axes.imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
+                                           parameters[var]['time'][0]:parameters[var]['time'][1]]))
             
-                plt.title(labels[var]['title']); plt.xlabel(labels[var]['xlabel']); plt.ylabel(labels[var]['ylabel'])
+                plt.title(labels[var]['title'])
+                plt.xlabel(labels[var]['xlabel'])
+                plt.ylabel(labels[var]['ylabel'])
+            
             axes.set_aspect('auto')
 
         else: # Plot each monitor variable at a time
             for i, var in enumerate(monitor.state_vars):
                 if parameters[var]['cmap'] == 'hot_r' or parameters[var]['cmap'] == 'hot':
-                    ims.append(axes[i].matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1], parameters[var]['time'][0]:parameters[var]['time'][1]]))
+                    ims.append(axes[i].matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
+                                               parameters[var]['time'][0]:parameters[var]['time'][1]]))
                 else:
-                    ims.append(axes[i].imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1], parameters[var]['time'][0]:parameters[var]['time'][1]]))
+                    ims.append(axes[i].imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
+                                              parameters[var]['time'][0]:parameters[var]['time'][1]]))
                 
-                axes.set_title(labels[var]['title']); axes.set_xlabel(labels[var]['xlabel']); axes.set_ylabel(labels[var]['ylabel'])
-                axes.set_aspect('auto') 
+                axes.set_title(labels[var]['title'])
+                axes.set_xlabel(labels[var]['xlabel'])
+                axes.set_ylabel(labels[var]['ylabel'])
+                
+            axes.set_aspect('auto') 
 
     # axes given        
     else:
         assert(len(ims) == n_subplots)
         
     return ims, axes
-    
-        
+
+
 def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
     '''
     Plot voltages for any group(s) of neurons.
@@ -418,8 +458,6 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
         assert(len(n_neurons.keys()) <= n_subplots)
         # Keys given must be same as the ones used in spikes dict
         assert(all(key in voltages.keys() for key in n_neurons.keys()))
-        # Checking to that given n_neurons per neuron layer is valid
-        assert(all(n_neurons[key][0] >= 0 and n_neurons[key][1] <= val.shape[0] for key, val in voltages.items() if key in n_neurons.keys()) == True)
     
     for key, val in voltages.items():
         if key not in n_neurons.keys():
@@ -431,16 +469,26 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 
         if n_subplots == 1:  # Plotting only one image
             for datum in voltages.items():
-                ims.append(axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
-                plt.title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+                ims.append(axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                        time[0]:time[1]]))
+                plt.title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                    n_neurons[datum[0]][0],
+                                                                                    n_neurons[datum[0]][1],
+                                                                                    time[0],
+                                                                                    time[1]))
                 plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
                 
                 axes.set_aspect('auto')
                 
         else:  # Plot each layer at a time
             for i, datum in enumerate(voltages.items()):
-                    ims.append(axes[i].matshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
-                    axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+                    ims.append(axes[i].matshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                               time[0]:time[1]]))
+                    axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                               n_neurons[datum[0]][0],
+                                                                                               n_neurons[datum[0]][1], 
+                                                                                               time[0], 
+                                                                                               time[1]))
             
             for ax in axes:
                 ax.set_aspect('auto')
@@ -452,16 +500,26 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
         if n_subplots == 1:  # Plotting only one image
             for datum in voltages.items():
                 axes.clear()
-                axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-                axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+                axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                             time[0]:time[1]])
+                axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                         n_neurons[datum[0]][0],
+                                                                                         n_neurons[datum[0]][1],
+                                                                                         time[0],
+                                                                                         time[1]))
                 
                 axes.set_aspect('auto')
 
         else: # Plot each layer at a time
             for i, datum in enumerate(voltages.items()):
                 axes[i].clear()
-                axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d '% (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1]))
+                axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                time[0]:time[1]])
+                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                            n_neurons[datum[0]][0],
+                                                                                            n_neurons[datum[0]][1],
+                                                                                            time[0],
+                                                                                            time[1]))
 
             for ax in axes:
                 ax.set_aspect('auto')

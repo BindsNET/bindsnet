@@ -31,7 +31,8 @@ class Monitor:
         
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = {var : torch.zeros(*self.obj.__dict__[var].size(), self.time) for var in self.state_vars}
+            self.recording = {var : torch.zeros(*self.obj.__dict__[var].size(),
+                                                self.time) for var in self.state_vars}
         
     def get(self, var):
         '''
@@ -44,7 +45,7 @@ class Monitor:
         Returns:
         
             | (:code:`torch.Tensor`): Tensor of shape :code:`[n_1, ..., n_k, time]`,
-                where :code:`[n_1, ..., n_k]` refers to the shape of the recorded state variable.
+            where :code:`[n_1, ..., n_k]` is the shape of the recorded state variable.
         '''
         return self.recording[var]
 
@@ -56,23 +57,14 @@ class Monitor:
         if self.time is None:
             for var in self.state_vars:
                 data = self.obj.__dict__[var].view(-1, 1).float()
-                self.recording[var] = torch.cat([self.recording[var], data], -1)
+                self.recording[var] = torch.cat([self.recording[var],
+                                                 data],
+                                                -1)
         else:
             for var in self.state_vars:
                 data = self.obj.__dict__[var].unsqueeze(-1)
-                
-                if len(data.size()) - 1 == 1:
-                    self.recording[var][:, self.i % self.time] = data.squeeze()
+                self.recording[var][..., self.i % self.time] = data.squeeze()
 
-                elif len(data.size()) - 1 == 2:
-                    self.recording[var][:, :, self.i % self.time] = data.squeeze()
-                    
-                elif len(data.size()) - 1 == 3:
-                    self.recording[var][:, :, :, self.i % self.time] = data.squeeze()
-                
-                elif len(data.size()) - 1 == 4:
-                    self.recording[var][:, :, :, :, self.i % self.time] = data.squeeze()
-        
             self.i += 1
 
 
@@ -86,7 +78,8 @@ class Monitor:
         
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = {var : torch.zeros(*self.obj.__dict__[var].size(), self.time) for var in self.state_vars}
+            self.recording = {var : torch.zeros(*self.obj.__dict__[var].size(),
+                                                self.time) for var in self.state_vars}
             self.i = 0
 
 
@@ -142,11 +135,13 @@ class NetworkMonitor:
             for v in self.state_vars:
                 for l in self.layers:
                     if v in self.network.layers[l].__dict__:
-                        self.recording[l][v] = torch.zeros(*self.network.layers[l].__dict__[v].size(), self.time)
+                        self.recording[l][v] = torch.zeros(*self.network.layers[l].__dict__[v].size(),
+                                                           self.time)
 
                 for c in self.connections:
                     if v in self.network.connections[c].__dict__:
-                        self.recording[c][v] = torch.zeros(*self.network.connections[c].__dict__[v].size(), self.time)
+                        self.recording[c][v] = torch.zeros(*self.network.connections[c].__dict__[v].size(),
+                                                           self.time)
         
     def get(self):
         '''
@@ -163,28 +158,32 @@ class NetworkMonitor:
         Appends the current value of the recorded state variables to the recording.
         '''
         if self.time is None:
-            for var in self.state_vars:
-                for layer in self.layers:
-                    if var in self.network.layers[layer].__dict__:
-                        data = self.network.layers[layer].__dict__[var].unsqueeze(-1).float()
-                        self.recording[layer][var] = torch.cat([self.recording[layer][var], data], -1)
+            for v in self.state_vars:
+                for l in self.layers:
+                    if v in self.network.layers[l].__dict__:
+                        data = self.network.layers[l].__dict__[v].unsqueeze(-1).float()
+                        self.recording[l][v] = torch.cat([self.recording[l][v],
+                                                                data],
+                                                               -1)
 
-                for connection in self.connections:
-                    if var in self.network.connections[connection].__dict__:
-                        data = self.network.connections[connection].__dict__[var].unsqueeze(-1)
-                        self.recording[connection][var] = torch.cat([self.recording[connection][var], data], -1)
+                for c in self.connections:
+                    if v in self.network.connections[c].__dict__:
+                        data = self.network.connections[c].__dict__[v].unsqueeze(-1)
+                        self.recording[c][v] = torch.cat([self.recording[c][v],
+                                                                     data],
+                                                                    -1)
         
         else:
-            for var in self.state_vars:
-                for layer in self.layers:
-                    if var in self.network.layers[layer].__dict__:
-                        data = self.network.layers[layer].__dict__[var].float()
-                        self.recording[layer][var][:, self.i % self.time] = data
+            for v in self.state_vars:
+                for l in self.layers:
+                    if v in self.network.layers[l].__dict__:
+                        data = self.network.layers[l].__dict__[v].float()
+                        self.recording[l][v][..., self.i % self.time] = data
 
-                for connection in self.connections:
-                    if var in self.network.connections[connection].__dict__:
-                        data = self.network.connections[connection].__dict__[var]
-                        self.recording[connection][var][:, :, self.i % self.time] = data
+                for c in self.connections:
+                    if v in self.network.connections[c].__dict__:
+                        data = self.network.connections[c].__dict__[v]
+                        self.recording[c][v][..., self.i % self.time] = data
             
             self.i += 1
     
@@ -203,11 +202,13 @@ class NetworkMonitor:
         if fmt == 'npz':
             # Build a list of arrays to write to disk.
             arrays = {}
-            for obj in self.recording:
-                if type(obj) == tuple:
-                    arrays.update({'_'.join(['-'.join(obj), var]) : self.recording[obj][var] for var in self.recording[obj]})
-                elif type(obj) == str:
-                    arrays.update({'_'.join([obj, var]) : self.recording[obj][var] for var in self.recording[obj]})
+            for o in self.recording:
+                if type(o) == tuple:
+                    k = '_'.join(['-'.join(o), v])
+                    arrays.update({k : self.recording[o][v] for v in self.recording[o]})
+                elif type(o) == str:
+                    k = '_'.join([o, v])
+                    arrays.update({k : self.recording[o][v] for v in self.recording[o]})
                 
             np.savez_compressed(path, **arrays)
             
@@ -239,8 +240,10 @@ class NetworkMonitor:
             for v in self.state_vars:
                 for l in self.layers:
                     if v in self.network.layers[l].__dict__:
-                        self.recording[l][v] = torch.zeros(self.network.layers[l].n, self.time)
+                        self.recording[l][v] = torch.zeros(self.network.layers[l].n,
+                                                           self.time)
 
                 for c in self.connections:
                     if v in self.network.connections[c].__dict__:
-                        self.recording[c][v] = torch.zeros(*self.network.connections[c].w.size(), self.time)
+                        self.recording[c][v] = torch.zeros(*self.network.connections[c].w.size(),
+                                                           self.time)

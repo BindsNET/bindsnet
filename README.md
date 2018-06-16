@@ -4,7 +4,7 @@ A Python package used for simulating spiking neural networks (SNNs) on CPUs or G
 
 BindsNET is a spiking neural network simulation library geared towards the development of biologically inspired algorithms for machine learning.
 
-This package is used as part of ongoing research on applying SNNs to machine learning (ML) and reinforcement learning (RL) problems in the [Biologically Inspired Neural & Dynamical Systems (BINDS) lab](http://binds.cs.umass.edu/). 
+This package is used as part of ongoing research on applying SNNs to machine learning (ML) and reinforcement learning (RL) problems in the [Biologically Inspired Neural & Dynamical Systems (BINDS) lab](http://binds.cs.umass.edu/).
 
 [![Build Status](https://travis-ci.com/Hananel-Hazan/bindsnet.svg?token=trym5Uzx1rs9Ez2yENEF&branch=master)](https://travis-ci.com/Hananel-Hazan/bindsnet)
 [![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
@@ -78,8 +78,25 @@ We are interested in applying SNNs to ML and RL problems. We use STDP to modify 
 
 We have provided some simple starter scripts for doing unsupervised learning (learning a fully-connected or convolutional representation via STDP), supervised learning (clamping output neurons to desired spiking behavior depending on data labels), and reinforcement learning (converting observations from the Atari game Space Invaders to input to an SNN, and converting network activity back to actions in the game).
 
-## References
- Hananel Hazan, Daniel J. Saunders, Hassaan Khan, Darpan T. Sanghavi, Hava T. Siegelmann, Robert Kozma, [BindsNET: A machine learning-oriented spiking neural networks library in Python.](https://arxiv.org/abs/1806.01423) 2018, Arxiv.
+## Citation
+
+If you use BindsNET in your research, please cite the following [article](https://arxiv.org/abs/1806.01423):
+
+```
+@ARTICLE{2018arXiv180601423H,
+   author = {{Hazan}, H. and {Saunders}, D.~J. and {Khan}, H. and {Sanghavi}, D.~T. and 
+	{Siegelmann}, H.~T. and {Kozma}, R.},
+    title = "{BindsNET: A machine learning-oriented spiking neural networks library in Python}",
+  journal = {ArXiv e-prints},
+archivePrefix = "arXiv",
+   eprint = {1806.01423},
+ keywords = {Computer Science - Neural and Evolutionary Computing, Quantitative Biology - Neurons and Cognition},
+     year = 2018,
+    month = jun,
+   adsurl = {http://adsabs.harvard.edu/abs/2018arXiv180601423H},
+  adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+```
 
 ## Contributors
 
