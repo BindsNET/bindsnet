@@ -160,7 +160,7 @@ def ngram(spikes, true_labels, ngram_counts, n_ngram, n_labels):
     predictions = []
     for example in spikes:
         # Initialize score array
-        ngram_score = np.zeros(n_labels)
+        ngram_score = torch.zeros(n_labels)
         # Obtain fire ordering of last layer
         fire_order = get_fire_order(example)
 
@@ -169,25 +169,30 @@ def ngram(spikes, true_labels, ngram_counts, n_ngram, n_labels):
             if tuple(fire_order[beg : beg+n_ngram]) in ngram_counts:
                 ngram_score += ngram_counts[tuple(fire_order[i : i+n_ngram])]
 
-        predictions.append(np.argmax(normalize(ngram_score)))
+        predictions.append(torch.argmax(normalize(ngram_score)))
 
+    return predictions
     # Compare network prediction to true labels
-    accuracy = np.mean([pred == truth for pred, truth in zip(predictions, true_labels)])
-    return accuracy
+    #accuracy = np.mean([pred == truth for pred, truth in zip(predictions, true_labels)])
+    #return accuracy
 
 def get_ngram_scores(spikes, true_labels, n_ngram, n_labels):
     '''
-    Obtain ngram counts with n<=n_ngram
+    Obtain ngram counts with n <= n_ngram.
+
     Inputs:
-        spikes: the network activity of the last layer, as returned by network.run()
-                  shape = (n_samples, timesteps, n_layer)
-        true_labels: The ground truth values to compare to
-                    shape = (n_samples,)
-        n_ngram: int indicating the max size of ngram to use
-        n_labels: int number of classes for dataset
+
+       | :code:`spikes` (:code:`tensor.Tensor`): the network activity of the last layer,
+       as returned by network.run() of shape :code:`(n_samples, timesteps, n_layer)`.
+       | :code:`true_labels` (:code:`tensor.Tensor`) : The ground truth values of
+       shape :code:`(n_samples,)`.
+       | :code:`n_ngram` (:code:`int`): The max size of ngram to use.
+       | :code:`n_labels` (:code:`int`): The number of target labels in the data.
+
     Outputs:
-        ngram_scores: dict with keys as ngram tuples and values = np.array(n_labels)
-        containing scores per class
+
+        | :code:`ngram_scores` (:code:`dict`): Keys are ngram :code:`tuple` and values are
+        :code:`numpy.array` of size :code:`n_labels` containing scores per label.
     '''
     ngram_scores = {}
     for idx, example in enumerate(spikes): # example.shape is (time steps, n_layer)
@@ -197,17 +202,30 @@ def get_ngram_scores(spikes, true_labels, n_ngram, n_labels):
             for beg in range(len(fire_order)-i+1):
                 # For every ordering based on n (i)
                 if tuple(fire_order[beg : beg+i]) not in ngram_scores:
-                    ngram_scores[tuple(fire_order[beg : beg+i])] = np.zeros(n_labels)
+                    ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
                  ngram_scores[tuple(fire_order[beg : beg+i])][int(true_labels[idx])] += 1
 
     return ngram_scores
 
 def get_fire_order(example):
+    """
+    Obtain the fire order for an example. Fire order is recorded from top down; neurons
+    with lower index are reported earlier in the order.
+
+    Inputs:
+
+        | :code:`example` (:code:`tensor.Tensor`): Spiking activity of last layer of an
+        example. Shape: (:code:`n_layer, timesteps`)
+
+    Outputs:
+
+        | :code:`fire_order` (:code:`list`): Fire order of an example
+    """
     # Example.shape = (n_layer, time steps)     <class 'torch.FloatTensor'> torch.Size([100, 350])
     n_layer, timesteps = example.shape
     fire_order = []
     for timestep in range(timesteps): # timeslice.shape is (n_layer)
-        if torch.sum(example[:,timestep])>0:
+        if torch.sum(example[:,timestep]) > 0: # Check to make sure
             for n_id in range(n_layer):
                 if example[n_id][timestep]:
                     fire_order.append(n_id)
