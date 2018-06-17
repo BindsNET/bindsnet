@@ -39,7 +39,7 @@ if not train:
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
-    
+
 # Build network.
 network = DiehlAndCook2015(n_inpt=784,
                        n_neurons=n_neurons,
@@ -84,11 +84,11 @@ for layer in set(network.layers) - {'X'}:
 print('\nBegin training.\n')
 start = t()
 
-for i in range(n_train):    
+for i in range(n_train):
     if i % progress_interval == 0:
         print('Progress: %d / %d (%.4f seconds)' % (i, n_train, t() - start))
         start = t()
-    
+
     if i % update_interval == 0 and i > 0:
         # Get network predictions.
         all_activity_pred = all_activity(spike_record, assignments, 10)
@@ -108,21 +108,21 @@ for i in range(n_train):
 
         # Assign labels to excitatory layer neurons.
         assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
-    
+
     # Get next input sample.
     sample = next(data_loader)
     inpts = {'X' : sample}
-    
+
     # Run the network on the input.
     network.run(inpts=inpts, time=time)
-    
+
     # Get voltage recording.
     exc_voltages = exc_voltage_monitor.get('v')
     inh_voltages = inh_voltage_monitor.get('v')
-    
+
     # Add to spikes recording.
     spike_record[i % update_interval] = spikes['Ae'].get('s').t()
-    
+
     # Optionally plot various simulation information.
     if plot:
         inpt = inpts['X'].view(time, 784).sum(0).view(28, 28)
@@ -130,7 +130,7 @@ for i in range(n_train):
         square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt, 28)
         square_assignments = get_square_assignments(assignments, n_sqrt)
         voltages = {'Ae' : exc_voltages, 'Ai' : inh_voltages}
-        
+
         if i == 0:
             inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
             spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes})
@@ -138,7 +138,7 @@ for i in range(n_train):
             assigns_im = plot_assignments(square_assignments)
             perf_ax = plot_performance(accuracy)
             voltage_ims, voltage_axes = plot_voltages(voltages)
-            
+
         else:
             inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims)
             spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s') for layer in spikes},
@@ -147,10 +147,12 @@ for i in range(n_train):
             assigns_im = plot_assignments(square_assignments, im=assigns_im)
             perf_ax = plot_performance(accuracy, ax=perf_ax)
             voltage_ims, voltage_axes = plot_voltages(voltages, ims=voltage_ims, axes=voltage_axes)
-        
+
         plt.pause(1e-8)
-    
+
     network._reset()  # Reset state variables.
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, t() - start))
 print('Training complete.\n')
+
+
