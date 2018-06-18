@@ -94,11 +94,12 @@ for i in range(n_train):
 
     if i % update_interval == 0 and i > 0:
         # Update n-gram counts based on spiking activity
-        ngram_counts = get_ngram_counts(spike_record, labels[i - update_interval : i], 2, 10, ngram_counts)
+        ngram_counts = get_ngram_counts(spike_record, labels[i - update_interval:i], 2, 10, ngram_counts)
 
         # Make predictions of update_interval examples using updated ngram counts
         predictions = ngram(spike_record, ngram_counts, 10, 2)
 
+        # Get
         accuracy = np.mean([pred == truth for pred, truth in zip(predictions, true_labels)])
 
         # Get network predictions.
