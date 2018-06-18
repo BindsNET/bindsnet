@@ -25,6 +25,6 @@ pipeline = Pipeline(network=network,
                     plot_interval=1)
 
 # Train the network.
-for i in range(60000):    
+for i in range(50000):
     pipeline.step()
     network._reset()
