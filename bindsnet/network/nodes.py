@@ -403,7 +403,7 @@ class AdaptiveLIFNodes(Nodes):
         self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
-        self.s = (self.v >= self.thresh + self.theta) & (self.refrac_count == 0)
+        self.s = (self.v >= self.thresh + self.theta)
 
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -546,7 +546,7 @@ class DiehlAndCookNodes(Nodes):
         self.reset = reset              # Post-spike reset voltage.
         self.thresh = thresh            # Spike threshold voltage.
         self.refrac = refrac            # Post-spike refractory period.
-        self.decay = decay          # Rate of decay of neuron voltage.
+        self.decay = decay              # Rate of decay of neuron voltage.
         self.theta_plus = theta_plus    # Constant threshold increase on spike.
         self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
@@ -571,7 +571,7 @@ class DiehlAndCookNodes(Nodes):
         self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
-        self.s = (self.v >= self.thresh + self.theta) & (self.refrac_count == 0)
+        self.s = (self.v >= self.thresh + self.theta)
 
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -627,7 +627,7 @@ class IzhikevichNodes(Nodes):
         self.reset = reset     # Post-spike reset voltage.
         self.thresh = thresh   # Spike threshold voltage.
         self.refrac = refrac   # Post-spike refractory period.
-        self.decay = decay # Rate of decay of neuron voltage.
+        self.decay = decay     # Rate of decay of neuron voltage.
 
         if excitatory:
             self.r = torch.rand(n)
@@ -638,13 +638,12 @@ class IzhikevichNodes(Nodes):
         else:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
-            self.b = 0.25 - 0.05 * torch.ones(n)
-            self.c = -65.0 * (self.re ** 2)
+            self.b = 0.25 - 0.05 * self.r
+            self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
 
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
         self.u = self.b * self.v            # Neuron recovery.
-        self.refrac_count = torch.zeros(n)  # Refractory period counters.
 
     def step(self, inpts, dt):
         '''
@@ -655,15 +654,14 @@ class IzhikevichNodes(Nodes):
             | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
             | :code:`dt` (:code:`float`): Simulation time step.
         '''
-        # Decrement refrac counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
-        self.s = (self.v >= self.thresh) & (self.refrac_count == 0)
+        self.s = (self.v >= self.thresh)
 
         # Refractoriness and voltage reset.
-        self.refrac_count.masked_fill_(self.s, self.refrac)
-        self.v.masked_fill_(self.s, self.reset)
+        self.v = torch.where(self.s, self.c, self.v)
+        self.u = torch.where(self.s, self.u + self.d, self.u)
+
 
         # Apply v and u updates.
         self.v += dt * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
@@ -678,4 +676,3 @@ class IzhikevichNodes(Nodes):
         super()._reset()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.u = self.b * self.v                     # Neuron recovery.
-        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
