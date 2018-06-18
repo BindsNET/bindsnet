@@ -138,17 +138,21 @@ def proportion_weighting(spikes, assignments, proportions, n_labels):
 
     return predictions
 
-def ngram(spikes, true_labels, ngram_counts, n_ngram, n_labels):
+def ngram(spikes, ngram_scores, n_labels, n=2) :
     '''
-    Evaluates the network using the confidence weighting scheme.
-    To use this function, first call get_ngram_counts(), and use the ngrams dict returned as input to this function.
+    Predicts between :code:`n_labels` using :code:`ngram_scores`.
+
     Inputs:
-        spikes: the network activity of the last layer, as returned by network.run()
-                  shape = (n_examples, n_layer, timesteps)
-        true_labels: The ground truth values to compare to
-                    shape = (n_examples,)
+
+       | :code:`spikes` (:code:`tensor.Tensor`): the spiking activity of shape :code:`(n_ex, n_layer, timesteps)`.
+       | :code:`n_labels` (:code:`int`): The number of target labels in the data.
+       | :code:`n` (:code:`int`): The max size of ngram to use.
+       | :code:`ngram_scores` (:code:`dict`): Previously recorded scores to update.
 
     Outputs:
+
+       | :code:`prediction` (:code:`list`): Predictions per example. Shape: :code:`(n_ex)`.
+
         Accuracy
         Confusion Matrix
         Top-k
@@ -160,14 +164,14 @@ def ngram(spikes, true_labels, ngram_counts, n_ngram, n_labels):
     predictions = []
     for example in spikes:
         # Initialize score array
-        ngram_score = torch.zeros(n_labels)
+        current_score = torch.zeros(n_labels)
         # Obtain fire ordering of last layer
         fire_order = get_fire_order(example)
 
         # Consider all n_gram subsequences
         for beg in range(len(fire_order)-n_ngram+1):
-            if tuple(fire_order[beg : beg+n_ngram]) in ngram_counts:
-                ngram_score += ngram_counts[tuple(fire_order[i : i+n_ngram])]
+            if tuple(fire_order[beg : beg+n_ngram]) in ngram_scores:
+                current_score += ngram_scores[tuple(fire_order[i : i+n_ngram])]
 
         predictions.append(torch.argmax(normalize(ngram_score)))
 
@@ -176,60 +180,45 @@ def ngram(spikes, true_labels, ngram_counts, n_ngram, n_labels):
     #accuracy = np.mean([pred == truth for pred, truth in zip(predictions, true_labels)])
     #return accuracy
 
-def get_ngram_scores(spikes, true_labels, n_ngram, n_labels):
+def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
     '''
-    Obtain ngram counts with n <= n_ngram.
+    Updates ngram scores with n <= n_ngram.
 
     Inputs:
 
-       | :code:`spikes` (:code:`tensor.Tensor`): the network activity of the last layer,
-       as returned by network.run() of shape :code:`(n_samples, timesteps, n_layer)`.
-       | :code:`true_labels` (:code:`tensor.Tensor`) : The ground truth values of
-       shape :code:`(n_samples,)`.
-       | :code:`n_ngram` (:code:`int`): The max size of ngram to use.
+       | :code:`spikes` (:code:`tensor.Tensor`): the spiking activity of shape :code:`(n_ex, n_layer, timesteps)`.
+       | :code:`gold_labels` (:code:`int`) : The ground truth value of shape :code:`(n_ex,)`
        | :code:`n_labels` (:code:`int`): The number of target labels in the data.
+       | :code:`n` (:code:`int`): The max size of ngram to use.
+       | :code:`ngram_scores` (:code:`dict`): Previously recorded scores to update.
 
     Outputs:
 
         | :code:`ngram_scores` (:code:`dict`): Keys are ngram :code:`tuple` and values are
         :code:`torch.Tensor` of size :code:`n_labels` containing scores per label.
     '''
-    ngram_scores = {}
-    for idx, example in enumerate(spikes): # example.shape is (time steps, n_layer)
-        fire_order = get_fire_order(example)
-        # Add counts for every n-gram
-        for i in range(1, n_ngram+1):
+
+    assert spikes.Size[0] == len(gold_labels), 'Every example must have a golden label'
+
+    for n_ex, activity in enumerate(spikes):
+       # Obtain firing order for spiking activity
+       fire_order = []
+       # Keep those timesteps that have firing neurons
+       timesteps_to_keep = torch.nonzero(torch.sum(activity, dim=0))
+       activity = activity[:, timesteps_to_keep]
+
+       # Aggregate all of the firing neurons' indices
+       for timestep in range(activity.Size[1]):
+            ordering = torch.nonzero(activity[:, timestep]).numpy().tolist()
+            fire_order += ordering
+
+       # Add counts for every n-gram
+       for i in range(1, n_ngram+1):
             for beg in range(len(fire_order)-i+1):
-                # For every ordering based on n (i)
-                if tuple(fire_order[beg : beg+i]) not in ngram_scores:
-                    ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
-                 ngram_scores[tuple(fire_order[beg : beg+i])][int(true_labels[idx])] += 1
+            # For every ordering based on n (i)
+            if tuple(fire_order[beg : beg+i]) not in ngram_scores:
+                ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
+            ngram_scores[tuple(fire_order[beg : beg+i])][gold_labels[n_ex]] += 1
 
     return ngram_scores
-
-def get_fire_order(example):
-    """
-    Obtain the fire order for an example. Fire order is recorded from top down; neurons
-    with lower index are reported earlier in the order.
-
-    Inputs:
-
-        | :code:`example` (:code:`tensor.Tensor`): Spiking activity of last layer of an
-        example. Shape: (:code:`n_layer, timesteps`).
-
-    Outputs:
-
-        | :code:`fire_order` (:code:`list`): Firing order of an example.
-    """
-    # Example.shape = (n_layer, time steps)     <class 'torch.FloatTensor'> torch.Size([100, 350])
-    fire_order = []
-
-    # Keep those timesteps that have firing neurons
-    timesteps_to_keep = torch.nonzero(torch.sum(example, dim=0))
-    example = example[:, timesteps_to_keep]
-
-    for timestep in range(example.Size[1]):
-        ordering = torch.nonzero(example[:, timestep]).numpy().tolist()
-        fire_order += ordering
-    return fire_order
 

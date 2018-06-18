@@ -75,6 +75,9 @@ rates = torch.zeros_like(torch.Tensor(n_neurons, 10))
 # Sequence of accuracy estimates.
 accuracy = {'all' : [], 'proportion' : []}
 
+# Record ngram probabilities
+ngram_counts = {}
+
 spikes = {}
 for layer in set(network.layers) - {'X'}:
     spikes[layer] = Monitor(network.layers[layer], state_vars=['s'], time=time)
@@ -90,6 +93,14 @@ for i in range(n_train):
         start = t()
 
     if i % update_interval == 0 and i > 0:
+        # Update n-gram counts based on spiking activity
+        ngram_counts = get_ngram_counts(spike_record, labels[i - update_interval : i], 2, 10, ngram_counts)
+
+        # Make predictions of update_interval examples using updated ngram counts
+        predictions = ngram(spike_record, ngram_counts, 10, 2)
+
+        accuracy = np.mean([pred == truth for pred, truth in zip(predictions, true_labels)])
+
         # Get network predictions.
         all_activity_pred = all_activity(spike_record, assignments, 10)
         proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
@@ -105,6 +116,7 @@ for i in range(n_train):
         print('Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n' \
                         % (accuracy['proportion'][-1], np.mean(accuracy['proportion']),
                           np.max(accuracy['proportion'])))
+
 
         # Assign labels to excitatory layer neurons.
         assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
@@ -155,7 +167,4 @@ for i in range(n_train):
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, t() - start))
 print('Training complete.\n')
 
-print('Calculating ngram scores')
-ngram_counts = get_ngram_counts(spike_record, labels[:len(train_spikes)], 2)
-predictions = ngram(train_spikes, labels[:len(train_spikes)], ngrams, 2)
 
