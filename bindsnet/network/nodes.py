@@ -9,6 +9,7 @@ class Nodes(ABC):
     '''
     Abstract base class for groups of neurons.
     '''
+    @abstractmethod
     def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
         super().__init__()
         
