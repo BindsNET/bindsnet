@@ -192,7 +192,7 @@ def get_ngram_scores(spikes, true_labels, n_ngram, n_labels):
     Outputs:
 
         | :code:`ngram_scores` (:code:`dict`): Keys are ngram :code:`tuple` and values are
-        :code:`numpy.array` of size :code:`n_labels` containing scores per label.
+        :code:`torch.Tensor` of size :code:`n_labels` containing scores per label.
     '''
     ngram_scores = {}
     for idx, example in enumerate(spikes): # example.shape is (time steps, n_layer)
@@ -215,18 +215,21 @@ def get_fire_order(example):
     Inputs:
 
         | :code:`example` (:code:`tensor.Tensor`): Spiking activity of last layer of an
-        example. Shape: (:code:`n_layer, timesteps`)
+        example. Shape: (:code:`n_layer, timesteps`).
 
     Outputs:
 
-        | :code:`fire_order` (:code:`list`): Fire order of an example
+        | :code:`fire_order` (:code:`list`): Firing order of an example.
     """
     # Example.shape = (n_layer, time steps)     <class 'torch.FloatTensor'> torch.Size([100, 350])
-    n_layer, timesteps = example.shape
     fire_order = []
-    for timestep in range(timesteps): # timeslice.shape is (n_layer)
-        if torch.sum(example[:,timestep]) > 0: # Check to make sure
-            for n_id in range(n_layer):
-                if example[n_id][timestep]:
-                    fire_order.append(n_id)
+
+    # Keep those timesteps that have firing neurons
+    timesteps_to_keep = torch.nonzero(torch.sum(example, dim=0))
+    example = example[:, timesteps_to_keep]
+
+    for timestep in range(example.Size[1]):
+        ordering = torch.nonzero(example[:, timestep]).numpy().tolist()
+        fire_order += ordering
     return fire_order
+
