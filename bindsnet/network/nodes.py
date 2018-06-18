@@ -181,14 +181,14 @@ class IFNodes(Nodes):
         self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
-        self.s = (self.v >= self.thresh)
+        self.s = self.v >= self.thresh
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
         # Integrate input and decay voltages.
-        self.v += (self.refrac_count  == 0).float() * inpts
+        self.v += (self.refrac_count == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -203,7 +203,8 @@ class IFNodes(Nodes):
 
 class LIFNodes(Nodes):
     '''
-    Layer of leaky integrate-and-fire (LIF) neurons.
+    Layer of `leaky integrate-and-fire (LIF) neurons
+    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02311000000000000000>`_.
     '''
     def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, rest=-65.0,
                  reset=-65.0, refrac=5, decay=1e-2, trace_tc=5e-2):
@@ -249,14 +250,14 @@ class LIFNodes(Nodes):
         self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
-        self.s = (self.v >= self.thresh)
+        self.s = self.v >= self.thresh
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
         # Integrate inputs.
-        self.v += (self.refrac_count  == 0).float() * inpts
+        self.v += (self.refrac_count == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -271,10 +272,13 @@ class LIFNodes(Nodes):
 
 class CurrentLIFNodes(Nodes):
     '''
-    Layer of current-based leaky integrate-and-fire (LIF) neurons.
+    Layer of `current-based leaky integrate-and-fire (LIF) neurons
+    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02313000000000000000>`_.
+    Total synaptic input current is modeled as a decaying memory
+    of input spikes multiplied by synpatic efficacies.
     '''
     def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, rest=-65.0,
-                 reset=-65.0, refrac=5, decay=1e-2, i_decay=2e-2, trace_tc=5e-2):
+                 reset=-65.0, refrac=5, decay=1e-2, i_decay=5e-1, trace_tc=5e-2):
         '''
         Instantiates a layer of synaptic input current-based LIF neurons.
 
@@ -329,7 +333,7 @@ class CurrentLIFNodes(Nodes):
 
         # Integrate inputs.
         self.i += inpts
-        self.v += self.i
+        self.v += (self.refrac_count == 0).float() * self.i
 
         super().step(inpts, dt)
 
@@ -346,6 +350,8 @@ class CurrentLIFNodes(Nodes):
 class AdaptiveLIFNodes(Nodes):
     '''
     Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds.
+    A neuron's voltage threshold is increased by some constant each time
+    it spikes; otherwise, it is decaying back to its default value.
     '''
     def __init__(self, n=None, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
                  refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
@@ -378,7 +384,6 @@ class AdaptiveLIFNodes(Nodes):
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
-
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
     def step(self, inpts, dt):
@@ -406,7 +411,7 @@ class AdaptiveLIFNodes(Nodes):
         self.theta += self.theta_plus * self.s.float()
 
         # Integrate inputs.
-        self.v += (self.refrac_count  == 0).float() * inpts
+        self.v += (self.refrac_count == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -419,9 +424,102 @@ class AdaptiveLIFNodes(Nodes):
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
+class AdaptiveCurrentLIFNodes(Nodes):
+    '''
+    Layer of `current-based leaky integrate-and-fire (LIF) neurons
+    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02313000000000000000>`_.
+    Combines ideas from both :code:`CurrentLIFNodes` and :code:`AdaptiveLIFNodes`
+    objects.
+    '''
+    def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, rest=-65.0,
+                 reset=-65.0, refrac=5, decay=1e-2, i_decay=2e-2, trace_tc=5e-2,
+                 theta_plus=0.05, theta_decay=1e-7):
+        '''
+        Instantiates a layer of synaptic input current-based LIF neurons.
+        
+        Inputs:
+        
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+            | :code:`rest` (:code:`float`): Resting membrane voltage.
+            | :code:`reset` (:code:`float`): Post-spike reset voltage.
+            | :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
+            | :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
+            | :code:`i_decay` (:code:`float`): Time constant of synaptic input current decay.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+            | :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
+            | :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
+        '''
+        super().__init__(n, shape, traces, trace_tc)
+
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay # Rate of decay of neuron voltage.
+        self.i_decay = i_decay # Rate of decay of synaptic input current.
+        self.theta_plus = theta_plus    # Constant threshold increase on spike.
+        self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
+
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
+        self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+    def step(self, inpts, dt):
+        '''
+        Runs a single simulation step.
+
+        Inputs:
+        
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        '''
+        # Decay voltages and current.
+        self.v -= dt * self.decay * (self.v - self.rest)
+        self.i -= dt * self.i_decay * self.i
+        self.theta -= dt * self.theta_decay * self.theta
+        
+        # Decrement refrac counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
+        
+        # Check for spiking neurons.
+        self.s = (self.v >= self.thresh + self.theta) & (self.refrac_count == 0)
+
+         # Refractoriness, voltage reset, and adaptive thresholds.
+        self.refrac_count.masked_fill_(self.s, self.refrac)
+        self.v.masked_fill_(self.s, self.reset)
+        self.theta += self.theta_plus * self.s.float()
+
+        # Choose only a single neuron to spike.
+        if torch.sum(self.s) > 0:
+            s = torch.zeros(self.s.size())
+            s = s.view(-1)
+            s[torch.multinomial(self.s.float().view(-1), 1)] = 1
+            self.s = s.view(self.s.size()).byte()
+        
+        # Integrate inputs.
+        self.i += inpts
+        self.v += (self.refrac_count == 0).float() * self.i
+
+        super().step(inpts, dt)
+        
+    def _reset(self):
+        '''
+        Resets relevant state variables.
+        '''
+        super()._reset()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+
 class DiehlAndCookNodes(Nodes):
     '''
-    Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds (modified for Diehl & Cook 2015 replication).
+    Layer of leaky integrate-and-fire (LIF) neurons with adaptive
+    thresholds (modified for Diehl & Cook 2015 replication).
     '''
     def __init__(self, n=None, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
                  refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
