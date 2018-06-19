@@ -163,7 +163,7 @@ class Connection(AbstractConnection):
         '''
         if self.norm is not None:
             self.w = self.w.view(self.source.n, self.target.n)
-            self.w *= self.norm / self.w.sum(0).unsqueeze(-1)
+            self.w *= self.norm / self.w.sum(0).view(1, -1)
             self.w = self.w.view(*self.source.shape, *self.target.shape)
 
     def _reset(self):
