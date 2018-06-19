@@ -198,7 +198,7 @@ def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
         :code:`torch.Tensor` of size :code:`n_labels` containing scores per label.
     '''
 
-    assert spikes.Size[0] == len(gold_labels), 'Every example must have a golden label'
+    assert spikes.size()[0] == len(gold_labels), 'Every example must have a golden label'
 
     for n_ex, activity in enumerate(spikes):
        # Obtain firing order for spiking activity
@@ -208,17 +208,17 @@ def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
        activity = activity[:, timesteps_to_keep]
 
        # Aggregate all of the firing neurons' indices
-       for timestep in range(activity.Size[1]):
+       for timestep in range(activity.size()[1]):
             ordering = torch.nonzero(activity[:, timestep]).numpy().tolist()
             fire_order += ordering
 
        # Add counts for every n-gram
        for i in range(1, n_ngram+1):
-            for beg in range(len(fire_order)-i+1):
-                # For every ordering based on n (i)
-                if tuple(fire_order[beg : beg+i]) not in ngram_scores:
-                    ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
-                ngram_scores[tuple(fire_order[beg : beg+i])][gold_labels[n_ex]] += 1
+           for beg in range(len(fire_order)-i+1):
+            # For every ordering based on n (i)
+            if tuple(fire_order[beg : beg+i]) not in ngram_scores:
+                ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
+            ngram_scores[tuple(fire_order[beg : beg+i])][gold_labels[n_ex]] += 1
 
     return ngram_scores
 
