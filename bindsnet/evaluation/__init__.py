@@ -1,3 +1,4 @@
+import sys
 import torch
 
 
@@ -169,9 +170,9 @@ def ngram(spikes, ngram_scores, n_labels, n=2) :
         fire_order = get_fire_order(example)
 
         # Consider all n_gram subsequences
-        for beg in range(len(fire_order)-n_ngram+1):
-            if tuple(fire_order[beg : beg+n_ngram]) in ngram_scores:
-                current_score += ngram_scores[tuple(fire_order[i : i+n_ngram])]
+        for beg in range(len(fire_order)-n+1):
+            if tuple(fire_order[beg : beg+n]) in ngram_scores:
+                current_score += ngram_scores[tuple(fire_order[i : i+n])]
 
         predictions.append(torch.argmax(normalize(ngram_score)))
 
@@ -212,8 +213,10 @@ def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
             ordering = torch.nonzero(activity[:, timestep]).numpy().tolist()
             fire_order += ordering
 
+       print(fire_order)
+       sys.exit()
        # Add counts for every n-gram
-       for i in range(1, n_ngram+1):
+       for i in range(1, n+1):
            for beg in range(len(fire_order)-i+1):
             # For every ordering based on n (i)
             if tuple(fire_order[beg : beg+i]) not in ngram_scores:
