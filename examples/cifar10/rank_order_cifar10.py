@@ -11,7 +11,7 @@ from time     import time as t
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--n_neurons', type=int, default=100)
-parser.add_argument('--n_train', type=int, default=60000)
+parser.add_argument('--n_train', type=int, default=50000)
 parser.add_argument('--n_test', type=int, default=10000)
 parser.add_argument('--exc', type=float, default=22.5)
 parser.add_argument('--inh', type=float, default=17.5)
