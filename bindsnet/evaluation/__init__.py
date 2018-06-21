@@ -163,23 +163,30 @@ def ngram(spikes, ngram_scores, n_labels, n=2) :
     normalize = lambda x: x/torch.sum(x)
 
     predictions = []
-    for example in spikes:
-        # Initialize score array
-        current_score = torch.zeros(n_labels)
-        # Obtain fire ordering of last layer
-        fire_order = get_fire_order(example)
+    for activity in spikes:
+       # Initialize score array
+       current_score = torch.zeros(n_labels)
+
+       # Obtain firing order for spiking activity
+       fire_order = []
+
+       # Keep those timesteps that have firing neurons
+       timesteps_to_keep = torch.nonzero(torch.sum(activity, dim=0))
+       activity = activity[:, timesteps_to_keep]
+
+       # Aggregate all of the firing neurons' indices
+       for timestep in range(activity.size()[1]):
+           ordering = [neuronID for pseudo_list in torch.nonzero(activity[:, timestep].view(-1))[:][:].tolist() for neuronID in pseudo_list]
+           fire_order += ordering
 
         # Consider all n_gram subsequences
-        for beg in range(len(fire_order)-n+1):
-            if tuple(fire_order[beg : beg+n]) in ngram_scores:
-                current_score += ngram_scores[tuple(fire_order[i : i+n])]
+       for beg in range(len(fire_order)-n+1):
+           if tuple(fire_order[beg : beg+n]) in ngram_scores:
+               current_score += ngram_scores[tuple(fire_order[beg : beg+n])]
 
-        predictions.append(torch.argmax(normalize(ngram_score)))
+       predictions.append(float(torch.argmax(normalize(current_score))))
 
-    return predictions
-    # Compare network prediction to true labels
-    #accuracy = np.mean([pred == truth for pred, truth in zip(predictions, true_labels)])
-    #return accuracy
+    return torch.LongTensor(predictions)
 
 def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
     '''
@@ -210,18 +217,16 @@ def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
 
        # Aggregate all of the firing neurons' indices
        for timestep in range(activity.size()[1]):
-            ordering = torch.nonzero(activity[:, timestep]).numpy().tolist()
-            fire_order += ordering
+           ordering = [neuronID for pseudo_list in torch.nonzero(activity[:, timestep].view(-1))[:][:].tolist() for neuronID in pseudo_list]
+           fire_order += ordering
 
-       print(fire_order)
-       sys.exit()
        # Add counts for every n-gram
        for i in range(1, n+1):
            for beg in range(len(fire_order)-i+1):
             # For every ordering based on n (i)
             if tuple(fire_order[beg : beg+i]) not in ngram_scores:
                 ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
-            ngram_scores[tuple(fire_order[beg : beg+i])][gold_labels[n_ex]] += 1
+            ngram_scores[tuple(fire_order[beg : beg+i])][int(gold_labels[n_ex])] += 1
 
     return ngram_scores
 
