@@ -90,3 +90,44 @@ def get_square_assignments(assignments, n_sqrt):
             square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
     
     return square_assignments
+
+def reshape_fully_conv_weights(w, n_filters, kernel_size, conv_size, locations, input_sqrt):
+    '''
+    Get the weights from a fully convolution layer
+    and reshape them to be two-dimensional and square.
+    '''
+    w_ = torch.zeros((n_filters * kernel_size, kernel_size * conv_size ** 2))
+
+    conv_sqrt = int(np.sqrt(conv_size))
+    filters_sqrt = int(np.sqrt(n_filters))
+    
+    for n in range(conv_size ** 2):
+        for feature in range(n_filters):
+            temp = w[:, feature * (conv_size ** 2) + (n // conv_sqrt) * conv_sqrt + (n % conv_sqrt)]
+            w_[feature * kernel_size : (feature + 1) * kernel_size,
+               n * kernel_size : (n + 1) * kernel_size] = \
+               temp[locations[:, n]].view(kernel_size, kernel_size)
+
+    if conv_size == 1:
+        filters_sqrt = int(math.ceil(math.sqrt(n_filters)))
+        square = torch.zeros((input_sqrt * filters_sqrt, input_sqrt * filters_sqrt))
+
+        for n in range(n_filters):
+            square[(n // filters_sqrt) * input_sqrt : ((n // filters_sqrt) + 1) * input_sqrt, 
+                   (n  % filters_sqrt) * input_sqrt : ((n  % filters_sqrt) + 1) * input_sqrt] = \
+                   w_[n * input_sqrt : (n + 1) * input_sqrt, :]
+
+        return square
+    else:
+        square = torch.zeros((kernel_size * filters_sqrt * conv_size, kernel_size * filters_sqrt * conv_size))
+
+        for n_1 in range(conv_size):
+            for n_2 in range(conv_size):
+                for f_1 in range(filters_sqrt):
+                    for f_2 in range(filters_sqrt):
+                        square[kernel_size * (n_2 * filters_sqrt + f_2) : kernel_size * (n_2 * filters_sqrt + f_2 + 1), \
+                                kernel_size * (n_1 * filters_sqrt + f_1) : kernel_size * (n_1 * filters_sqrt + f_1 + 1)] = \
+                                w_[(f_1 * filters_sqrt + f_2) * kernel_size : (f_1 * filters_sqrt + f_2 + 1) * kernel_size, \
+                                        (n_1 * conv_size + n_2) * kernel_size : (n_1 * conv_size + n_2 + 1) * kernel_size]
+
+        return square
