@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from ..utils import reshape_fully_conv_weights
+from ..utils import reshape_locally_connected_weights
 
 
 plt.ion()
@@ -234,10 +234,11 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
     return im
 
 
-def plot_fully_conv_weights(weights, n_filters, kernel_size, conv_size, locations,
+def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, locations,
                             input_sqrt, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
     '''
-    Plot a connection weight matrix of a Connection with fully convolutional structure.
+    Plot a connection weight matrix of a Connection with
+    `locally connected structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
     
     Inputs:
         
@@ -257,7 +258,7 @@ def plot_fully_conv_weights(weights, n_filters, kernel_size, conv_size, location
         
         | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
     '''
-    reshaped = reshape_fully_conv_weights(weights, n_filters, kernel_size,
+    reshaped = reshape_locally_connected_weights(weights, n_filters, kernel_size,
                                           conv_size, locations, input_sqrt)
 
     n_sqrt = int(np.ceil(np.sqrt(n_filters))) * conv_size
