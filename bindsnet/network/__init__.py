@@ -164,21 +164,21 @@ class Network:
         
         Returns:
         
-            | (:code:`dict[torch.Tensor or torch.cuda.Tensor]`): Inputs to all layers for the current iteration.
+            | (:code:`dict[torch.Tensor]`): Inputs to all layers for the current iteration.
         '''
         inpts = {}
         
         # Loop over network connections.
-        for key in self.connections:
+        for c in self.connections:
             # Fetch source and target populations.
-            source = self.connections[key].source
-            target = self.connections[key].target
+            source = self.connections[c].source
+            target = self.connections[c].target
             
-            if not key[1] in inpts:
-                inpts[key[1]] = torch.zeros(target.shape)
+            if not c[1] in inpts:
+                inpts[c[1]] = torch.zeros(target.shape)
 
             # Add to input: source's spikes multiplied by connection weights.
-            inpts[key[1]] += self.connections[key].compute(source.s)
+            inpts[c[1]] += self.connections[c].compute(source.s)
             
         return inpts
 

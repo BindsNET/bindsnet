@@ -94,7 +94,7 @@ class DiehlAndCook2015(Network):
                        name='Ae')
         
         self.add_layer(LIFNodes(n=self.n_neurons,
-                                traces=True,
+                                traces=False,
                                 rest=-60.0,
                                 reset=-45.0,
                                 thresh=-40.0,
