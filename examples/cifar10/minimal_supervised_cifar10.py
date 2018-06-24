@@ -29,7 +29,7 @@ pipeline = Pipeline(network=network,
 
 # Train the network.
 labels = environment.labels
-for i in range(60000):
+for i in range(50000):
     # Choose an output neuron to clamp to spiking behavior.
     c = choice(10, size=1, replace=False)
     clamp = {'Ae' : 10 * labels[i].long() + Tensor(c).long()}
