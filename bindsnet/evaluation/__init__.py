@@ -209,24 +209,22 @@ def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
     assert spikes.size()[0] == len(gold_labels), 'Every example must have a golden label'
 
     for n_ex, activity in enumerate(spikes):
-       # Obtain firing order for spiking activity
-       fire_order = []
-       # Keep those timesteps that have firing neurons
-       timesteps_to_keep = torch.nonzero(torch.sum(activity, dim=0))
-       activity = activity[:, timesteps_to_keep]
+        # Obtain firing order for spiking activity
+        fire_order = []
+        timesteps_to_keep = torch.nonzero(torch.sum(activity, dim=0))
 
-       # Aggregate all of the firing neurons' indices
-       for timestep in range(activity.size()[1]):
-           ordering = [neuronID for pseudo_list in torch.nonzero(activity[:, timestep].view(-1))[:][:].tolist() for neuronID in pseudo_list]
-           fire_order += ordering
+        # Aggregate all of the firing neurons' indices
+        for timestep in range(activity.size()[1]):
+            ordering = [neuronID for pseudo_list in torch.nonzero(activity[:, timestep].view(-1))[:][:].tolist() for neuronID in pseudo_list]
+            fire_order += ordering
 
-       # Add counts for every n-gram
-       for i in range(1, n+1):
-           for beg in range(len(fire_order)-i+1):
-            # For every ordering based on n (i)
-            if tuple(fire_order[beg : beg+i]) not in ngram_scores:
-                ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
-            ngram_scores[tuple(fire_order[beg : beg+i])][int(gold_labels[n_ex])] += 1
+        # Add counts for every n-gram
+        for i in range(1, n+1):
+            for beg in range(len(fire_order)-i+1):
+                # For every ordering based on n (i)
+                if tuple(fire_order[beg : beg+i]) not in ngram_scores:
+                    ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
+                ngram_scores[tuple(fire_order[beg : beg+i])][int(gold_labels[n_ex])] += 1
 
     return ngram_scores
 
