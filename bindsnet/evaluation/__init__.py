@@ -213,6 +213,7 @@ def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
         fire_order = []
         timesteps_to_keep = torch.nonzero(torch.sum(activity, dim=0))
 
+
         # Aggregate all of the firing neurons' indices
         for timestep in range(activity.size()[1]):
             ordering = [neuronID for pseudo_list in torch.nonzero(activity[:, timestep].view(-1))[:][:].tolist() for neuronID in pseudo_list]
