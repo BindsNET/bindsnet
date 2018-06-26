@@ -9,6 +9,7 @@ class Nodes(ABC):
     '''
     Abstract base class for groups of neurons.
     '''
+    @abstractmethod
     def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
         super().__init__()
 
@@ -656,7 +657,8 @@ class IzhikevichNodes(Nodes):
         '''
 
         # Apply v and u updates.
-        self.v += dt * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
         self.u += self.a * (self.b * self.v - self.u)
 
         # Check for spiking neurons.
