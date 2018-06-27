@@ -91,9 +91,9 @@ def get_square_assignments(assignments, n_sqrt):
     
     return square_assignments
 
-def reshape_fully_conv_weights(w, n_filters, kernel_size, conv_size, locations, input_sqrt):
+def reshape_locally_connected_weights(w, n_filters, kernel_size, conv_size, locations, input_sqrt):
     '''
-    Get the weights from a fully convolution layer
+    Get the weights from a locally connected layer
     and reshape them to be two-dimensional and square.
     '''
     w_ = torch.zeros((n_filters * kernel_size, kernel_size * conv_size ** 2))
