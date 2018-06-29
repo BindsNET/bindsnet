@@ -10,7 +10,7 @@ def post_pre(conn, **kwargs):
     Inputs:
         
         | :code:`conn` (:code:`bindsnet.network.topology.AbstractConnection`):
-        An instance of class :code:`AbstractAbstractConnectionConnection`.
+        An instance of class :code:`AbstractConnection`.
     '''
     if not 'kernel_size' in conn.__dict__:
         x_source, x_target = conn.source.x.unsqueeze(-1), conn.target.x.unsqueeze(0)

@@ -33,7 +33,7 @@ for i in range(50000):
     # Choose an output neuron to clamp to spiking behavior.
     c = choice(10, size=1, replace=False)
     clamp = {'Ae' : 10 * labels[i].long() + Tensor(c).long()}
-    
+
     # Run a step of the pipeline with clamped neuron.
     pipeline.step(clamp=clamp)
     network._reset()
