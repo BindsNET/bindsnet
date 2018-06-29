@@ -237,7 +237,7 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, locations,
                             input_sqrt, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
     '''
-    Plot a connection weight matrix of a Connection with
+    Plot a connection weight matrix of a :code:`Connection` with
     `locally connected structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
     
     Inputs:
@@ -259,9 +259,9 @@ def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, l
         | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
     '''
     reshaped = reshape_locally_connected_weights(weights, n_filters, kernel_size,
-                                          conv_size, locations, input_sqrt)
+                                                 conv_size, locations, input_sqrt)
 
-    n_sqrt = int(np.ceil(np.sqrt(n_filters))) * conv_size
+    n_sqrt = int(np.ceil(np.sqrt(n_filters)))
 
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
@@ -271,10 +271,10 @@ def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, l
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
         
-        for i in range(conv_size * kernel_size, n_sqrt * kernel_size, conv_size * kernel_size):
+        for i in range(n_sqrt * kernel_size, n_sqrt * conv_size * kernel_size, n_sqrt * kernel_size):
             ax.axhline(i - 0.5, color='g', linestyle='--')
         
-        for i in range(conv_size * kernel_size, n_sqrt * kernel_size, conv_size * kernel_size):
+        for i in range(n_sqrt * kernel_size, n_sqrt * conv_size * kernel_size, n_sqrt * kernel_size):
             ax.axvline(i - 0.5, color='g', linestyle='--')
         
         ax.set_xticks(()); ax.set_yticks(())
@@ -313,17 +313,13 @@ def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
 
         color = plt.get_cmap('RdBu', 11)
         im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
-        div = make_axes_locatable(ax); cax = div.append_axes("right",
-                                                             size="5%",
-                                                             pad=0.05)
+        div = make_axes_locatable(ax)
+        cax = div.append_axes("right", size="5%", pad=0.05)
         
         if classes is None:
             plt.colorbar(im, cax=cax, ticks=np.arange(-1, 10))
         else:
-            cbar = plt.colorbar(im,
-                                cax=cax,
-                                ticks=np.arange(-1, len(classes)))
-
+            cbar = plt.colorbar(im, cax=cax, ticks=np.arange(-1, len(classes)))
             cbar.ax.set_yticklabels(classes)   
             
         ax.set_xticks(()); ax.set_yticks(())
