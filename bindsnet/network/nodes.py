@@ -9,6 +9,7 @@ class Nodes(ABC):
     '''
     Abstract base class for groups of neurons.
     '''
+    @abstractmethod
     def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
         super().__init__()
 
@@ -180,15 +181,15 @@ class IFNodes(Nodes):
         # Decrement refractory counters.
         self.refrac_count[self.refrac_count != 0] -= dt
 
+        # Integrate input and decay voltages.
+        self.v += (self.refrac_count == 0).float() * inpts
+
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
-
-        # Integrate input and decay voltages.
-        self.v += (self.refrac_count == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -249,15 +250,15 @@ class LIFNodes(Nodes):
         # Decrement refrac counters.
         self.refrac_count[self.refrac_count != 0] -= dt
 
+        # Integrate inputs.
+        self.v += (self.refrac_count == 0).float() * inpts
+
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
-
-        # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -324,16 +325,16 @@ class CurrentLIFNodes(Nodes):
         # Decrement refrac counters.
         self.refrac_count[self.refrac_count != 0] -= dt
 
+        # Integrate inputs.
+        self.i += inpts
+        self.v += (self.refrac_count == 0).float() * self.i
+
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh) & (self.refrac_count == 0)
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
-
-        # Integrate inputs.
-        self.i += inpts
-        self.v += (self.refrac_count == 0).float() * self.i
 
         super().step(inpts, dt)
 
@@ -402,6 +403,9 @@ class AdaptiveLIFNodes(Nodes):
         # Decrement refractory counters.
         self.refrac_count[self.refrac_count != 0] -= dt
 
+        # Integrate inputs.
+        self.v += (self.refrac_count == 0).float() * inpts
+
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta)
 
@@ -409,9 +413,6 @@ class AdaptiveLIFNodes(Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
         self.theta += self.theta_plus * self.s.float()
-
-        # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -436,9 +437,9 @@ class AdaptiveCurrentLIFNodes(Nodes):
                  theta_plus=0.05, theta_decay=1e-7):
         '''
         Instantiates a layer of synaptic input current-based LIF neurons.
-        
+
         Inputs:
-        
+
             | :code:`n` (:code:`int`): The number of neurons in the layer.
             | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
             | :code:`traces` (:code:`bool`): Whether to record spike traces.
@@ -473,7 +474,7 @@ class AdaptiveCurrentLIFNodes(Nodes):
         Runs a single simulation step.
 
         Inputs:
-        
+
             | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
             | :code:`dt` (:code:`float`): Simulation time step.
         '''
@@ -481,10 +482,14 @@ class AdaptiveCurrentLIFNodes(Nodes):
         self.v -= dt * self.decay * (self.v - self.rest)
         self.i -= dt * self.i_decay * self.i
         self.theta -= dt * self.theta_decay * self.theta
-        
+
         # Decrement refrac counters.
         self.refrac_count[self.refrac_count != 0] -= dt
-        
+
+        # Integrate inputs.
+        self.i += inpts
+        self.v += (self.refrac_count == 0).float() * self.i
+
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta) & (self.refrac_count == 0)
 
@@ -499,13 +504,9 @@ class AdaptiveCurrentLIFNodes(Nodes):
             s = s.view(-1)
             s[torch.multinomial(self.s.float().view(-1), 1)] = 1
             self.s = s.view(self.s.size()).byte()
-        
-        # Integrate inputs.
-        self.i += inpts
-        self.v += (self.refrac_count == 0).float() * self.i
 
         super().step(inpts, dt)
-        
+
     def _reset(self):
         '''
         Resets relevant state variables.
@@ -570,6 +571,9 @@ class DiehlAndCookNodes(Nodes):
         # Decrement refractory counters.
         self.refrac_count[self.refrac_count != 0] -= dt
 
+        # Integrate inputs.
+        self.v += (self.refrac_count  == 0).float() * inpts
+
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta)
 
@@ -584,9 +588,6 @@ class DiehlAndCookNodes(Nodes):
             s = s.view(-1)
             s[torch.multinomial(self.s.float().view(-1), 1)] = 1
             self.s = s.view(self.s.size()).byte()
-
-        # Integrate inputs.
-        self.v += (self.refrac_count  == 0).float() * inpts
 
         super().step(inpts, dt)
 
@@ -655,17 +656,17 @@ class IzhikevichNodes(Nodes):
             | :code:`dt` (:code:`float`): Simulation time step.
         '''
 
+        # Apply v and u updates.
+        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.u += self.a * (self.b * self.v - self.u)
+
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh)
 
         # Refractoriness and voltage reset.
         self.v = torch.where(self.s, self.c, self.v)
         self.u = torch.where(self.s, self.u + self.d, self.u)
-
-
-        # Apply v and u updates.
-        self.v += dt * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
-        self.u += self.a * (self.b * self.v - self.u)
 
         super().step(inpts, dt)
 

@@ -3,8 +3,31 @@ import torch
 import numpy as np
 import pickle as p
 
+from abc import ABC, abstractmethod
 
-class Monitor:
+
+class AbstractMonitor(ABC):
+    '''
+    Abstract base class for state variable monitors.
+    '''
+    @abstractmethod
+    def __init__(self):
+        super().__init__()
+
+    @abstractmethod
+    def get(self):
+        pass
+
+    @abstractmethod
+    def record(self):
+        pass
+
+    @abstractmethod
+    def _reset(self):
+        pass
+
+
+class Monitor(AbstractMonitor):
     '''
     Records state variables of interest.
     '''
@@ -18,6 +41,8 @@ class Monitor:
             | :code:`state_vars` (:code:`list`): List of strings indicating names of state variables to record.
             | :code:`time` (:code:`int`): If not :code:`None`, pre-allocate memory for state variable recording.
         '''
+        super().__init__()
+
         self.obj = obj
         self.state_vars = state_vars
         self.time = time
@@ -83,7 +108,7 @@ class Monitor:
             self.i = 0
 
 
-class NetworkMonitor:
+class NetworkMonitor(AbstractMonitor):
     '''
     Record state variables of all layers and connections.
     '''
@@ -99,6 +124,8 @@ class NetworkMonitor:
             | :code:`state_vars` (:code:`list`): List of strings indicating names of state variables to record.
             | :code:`time` (:code:`int`): If not :code:`None`, pre-allocate memory for state variable recording.
         '''
+        super().__init__()
+
         self.network = network
         self.state_vars = state_vars
         self.time = time

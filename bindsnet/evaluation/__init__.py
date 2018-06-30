@@ -139,89 +139,82 @@ def proportion_weighting(spikes, assignments, proportions, n_labels):
 
     return predictions
 
-def ngram(spikes, ngram_scores, n_labels, n=2) :
+def ngram(spikes, ngram_scores, n_labels, n) :
     '''
     Predicts between :code:`n_labels` using :code:`ngram_scores`.
 
     Inputs:
 
-       | :code:`spikes` (:code:`tensor.Tensor`): the spiking activity of shape :code:`(n_ex, n_layer, timesteps)`.
-       | :code:`n_labels` (:code:`int`): The number of target labels in the data.
-       | :code:`n` (:code:`int`): The max size of ngram to use.
-       | :code:`ngram_scores` (:code:`dict`): Previously recorded scores to update.
+        | :code:`spikes` (:code:`tensor.Tensor`): Spikes of shape :code:`(n_examples, time, n_neurons)`.
+        | :code:`n_labels` (:code:`int`): The number of target labels in the data.
+        | :code:`n` (:code:`int`): The max size of ngram to use.
+        | :code:`ngram_scores` (:code:`dict`): Previously recorded scores to update.
 
     Outputs:
 
-       | :code:`prediction` (:code:`list`): Predictions per example. Shape: :code:`(n_ex)`.
-
-        Accuracy
-        Confusion Matrix
-        Top-k
-        Precision
-        Recall
+        | :code:`predictions` (:code:`torch.Tensor`): Predictions per example.
     '''
-    normalize = lambda x: x/torch.sum(x)
-
     predictions = []
-    for example in spikes:
-        # Initialize score array
-        current_score = torch.zeros(n_labels)
-        # Obtain fire ordering of last layer
-        fire_order = get_fire_order(example)
+    for activity in spikes:
+        score = torch.zeros(n_labels)
 
-        # Consider all n_gram subsequences
-        for beg in range(len(fire_order)-n+1):
-            if tuple(fire_order[beg : beg+n]) in ngram_scores:
-                current_score += ngram_scores[tuple(fire_order[i : i+n])]
+        # Aggregate all of the firing neurons' indices
+        fire_order = []
+        for t in range(activity.size()[0]):
+            ordering = torch.nonzero(activity[t].view(-1))
+            if ordering.numel() > 0:
+                ordering = ordering[:, 0].tolist()
+                fire_order += ordering
 
-        predictions.append(torch.argmax(normalize(ngram_score)))
+        # Consider all ngram sequences.
+        for j in range(len(fire_order) - n):
+            if tuple(fire_order[j:j + n - 1]) in ngram_scores:
+                score += ngram_scores[tuple(fire_order[j:j + n - 1])]
 
-    return predictions
-    # Compare network prediction to true labels
-    #accuracy = np.mean([pred == truth for pred, truth in zip(predictions, true_labels)])
-    #return accuracy
+        predictions.append(torch.argmax(score))
 
-def update_ngram_scores(spikes, gold_labels, n_labels, n=2, ngram_scores={}):
+    return torch.LongTensor(predictions)
+
+
+def update_ngram_scores(spikes, labels, n_labels, n, ngram_scores):
     '''
-    Updates ngram scores with n <= n_ngram.
+    Updates ngram scores.
 
     Inputs:
 
-       | :code:`spikes` (:code:`tensor.Tensor`): the spiking activity of shape :code:`(n_ex, n_layer, timesteps)`.
-       | :code:`gold_labels` (:code:`int`) : The ground truth value of shape :code:`(n_ex,)`
-       | :code:`n_labels` (:code:`int`): The number of target labels in the data.
-       | :code:`n` (:code:`int`): The max size of ngram to use.
-       | :code:`ngram_scores` (:code:`dict`): Previously recorded scores to update.
+        | :code:`spikes` (:code:`tensor.Tensor`): Spikes of shape :code:`(n_examples, time, n_neurons)`.
+        | :code:`labels` (:code:`int`) : The ground truth value of shape :code:`(n_examples)`
+        | :code:`n_labels` (:code:`int`): The number of target labels in the data.
+        | :code:`n` (:code:`int`): The max size of ngram to use.
+        | :code:`ngram_scores` (:code:`dict`): Previously recorded scores to update.
 
     Outputs:
 
         | :code:`ngram_scores` (:code:`dict`): Keys are ngram :code:`tuple` and values are
-        :code:`torch.Tensor` of size :code:`n_labels` containing scores per label.
+            :code:`torch.Tensor` of size :code:`n_labels` containing scores per label.
     '''
 
-    assert spikes.size()[0] == len(gold_labels), 'Every example must have a golden label'
+    assert spikes.size()[0] == len(labels), 'Every example must have a label.'
 
-    for n_ex, activity in enumerate(spikes):
-       # Obtain firing order for spiking activity
-       fire_order = []
-       # Keep those timesteps that have firing neurons
-       timesteps_to_keep = torch.nonzero(torch.sum(activity, dim=0))
-       activity = activity[:, timesteps_to_keep]
+    for i, activity in enumerate(spikes):
+        # Obtain firing order for spiking activity
+        fire_order = []
+        timesteps_to_keep = torch.nonzero(torch.sum(activity, dim=0))
 
-       # Aggregate all of the firing neurons' indices
-       for timestep in range(activity.size()[1]):
-            ordering = torch.nonzero(activity[:, timestep]).numpy().tolist()
-            fire_order += ordering
+        # Aggregate all of the firing neurons' indices
+        for t in range(activity.size()[0]):
+            ordering = torch.nonzero(activity[t].view(-1))
+            if ordering.numel() > 0:
+                ordering = ordering[:, 0].tolist()
+                fire_order += ordering
 
-       print(fire_order)
-       sys.exit()
-       # Add counts for every n-gram
-       for i in range(1, n+1):
-           for beg in range(len(fire_order)-i+1):
-            # For every ordering based on n (i)
-            if tuple(fire_order[beg : beg+i]) not in ngram_scores:
-                ngram_scores[tuple(fire_order[beg : beg+i])] = torch.zeros(n_labels)
-            ngram_scores[tuple(fire_order[beg : beg+i])][gold_labels[n_ex]] += 1
+        # Add counts for every n-gram
+        for j in range(len(fire_order) - n):
+            # For every ordering based on n
+            if tuple(fire_order[j:j + n - 1]) not in ngram_scores:
+                ngram_scores[tuple(fire_order[j:j + n - 1])] = torch.zeros(n_labels)
+
+            ngram_scores[tuple(fire_order[j:j + n - 1])][int(labels[i])] += 1
 
     return ngram_scores
 

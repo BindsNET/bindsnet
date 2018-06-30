@@ -123,7 +123,7 @@ class Connection(AbstractConnection):
             if self.wmin == -np.inf or self.wmax == np.inf:
                 self.w = torch.rand(*source.shape, *target.shape)
             else:
-                self.w = self.wmin + torch.rand(*source.shape, *target.shape) * (self.wmin - self.wmin)
+                self.w = self.wmin + torch.rand(*source.shape, *target.shape) * (self.wmax - self.wmin)
         else:
             if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
                 warnings.warn(f'Weight matrix will be clamped between [{self.wmin}, {self.wmax}]')
@@ -163,7 +163,7 @@ class Connection(AbstractConnection):
         '''
         if self.norm is not None:
             self.w = self.w.view(self.source.n, self.target.n)
-            self.w *= self.norm / self.w.sum(0).unsqueeze(-1)
+            self.w *= self.norm / self.w.sum(0).view(1, -1)
             self.w = self.w.view(*self.source.shape, *self.target.shape)
 
     def _reset(self):

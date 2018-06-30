@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import torch
 import numpy             as np
 import argparse
@@ -58,6 +59,7 @@ network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 # Load MNIST data.
 images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST'),
                        download=True).get_train()
+
 images = images.view(-1, 784)
 images *= intensity
 
@@ -73,7 +75,7 @@ proportions = torch.zeros_like(torch.Tensor(n_neurons, 10))
 rates = torch.zeros_like(torch.Tensor(n_neurons, 10))
 
 # Sequence of accuracy estimates.
-accuracy = {'all' : [], 'proportion' : [], 'ngram' : []}
+accuracy = {'all_activity' : [], 'proportion' : [], 'ngram' : []}
 
 # Record ngram probabilities
 ngram_counts = {}
@@ -94,7 +96,7 @@ for i in range(n_train):
 
     if i % update_interval == 0 and i > 0:
         # Update n-gram counts based on spiking activity
-        ngram_counts = update_ngram_scores(spike_record, labels[i - update_interval:i], 2, 10, ngram_counts)
+        ngram_counts = update_ngram_scores(spike_record, labels[i - update_interval:i], 10, 2, ngram_counts)
 
         # Get network predictions.
         ngram_pred = ngram(spike_record, ngram_counts, 10, 2)
@@ -102,17 +104,15 @@ for i in range(n_train):
         proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
 
         # Compute network accuracy according to available classification strategies.
-        accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long() \
+        accuracy['all_activity'].append(100 * torch.sum(labels[i - update_interval:i].long() \
                                                 == all_activity_pred) / update_interval)
         accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long() \
                                                 == proportion_pred) / update_interval)
-
         accuracy['ngram'].append(100 * torch.sum(labels[i - update_interval:i].long() \
-                                                == n_gram_pred) / update_interval)
+                                                == ngram_pred) / update_interval)
 
-        for eval in ['all', 'proportion', 'ngram']:
-            print(f"All activity accuracy: {accuracy[eval][-1]} (last), {np.mean(accuracy[eval])} (average), \
-                    {np.max(accuracy[eval])} (best)")
+        for eval in ['all_activity', 'proportion', 'ngram']:
+            print(f"{eval} accuracy: {accuracy[eval][-1]} (last), {np.mean(accuracy[eval])} (average), {np.max(accuracy[eval])} (best)")
 
         # Assign labels to excitatory layer neurons.
         assignments, proportions, rates = assign_labels(spike_record, labels[i - update_interval:i], 10, rates)
@@ -162,5 +162,10 @@ for i in range(n_train):
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, t() - start))
 print('Training complete.\n')
+
+print ('Saving necessary items.\n')
+
+with open('/mnt/nfs/work1/rkozma/hqkhan/output.txt', 'w') as out:
+    json.dump(accuracy, out)
 
 
