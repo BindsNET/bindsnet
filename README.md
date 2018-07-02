@@ -18,9 +18,10 @@ This package is used as part of ongoing research on applying SNNs to machine lea
 - `scikit_image`
 - `opencv-python`
 - `gym` (optional)
-
+o
 ## Setting things up
 
+### Using pip
 BindsNET is available on PyPI. Issue
 
 ```
@@ -40,6 +41,25 @@ pip install -e .
 ```
 
 To install the packages necessary to interface with the [OpenAI gym RL environments library](https://github.com/openai/gym), follow their instructions for installing the packages needed to run the RL environments simulator (on Linux / MacOS).
+
+### Using Docker
+We also provide a Dockerfile in which BindsNET and all of its dependencies come installed in. Issue
+
+```
+docker image build .
+```
+at the top level directory of this project to create a docker image. 
+
+To change the name of the newly built image, issue
+```
+docker tag <IMAGE_ID> <NEW_IMAGE_ID>
+```
+
+To run a container and get a bash terminal inside it, issue
+
+```
+docker run -it <NEW_IMAGE_ID> bash
+```
 
 ## Getting started
 
@@ -110,3 +130,5 @@ archivePrefix = "arXiv",
 
 ## License
 GNU Affero General Public License v3.0
+
+
