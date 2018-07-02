@@ -195,6 +195,8 @@ class Network:
 
                 | :code:`clamps` (:code:`dict`): Mapping of layer names to neurons which to "clamp" to spiking.
                 | :code:`reward` (:code:`float`): Scalar value used in reward-modulated learning.
+                | :code:`masks` (:code:`dict`): Mapping of connection names to boolean
+                    masks determining which weights to clamp to zero.
         
         **Example:**
     
