@@ -195,6 +195,8 @@ class Network:
 
                 | :code:`clamps` (:code:`dict`): Mapping of layer names to neurons which to "clamp" to spiking.
                 | :code:`reward` (:code:`float`): Scalar value used in reward-modulated learning.
+                | :code:`masks` (:code:`dict`): Mapping of connection names to boolean
+                    masks determining which weights to clamp to zero.
         
         **Example:**
     
@@ -228,6 +230,7 @@ class Network:
         # Parse keyword arguments.
         clamps = kwargs.get('clamp', {})
         reward = kwargs.get('reward', None)
+        masks = kwargs.get('masks', {})
         
         # Effective number of timesteps
         timesteps = int(time / self.dt)
@@ -251,7 +254,8 @@ class Network:
 
             # Run synapse updates.
             for c in self.connections:
-                self.connections[c].update(reward=reward)
+                self.connections[c].update(reward=reward,
+                                           mask=masks.get(c, None))
 
             # Get input to all layers.
             inpts.update(self.get_inputs())
