@@ -1,4 +1,4 @@
-# BindsNET
+<p align="center"><img width="25%" src="docs/logo.png"/></p>
 
 A Python package used for simulating spiking neural networks (SNNs) on CPUs or GPUs using [PyTorch](http://pytorch.org/) `Tensor` functionality.
 

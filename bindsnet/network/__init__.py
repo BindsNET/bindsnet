@@ -16,7 +16,7 @@ def load_network(fname):
     '''
     try:
         with open(fname, 'rb') as f:
-            return p.load(open(fname, 'rb'))
+            return torch.load(open(fname, 'rb'))
     except FileNotFoundError:
         print('Network not found on disk.')
 
@@ -156,7 +156,7 @@ class Network:
             # Save the network to disk.
             network.save(str(Path.home()) + '/network.p')
         '''
-        p.dump(self, open(fname, 'wb'))
+        torch.save(self, open(fname, 'wb'))
 
     def get_inputs(self):
         '''
