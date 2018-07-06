@@ -18,7 +18,7 @@ This package is used as part of ongoing research on applying SNNs to machine lea
 - `scikit_image`
 - `opencv-python`
 - `gym` (optional)
-o
+
 ## Setting things up
 
 ### Using pip
