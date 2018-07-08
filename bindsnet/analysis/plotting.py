@@ -198,11 +198,9 @@ def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], t
     if network is not None:
         for layer, monitor_name in layer_to_monitor.items():
             assert monitor_name in network.monitors, \
-                    f"{'{monitor_name}' does not exist within network.\
-                    Network contains layers: {list(network.layers.keys())}}"
+                f"'{monitor_name}' does not exist within network. Network contains layers: {list(network.layers.keys())}"
             assert layer in network.layers, \
-                    f"{'{layer}' does not exist within network.\
-                    Network contains monitors: {list(network.monitors.keys())}}"
+                f"'{layer}' does not exist within network. Network contains monitors: {list(network.monitors.keys())}"
 
         # Not all mappings were provided. Assume layer names.
         if len(layer_to_monitor) != len(layers):
