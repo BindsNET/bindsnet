@@ -168,8 +168,8 @@ def ngram(spikes, ngram_scores, n_labels, n) :
 
         # Consider all ngram sequences.
         for j in range(len(fire_order) - n):
-            if tuple(fire_order[j:j + n - 1]) in ngram_scores:
-                score += ngram_scores[tuple(fire_order[j:j + n - 1])]
+            if tuple(fire_order[j:j + n]) in ngram_scores:
+                score += ngram_scores[tuple(fire_order[j:j + n])]
 
         predictions.append(torch.argmax(score))
 
@@ -211,10 +211,10 @@ def update_ngram_scores(spikes, labels, n_labels, n, ngram_scores):
         # Add counts for every n-gram
         for j in range(len(fire_order) - n):
             # For every ordering based on n
-            if tuple(fire_order[j:j + n - 1]) not in ngram_scores:
-                ngram_scores[tuple(fire_order[j:j + n - 1])] = torch.zeros(n_labels)
+            if tuple(fire_order[j:j + n]) not in ngram_scores:
+                ngram_scores[tuple(fire_order[j:j + n])] = torch.zeros(n_labels)
 
-            ngram_scores[tuple(fire_order[j:j + n - 1])][int(labels[i])] += 1
+            ngram_scores[tuple(fire_order[j:j + n])][int(labels[i])] += 1
 
     return ngram_scores
 
