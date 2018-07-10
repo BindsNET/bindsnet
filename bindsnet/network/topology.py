@@ -72,9 +72,13 @@ class AbstractConnection(ABC):
         Compute connection's update rule.
         '''
         reward = kwargs.get('reward', None)
+        mask = kwargs.get('mask', None)
 
         if self.update_rule is not None:
             self.update_rule(self, reward=reward)
+
+        if mask is not None:
+            self.w.masked_fill_(mask, 0)
 
     @abstractmethod
     def normalize(self):
