@@ -39,4 +39,4 @@ for i in range(60000):
     
     # Run a step of the pipeline with clamped neuron.
     pipeline.step(clamp=clamp)
-    network._reset()
+    network.reset_()

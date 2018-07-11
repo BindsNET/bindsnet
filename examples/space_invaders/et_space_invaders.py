@@ -101,7 +101,7 @@ try:
 		pipeline.step()
 
 		if pipeline.done == True:
-			pipeline._reset()
+			pipeline.reset_()
 except KeyboardInterrupt:
 	plt.close("all")
 	environment.close()

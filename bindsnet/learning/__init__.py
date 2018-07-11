@@ -4,14 +4,14 @@ from ..utils import im2col_indices
 
 
 def post_pre(conn, **kwargs):
-    '''
+    """
     Simple STDP rule involving both pre- and post-synaptic spiking activity.
     
     Inputs:
         
         | :code:`conn` (:code:`bindsnet.network.topology.AbstractConnection`):
         An instance of class :code:`AbstractConnection`.
-    '''
+    """
     if not 'kernel_size' in conn.__dict__:
         x_source, x_target = conn.source.x.unsqueeze(-1), conn.target.x.unsqueeze(0)
         s_source, s_target = conn.source.s.float().unsqueeze(-1), conn.target.s.float().unsqueeze(0)
@@ -56,14 +56,14 @@ def post_pre(conn, **kwargs):
         conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
 
 def hebbian(conn, **kwargs):
-    '''
+    """
     Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
     
     Inputs:
         
         | :code:`conn` (:code:`bindsnet.network.topology.AbstractConnection`):
         An instance of class :code:`AbstractConnection`.
-    '''
+    """
     if not 'kernel_size' in conn.__dict__:
         # Post-synaptic.
         conn.w += conn.nu_post * conn.source.x.unsqueeze(-1) * conn.target.s.float().unsqueeze(0)
@@ -112,7 +112,7 @@ def hebbian(conn, **kwargs):
 
 
 def m_stdp(conn, **kwargs):
-    '''
+    """
     Reward-modulated STDP. Adapted from
     `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     
@@ -120,7 +120,7 @@ def m_stdp(conn, **kwargs):
         
         | :code:`conn` (:code:`bindsnet.network.topology.AbstractConnection`):
         An instance of class :code:`AbstractConnection`.
-    '''
+    """
     # Parse keyword arguments.
     try:
         reward = kwargs['reward']
@@ -191,7 +191,7 @@ def m_stdp(conn, **kwargs):
 
 
 def m_stdp_et(conn, **kwargs):
-    '''
+    """
     Reward-modulated STDP with eligibility trace. Adapted from
     `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     
@@ -204,7 +204,7 @@ def m_stdp_et(conn, **kwargs):
             
             | :code:`a_plus` (:code:`int`): Learning rate (positive).
             | :code:`a_minus` (:code:`int`): Learning rate (negative).
-    '''
+    """
     if not 'kernel_size' in conn.__dict__:
         # Parse keyword arguments.
         try:

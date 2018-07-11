@@ -6,9 +6,9 @@ from bindsnet.network.nodes    import Input, IFNodes
 from bindsnet.network.topology import Connection
 
 class TestMonitor:
-	'''
+	"""
 	Testing Monitor object.
-	'''
+	"""
 	network = Network()
 	
 	inpt = Input(75); network.add_layer(inpt, name='X')
@@ -36,9 +36,9 @@ class TestMonitor:
 	assert _if_mon.get('v').size() == torch.Size([_if.n, 500])
 
 class TestNetworkMonitor:
-	'''
+	"""
 	Testing NetworkMonitor object.
-	'''
+	"""
 	network = Network()
 	
 	inpt = Input(25); network.add_layer(inpt, name='X')

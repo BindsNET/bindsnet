@@ -11,11 +11,11 @@ from ..datasets            import *
 
 
 class DatasetEnvironment:
-    '''
+    """
     A wrapper around any object from the :code:`datasets` module to pass to the :code:`Pipeline` object.
-    '''
+    """
     def __init__(self, dataset, train=True, time=350, **kwargs):
-        '''
+        """
         Initializes the environment wrapper around the dataset.
         
         Inputs:
@@ -24,7 +24,7 @@ class DatasetEnvironment:
             | :code:`train` (:code:`bool`): Whether to use train or test dataset.
             | :code:`time` (:code:`time`): Length of spike train per example.
             | :code:`intensity` (:code:`intensity`): Raw data is multiplied by this value.
-        '''
+        """
         self.dataset = dataset
         self.train = train
         self.time = time
@@ -46,7 +46,7 @@ class DatasetEnvironment:
         self.env = iter(self.data)
     
     def step(self, a=None):
-        '''
+        """
         Dummy function for OpenAI Gym environment's :code:`step()` function.
         
         Inputs:
@@ -59,7 +59,7 @@ class DatasetEnvironment:
             | :code:`reward` (:code:`float`): Fixed to :code:`0`.
             | :code:`done` (:code:`bool`): Fixed to :code:`False`.
             | :code:`info` (:code:`dict`): Contains label of data item.
-        '''
+        """
         try:
             # Attempt to fetch the next observation.
             self.obs = next(self.env)
@@ -78,40 +78,40 @@ class DatasetEnvironment:
         return self.obs, 0, False, info
     
     def reset(self):
-        '''
+        """
         Dummy function for OpenAI Gym environment's :code:`reset()` function.
-        '''
+        """
         # Reload data and label generators.
         self.env = iter(self.data)
         self.label_loader = iter(self.labels)
     
     def render(self):
-        '''
+        """
         Dummy function for OpenAI Gym environment's :code:`render()` function.
-        '''
+        """
         pass
 
     def close(self):
-        '''
+        """
         Dummy function for OpenAI Gym environment's :code:`close()` function.
-        '''
+        """
         pass
     
     def preprocess(self):
-        '''
+        """
         Preprocessing step for a state specific to dataset objects.
-        '''
+        """
         self.obs = self.obs.view(-1)
         self.obs *= self.intensity
     
     def reshape(self):
-        '''
+        """
         Reshaped observation for plotting purposes.
         
         Returns:
         
             | (:code:`torch.Tensor`): Reshaped observation to plot in :code:`plt.imshow()` call.
-        '''
+        """
         if type(self.dataset) == MNIST:
             return self.obs.view(28, 28)
         elif type(self.dataset) in [CIFAR10, CIFAR100]:
@@ -122,18 +122,18 @@ class DatasetEnvironment:
 
 
 class GymEnvironment:
-    '''
+    """
     A wrapper around the OpenAI :code:`gym` environments.
-    '''
+    """
     def __init__(self, name, **kwargs):
-        '''
+        """
         Initializes the environment wrapper.
 
         Inputs:
 
             | :code:`name` (:code:`str`): The name of an OpenAI :code:`gym` environment.
             | :code:`max_prob` (:code:`float`): Maximum spiking probability.
-        '''
+        """
         self.name = name
         self.env = gym.make(name)
         self.action_space = self.env.action_space
@@ -145,7 +145,7 @@ class GymEnvironment:
             'Maximum spiking probability must be in (0, 1].'
 
     def step(self, a):
-        '''
+        """
         Wrapper around the OpenAI Gym environment :code:`step()` function.
 
         Inputs:
@@ -158,7 +158,7 @@ class GymEnvironment:
             | :code:`reward` (:code:`float`): Reward signal from the environment.
             | :code:`done` (:code:`bool`): Indicates whether the simulation has finished.
             | :code:`info` (:code:`dict`): Current information about the environment.
-        '''
+        """
         # Call gym's environment step function.
         self.obs, self.reward, done, info = self.env.step(a)
         self.preprocess()
@@ -167,13 +167,13 @@ class GymEnvironment:
         return self.obs, self.reward, done, info
 
     def reset(self):
-        '''
+        """
         Wrapper around the OpenAI Gym environment :code:`reset()` function.
 
         Returns:
 
             | :code:`obs` (:code:`torch.Tensor`): Observation from the environment.
-        '''
+        """
         # Call gym's environment reset function.
         self.obs = self.env.reset()
         self.preprocess()
@@ -181,21 +181,21 @@ class GymEnvironment:
         return self.obs
 
     def render(self):
-        '''
+        """
         Wrapper around the OpenAI Gym environment :code:`render()` function.
-        '''
+        """
         self.env.render()
 
     def close(self):
-        '''
+        """
         Wrapper around the OpenAI Gym environment :code:`close()` function.
-        '''
+        """
         self.env.close()
 
     def preprocess(self):
-        '''
+        """
         Preprocessing step for an observation from Gym environment.
-        '''
+        """
         if self.name == 'CartPole-v0':
             self.obs = np.array([self.obs[0] + 2.4, -min(self.obs[1], 0), max(self.obs[1], 0),
                                  self.obs[2] + 41.8, -min(self.obs[3], 0), max(self.obs[3], 0)])
@@ -210,11 +210,11 @@ class GymEnvironment:
         self.obs = torch.from_numpy(self.obs).float()
         
     def reshape(self):
-        '''
+        """
         Reshape observation for plotting purposes.
 
         Returns:
         
             | (:code:`torch.Tensor`): Reshaped observation to plot in :code:`plt.imshow()` call.
-        '''
+        """
         return self.obs

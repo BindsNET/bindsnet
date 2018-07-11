@@ -10,11 +10,11 @@ from abc                    import ABC, abstractmethod
 
 
 class AbstractConnection(ABC):
-    '''
+    """
     Abstract base method for connections between :code:`Nodes`.
-    '''
+    """
     def __init__(self, source, target, nu=1e-2, nu_pre=1e-4, nu_post=1e-2, **kwargs):
-        '''
+        """
         Inputs:
 
             | :code:`source` (:code:`nodes`.Nodes): A layer of nodes from which the connection originates.
@@ -29,7 +29,7 @@ class AbstractConnection(ABC):
                 | :code:`wmin` (:code:`float`): The minimum value on the connection weights.
                 | :code:`wmax` (:code:`float`): The maximum value on the connection weights.
                 | :code:`norm` (:code:`float`): Total weight per target neuron normalization.
-        '''
+        """
         super().__init__()
 
         self.source = source
@@ -57,20 +57,20 @@ class AbstractConnection(ABC):
 
     @abstractmethod
     def compute(self, s):
-        '''
+        """
         Compute pre-activations of downstream neurons given spikes of upstream neurons.
 
         Inputs:
 
             | :code:`s` (:code:`torch.Tensor`): Incoming spikes.
-        '''
+        """
         pass
 
     @abstractmethod
     def update(self, **kwargs):
-        '''
+        """
         Compute connection's update rule.
-        '''
+        """
         reward = kwargs.get('reward', None)
         mask = kwargs.get('mask', None)
 
@@ -82,25 +82,25 @@ class AbstractConnection(ABC):
 
     @abstractmethod
     def normalize(self):
-        '''
+        """
         Normalize weights so each target neuron has sum of connection weights equal to :code:`self.norm`.
-        '''
+        """
         pass
 
     @abstractmethod
-    def _reset(self):
-        '''
+    def reset_(self):
+        """
         Contains resetting logic for the connection.
-        '''
+        """
         pass
 
 
 class Connection(AbstractConnection):
-    '''
+    """
     Specifies synapses between one or two populations of neurons.
-    '''
+    """
     def __init__(self, source, target, nu=1e-2, nu_pre=1e-4, nu_post=1e-2, **kwargs):
-        '''
+        """
         Instantiates a :code:`SimpleConnection` object.
 
         Inputs:
@@ -118,7 +118,7 @@ class Connection(AbstractConnection):
                 | :code:`wmin` (:code:`float`): The minimum value on the connection weights.
                 | :code:`wmax` (:code:`float`): The maximum value on the connection weights.
                 | :code:`norm` (:code:`float`): Total weight per target neuron normalization.
-        '''
+        """
         super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 
         self.w = kwargs.get('w', None)
@@ -134,13 +134,13 @@ class Connection(AbstractConnection):
                 self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
     def compute(self, s):
-        '''
+        """
         Compute pre-activations given spikes using layer weights.
 
         Inputs:
 
             | :code:`s` (:code:`torch.Tensor`): Incoming spikes.
-        '''
+        """
 
         # Decaying spike activation from previous iteration.
         if self.decay is not None:
@@ -156,34 +156,34 @@ class Connection(AbstractConnection):
             return a_post.view(*self.target.shape)
 
     def update(self, **kwargs):
-        '''
+        """
         Compute connection's update rule.
-        '''
+        """
         super().update(**kwargs)
 
     def normalize(self):
-        '''
+        """
         Normalize weights so each target neuron has sum of connection weights equal to :code:`self.norm`.
-        '''
+        """
         if self.norm is not None:
             self.w = self.w.view(self.source.n, self.target.n)
             self.w *= self.norm / self.w.sum(0).view(1, -1)
             self.w = self.w.view(*self.source.shape, *self.target.shape)
 
-    def _reset(self):
-        '''
+    def reset_(self):
+        """
         Contains resetting logic for the connection.
-        '''
-        super()._reset()
+        """
+        super().reset_()
 
 
 class Conv2dConnection(AbstractConnection):
-    '''
+    """
     Specifies convolutional synapses between one or two populations of neurons.
-    '''
+    """
     def __init__(self, source, target, kernel_size, stride=1, padding=0,
                  dilation=1, nu=1e-2, nu_pre=1e-4, nu_post=1e-2, **kwargs):
-        '''
+        """
         Instantiates a :code:`Conv2dConnection` object.
 
         Inputs:
@@ -205,7 +205,7 @@ class Conv2dConnection(AbstractConnection):
                 | :code:`wmin` (:code:`float`): The minimum value on the connection weights.
                 | :code:`wmax` (:code:`float`): The maximum value on the connection weights.
                 | :code:`norm` (:code:`float`): Total weight per target neuron normalization.
-        '''
+        """
         super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 
         self.kernel_size = _pair(kernel_size)
@@ -239,13 +239,13 @@ class Conv2dConnection(AbstractConnection):
                              self.wmax)
 
     def compute(self, s):
-        '''
+        """
         Compute convolutional pre-activations given spikes using layer weights.
 
         Inputs:
 
             | :code:`s` (:code:`torch.Tensor`): Incoming spikes.
-        '''
+        """
         return F.conv2d(s.float(),
                         self.w,
                         stride=self.stride,
@@ -253,15 +253,15 @@ class Conv2dConnection(AbstractConnection):
                         dilation=self.dilation)
 
     def update(self, **kwargs):
-        '''
+        """
         Compute connection's update rule.
-        '''
+        """
         super().update(**kwargs)
 
     def normalize(self):
-        '''
+        """
         Normalize weights along the first axis according to total weight per target neuron.
-        '''
+        """
         if self.norm is not None:
             shape = self.w.size()
             self.w = self.w.view(self.w.size(0),
@@ -272,19 +272,19 @@ class Conv2dConnection(AbstractConnection):
 
             self.w = self.w.view(*shape)
 
-    def _reset(self):
-        '''
+    def reset_(self):
+        """
         Contains resetting logic for the connection.
-        '''
-        super()._reset()
+        """
+        super().reset_()
 
 
 class SparseConnection(AbstractConnection):
-    '''
+    """
     Specifies sparse synapses between one or two populations of neurons.
-    '''
+    """
     def __init__(self, source, target, nu=1e-2, nu_pre=1e-4, nu_post=1e-2, **kwargs):
-        '''
+        """
         Instantiates a :code:`Connection` object with sparse weights.
 
         Inputs:
@@ -303,7 +303,7 @@ class SparseConnection(AbstractConnection):
                 | :code:`wmin` (:code:`float`): The minimum value on the connection weights.
                 | :code:`wmax` (:code:`float`): The maximum value on the connection weights.
                 | :code:`norm` (:code:`float`): Total weight per target neuron normalization.
-        '''
+        """
         super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
 
         self.w = kwargs.get('w', None)
@@ -321,31 +321,31 @@ class SparseConnection(AbstractConnection):
             assert self.w.is_sparse, 'Weight matrix is not sparse (see torch.sparse module)'
 
     def compute(self, s):
-        '''
+        """
         Compute convolutional pre-activations given spikes using layer weights.
 
         Inputs:
 
             | :code:`s` (:code:`torch.Tensor`): Incoming spikes.
-        '''
+        """
         s = s.float().view(-1)
         a = s @ self.w
         return a.view(*self.target.shape)
 
     def update(self, **kwargs):
-        '''
+        """
         Compute connection's update rule.
-        '''
+        """
         pass
 
     def normalize(self):
-        '''
+        """
         Normalize weights along the first axis according to total weight per target neuron.
-        '''
+        """
         pass
 
-    def _reset(self):
-        '''
+    def reset_(self):
+        """
         Contains resetting logic for the connection.
-        '''
-        super()._reset()
+        """
+        super().reset_()

@@ -8,9 +8,9 @@ from bindsnet.network.monitors import Monitor
 
 
 class TestNodes:
-	'''
+	"""
 	Tests all stable groups of neurons / nodes.
-	'''
+	"""
 	def test_init(self):
 		for nodes in [Input,
 					  McCullochPitts,

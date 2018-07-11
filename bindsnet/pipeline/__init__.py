@@ -13,11 +13,11 @@ from ..encoding          import bernoulli
 plt.ion()
 
 class Pipeline:
-    '''
+    """
     Abstracts the interaction between network, environment (or dataset), input encoding, and environment feedback action.
-    '''
+    """
     def __init__(self, network, environment, encoding=bernoulli, action_function=None, **kwargs):
-        '''
+        """
         Initializes the pipeline.
         
         Inputs:
@@ -37,7 +37,7 @@ class Pipeline:
                 | :code:`render_interval` (:code:`bool`): Interval to render the environment.
                 | :code:`save_interval` (:code:`int`): How often to save the network to disk.
                 | :code:`output` (:code:`str`): String name of the layer from which to take output from.
-        '''
+        """
         self.network = network
         self.env = environment
         self.encoding = encoding
@@ -91,24 +91,24 @@ class Pipeline:
         self.clock = time.time()
 
     def set_spike_data(self):
-        '''
+        """
         Get the spike data from all layers in the pipeline's network.
-        '''
+        """
         self.spike_record = {l : self.network.monitors[f'{l}_spikes'].get('s') for l in self.network.layers}
 
     def set_voltage_data(self):
-        '''
+        """
         Get the voltage data from all applicable layers in the pipeline's network.
-        '''
+        """
         self.voltage_record = {}
         for l in self.network.layers:
             if 'v' in self.network.layers[l].__dict__:
                 self.voltage_record[l] = self.network.monitors[f'{l}_voltages'].get('v')
 
     def step(self, **kwargs):
-        '''
+        """
         Run an iteration of the pipeline.
-        '''
+        """
         clamp = kwargs.get('clamp', {})
         
         if self.print_interval is not None and self.iteration % self.print_interval == 0:
@@ -159,9 +159,9 @@ class Pipeline:
         self.iteration += 1
 
     def plot_obs(self):
-        '''
+        """
         Plot the processed observation after difference against history
-        '''
+        """
         if self.obs_im is None and self.obs_ax is None:
             fig, self.obs_ax = plt.subplots(); self.obs_ax.set_title('Observation')
             self.obs_ax.set_xticks(()); self.obs_ax.set_yticks(())
@@ -170,9 +170,9 @@ class Pipeline:
             self.obs_im.set_data(self.env.reshape())
     
     def plot_data(self):
-        '''
+        """
         Plot desired variables.
-        '''
+        """
         # Set latest data
         self.set_spike_data()
         self.set_voltage_data()
@@ -190,13 +190,13 @@ class Pipeline:
         plt.show()
 
     def update_history(self):
-        '''
+        """
         Updates the observations inside history by performing subtraction from 
         most recent observation and the sum of previous observations.
         
         If there are not enough observations to take a difference from, simply 
         store the observation without any subtraction.
-        '''
+        """
         # Recording initial observations
         if self.iteration < len(self.history) * self.delta:
             # Store observation based on delta value
@@ -214,13 +214,13 @@ class Pipeline:
             self.obs = temp
             
     def update_index(self):
-        '''
+        """
         Updates the index to keep track of history.
         
         For example: history = 4, delta = 3 will produce self.history = {1, 4, 7, 10}
                           and self.history_index will be updated according to self.delta
                           and will wrap around the history dictionary.
-        '''
+        """
         if self.iteration % self.delta == 0:
             if self.history_index != max(self.history.keys()):
                 self.history_index += self.delta
@@ -228,11 +228,11 @@ class Pipeline:
             else:
                 self.history_index = (self.history_index % max(self.history.keys())) + 1 
                     
-    def _reset(self):
-        '''
+    def reset_(self):
+        """
         Reset the pipeline.
-        '''
+        """
         self.env.reset()
-        self.network._reset()
+        self.network.reset_()
         self.iteration = 0
         self.history = {i: torch.Tensor() for i in self.history}

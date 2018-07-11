@@ -5,18 +5,18 @@ from ..learning import *
 
 
 class TwoLayerNetwork(Network):
-    '''
+    """
     Implements an :code:`Input` instance connected to a :code:`LIFNodes` instance with a fully-connected :code:`Connection`.
-    '''
+    """
     def __init__(self, n_inpt, n_neurons=100, dt=1.0, nu_pre=1e-4, nu_post=1e-2, wmin=0, wmax=1, norm=78.4):
-        '''
+        """
         Inputs:
         
             | :code:`n_input` (:code:`int`): Number of input neurons. Matches the 1D size of the input data.
             | :code:`n_neurons` (:code:`int`): Number of excitatory, inhibitory neurons.
             | :code:`dt` (:code:`float`): Simulation time step.
             | :code:`norm` (:code:`float`): Input to excitatory layer connection weights norm.
-        '''
+        """
         super().__init__(dt=dt)
         
         self.n_inpt = n_inpt
@@ -52,13 +52,13 @@ class TwoLayerNetwork(Network):
         
 
 class DiehlAndCook2015(Network):
-    '''
+    """
     Implements the spiking neural network architecture from `(Diehl & Cook 2015) <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
-    '''
+    """
     def __init__(self, n_inpt, n_neurons=100, exc=22.5, inh=17.5, dt=1.0, nu_pre=1e-4,
                  nu_post=1e-2, wmin=0, wmax=1, norm=78.4, theta_plus=0.05, theta_decay=1e-7,
                  X_Ae_decay=None, Ae_Ai_decay=None, Ai_Ae_decay=None):
-        '''
+        """
         Inputs:
         
             | :code:`n_input` (:code:`int`): Number of input neurons. Matches the 1D size of the input data.
@@ -67,7 +67,7 @@ class DiehlAndCook2015(Network):
             | :code:`inh` (:code:`float`): Strength of synapse weights from inhibitory to excitatory layer.
             | :code:`dt` (:code:`float`): Simulation time step.
             | :code:`norm` (:code:`float`): Input to excitatory layer connection weights norm.
-        '''
+        """
         super().__init__(dt=dt)
         
         self.n_inpt = n_inpt
