@@ -184,14 +184,20 @@ def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], t
                 layers.append(layer)
     else: # Specific layers in network or spikes were provided
         for layer in layers:
-            assert layer in network.layers or layer in spikes.keys(), \
-                'Layer does not exist within given network or spiking information'
+            if network is not None:
+                assert layer in network.layers,\
+                    f"'{layer}' does not exist within network's layers. \
+                    Network contains layers: {list(network.layers.keys())}"
+            else:
+                assert layer in spikes.keys(), \
+                    f"'{layer}' does not exist within given spiking information.\
+                    Spikes contain layers: {list(spikes.keys())}"
 
     # Pre-setup plots
     if network is not None:
         n_subplots = len(layers)
     else: # Obtain information from spikes
-        n_subplots = len(spikes.keys())
+        n_subplots = len(layers)
         spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
 
     # Set up monitor to layer names
@@ -215,8 +221,14 @@ def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], t
     # Check if appropriate values for time were provided
     if time != {}:
         for key, val in time.items():
-            assert key in network.layers or key in spikes.keys(), \
-                'Layer does not exist within given network or spiking information'
+            if network is not None:
+                assert layer in network.layers,\
+                    f"'{layer}' given in 'time' paramter does not exist within \
+                    network's layers. Network contains layers: {list(network.layers.keys())}"
+            else:
+                assert layer in spikes.keys(), \
+                    f"'{layer}' given in 'time' paramter does not exist within \
+                    spiking information. Spikes contain layers: {list(spikes.keys())}"
             assert len(val) == 2, 'Need (start, stop) values for time argument'
             assert val[0] < val[1], 'Need start < stop in time argument'
 
@@ -231,8 +243,14 @@ def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], t
     # Check if appropriate values for n_neurons were provided
     if n_neurons != {}:
         for key, val in n_neurons.items():
-            assert key in network.layers or key in spikes.keys(), \
-                'Layer does not exist within given network or spiking information'
+            if network is not None:
+                assert layer in network.layers,\
+                    f"'{layer}' given in 'n_neurons' paramter does not exist within \
+                    network's layers. Network contains layers: {list(network.layers.keys())}"
+            else:
+                assert layer in spikes.keys(), \
+                    f"'{layer}' given in 'n_neurons' paramter does not exist within \
+                    spiking information. Spikes contain layers: {list(spikes.keys())}"
 
     # Set to use all neurons
     for layer in layers:
