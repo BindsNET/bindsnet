@@ -51,102 +51,7 @@ def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
     return axes, ims
 
 
-def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
-    '''
-    Plot spikes for any group(s) of neurons.
-
-    Inputs:
-
-        | :code:`spikes` (:code:`dict(torch.Tensor)`): Contains
-        spiking data for groups of neurons of interest.
-        | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
-        | :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
-        | :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons
-        in the given time range. Default is entire simulation time.
-        | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity
-        of neurons in the given range of neurons. Default is all neurons.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
-        | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
-
-    '''
-    n_subplots = len(spikes.keys())
-    spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
-
-    if time is not None:
-        assert len(time) == 2, 'Need (start, stop) values for time argument'
-        assert time[0] < time[1], 'Need start < stop in time argument'
-    else:
-        # Set it for entire duration
-        for key in spikes.keys():
-            time = (0, spikes[key].shape[1])
-            break
-
-    if len(n_neurons.keys()) != 0:
-        assert len(n_neurons.keys()) <= n_subplots, \
-            'n_neurons argument needs fewer entries than n_subplots'
-        assert all(key in spikes.keys() for key in n_neurons.keys()), \
-            'n_neurons keys must be subset of spikes keys'
-
-    # Use all neurons if no argument provided.
-    for key, val in spikes.items():
-        if key not in n_neurons.keys():
-            n_neurons[key] = (0, val.shape[0])
-
-    if not ims:
-        fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
-        ims = []
-
-        if n_subplots == 1:
-            for datum in spikes.items():
-                ims.append(axes.imshow(spikes[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
-                                       time[0]:time[1]],
-                                       cmap='binary'))
-
-                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
-                plt.title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-                plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
-                axes.set_aspect('auto')
-        else:
-            for i, datum in enumerate(spikes.items()):
-                ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
-                                          time[0]:time[1]],
-                                          cmap='binary'))
-
-                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
-                axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-
-            for ax in axes:
-                ax.set_aspect('auto')
-
-        plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
-        plt.tight_layout()
-
-    else:
-        if n_subplots == 1:
-            for datum in spikes.items():
-                ims[0].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-                ims[0].autoscale()
-
-                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
-                axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-
-        else:
-            for i, datum in enumerate(spikes.items()):
-                ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-                ims[i].autoscale()
-
-                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
-                axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-
-    plt.draw()
-    return ims, axes
-
-
-def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], time={}, n_neurons={}, ims=None, axes=None, figsize=(8, 4.5)):
+def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time={}, n_neurons={}, ims=None, axes=None, figsize=(8, 4.5)):
     '''
     Plot spikes for any group(s) of neurons. Default behavior will plot everything.
 
@@ -172,6 +77,7 @@ def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], t
         | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
 
     '''
+
     assert network is not None or spikes is not None, 'No plotting information'
 
     # Set to all layers if no layers were requested
