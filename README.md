@@ -43,6 +43,8 @@ pip install -e .
 To install the packages necessary to interface with the [OpenAI gym RL environments library](https://github.com/openai/gym), follow their instructions for installing the packages needed to run the RL environments simulator (on Linux / MacOS).
 
 ### Using Docker
+[Link](https://hub.docker.com/r/hqkhan/bindsnet/) to Docker repository.
+
 We also provide a Dockerfile in which BindsNET and all of its dependencies come installed in. Issue
 
 ```
