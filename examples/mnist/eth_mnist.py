@@ -155,7 +155,3 @@ for i in range(n_train):
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, t() - start))
 print('Training complete.\n')
 
-print('Calculating ngram scores')
-ngram_counts = get_ngram_counts(spike_record, labels[:len(train_spikes)], 2)
-predictions = ngram(train_spikes, labels[:len(train_spikes)], ngrams, 2)
-
