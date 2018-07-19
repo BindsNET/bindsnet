@@ -6,7 +6,7 @@ from bindsnet.encoding          import bernoulli
 from bindsnet.network.topology  import Connection
 from bindsnet.environment       import GymEnvironment
 from bindsnet.network.nodes     import Input, LIFNodes
-from bindsnet.pipeline.feedback import select_multinomial
+from bindsnet.pipeline.action   import select_multinomial
 
 # Build network.
 network = Network(dt=1.0)
@@ -43,4 +43,4 @@ pipeline = Pipeline(network, environment, encoding=bernoulli,
 while True:
 	pipeline.step()
 	if pipeline.done == True:
-		pipeline._reset()
+		pipeline.reset_()

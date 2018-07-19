@@ -6,502 +6,674 @@ from abc       import ABC, abstractmethod
 
 
 class Nodes(ABC):
-	'''
-	Abstract base class for groups of neurons.
-	'''
-	def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
-		super().__init__()
-		
-		assert not n is None or not shape is None, 'Must provide either no. of neurons or shape of nodes'
-		
-		if n is None:
-			self.n = reduce(mul, shape)          # No. of neurons product of shape.
-		else:
-			self.n = n                           # No. of neurons provided.
-		
-		if shape is None:
-			self.shape = [self.n]                # Shape is equal to the size of the layer.
-		else:
-			self.shape = shape                   # Shape is passed in as an argument.
-		
-		assert self.n == reduce(mul, self.shape), 'No. of neurons and shape do not match'
-			
-		self.traces = traces                     # Whether to record synpatic traces.
-		self.s = torch.zeros(self.shape).byte()  # Spike occurences.
-		
-		if self.traces:
-			self.x = torch.zeros(self.shape)     # Firing traces.
-			self.trace_tc = trace_tc             # Rate of decay of spike trace time constant.
+    """
+    Abstract base class for groups of neurons.
+    """
+    @abstractmethod
+    def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
+        super().__init__()
 
-	@abstractmethod
-	def step(self, inpts, dt):
-		'''
-		Abstract base class method for a single simulation step.
-		
-		Inputs:
-		
-			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
-			| :code:`dt` (:code:`float`): Simulation time step.
-		'''
-		if self.traces:
-			# Decay and set spike traces.
-			self.x -= dt * self.trace_tc * self.x
-			self.x[self.s] = 1
-	
-	@abstractmethod
-	def _reset(self):
-		'''
-		Abstract base class method for resetting state variables.
-		'''
-		self.s[self.s != 0] = 0  # Spike occurences.
+        assert n is not None or shape is not None, \
+            'Must provide either no. of neurons or shape of nodes'
 
-		if self.traces:
-			self.x = torch.zeros(self.shape)  # Firing traces.
+        if n is None:
+            self.n = reduce(mul, shape)          # No. of neurons product of shape.
+        else:
+            self.n = n                           # No. of neurons provided.
+
+        if shape is None:
+            self.shape = [self.n]                # Shape is equal to the size of the layer.
+        else:
+            self.shape = shape                   # Shape is passed in as an argument.
+
+        assert self.n == reduce(mul, self.shape), \
+            'No. of neurons and shape do not match'
+
+        self.traces = traces                     # Whether to record synpatic traces.
+        self.s = torch.zeros(self.shape).byte()  # Spike occurences.
+
+        if self.traces:
+            self.x = torch.zeros(self.shape)     # Firing traces.
+            self.trace_tc = trace_tc             # Rate of decay of spike trace time constant.
+
+    @abstractmethod
+    def step(self, inpts, dt):
+        """
+        Abstract base class method for a single simulation step.
+
+        Inputs:
+
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        if self.traces:
+            # Decay and set spike traces.
+            self.x -= dt * self.trace_tc * self.x
+            self.x.masked_fill_(self.s, 1)
+
+    @abstractmethod
+    def reset_(self):
+        """
+        Abstract base class method for resetting state variables.
+        """
+        self.s = torch.zeros(self.shape).byte()  # Spike occurences.
+
+        if self.traces:
+            self.x = torch.zeros(self.shape)     # Firing traces.
 
 
 class Input(Nodes):
-	'''
-	Layer of nodes with user-specified spiking behavior.
-	'''
-	def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
-		'''
-		Instantiates a layer of input neurons.
-		
-		Inputs:
-		
-			| :code:`n` (:code:`int`): The number of neurons in the layer.
-			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
-			| :code:`traces` (:code:`bool`): Whether to record decaying spike traces.
-			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-		'''
-		super().__init__(n, shape, traces, trace_tc)
+    """
+    Layer of nodes with user-specified spiking behavior.
+    """
+    def __init__(self, n=None, shape=None, traces=False, trace_tc=5e-2):
+        """
+        Instantiates a layer of input neurons.
 
-	def step(self, inpts, dt):
-		'''
-		On each simulation step, set the spikes of the population equal to the inputs.
+        Inputs:
 
-		Inputs:
-		
-			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
-			| :code:`dt` (:code:`float`): Simulation time step.
-		'''
-		# Set spike occurrences to input values.
-		self.s = inpts.byte()
-		
-		super().step(inpts, dt)
-	
-	def _reset(self):
-		'''
-		Resets relevant state variables.
-		'''
-		super()._reset()
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record decaying spike traces.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+        """
+        super().__init__(n, shape, traces, trace_tc)
+
+    def step(self, inpts, dt):
+        """
+        On each simulation step, set the spikes of the population equal to the inputs.
+
+        Inputs:
+
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        # Set spike occurrences to input values.
+        self.s = inpts.byte()
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
 
 
 class McCullochPitts(Nodes):
-	'''
-	Layer of `McCulloch-Pitts neurons <http://wwwold.ece.utep.edu/research/webfuzzy/docs/kk-thesis/kk-thesis-html/node12.html>`_.
-	'''
-	def __init__(self, n=None, shape=None, traces=False, thresh=1.0, trace_tc=5e-2):
-		'''
-		Instantiates a McCulloch-Pitts layer of neurons.
-		
-		Inputs:
-		
-			| :code:`n` (:code:`int`): The number of neurons in the layer.
-			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
-			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
-		'''
-		super().__init__(n, shape, traces, trace_tc)
+    """
+    Layer of `McCulloch-Pitts neurons <http://wwwold.ece.utep.edu/research/webfuzzy/docs/kk-thesis/kk-thesis-html/node12.html>`_.
+    """
+    def __init__(self, n=None, shape=None, traces=False, thresh=1.0, trace_tc=5e-2):
+        """
+        Instantiates a McCulloch-Pitts layer of neurons.
 
-		self.thresh = thresh                     # Spike threshold voltage.
-		self.v = torch.zeros(self.shape)         # Neuron voltages.
+        Inputs:
 
-	def step(self, inpts, dt):
-		'''
-		Runs a single simulation step.
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+        """
+        super().__init__(n, shape, traces, trace_tc)
 
-		Inputs:
-		
-			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
-			| :code:`dt` (:code:`float`): Simulation time step.
-		'''
-		self.v = inpts                  # Voltages are equal to the inputs.
-		self.s = self.v >= self.thresh  # Check for spiking neurons.
+        self.thresh = thresh             # Spike threshold voltage.
+        self.v = torch.zeros(self.shape) # Neuron voltages.
 
-		super().step(inpts, dt)
-	
-	def _reset(self):
-		'''
-		Resets relevant state variables.
-		'''
-		super()._reset()
+    def step(self, inpts, dt):
+        """
+        Runs a single simulation step.
+
+        Inputs:
+
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        self.v = inpts                  # Voltages are equal to the inputs.
+        self.s = self.v >= self.thresh  # Check for spiking neurons.
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
 
 
 class IFNodes(Nodes):
-	'''
-	Layer of `integrate-and-fire (IF) neurons <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_.
-	'''
-	def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, reset=-65.0, refrac=5, trace_tc=5e-2):
-		'''
-		Instantiates a layer of IF neurons.
-		
-		Inputs:
-		
-			| :code:`n` (:code:`int`): The number of neurons in the layer.
-			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
-			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
-			| :code:`reset` (:code:`float`): Post-spike reset voltage.
-			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-		'''
-		
-		super().__init__(n, shape, traces, trace_tc)
+    """
+    Layer of `integrate-and-fire (IF) neurons <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_.
+    """
+    def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, reset=-65.0, refrac=5, trace_tc=5e-2):
+        """
+        Instantiates a layer of IF neurons.
 
-		self.reset = reset    # Post-spike reset voltage.
-		self.thresh = thresh  # Spike threshold voltage.
-		self.refrac = refrac  # Post-spike refractory period.
+        Inputs:
 
-		self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
-		self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+            | :code:`reset` (:code:`float`): Post-spike reset voltage.
+            | :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+        """
 
-	def step(self, inpts, dt):
-		'''
-		Runs a single simulation step.
+        super().__init__(n, shape, traces, trace_tc)
 
-		Inputs:
-		
-			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
-			| :code:`dt` (:code:`float`): Simulation time step.
-		'''
-		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count != 0] -= dt
-	
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+        self.reset = reset    # Post-spike reset voltage.
+        self.thresh = thresh  # Spike threshold voltage.
+        self.refrac = refrac  # Post-spike refractory period.
 
-		# Refractoriness and voltage reset.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
+        self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
 
-		# Integrate input and decay voltages.
-		self.v += inpts
+    def step(self, inpts, dt):
+        """
+        Runs a single simulation step.
 
-		super().step(inpts, dt)
+        Inputs:
 
-	def _reset(self):
-		'''
-		Resets relevant state variables.
-		'''
-		super()._reset()
-		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
-		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        # Decrement refractory counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
+
+        # Integrate input and decay voltages.
+        self.v += (self.refrac_count == 0).float() * inpts
+
+        # Check for spiking neurons.
+        self.s = self.v >= self.thresh
+
+        # Refractoriness and voltage reset.
+        self.refrac_count.masked_fill_(self.s, self.refrac)
+        self.v.masked_fill_(self.s, self.reset)
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
 class LIFNodes(Nodes):
-	'''
-	Layer of leaky integrate-and-fire (LIF) neurons.
-	'''
-	def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, rest=-65.0,
-				 reset=-65.0, refrac=5, decay=1e-2, trace_tc=5e-2):
-		'''
-		Instantiates a layer of LIF neurons.
-		
-		Inputs:
-		
-			| :code:`n` (:code:`int`): The number of neurons in the layer.
-			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
-			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
-			| :code:`rest` (:code:`float`): Resting membrane voltage.
-			| :code:`reset` (:code:`float`): Post-spike reset voltage.
-			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
-			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-		'''
-		super().__init__(n, shape, traces, trace_tc)
+    """
+    Layer of `leaky integrate-and-fire (LIF) neurons
+    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02311000000000000000>`_.
+    """
+    def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, rest=-65.0,
+                 reset=-65.0, refrac=5, decay=1e-2, trace_tc=5e-2):
+        """
+        Instantiates a layer of LIF neurons.
 
-		self.rest = rest      # Rest voltage.
-		self.reset = reset    # Post-spike reset voltage.
-		self.thresh = thresh  # Spike threshold voltage.
-		self.refrac = refrac  # Post-spike refractory period.
-		self.decay = decay    # Rate of decay of neuron voltage.
+        Inputs:
 
-		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+            | :code:`rest` (:code:`float`): Resting membrane voltage.
+            | :code:`reset` (:code:`float`): Post-spike reset voltage.
+            | :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
+            | :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+        """
+        super().__init__(n, shape, traces, trace_tc)
 
-	def step(self, inpts, dt):
-		'''
-		Runs a single simulation step.
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay     # Rate of decay of neuron voltage.
 
-		Inputs:
-		
-			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
-			| :code:`dt` (:code:`float`): Simulation time step.
-		'''
-		# Decay voltages.
-		self.v -= dt * self.decay * (self.v - self.rest)
-		
-		# Decrement refrac counters.
-		self.refrac_count[self.refrac_count != 0] -= dt
-		
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-		# Refractoriness and voltage reset.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
-		
-		# Integrate inputs.
-		self.v += inpts
+    def step(self, inpts, dt):
+        """
+        Runs a single simulation step.
 
-		super().step(inpts, dt)
-		
-	def _reset(self):
-		'''
-		Resets relevant state variables.
-		'''
-		super()._reset()
-		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
-		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
+        Inputs:
+
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        # Decay voltages.
+        self.v -= dt * self.decay * (self.v - self.rest)
+
+        # Decrement refrac counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
+
+        # Integrate inputs.
+        self.v += (self.refrac_count == 0).float() * inpts
+
+        # Check for spiking neurons.
+        self.s = self.v >= self.thresh
+
+        # Refractoriness and voltage reset.
+        self.refrac_count.masked_fill_(self.s, self.refrac)
+        self.v.masked_fill_(self.s, self.reset)
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+
+class CurrentLIFNodes(Nodes):
+    """
+    Layer of `current-based leaky integrate-and-fire (LIF) neurons
+    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02313000000000000000>`_.
+    Total synaptic input current is modeled as a decaying memory
+    of input spikes multiplied by synpatic efficacies.
+    """
+    def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, rest=-65.0,
+                 reset=-65.0, refrac=5, decay=1e-2, i_decay=5e-1, trace_tc=5e-2):
+        """
+        Instantiates a layer of synaptic input current-based LIF neurons.
+
+        Inputs:
+
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+            | :code:`rest` (:code:`float`): Resting membrane voltage.
+            | :code:`reset` (:code:`float`): Post-spike reset voltage.
+            | :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
+            | :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
+            | :code:`i_decay` (:code:`float`): Time constant of synaptic input current decay.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+        """
+        super().__init__(n, shape, traces, trace_tc)
+
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay     # Rate of decay of neuron voltage.
+        self.i_decay = i_decay # Rate of decay of synaptic input current.
+
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+    def step(self, inpts, dt):
+        """
+        Runs a single simulation step.
+
+        Inputs:
+
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        # Decay voltages and current.
+        self.v -= dt * self.decay * (self.v - self.rest)
+        self.i -= dt * self.i_decay * self.i
+
+        # Decrement refrac counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
+
+        # Integrate inputs.
+        self.i += inpts
+        self.v += (self.refrac_count == 0).float() * self.i
+
+        # Check for spiking neurons.
+        self.s = (self.v >= self.thresh) & (self.refrac_count == 0)
+
+        # Refractoriness and voltage reset.
+        self.refrac_count.masked_fill_(self.s, self.refrac)
+        self.v.masked_fill_(self.s, self.reset)
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
 class AdaptiveLIFNodes(Nodes):
-	'''
-	Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds.
-	'''
-	def __init__(self, n=None, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
-				 refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
-		'''
-		Instantiates a layer of LIF neurons with adaptive firing thresholds.
-		
-		Inputs:
-		
-			| :code:`n` (:code:`int`): The number of neurons in the layer.
-			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
-			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`rest` (:code:`float`): Resting membrane voltage.
-			| :code:`reset` (:code:`float`): Post-spike reset voltage.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
-			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
-			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-			| :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
-			| :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
-		'''
-		super().__init__(n, shape, traces, trace_tc)
+    """
+    Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds.
+    A neuron's voltage threshold is increased by some constant each time
+    it spikes; otherwise, it is decaying back to its default value.
+    """
+    def __init__(self, n=None, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
+                 refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
+        """
+        Instantiates a layer of LIF neurons with adaptive firing thresholds.
 
-		self.rest = rest                # Rest voltage.
-		self.reset = reset              # Post-spike reset voltage.
-		self.thresh = thresh            # Spike threshold voltage.
-		self.refrac = refrac            # Post-spike refractory period.
-		self.decay = decay              # Rate of decay of neuron voltage.
-		self.theta_plus = theta_plus    # Constant threshold increase on spike.
-		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
+        Inputs:
 
-		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`rest` (:code:`float`): Resting membrane voltage.
+            | :code:`reset` (:code:`float`): Post-spike reset voltage.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+            | :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
+            | :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+            | :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
+            | :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
+        """
+        super().__init__(n, shape, traces, trace_tc)
 
-		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
-		
-	def step(self, inpts, dt):
-		'''
-		Runs a single simulation step.
+        self.rest = rest                # Rest voltage.
+        self.reset = reset              # Post-spike reset voltage.
+        self.thresh = thresh            # Spike threshold voltage.
+        self.refrac = refrac            # Post-spike refractory period.
+        self.decay = decay              # Rate of decay of neuron voltage.
+        self.theta_plus = theta_plus    # Constant threshold increase on spike.
+        self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
-		Inputs:
-		
-			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
-			| :code:`dt` (:code:`float`): Simulation time step.
-		'''
-		# Decay voltages and adaptive thresholds.
-		self.v -= dt * self.decay * (self.v - self.rest)
-		self.theta -= dt * self.theta_decay * self.theta
-		
-		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count != 0] -= dt
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
+    def step(self, inpts, dt):
+        """
+        Runs a single simulation step.
 
-		# Refractoriness, voltage reset, and adaptive thresholds.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
-		self.theta += self.theta_plus * self.s.float()
-		
-		# Integrate inputs.
-		self.v += inpts
+        Inputs:
 
-		super().step(inpts, dt)
-		
-	def _reset(self):
-		'''
-		Resets relevant state variables.
-		'''
-		super()._reset()
-		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
-		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        # Decay voltages and adaptive thresholds.
+        self.v -= dt * self.decay * (self.v - self.rest)
+        self.theta -= dt * self.theta_decay * self.theta
+
+        # Decrement refractory counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
+
+        # Integrate inputs.
+        self.v += (self.refrac_count == 0).float() * inpts
+
+        # Check for spiking neurons.
+        self.s = (self.v >= self.thresh + self.theta)
+
+        # Refractoriness, voltage reset, and adaptive thresholds.
+        self.refrac_count.masked_fill_(self.s, self.refrac)
+        self.v.masked_fill_(self.s, self.reset)
+        self.theta += self.theta_plus * self.s.float()
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+
+class AdaptiveCurrentLIFNodes(Nodes):
+    """
+    Layer of `current-based leaky integrate-and-fire (LIF) neurons
+    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02313000000000000000>`_.
+    Combines ideas from both :code:`CurrentLIFNodes` and :code:`AdaptiveLIFNodes`
+    objects.
+    """
+    def __init__(self, n=None, shape=None, traces=False, thresh=-52.0, rest=-65.0,
+                 reset=-65.0, refrac=5, decay=1e-2, i_decay=2e-2, trace_tc=5e-2,
+                 theta_plus=0.05, theta_decay=1e-7):
+        """
+        Instantiates a layer of synaptic input current-based LIF neurons.
+
+        Inputs:
+
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+            | :code:`rest` (:code:`float`): Resting membrane voltage.
+            | :code:`reset` (:code:`float`): Post-spike reset voltage.
+            | :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
+            | :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
+            | :code:`i_decay` (:code:`float`): Time constant of synaptic input current decay.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+            | :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
+            | :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
+        """
+        super().__init__(n, shape, traces, trace_tc)
+
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay # Rate of decay of neuron voltage.
+        self.i_decay = i_decay # Rate of decay of synaptic input current.
+        self.theta_plus = theta_plus    # Constant threshold increase on spike.
+        self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
+
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
+        self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+    def step(self, inpts, dt):
+        """
+        Runs a single simulation step.
+
+        Inputs:
+
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        # Decay voltages and current.
+        self.v -= dt * self.decay * (self.v - self.rest)
+        self.i -= dt * self.i_decay * self.i
+        self.theta -= dt * self.theta_decay * self.theta
+
+        # Decrement refrac counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
+
+        # Integrate inputs.
+        self.i += inpts
+        self.v += (self.refrac_count == 0).float() * self.i
+
+        # Check for spiking neurons.
+        self.s = (self.v >= self.thresh + self.theta) & (self.refrac_count == 0)
+
+        # Refractoriness, voltage reset, and adaptive thresholds.
+        self.refrac_count.masked_fill_(self.s, self.refrac)
+        self.v.masked_fill_(self.s, self.reset)
+        self.theta += self.theta_plus * self.s.float()
+
+        # Choose only a single neuron to spike.
+        if torch.sum(self.s) > 0:
+            s = torch.zeros(self.s.size())
+            s = s.view(-1)
+            s[torch.multinomial(self.s.float().view(-1), 1)] = 1
+            self.s = s.view(self.s.size()).byte()
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
 class DiehlAndCookNodes(Nodes):
-	'''
-	Layer of leaky integrate-and-fire (LIF) neurons with adaptive thresholds (modified for Diehl & Cook 2015 replication).
-	'''
-	def __init__(self, n=None, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
-				 refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
-		'''
-		Instantiates a layer of Diehl & Cook 2015 neurons.
-		
-		Inputs:
-		
-			| :code:`n` (:code:`int`): The number of neurons in the layer.
-			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
-			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`rest` (:code:`float`): Resting membrane voltage.
-			| :code:`reset` (:code:`float`): Post-spike reset voltage.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
-			| :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
-			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
-			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-			| :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
-			| :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
-		'''
-		super().__init__(n, shape, traces, trace_tc)
+    """
+    Layer of leaky integrate-and-fire (LIF) neurons with adaptive
+    thresholds (modified for Diehl & Cook 2015 replication).
+    """
+    def __init__(self, n=None, shape=None, traces=False, rest=-65.0, reset=-65.0, thresh=-52.0,
+                 refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=0.05, theta_decay=1e-7):
+        """
+        Instantiates a layer of Diehl & Cook 2015 neurons.
 
-		self.rest = rest                # Rest voltage.
-		self.reset = reset              # Post-spike reset voltage.
-		self.thresh = thresh            # Spike threshold voltage.
-		self.refrac = refrac            # Post-spike refractory period.
-		self.decay = decay              # Rate of decay of neuron voltage.
-		self.theta_plus = theta_plus    # Constant threshold increase on spike.
-		self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
+        Inputs:
 
-		self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-		self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
-		self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`rest` (:code:`float`): Resting membrane voltage.
+            | :code:`reset` (:code:`float`): Post-spike reset voltage.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+            | :code:`refrac` (:code:`int`): Refractory (non-firing) period of the neuron.
+            | :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+            | :code:`theta_plus` (:code:`float`): Voltage increase of threshold after spiking.
+            | :code:`theta_decay` (:code:`float`): Time constant of adaptive threshold decay.
+        """
+        super().__init__(n, shape, traces, trace_tc)
 
-	def step(self, inpts, dt):
-		'''
-		Runs a single simulation step.
+        self.rest = rest                # Rest voltage.
+        self.reset = reset              # Post-spike reset voltage.
+        self.thresh = thresh            # Spike threshold voltage.
+        self.refrac = refrac            # Post-spike refractory period.
+        self.decay = decay              # Rate of decay of neuron voltage.
+        self.theta_plus = theta_plus    # Constant threshold increase on spike.
+        self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
-		Inputs:
-		
-			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
-			| :code:`dt` (:code:`float`): Simulation time step.
-		'''
-		# Decay voltages and adaptive thresholds.
-		self.v -= dt * self.decay * (self.v - self.rest)
-		self.theta -= dt * self.theta_decay * self.theta
-		
-		# Decrement refractory counters.
-		self.refrac_count[self.refrac_count != 0] -= dt
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh + self.theta) * (self.refrac_count == 0)
+    def step(self, inpts, dt):
+        """
+        Runs a single simulation step.
 
-		# Refractoriness, voltage reset, and adaptive thresholds.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
-		self.theta += self.theta_plus * self.s.float()
-		
-		# Choose only a single neuron to spike.
-		if torch.sum(self.s) > 0:
-			s = torch.zeros(self.s.size())
-			s = s.view(-1)
-			s[torch.multinomial(self.s.float().view(-1), 1)] = 1
-			self.s = s.view(self.s.size()).byte()
-		
-		# Integrate inputs.
-		self.v += inpts
+        Inputs:
 
-		super().step(inpts, dt)
-		
-	def _reset(self):
-		'''
-		Resets relevant state variables.
-		'''
-		super()._reset()
-		self.v[self.v != self.rest] = self.rest        # Neuron voltages.
-		self.refrac_count[self.refrac_count != 0] = 0  # Refractory period counters.
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+        # Decay voltages and adaptive thresholds.
+        self.v -= dt * self.decay * (self.v - self.rest)
+        self.theta -= dt * self.theta_decay * self.theta
+
+        # Decrement refractory counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
+
+        # Integrate inputs.
+        self.v += (self.refrac_count  == 0).float() * inpts
+
+        # Check for spiking neurons.
+        self.s = (self.v >= self.thresh + self.theta)
+
+        # Refractoriness, voltage reset, and adaptive thresholds.
+        self.refrac_count.masked_fill_(self.s, self.refrac)
+        self.v.masked_fill_(self.s, self.reset)
+        self.theta += self.theta_plus * self.s.float()
+
+        # Choose only a single neuron to spike.
+        if torch.sum(self.s) > 0:
+            s = torch.zeros(self.s.size())
+            s = s.view(-1)
+            s[torch.multinomial(self.s.float().view(-1), 1)] = 1
+            self.s = s.view(self.s.size()).byte()
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
 class IzhikevichNodes(Nodes):
-	'''
-	Layer of Izhikevich neurons.
-	'''
-	def __init__(self, n=None, shape=None, traces=False, excitatory=True, rest=-65.0, reset=-65.0,
-					thresh=-52.0, refrac=5, decay=1e-2, trace_tc=5e-2):
-		'''
-		Instantiates a layer of Izhikevich neurons.
-		
-		Inputs:
-		
-			| :code:`n` (:code:`int`): The number of neurons in the layer.
-			| :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
-			| :code:`traces` (:code:`bool`): Whether to record spike traces.
-			| :code:`excitatory` (:code:`bool`): Whether layer is excitatory.
-			| :code:`rest` (:code:`float`): Resting membrane voltage.
-			| :code:`reset` (:code:`float`): Post-spike reset voltage.
-			| :code:`thresh` (:code:`float`): Spike threshold voltage.
-			| :code:`refrac` (:code:`int`): refrac (non-firing) period of the neuron.
-			| :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
-			| :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
-		'''
-		super().__init__(n, shape, traces, trace_tc)
+    """
+    Layer of Izhikevich neurons.
+    """
+    def __init__(self, n=None, shape=None, traces=False, excitatory=True, rest=-65.0, reset=-65.0,
+                    thresh=-52.0, refrac=5, decay=1e-2, trace_tc=5e-2):
+        """
+        Instantiates a layer of Izhikevich neurons.
 
-		self.rest = rest      # Rest voltage.
-		self.reset = reset    # Post-spike reset voltage.
-		self.thresh = thresh  # Spike threshold voltage.
-		self.refrac = refrac  # Post-spike refractory period.
-		self.decay = decay    # Rate of decay of neuron voltage.
-		
-		if excitatory:
-			self.r = torch.rand(n)
-			self.a = 0.02 * torch.ones(n)
-			self.b = 0.2 * torch.ones(n)
-			self.c = -65.0 + 15 * (self.r ** 2)
-			self.d = 8 - 6 * (self.r ** 2)
-		else:
-			self.r = torch.rand(n)
-			self.a = 0.02 + 0.08 * self.r
-			self.b = 0.25 - 0.05 * torch.ones(n)
-			self.c = -65.0 * (self.re ** 2)
-			self.d = 2 * torch.ones(n)
-		
-		self.v = self.rest * torch.ones(n)  # Neuron voltages.
-		self.u = self.b * self.v            # Neuron recovery.
-		self.refrac_count = torch.zeros(n)  # Refractory period counters.
+        Inputs:
 
-	def step(self, inpts, dt):
-		'''
-		Runs a single simulation step.
+            | :code:`n` (:code:`int`): The number of neurons in the layer.
+            | :code:`shape` (:code:`iterable[int]`): The dimensionality of the layer.
+            | :code:`traces` (:code:`bool`): Whether to record spike traces.
+            | :code:`excitatory` (:code:`bool`): Whether layer is excitatory.
+            | :code:`rest` (:code:`float`): Resting membrane voltage.
+            | :code:`reset` (:code:`float`): Post-spike reset voltage.
+            | :code:`thresh` (:code:`float`): Spike threshold voltage.
+            | :code:`refrac` (:code:`int`): refrac (non-firing) period of the neuron.
+            | :code:`decay` (:code:`float`): Time constant of neuron voltage decay.
+            | :code:`trace_tc` (:code:`float`): Time constant of spike trace decay.
+        """
+        super().__init__(n, shape, traces, trace_tc)
 
-		Inputs:
-		
-			| :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
-			| :code:`dt` (:code:`float`): Simulation time step.
-		'''
-		# Decrement refrac counters.
-		self.refrac_count[self.refrac_count != 0] -= dt
-		
-		# Check for spiking neurons.
-		self.s = (self.v >= self.thresh) * (self.refrac_count == 0)
-		
-		# Refractoriness and voltage reset.
-		self.refrac_count[self.s] = self.refrac
-		self.v[self.s] = self.reset
-		
-		# Apply v and u updates.
-		self.v += dt * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
-		self.u += self.a * (self.b * self.v - self.u)
-		
-		super().step(inpts, dt)
-		
-	def _reset(self):
-		'''
-		Resets relevant state variables.
-		'''
-		super()._reset()
-		self.v = self.rest * torch.ones(self.n)  # Neuron voltages.
-		self.u = self.b * self.v                 # Neuron recovery.
-		self.refrac_count = torch.zeros(self.n)  # Refractory period counters.
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay     # Rate of decay of neuron voltage.
+
+        if excitatory:
+            self.r = torch.rand(n)
+            self.a = 0.02 * torch.ones(n)
+            self.b = 0.2 * torch.ones(n)
+            self.c = -65.0 + 15 * (self.r ** 2)
+            self.d = 8 - 6 * (self.r ** 2)
+        else:
+            self.r = torch.rand(n)
+            self.a = 0.02 + 0.08 * self.r
+            self.b = 0.25 - 0.05 * self.r
+            self.c = -65.0 * torch.ones(n)
+            self.d = 2 * torch.ones(n)
+
+        self.v = self.rest * torch.ones(n)  # Neuron voltages.
+        self.u = self.b * self.v            # Neuron recovery.
+
+    def step(self, inpts, dt):
+        """
+        Runs a single simulation step.
+
+        Inputs:
+
+            | :code:`inpts` (:code:`torch.Tensor`): Inputs to the layer.
+            | :code:`dt` (:code:`float`): Simulation time step.
+        """
+
+        # Apply v and u updates.
+        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.u += self.a * (self.b * self.v - self.u)
+
+        # Check for spiking neurons.
+        self.s = (self.v >= self.thresh)
+
+        # Refractoriness and voltage reset.
+        self.v = torch.where(self.s, self.c, self.v)
+        self.u = torch.where(self.s, self.u + self.d, self.u)
+
+        super().step(inpts, dt)
+
+    def reset_(self):
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.u = self.b * self.v                     # Neuron recovery.

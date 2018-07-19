@@ -1,30 +1,69 @@
-# BindsNET
+<p align="center"><img width="25%" src="docs/logo.png"/></p>
 
-Python package used for simulating spiking neural networks (SNNs) in [PyTorch](http://pytorch.org/).
+A Python package used for simulating spiking neural networks (SNNs) on CPUs or GPUs using [PyTorch](http://pytorch.org/) `Tensor` functionality.
 
-We are interested in applying SNNs to machine learning (ML) and reinforcement learning (RL) problems, but the code (especially the core `network` functionality for building and simulating SNNs) can be used for any purpose.
+BindsNET is a spiking neural network simulation library geared towards the development of biologically inspired algorithms for machine learning.
+
+This package is used as part of ongoing research on applying SNNs to machine learning (ML) and reinforcement learning (RL) problems in the [Biologically Inspired Neural & Dynamical Systems (BINDS) lab](http://binds.cs.umass.edu/).
 
 [![Build Status](https://travis-ci.com/Hananel-Hazan/bindsnet.svg?token=trym5Uzx1rs9Ez2yENEF&branch=master)](https://travis-ci.com/Hananel-Hazan/bindsnet)
+[![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
 
 ## Requirements
 
 - Python 3.6
+- `torch`
+- `numpy`
+- `matplotlib`
+- `scikit_image`
+- `opencv-python`
+- `gym` (optional)
 
 ## Setting things up
 
-To build the `bindsnet` package from source, change directory to the top level of this project and issue
+### Using pip
+BindsNET is available on PyPI. Issue
+
+```
+pip install bindsnet
+```
+
+to get the most recent stable release. Or, to build the `bindsnet` package from source, clone the GitHub repository, change directory to the top level of this project, and issue
 
 ```
 pip install .
 ```
 
-Or, to install in editable mode (allows modification of package with re-installing):
+Or, to install in editable mode (allows modification of package without re-installing):
 
 ```
 pip install -e .
 ```
 
-PyPI support (`pip install bindsnet`) *hopefully* coming soon.
+To install the packages necessary to interface with the [OpenAI gym RL environments library](https://github.com/openai/gym), follow their instructions for installing the packages needed to run the RL environments simulator (on Linux / MacOS).
+
+### Using Docker
+[Link](https://hub.docker.com/r/hqkhan/bindsnet/) to Docker repository.
+
+We also provide a Dockerfile in which BindsNET and all of its dependencies come installed in. Issue
+
+```
+docker image build .
+```
+at the top level directory of this project to create a docker image. 
+
+To change the name of the newly built image, issue
+```
+docker tag <IMAGE_ID> <NEW_IMAGE_ID>
+```
+
+To run a container and get a bash terminal inside it, issue
+
+```
+docker run -it <NEW_IMAGE_ID> bash
+```
+
+## Getting started
 
 To run a near-replication of the SNN from [this paper](https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full#), issue
 
@@ -42,8 +81,10 @@ A number of other examples are available in the `examples` directory that are me
 Issue the following to run the tests:
 
 ```
-python -m pytest test
+python -m pytest test/
 ```
+
+Some tests will fail if Open AI `gym` is not installed on your machine.
 
 ## Background
 
@@ -59,12 +100,37 @@ We are interested in applying SNNs to ML and RL problems. We use STDP to modify 
 
 We have provided some simple starter scripts for doing unsupervised learning (learning a fully-connected or convolutional representation via STDP), supervised learning (clamping output neurons to desired spiking behavior depending on data labels), and reinforcement learning (converting observations from the Atari game Space Invaders to input to an SNN, and converting network activity back to actions in the game).
 
+## Citation
+
+If you use BindsNET in your research, please cite the following [article](https://arxiv.org/abs/1806.01423):
+
+```
+@ARTICLE{2018arXiv180601423H,
+   author = {{Hazan}, H. and {Saunders}, D.~J. and {Khan}, H. and {Sanghavi}, D.~T. and 
+	{Siegelmann}, H.~T. and {Kozma}, R.},
+    title = "{BindsNET: A machine learning-oriented spiking neural networks library in Python}",
+  journal = {ArXiv e-prints},
+archivePrefix = "arXiv",
+   eprint = {1806.01423},
+ keywords = {Computer Science - Neural and Evolutionary Computing, Quantitative Biology - Neurons and Cognition},
+     year = 2018,
+    month = jun,
+   adsurl = {http://adsabs.harvard.edu/abs/2018arXiv180601423H},
+  adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+```
+
 ## Contributors
 
 - Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu))
 
-- Hananel Hazan ([email](mailto:hananel@hazan.org.il))
+- Hananel Hazan ([email](mailto:hananel@cs.umass.edu))
 
 - Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu))
 
 - Hassaan Khan ([email](mailto:hqkhan@umass.edu))
+
+## License
+GNU Affero General Public License v3.0
+
+

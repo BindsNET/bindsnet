@@ -6,9 +6,9 @@ from bindsnet.network.nodes    import Input, LIFNodes
 from bindsnet.network          import Network, load_network
 
 class TestNetwork:
-	'''
+	"""
 	Tests basic network functionality.
-	'''
+	"""
 	def test_empty(self):
 		for dt in [0.1, 1.0, 5.0]:
 			network = Network(dt=dt)

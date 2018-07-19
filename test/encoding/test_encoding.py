@@ -4,9 +4,9 @@ import torch
 import numpy as np
 
 class TestEncodings:
-	'''
+	"""
 	Tests all stable encoding functions and generators.
-	'''
+	"""
 	def test_bernoulli(self):
 		print(); print('*** test_bernoulli ***'); print()
 		
