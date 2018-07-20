@@ -1,19 +1,48 @@
-import os
-import sys
 import gym
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 
-from ..datasets.preprocess import *
-from ..encoding            import *
-from ..datasets            import *
+from abc import ABC, abstractmethod
+
+from ..datasets import MNIST, CIFAR10, CIFAR100, SpokenMNIST
+from ..datasets.preprocess import subsample, gray_scale, binary_image
 
 
-class DatasetEnvironment:
+class Environment(ABC):
+    """
+    Abstract environment class.
+    """
+
+    @abstractmethod
+    def step(self, a):
+        pass
+
+    @abstractmethod
+    def reset(self):
+        pass
+
+    @abstractmethod
+    def render(self):
+        pass
+
+    @abstractmethod
+    def close(self):
+        pass
+
+    @abstractmethod
+    def preprocess(self):
+        pass
+
+    @abstractmethod
+    def reshape(self):
+        pass
+
+
+class DatasetEnvironment(Environment):
     """
     A wrapper around any object from the :code:`datasets` module to pass to the :code:`Pipeline` object.
     """
+
     def __init__(self, dataset, train=True, time=350, **kwargs):
         """
         Initializes the environment wrapper around the dataset.
@@ -28,23 +57,22 @@ class DatasetEnvironment:
         self.dataset = dataset
         self.train = train
         self.time = time
-        
+
         # Keyword arguments.
         self.intensity = kwargs.get('intensity', 1)
         self.max_prob = kwargs.get('max_prob', 1)
-        
-        assert self.max_prob > 0 and self.max_prob <= 1, \
-            'Maximum spiking probability must be in (0, 1].'
-        
+
+        assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
+
         if train:
             self.data, self.labels = self.dataset.get_train()
             self.label_loader = iter(self.labels)
         else:
             self.data, self.labels = self.dataset.get_test()
             self.label_loader = iter(self.labels)
-        
+
         self.env = iter(self.data)
-    
+
     def step(self, a=None):
         """
         Dummy function for OpenAI Gym environment's :code:`step()` function.
@@ -65,18 +93,18 @@ class DatasetEnvironment:
             self.obs = next(self.env)
         except StopIteration:
             # If out of samples, reload data and label generators.
-            self.env = iter(data)
+            self.env = iter(self.data)
             self.label_loader = iter(self.labels)
             self.obs = next(self.env)
-        
+
         # Preprocess observation.
         self.preprocess()
-        
+
         # Info dictionary contains label of MNIST digit.
-        info = {'label' : next(self.label_loader)}
-        
+        info = {'label': next(self.label_loader)}
+
         return self.obs, 0, False, info
-    
+
     def reset(self):
         """
         Dummy function for OpenAI Gym environment's :code:`reset()` function.
@@ -84,7 +112,7 @@ class DatasetEnvironment:
         # Reload data and label generators.
         self.env = iter(self.data)
         self.label_loader = iter(self.labels)
-    
+
     def render(self):
         """
         Dummy function for OpenAI Gym environment's :code:`render()` function.
@@ -96,14 +124,14 @@ class DatasetEnvironment:
         Dummy function for OpenAI Gym environment's :code:`close()` function.
         """
         pass
-    
+
     def preprocess(self):
         """
         Preprocessing step for a state specific to dataset objects.
         """
         self.obs = self.obs.view(-1)
         self.obs *= self.intensity
-    
+
     def reshape(self):
         """
         Reshaped observation for plotting purposes.
@@ -121,10 +149,11 @@ class DatasetEnvironment:
             return self.obs.view(-1, 40)
 
 
-class GymEnvironment:
+class GymEnvironment(Environment):
     """
     A wrapper around the OpenAI :code:`gym` environments.
     """
+
     def __init__(self, name, **kwargs):
         """
         Initializes the environment wrapper.
@@ -137,12 +166,11 @@ class GymEnvironment:
         self.name = name
         self.env = gym.make(name)
         self.action_space = self.env.action_space
-        
+
         # Keyword arguments.
         self.max_prob = kwargs.get('max_prob', 1)
-        
-        assert self.max_prob > 0 and self.max_prob <= 1, \
-            'Maximum spiking probability must be in (0, 1].'
+
+        assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 
     def step(self, a):
         """
@@ -177,7 +205,7 @@ class GymEnvironment:
         # Call gym's environment reset function.
         self.obs = self.env.reset()
         self.preprocess()
-        
+
         return self.obs
 
     def render(self):
@@ -203,12 +231,12 @@ class GymEnvironment:
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = self.obs[26:104, :]
             self.obs = binary_image(self.obs)
-        else: # Default pre-processing step
+        else:  # Default pre-processing step
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = binary_image(self.obs)
-            
+
         self.obs = torch.from_numpy(self.obs).float()
-        
+
     def reshape(self):
         """
         Reshape observation for plotting purposes.

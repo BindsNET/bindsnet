@@ -1,7 +1,9 @@
 import torch
 
-from ..network  import *
-from ..learning import *
+from ..learning import post_pre
+from ..network import Network
+from ..network.topology import Connection
+from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes
 
 
 class TwoLayerNetwork(Network):
@@ -24,29 +26,29 @@ class TwoLayerNetwork(Network):
         self.dt = dt
         
         self.add_layer(Input(n=self.n_inpt,
-                             traces=True,
-                             trace_tc=5e-2),
+                                     traces=True,
+                                     trace_tc=5e-2),
                        name='X')
         
         self.add_layer(LIFNodes(n=self.n_neurons,
-                                traces=True,
-                                rest=-65.0,
-                                reset=-65.0,
-                                thresh=-52.0,
-                                refrac=5,
-                                decay=1e-2,
-                                trace_tc=5e-2),
+                                        traces=True,
+                                        rest=-65.0,
+                                        reset=-65.0,
+                                        thresh=-52.0,
+                                        refrac=5,
+                                        decay=1e-2,
+                                        trace_tc=5e-2),
                        name='Y')
         
         self.add_connection(Connection(source=self.layers['X'],
-                                       target=self.layers['Y'],
-                                       w=0.3 * torch.rand(self.n_inpt, self.n_neurons),
-                                       update_rule=post_pre,
-                                       nu_pre=nu_pre,
-                                       nu_post=nu_post,
-                                       wmin=wmin,
-                                       wmax=wmax,
-                                       norm=norm),
+                                               target=self.layers['Y'],
+                                               w=0.3 * torch.rand(self.n_inpt, self.n_neurons),
+                                               update_rule=post_pre,
+                                               nu_pre=nu_pre,
+                                               nu_post=nu_post,
+                                               wmin=wmin,
+                                               wmax=wmax,
+                                               norm=norm),
                             source='X',
                             target='Y')
         
@@ -77,59 +79,59 @@ class DiehlAndCook2015(Network):
         self.dt = dt
         
         self.add_layer(Input(n=self.n_inpt,
-                             traces=True,
-                             trace_tc=5e-2),
+                                     traces=True,
+                                     trace_tc=5e-2),
                        name='X')
         
         self.add_layer(DiehlAndCookNodes(n=self.n_neurons,
-                                         traces=True,
-                                         rest=-65.0,
-                                         reset=-60.0,
-                                         thresh=-52.0,
-                                         refrac=5,
-                                         decay=1e-2,
-                                         trace_tc=5e-2,
-                                         theta_plus=theta_plus,
-                                         theta_decay=theta_decay),
+                                                 traces=True,
+                                                 rest=-65.0,
+                                                 reset=-60.0,
+                                                 thresh=-52.0,
+                                                 refrac=5,
+                                                 decay=1e-2,
+                                                 trace_tc=5e-2,
+                                                 theta_plus=theta_plus,
+                                                 theta_decay=theta_decay),
                        name='Ae')
         
         self.add_layer(LIFNodes(n=self.n_neurons,
-                                traces=False,
-                                rest=-60.0,
-                                reset=-45.0,
-                                thresh=-40.0,
-                                decay=1e-1,
-                                refrac=2,
-                                trace_tc=5e-2),
+                                        traces=False,
+                                        rest=-60.0,
+                                        reset=-45.0,
+                                        thresh=-40.0,
+                                        decay=1e-1,
+                                        refrac=2,
+                                        trace_tc=5e-2),
                        name='Ai')
         
         self.add_connection(Connection(source=self.layers['X'],
-                                       target=self.layers['Ae'],
-                                       w=0.3 * torch.rand(self.n_inpt, self.n_neurons),
-                                       update_rule=post_pre,
-                                       nu_pre=nu_pre,
-                                       nu_post=nu_post,
-                                       wmin=wmin,
-                                       wmax=wmax,
-                                       norm=norm,
-                                       decay=X_Ae_decay),
+                                               target=self.layers['Ae'],
+                                               w=0.3 * torch.rand(self.n_inpt, self.n_neurons),
+                                               update_rule=post_pre,
+                                               nu_pre=nu_pre,
+                                               nu_post=nu_post,
+                                               wmin=wmin,
+                                               wmax=wmax,
+                                               norm=norm,
+                                               decay=X_Ae_decay),
                             source='X',
                             target='Ae')
         
         self.add_connection(Connection(source=self.layers['Ae'],
-                                       target=self.layers['Ai'],
-                                       w=self.exc * torch.diag(torch.ones(self.n_neurons)),
-                                       wmin=0,
-                                       wmax=self.exc,
-                                       decay=Ae_Ai_decay),
+                                               target=self.layers['Ai'],
+                                               w=self.exc * torch.diag(torch.ones(self.n_neurons)),
+                                               wmin=0,
+                                               wmax=self.exc,
+                                               decay=Ae_Ai_decay),
                             source='Ae',
                             target='Ai')
         
         self.add_connection(Connection(source=self.layers['Ai'],
-                                       target=self.layers['Ae'],
-                                       w=-self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons))),
-                                       wmin=-self.inh,
-                                       wmax=0,
-                                       decay=Ai_Ae_decay),
+                                               target=self.layers['Ae'],
+                                               w=-self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons))),
+                                               wmin=-self.inh,
+                                               wmax=0,
+                                               decay=Ai_Ae_decay),
                             source='Ai',
                             target='Ae')
