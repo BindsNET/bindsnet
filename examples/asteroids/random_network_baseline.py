@@ -104,7 +104,7 @@ try:
         pipeline.step()
         
         if pipeline.done == True:
-            pipeline.reset_()
+            pipeline._reset()
         
 except KeyboardInterrupt:
     environment.close()

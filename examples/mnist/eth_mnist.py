@@ -150,7 +150,7 @@ for i in range(n_train):
 
         plt.pause(1e-8)
 
-    network.reset_()  # Reset state variables.
+    network._reset()  # Reset state variables.
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, t() - start))
 print('Training complete.\n')
