@@ -15,26 +15,16 @@ from bindsnet.pipeline.action import select_multinomial, select_random
 class TestPipeline:
 
     def test_mnist_pipeline(self):
-        network = DiehlAndCook2015(n_inpt=784,
-                                   n_neurons=400,
-                                   exc=22.5,
-                                   inh=17.5,
-                                   dt=1.0,
-                                   norm=78.4)
-
-        environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST', download=True),
+        network = DiehlAndCook2015(n_inpt=784, n_neurons=400, exc=22.5, inh=17.5, dt=1.0, norm=78.4)
+        environment = DatasetEnvironment(dataset=MNIST(path='../data/MNIST', download=True),
                                          train=True, intensity=0.25)
+        pipeline = Pipeline(network=network, environment=environment, encoding=poisson, time=350)
 
-        p = Pipeline(network=network,
-                     environment=environment,
-                     encoding=poisson,
-                     time=350)
-
-        assert p.network == network
-        assert p.env == environment
-        assert p.encoding == poisson
-        assert p.time == 350
-        assert p.history_length is None
+        assert pipeline.network == network
+        assert pipeline.env == environment
+        assert pipeline.encoding == poisson
+        assert pipeline.time == 350
+        assert pipeline.history_length is None
 
     def test_gym_pipeline(self):
         # Build network.
@@ -47,8 +37,7 @@ class TestPipeline:
 
         # Connections between layers.
         inpt_middle = Connection(source=inpt, target=middle, wmax=1e-2)
-        middle_out = Connection(source=middle, target=out, wmax=0.5,
-                                update_rule=m_stdp_et, nu=2e-2,
+        middle_out = Connection(source=middle, target=out, wmax=0.5, update_rule=m_stdp_et, nu=2e-2,
                                 norm=0.15 * middle.n)
 
         # Add all layers and connections to the network.

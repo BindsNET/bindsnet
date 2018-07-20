@@ -15,6 +15,7 @@ plt.ion()
 
 
 class Pipeline:
+    # language=rst
     """
     Abstracts the interaction between network, environment (or dataset), input encoding, and environment feedback
     action.
@@ -26,24 +27,22 @@ class Pipeline:
         """
         Initializes the pipeline.
         
-        Inputs:
-        
-            | :param network: Arbitrary network object.
-            | :param environment: Arbitrary environment.
-            | :param encoding: Function to encode observations into spike trains.
-            | :param action_function: Function to convert network outputs into environment inputs.
+        :param network: Arbitrary network object.
+        :param environment: Arbitrary environment.
+        :param encoding: Function to encode observations into spike trains.
+        :param action_function: Function to convert network outputs into environment inputs.
 
-            | Keyword arguments:
+        Keyword arguments:
             
-                | :param plot_interval: (``int``): Interval to update plots.
-                | :param save_dir: (``str``): Directory to save network object to.
-                | :param print_interval: (``int``): Interval to print text output.
-                | :param time: (``int``): Time input is presented for to the network.
-                | :param history: (``int``): Number of observations to keep track of.
-                | :param delta: (``int``): Step size to save observations in history.
-                | :param render_interval: (``bool``): Interval to render the environment.
-                | :param save_interval: (``int``): How often to save the network to disk.
-                | :param output: (``str``): String name of the layer from which to take output from.
+        :param int plot_interval: Interval to update plots.
+        :param str save_dir: Directory to save network object to.
+        :param int print_interval: Interval to print text output.
+        :param int time: Time input is presented for to the network.
+        :param int history: Number of observations to keep track of.
+        :param int delta: Step size to save observations in history.
+        :param bool render_interval: Interval to render the environment.
+        :param int save_interval: How often to save the network to disk.
+        :param str output: String name of the layer from which to take output from.
         """
         self.network = network
         self.env = environment
@@ -96,7 +95,7 @@ class Pipeline:
         self.clock = time.time()
 
     def set_spike_data(self) -> None:
-        # langauge=rst
+        # language=rst
         """
         Get the spike data from all layers in the pipeline's network.
         """
@@ -176,7 +175,7 @@ class Pipeline:
             self.obs_im.set_data(self.env.reshape())
 
     def plot_data(self) -> None:
-        # languge=rst
+        # language=rst
         """
         Plot desired variables.
         """

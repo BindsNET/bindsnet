@@ -1,4 +1,3 @@
-import sys
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,8 +6,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from ..utils import reshape_locally_connected_weights
 
-
 plt.ion()
+
 
 def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
     """
