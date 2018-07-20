@@ -43,7 +43,7 @@ def plot_weights_movie(ws, sample_every=1):
     plt.show()
     
 def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
-    '''
+    """
     Plot spike trains for top-k neurons or for specific indices.
     
     Inputs:
@@ -55,7 +55,7 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
         | :code:`top_k` (:code:`int`): Plot k neurons that spiked the most for n_ex example.
         | :code:`indices` (:code:`list(int)`): Plot specific neurons'
         spiking activity instead of top_k. Meant to replace top_k. 
-    '''
+    """
 
     assert (n_ex is not None and n_ex >= 0 and n_ex < spikes.shape[0])
     
@@ -81,7 +81,7 @@ def plot_spike_trains_for_example(spikes, n_ex=None, top_k=None, indices=None):
     plt.show()
 
 def plot_voltage(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
-    '''
+    """
     Plot voltage for a single neuron on a specific example.
     
     Inputs:
@@ -96,7 +96,7 @@ def plot_voltage(voltage, n_ex=0, n_neuron=0, time=None, threshold=None):
         activity of neurons between the given range of time. 
         | :code:`threshold` (:code:`float`): Neuron
         spiking threshold. Will be shown on the plot.
-    '''
+    """
     
     assert (n_ex >= 0 and n_neuron >= 0)
     assert (n_ex < voltage.shape[0] and n_neuron < voltage.shape[1])

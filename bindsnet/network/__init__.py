@@ -1,29 +1,30 @@
 import torch
-import pickle as p
 
-from .nodes    import *
-from .topology import *
-from .monitors import *
+from typing import Dict
+
+from .nodes import Nodes, Input
+from .topology import AbstractConnection
+from .monitors import AbstractMonitor
 
 
-def load_network(fname):
-    '''
+def load_network(file_name: str) -> None:
+    # language=rst
+    """
     Loads serialized network object from disk.
     
-    Inputs:
-    
-        | :code:`fname` (:code:`str`): Path to serialized network object on disk.
-    '''
+    :param file_name: Path to serialized network object on disk.
+    """
     try:
-        with open(fname, 'rb') as f:
-            return torch.load(open(fname, 'rb'))
+        with open(file_name, 'rb') as f:
+            return torch.load(open(file_name, 'rb'))
     except FileNotFoundError:
         print('Network not found on disk.')
 
 
 class Network:
-    '''
-    Most important object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and connections.
+    # language=rst
+    """
+    Central object of the ``bindsnet`` package. Responsible for the simulation and interaction of nodes and connections.
     
     **Example:**
     
@@ -54,7 +55,7 @@ class Network:
         
         # Create Poisson-distributed spike train inputs.
         data = 15 * torch.rand(1, 100)  # Generate random Poisson rates for 100 input neurons.
-        trains = encoding.get_poisson(data=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
+        trains = encoding.poisson_loader(data=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
         
         # Simulate network on generated spike trains.
         for train in trains:
@@ -73,62 +74,56 @@ class Network:
             axes[i].set_aspect('auto')
         
         plt.tight_layout(); plt.show()
-    '''
-    def __init__(self, dt=1.0):
-        '''
+    """
+    def __init__(self, dt: float=1.0) -> None:
+        # language=rst
+        """
         Initializes network object. 
         
-        Inputs:
-        
-            | :code:`dt` (:code:`float`): Simulation timestep. All other 
-                objects' time constants are relative to this value.
-        '''
+        :param dt: Simulation time step. All other objects' time constants are relative to this value.
+        """
         self.dt = dt
         self.layers = {}
         self.connections = {}
         self.monitors = {}
 
-    def add_layer(self, layer, name):
-        '''
+    def add_layer(self, layer: Nodes, name: str) -> None:
+        # language=rst
+        """
         Adds a layer of nodes to the network.
         
-        Inputs:
-        
-            | :code:`layer` (:code:`bindsnet.nodes.Nodes`): A subclass of the :code:`Nodes` object.
-            | :code:`name` (:code:`str`): Logical name of layer.
-        '''
+        :param layer: A subclass of the ``Nodes`` object.
+        :param name: Logical name of layer.
+        """
         self.layers[name] = layer
 
-    def add_connection(self, connection, source, target):
-        '''
+    def add_connection(self, connection: AbstractConnection, source: str, target: str) -> None:
+        # language=rst
+        """
         Adds a connection between layers of nodes to the network.
-        
-        Inputs:
-        
-            | :code:`connection` (:code:`bindsnet.topology.Connection`): An instance of class :code:`Connection`.
-            | :code:`source` (:code:`str`): Logical name of the connection's source layer.
-            | :code:`target` (:code:`str`): Logical name of the connection's target layer.
-        '''
+
+        :param connection: An instance of class ``AbstractConnection``.
+        :param source: Logical name of the connection's source layer.
+        :param target: Logical name of the connection's target layer.
+        """
         self.connections[(source, target)] = connection
 
-    def add_monitor(self, monitor, name):
-        '''
+    def add_monitor(self, monitor: AbstractMonitor, name: str) -> None:
+        # language=rst
+        """
         Adds a monitor on a network object to the network.
         
-        Inputs:
-        
-            | :code:`monitor` (:code:`bindsnet.Monitor`): An instance of class :code:`Monitor`.
-            | :code:`name` (:code:`str`): Logical name of monitor object.
-        '''
+        :param monitor: An instance of class ``Monitor``.
+        :param name: Logical name of monitor object.
+        """
         self.monitors[name] = monitor
 
-    def save(self, fname):
-        '''
+    def save(self, file_name: str) -> None:
+        # language=rst
+        """
         Serializes the network object to disk.
         
-        Inputs:
-        
-            | :code:`fname` (:code:`str`): Path to store serialized network object on disk.
+        :param file_name: Path to store serialized network object on disk.
         
         **Example:**
         
@@ -155,17 +150,17 @@ class Network:
 
             # Save the network to disk.
             network.save(str(Path.home()) + '/network.p')
-        '''
-        torch.save(self, open(fname, 'wb'))
+        """
+        with open(file_name, 'wb') as f:
+            torch.save(self, f)
 
-    def get_inputs(self):
-        '''
+    def get_inputs(self) -> Dict[str, torch.Tensor]:
+        # language=rst
+        """
         Fetches outputs from network layers for input to downstream layers.
-        
-        Returns:
-        
-            | (:code:`dict[torch.Tensor]`): Inputs to all layers for the current iteration.
-        '''
+
+        :return: Inputs to all layers for the current iteration.
+        """
         inpts = {}
         
         # Loop over network connections.
@@ -182,21 +177,20 @@ class Network:
             
         return inpts
 
-    def run(self, inpts, time, **kwargs):
-        '''
+    def run(self, inpts: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
+        # language=rst
+        """
         Simulation network for given inputs and time.
         
-        Inputs:
-        
-            | :code:`inpts` (:code:`dict`): Dictionary of :code:`Tensor`s of shape :code:`[time, n_input]`.
-            | :code:`time` (:code:`int`): Simulation time.
+        :param inpts: Dictionary of ``torch.Tensor``s of input spikes or current.
+        :param time: Simulation time.
 
-            Keyword arguments:
+        Keyword arguments:
 
-                | :code:`clamps` (:code:`dict`): Mapping of layer names to neurons which to "clamp" to spiking.
-                | :code:`reward` (:code:`float`): Scalar value used in reward-modulated learning.
-                | :code:`masks` (:code:`dict`): Mapping of connection names to boolean
-                    masks determining which weights to clamp to zero.
+        :param Dict[str,torch.Tensor] clamps: Mapping of layer names to neurons which to "clamp" to spiking.
+        :param float reward: Scalar value used in reward-modulated learning.
+        :param Dict[str,torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
+               clamp to zero.
         
         **Example:**
     
@@ -226,13 +220,13 @@ class Network:
             plt.xlabel('Time'); plt.ylabel('Neuron index')
             plt.title('Input spiking')
             plt.show()
-        '''
+        """
         # Parse keyword arguments.
         clamps = kwargs.get('clamp', {})
         reward = kwargs.get('reward', None)
         masks = kwargs.get('masks', {})
         
-        # Effective number of timesteps
+        # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
         # Get input to all layers.
@@ -254,8 +248,7 @@ class Network:
 
             # Run synapse updates.
             for c in self.connections:
-                self.connections[c].update(reward=reward,
-                                           mask=masks.get(c, None))
+                self.connections[c].update(reward=reward, mask=masks.get(c, None))
 
             # Get input to all layers.
             inpts.update(self.get_inputs())
@@ -268,15 +261,16 @@ class Network:
         for c in self.connections:
             self.connections[c].normalize()
 
-    def _reset(self):
-        '''
+    def reset_(self) -> None:
+        # language=rst
+        """
         Reset state variables of objects in network.
-        '''
+        """
         for layer in self.layers:
-            self.layers[layer]._reset()
+            self.layers[layer].reset_()
 
         for connection in self.connections:
-            self.connections[connection]._reset()
+            self.connections[connection].reset_()
 
         for monitor in self.monitors:
-            self.monitors[monitor]._reset()
+            self.monitors[monitor].reset_()

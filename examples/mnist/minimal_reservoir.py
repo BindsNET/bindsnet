@@ -28,7 +28,7 @@ training_pairs = []
 for i, (datum, label) in enumerate(loader):
     network.run(inpts={'I' : datum}, time=250)
     training_pairs.append([network.monitors['output_spikes'].get('s').sum(-1), label])
-    network._reset()
+    network.reset_()
     
     if (i + 1) % 50 == 0: print('Train progress: (%d / 500)' % (i + 1))
     if (i + 1) == 500: print(); break  # stop after 500 training examples
@@ -53,7 +53,7 @@ test_pairs = []
 for i, (datum, label) in enumerate(loader):
     network.run(inpts={'I' : datum}, time=250)
     test_pairs.append([network.monitors['output_spikes'].get('s').sum(-1), label])
-    network._reset()
+    network.reset_()
     
     if (i + 1) % 50 == 0: print('Test progress: (%d / 500)' % (i + 1))
     if (i + 1) == 500: print(); break  # stop after 500 test examples

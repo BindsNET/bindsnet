@@ -11,7 +11,7 @@ from ..utils import reshape_locally_connected_weights
 plt.ion()
 
 def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
-    '''
+    """
     Plots a two-dimensional image and its corresponding spike-train representation.
 
     Inputs:
@@ -25,7 +25,7 @@ def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
 
         | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the input plots.
         | (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the input plots.
-    '''
+    """
     if axes is None:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
         ims = axes[0].imshow(image, cmap='binary'), axes[1].imshow(inpt, cmap='binary')
@@ -75,9 +75,7 @@ def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time=
 
         | (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
         | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
-
     '''
-
     assert network is not None or spikes is not None, 'No plotting information'
 
     # Set to all layers if no layers were requested
@@ -239,7 +237,7 @@ def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time=
 
 
 def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
-    '''
+    """
     Plot a connection weight matrix.
 
     Inputs:
@@ -253,7 +251,7 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
     Returns:
 
         | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
-    '''
+    """
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title('Connection weights')
@@ -274,7 +272,7 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 
 
 def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
-    '''
+    """
     Plot a connection weight matrix of a Conv2dConnection.
 
     Inputs:
@@ -288,7 +286,7 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
     Returns:
 
         | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
-    '''
+    """
     n_sqrt = int(np.ceil(np.sqrt(weights.size(0))))
     height = weights.size(2)
     width = weights.size(3)
@@ -328,7 +326,7 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
 
 def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, locations,
                             input_sqrt, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
-    '''
+    """
     Plot a connection weight matrix of a :code:`Connection` with
     `locally connected structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
 
@@ -349,7 +347,7 @@ def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, l
     Returns:
 
         | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
-    '''
+    """
     reshaped = reshape_locally_connected_weights(weights, n_filters, kernel_size,
                                                  conv_size, locations, input_sqrt)
 
@@ -381,7 +379,7 @@ def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, l
 
 
 def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
-    '''
+    """
     Plot the two-dimensional neuron assignments.
 
     Inputs:
@@ -398,7 +396,7 @@ def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
 
         | (:code:`im` (:code:`matplotlib.image.AxesImage`):
         Used for re-drawing the assigments plot.
-    '''
+    """
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title('Categorical assignments')
@@ -423,7 +421,7 @@ def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
 
 
 def plot_performance(performances, ax=None, figsize=(7, 4)):
-    '''
+    """
     Plot training accuracy curves.
 
     Inputs:
@@ -439,7 +437,7 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 
         | (:code:`ax` (:code:`matplotlib.axes.Axes`):
         Used for re-drawing the performance plot.
-    '''
+    """
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
     else:
@@ -458,7 +456,7 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 
 
 def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None, figsize=(8,4.5)):
-    '''
+    """
     General plotting function for variables being monitored.
 
     Inputs:
@@ -481,8 +479,8 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
         | (:code:`ims` (:code:`list(matplotlib.axes.Axes)):
         Used for re-drawing plots.
         | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`):
-        Used for re-drawing plots.
-    '''
+        Used for re-drawing plots. 
+    """
     default = {'xlabel' : 'Simulation time', 'ylabel' : 'Index'}
 
     if monitor is None:
@@ -567,7 +565,7 @@ def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None
 
 
 def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
-    '''
+    """
     Plot voltages for any group(s) of neurons.
 
     Inputs:
@@ -583,8 +581,8 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 
         | (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the voltage plots.
         | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
-
-    '''
+        
+    """
     n_subplots = len(voltages.keys())
 
     # Confirm only 2 values for time were given

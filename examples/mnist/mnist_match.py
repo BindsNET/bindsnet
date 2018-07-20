@@ -135,7 +135,7 @@ for i in range(i):
         print('Performance on iteration %d: (%.2f, %.2f)' % (i / change_interval, p[0] * 100, p[1] * 100))
         
     for m in spike_monitors:
-        spike_monitors[m]._reset()
+        spike_monitors[m].reset_()
     
     if plot:
         if i == 0:
