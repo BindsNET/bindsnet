@@ -3,9 +3,9 @@ import numpy as np
 
 
 def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
-    """
+    '''
     First figure out what the size of the output should be. Taken from `this repository <https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py>`_.
-    """
+    '''
     N, C, H, W = x_shape
     
     assert (H + 2 * padding[0] - field_height) % stride[0] == 0
@@ -27,9 +27,9 @@ def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
     return (k, i, j)
 
 def im2col_indices(x, field_height, field_width, padding=1, stride=1):
-    """
+    '''
     An implementation of im2col based on some fancy indexing. Taken from `this repository <https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py>`_.
-    """
+    '''
     # Zero-pad the input
     p = padding
     
@@ -44,9 +44,9 @@ def im2col_indices(x, field_height, field_width, padding=1, stride=1):
     return torch.Tensor(cols)
 
 def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1, stride=1):
-    """
+    '''
     An implementation of col2im based on fancy indexing and np.add.at. Taken from `this repository <https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py>`_.
-    """
+    '''
     N, C, H, W = x_shape
     H_padded, W_padded = H + 2 * padding, W + 2 * padding
     x_padded = np.zeros((N, C, H_padded, W_padded), dtype=cols.dtype)
@@ -62,9 +62,9 @@ def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1, stri
     return x_padded[:, :, padding:-padding, padding:-padding]
 
 def get_square_weights(weights, n_sqrt, side):
-    """
+    '''
     Return a grid of a number of filters :code:`sqrt ** 2` with side lengths :code:`side`.
-    """
+    '''
     square_weights = torch.zeros_like(torch.Tensor(side * n_sqrt, side * n_sqrt))
     for i in range(n_sqrt):
         for j in range(n_sqrt):
@@ -77,9 +77,9 @@ def get_square_weights(weights, n_sqrt, side):
     return square_weights
 
 def get_square_assignments(assignments, n_sqrt):
-    """
+    '''
     Return a grid of assignments.
-    """
+    '''
     square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
     for i in range(n_sqrt):
         for j in range(n_sqrt):
@@ -92,10 +92,10 @@ def get_square_assignments(assignments, n_sqrt):
     return square_assignments
 
 def reshape_locally_connected_weights(w, n_filters, kernel_size, conv_size, locations, input_sqrt):
-    """
+    '''
     Get the weights from a locally connected layer
     and reshape them to be two-dimensional and square.
-    """
+    '''
     w_ = torch.zeros((n_filters * kernel_size, kernel_size * conv_size ** 2))
 
     conv_sqrt = int(np.sqrt(conv_size))

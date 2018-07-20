@@ -28,4 +28,4 @@ pipeline = Pipeline(network=network,
 # Train the network.
 for i in range(60000):    
     pipeline.step()
-    network.reset_()
+    network._reset()

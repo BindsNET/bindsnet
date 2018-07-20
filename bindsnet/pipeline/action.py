@@ -3,7 +3,7 @@ import numpy as np
 
 
 def select_multinomial(pipeline, **kwargs):
-    """
+    '''
     Selects an action probabilistically based on spiking activity from a network layer.
     
     Inputs:
@@ -14,7 +14,7 @@ def select_multinomial(pipeline, **kwargs):
     Returns:
     
         | (:code:`int`): Integer indicating an action from the action space.
-    """
+    '''
     try:
         output = kwargs['output']
     except KeyError:
@@ -39,7 +39,7 @@ def select_multinomial(pipeline, **kwargs):
     return action
 
 def select_softmax(pipeline, **kwargs):
-    """
+    '''
     Selects an action using softmax function based on spiking from a network layer.
     
     Inputs:
@@ -50,7 +50,7 @@ def select_softmax(pipeline, **kwargs):
     Returns:
     
         | (:code:`int`): Number indicating the desired action from the action space.
-    """
+    '''
     try:
         output = kwargs['output']
     except KeyError:
@@ -72,7 +72,7 @@ def select_softmax(pipeline, **kwargs):
     return action
     
 def select_random(pipeline, **kwargs):
-    """
+    '''
     Selects an action randomly from the action space.
     
     Inputs:
@@ -83,6 +83,6 @@ def select_random(pipeline, **kwargs):
     Returns:
     
         | (:code:`int`): Number indicating the randomly selected action from the action space.
-    """
+    '''
     # Choose action randomly from the action space.
     return np.random.choice(range(pipeline.env.action_space.n))

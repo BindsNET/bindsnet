@@ -115,6 +115,3 @@ results/
 
 # Swap files.
 *.swp
-
-# PyCharm configuration directory.
-.idea/

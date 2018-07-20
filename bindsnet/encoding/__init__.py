@@ -3,7 +3,7 @@ import numpy as np
 
 
 def bernoulli(datum, time=None, **kwargs):
-    """
+    '''
     Generates Bernoulli-distributed spike trains based on input intensity.
     Inputs must be non-negative. Spikes correspond to successful Bernoulli
     trials, with success probability equal to (normalized in [0, 1]) input value.
@@ -22,7 +22,7 @@ def bernoulli(datum, time=None, **kwargs):
     
         | (:code:`torch.Tensor`): Tensor of shape :code:`[time, n_1, ..., n_k]`
         of Bernoulli-distributed spikes.
-    """
+    '''
     # Setting kwargs.
     max_prob = kwargs.get('max_prob', 1.0)
     
@@ -47,7 +47,7 @@ def bernoulli(datum, time=None, **kwargs):
     return torch.Tensor(s).byte()
 
 def bernoulli_loader(data, time=None, **kwargs):
-    """
+    '''
     Lazily invokes :code:`bindsnet.encoding.bernoulli` to iteratively encode a sequence of data.
 
     Inputs:
@@ -64,7 +64,7 @@ def bernoulli_loader(data, time=None, **kwargs):
     
         | (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]`
         of Bernoulli-distributed spikes.
-    """
+    '''
     
     # Setting kwargs.
     max_prob = kwargs.get('max_prob', 1.0)
@@ -73,7 +73,7 @@ def bernoulli_loader(data, time=None, **kwargs):
         yield bernoulli(data[i], time, max_prob=max_prob)  # Encode datum as Bernoulli spike trains.
 
 def poisson(datum, time, **kwargs):
-    """
+    '''
     Generates Poisson-distributed spike trains based
     on input intensity. Inputs must be non-negative.
 
@@ -86,7 +86,7 @@ def poisson(datum, time, **kwargs):
     
         | (:code:`torch.Tensor`): Tensor of shape :code:`[time, n_1, ..., n_k]`
         of Poisson-distributed spikes.
-    """
+    '''
     datum = np.copy(datum)
     shape, size = datum.shape, datum.size
     datum = datum.ravel()
@@ -110,7 +110,7 @@ def poisson(datum, time, **kwargs):
     return torch.Tensor(s).byte()
    
 def poisson_loader(data, time, **kwargs):
-    """
+    '''
     Lazily invokes :code:`bindsnet.encoding.poisson` to iteratively encode a sequence of data.
     
     Inputs:
@@ -123,13 +123,13 @@ def poisson_loader(data, time, **kwargs):
     
         | (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]`
         of Poisson-distributed spikes.
-    """
+    '''
     for i in range(len(data)):
         yield poisson(data[i], time)  # Encode datum as Poisson spike trains.
 
 
 def rank_order(datum, time, **kwargs):
-    """
+    '''
     Encodes data via a rank order coding-like representation. One
     spike per neuron, temporally ordered by decreasing intensity.
     Inputs must be non-negative.
@@ -145,7 +145,7 @@ def rank_order(datum, time, **kwargs):
     
         | (:code:`torch.Tensor`): Tensor of shape
         :code:`[time, n_1, ..., n_k]` of rank order-encoded spikes.
-    """
+    '''
     datum = np.copy(datum)
     shape, size = datum.shape, datum.size
     datum = datum.ravel()
@@ -169,7 +169,7 @@ def rank_order(datum, time, **kwargs):
     return torch.Tensor(s).byte()
 
 def rank_order_loader(data, time, **kwargs):
-    """
+    '''
     Lazily invokes :code:`bindsnet.encoding.rank_order`
     to iteratively encode a sequence of data.
     
@@ -184,6 +184,6 @@ def rank_order_loader(data, time, **kwargs):
     
         | (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]`
         of rank order-encoded spikes.
-    """
+    '''
     for i in range(len(data)):
         yield rank_order(data[i], time)  # Encode datum as rank order-encoded spike trains.

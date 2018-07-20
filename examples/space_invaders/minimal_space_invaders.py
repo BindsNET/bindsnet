@@ -43,4 +43,4 @@ pipeline = Pipeline(network, environment, encoding=bernoulli,
 while True:
 	pipeline.step()
 	if pipeline.done == True:
-		pipeline.reset_()
+		pipeline._reset()

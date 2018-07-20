@@ -20,11 +20,11 @@ from abc            import ABC, abstractmethod
 
 
 class Dataset(ABC):
-    """
+    '''
     Abstract base class for dataset.
-    """
+    '''
     def __init__(self, path='.', download=False):
-        """
+        '''
         Abstract constructor for the Games class.
         
         Inputs:
@@ -33,7 +33,7 @@ class Dataset(ABC):
             directory in which to store the dataset.
             | :code:`download` (:code:`bool`): Whether or not to
             download the dataset (requires internet connection).
-        """
+        '''
         if not os.path.isdir(path):
             os.makedirs(path)
         
@@ -42,34 +42,34 @@ class Dataset(ABC):
     
     @abstractmethod
     def get_train(self):
-        """
+        '''
         Fetches training data from this dataset.
         
         Returns:
         
             | (:code:`numpy.ndarray`): Inputs to a machine learning model.
             | (:code:`numpy.ndarray`): Corresponding desired outputs.
-        """
+        '''
         pass
     
     @abstractmethod
-    def get_test(self):
-        """
+    def get_test(self, a):
+        '''
         Fetches test data from this dataset.
         
         Returns:
         
             | (:code:`numpy.ndarray`): Inputs to a machine learning model.
             | (:code:`numpy.ndarray`): Corresponding desired outputs.
-        """
+        '''
         pass
     
 
 class MNIST(Dataset):
-    """
+    '''
     Handles loading and saving of the MNIST handwritten digits
     `(link) <http://yann.lecun.com/exdb/mnist/>`_.
-    """
+    '''
     train_images_pickle = 'train_images.p'
     train_labels_pickle = 'train_labels.p'
     test_images_pickle = 'test_images.p'
@@ -86,7 +86,7 @@ class MNIST(Dataset):
     test_labels_url = 'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz'
     
     def __init__(self, path=os.path.join('data', 'MNIST'), download=False):
-        """
+        '''
         Constructor for the :code:`MNIST` object. Makes
         the data directory if it doesn't already exist.
 
@@ -96,18 +96,18 @@ class MNIST(Dataset):
             directory in which to store the dataset.
             | :code:`download` (:code:`bool`): Whether or not
             to download the dataset (requires internet connection).
-        """
+        '''
         super().__init__(path, download)
         
     def get_train(self):
-        """
+        '''
         Gets the MNIST training images and labels.
 
         Returns:
         
             | :code:`images` (:code:`torch.Tensor`): The MNIST training images.
             | :code:`labels` (:code:`torch.Tensor`): The MNIST training labels.
-        """
+        '''
         if not os.path.isfile(os.path.join(self.path, MNIST.train_images_pickle)):
             # Download training images if they aren't on disk.
             if self.download:
@@ -145,14 +145,14 @@ class MNIST(Dataset):
         return torch.Tensor(images), torch.Tensor(labels)
 
     def get_test(self):
-        """
+        '''
         Gets the MNIST test images and labels.
 
         Returns:
         
             | :code:`images` (:code:`torch.Tensor`): The MNIST test images.
             | :code:`labels` (:code:`torch.Tensor`): The MNIST test labels.
-        """
+        '''
         if not os.path.isfile(os.path.join(self.path, MNIST.test_images_pickle)):
             # Download test images if they aren't on disk.
             if self.download:
@@ -190,7 +190,7 @@ class MNIST(Dataset):
         return torch.Tensor(images), torch.Tensor(labels)
                 
     def _download(self, url, filename):
-        """
+        '''
         Downloads and unzips an MNIST data file.
         
         Inputs:
@@ -198,14 +198,14 @@ class MNIST(Dataset):
             | :code:`url` (:code:`str`): The URL of the data file to be downloaded.
             | :code:`filename` (:code:`str`): The name
             of the file to save the downloaded data to.
-        """
+        '''
         urlretrieve(url, os.path.join(self.path, filename + '.gz'))
         with gzip.open(os.path.join(self.path, filename + '.gz'), 'rb') as _in:
             with open(os.path.join(self.path, filename), 'wb') as _out:
                 shutil.copyfileobj(_in, _out)
     
     def process_images(self, filename):
-        """
+        '''
         Opens a file of MNIST images and processes them into numpy arrays.
         
         Inputs:
@@ -217,7 +217,7 @@ class MNIST(Dataset):
         
             | (:code:`numpy.ndarray`): A numpy array of shape :code:`[n_images, 28,
                 28]`, where :code:`n_images` refers to the number of images in the file.
-        """
+        '''
         filename = os.path.join(self.path, filename)
         data = open(filename, 'rb')
         
@@ -242,7 +242,7 @@ class MNIST(Dataset):
         return images
     
     def process_labels(self, filename):
-        """
+        '''
         Opens a file of MNIST label data and processes it into a numpy vector.
         
         Inputs:
@@ -253,7 +253,7 @@ class MNIST(Dataset):
         
             | (:code:`np.ndarray`): A one-dimensional array of shape :code:`(n_labels,)`,
                 where :code:`n_labels` refers to the number of labels contained in the file.
-        """
+        '''
         filename = os.path.join(self.path, filename)
         data = open(filename, 'rb')
         
@@ -277,10 +277,10 @@ class MNIST(Dataset):
 
 
 class SpokenMNIST(Dataset):
-    """
+    '''
     Handles loading and saving of the Spoken MNIST audio dataset
     `(link) <https://github.com/Jakobovski/free-spoken-digit-dataset>`_.
-    """
+    '''
     train_pickle = 'train.p'
     test_pickle = 'test.p'
     
@@ -295,7 +295,7 @@ class SpokenMNIST(Dataset):
     n_files = len(files)
     
     def __init__(self, path=os.path.join('data', 'SpokenMNIST'), download=False):
-        """
+        '''
         Constructor for the :code:`SpokenMNIST` object. Makes
         the data directory if it doesn't already exist.
         
@@ -305,12 +305,12 @@ class SpokenMNIST(Dataset):
             directory in which to store the dataset.
             | :code:`download` (:code:`bool`): Whether or not to
             download the dataset (requires internet connection).
-        """
+        '''
         super().__init__(path, download)
         self.zip_path = os.path.join(path, 'repo.zip')
     
     def get_train(self, split=0.8):
-        """
+        '''
         Gets the Spoken MNIST training audio and labels.
         
         Inputs:
@@ -321,7 +321,7 @@ class SpokenMNIST(Dataset):
         
             | :code:`audio` (:code:`torch.Tensor`): The Spoken MNIST training audio.
             | :code:`labels` (:code:list(`torch.Tensor`)): The Spoken MNIST training labels.
-        """
+        '''
         split_index = int(split * SpokenMNIST.n_files)
         path = os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))
 
@@ -354,14 +354,14 @@ class SpokenMNIST(Dataset):
         return audio, torch.Tensor(labels)
 
     def get_test(self, split=0.8):
-        """
+        '''
         Gets the Spoken MNIST training audio and labels.
 
         Returns:
         
             | :code:`audio` (:code:`torch.Tensor`): The Spoken MNIST training audio.
             | :code:`labels` (:code:`torch.Tensor`): The Spoken MNIST training labels.
-        """
+        '''
         split_index = int(split * SpokenMNIST.n_files)
         path = os.path.join(self.path, '_'.join([SpokenMNIST.test_pickle, str(split)]))
         
@@ -394,13 +394,13 @@ class SpokenMNIST(Dataset):
         return audio, torch.Tensor(labels)
                 
     def _download(self):
-        """
+        '''
         Downloads and unzips all Spoken MNIST data.
         
         Inputs:
         
             | :code:`url` (:code:`str`): The URL of the data archive to be downloaded.
-        """
+        '''
         urlretrieve(SpokenMNIST.url, self.zip_path)
         
         z = zipfile.ZipFile(self.zip_path, 'r')
@@ -417,7 +417,7 @@ class SpokenMNIST(Dataset):
         os.chdir(cwd)
     
     def process_data(self, filenames):
-        """
+        '''
         Opens files of Spoken MNIST data and processes them into :code:`numpy` arrays.
         
         Inputs:
@@ -427,7 +427,7 @@ class SpokenMNIST(Dataset):
         Returns:
         
             | (:code:`tuple(numpy.ndarray)`): Two :code:`numpy` arrays with audio and label data, respectively.
-        """
+        '''
         audio, labels = [], []
         
         for f in filenames:
@@ -490,9 +490,9 @@ class SpokenMNIST(Dataset):
 
 
 class CIFAR10(Dataset):
-    """
+    '''
     Handles loading and saving of the CIFAR-10 image dataset `(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
-    """
+    '''
     data_directory = 'cifar-10-batches-py'
     data_archive = 'cifar-10-python.tar.gz'
     
@@ -505,26 +505,26 @@ class CIFAR10(Dataset):
     url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
     
     def __init__(self, path=os.path.join('data', 'CIFAR10'), download=False):
-        """
+        '''
         Constructor for the :code:`CIFAR10` object. Makes the data directory if it doesn't already exist.
 
         Inputs:
         
             | :code:`path` (:code:`str`): Pathname of directory in which to store the dataset.
             | :code:`download` (:code:`bool`): Whether or not to download the dataset (requires internet connection).
-        """
+        '''
         super().__init__(path, download)
         self.data_path = os.path.join(self.path, CIFAR10.data_directory)
         
     def get_train(self):
-        """
+        '''
         Gets the CIFAR-10 training images and labels.
 
         Returns:
         
             | :code:`images` (:code:`torch.Tensor`): The CIFAR-10 training images.
             | :code:`labels` (:code:`torch.Tensor`): The CIFAR-10 training labels.
-        """
+        '''
         path = os.path.join(self.path, CIFAR10.train_pickle)
         if not os.path.isdir(os.path.join(self.path, CIFAR10.data_directory)):
             # Download data if it isn't on disk.
@@ -553,14 +553,14 @@ class CIFAR10(Dataset):
         return torch.Tensor(images), torch.Tensor(labels)
 
     def get_test(self):
-        """
+        '''
         Gets the CIFAR-10 test images and labels.
 
         Returns:
         
             | :code:`images` (:code:`torch.Tensor`): The CIFAR-10 test images.
             | :code:`labels` (:code:`torch.Tensor`): The CIFAR-10 test labels.
-        """
+        '''
         path = os.path.join(self.path, CIFAR10.test_pickle)
         if not os.path.isdir(os.path.join(self.path, CIFAR10.data_directory)):
             # Download data if it isn't on disk.
@@ -589,20 +589,20 @@ class CIFAR10(Dataset):
         return torch.Tensor(images), torch.Tensor(labels)
                 
     def _download(self, url, filename):
-        """
+        '''
         Downloads and unzips all CIFAR-10 data.
         
         Inputs:
         
             | :code:`url` (:code:`str`): The URL of the data archive to be downloaded.
-        """
+        '''
         urlretrieve(url, os.path.join(self.path, filename))
         tar = tarfile.open(os.path.join(self.path, filename), 'r:gz')
         tar.extractall(path=self.path)
         tar.close()
     
     def process_data(self, filenames):
-        """
+        '''
         Opens files of CIFAR-10 data and processes them into :code:`numpy` arrays.
         
         Inputs:
@@ -614,8 +614,8 @@ class CIFAR10(Dataset):
         
             | (:code:`tuple(numpy.ndarray)`): Two :code:`numpy`
             arrays with image and label data, respectively.
-        """
-        d = {'data': [], 'labels': []}
+        '''
+        d = {'data' : [], 'labels' : []}
         for filename in filenames:
             with open(os.path.join(self.data_path, filename), 'rb') as f:
                 temp = p.load(f, encoding='bytes')
@@ -626,10 +626,10 @@ class CIFAR10(Dataset):
 
 
 class CIFAR100(Dataset):
-    """
+    '''
     Handles loading and saving of the CIFAR-100 image dataset
     `(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
-    """
+    '''
     data_directory = 'cifar-100-python'
     data_archive = 'cifar-100-python.tar.gz'
     
@@ -642,7 +642,7 @@ class CIFAR100(Dataset):
     url = 'https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz'
     
     def __init__(self, path=os.path.join('data', 'CIFAR100'), download=False):
-        """
+        '''
         Constructor for the :code:`CIFAR100` object. Makes
         the data directory if it doesn't already exist.
 
@@ -652,19 +652,19 @@ class CIFAR100(Dataset):
             directory in which to store the dataset.
             | :code:`download` (:code:`bool`): Whether or not to
             download the dataset (requires internet connection).
-        """
+        '''
         super().__init__(path, download)
         self.data_path = os.path.join(self.path, CIFAR100.data_directory)
         
     def get_train(self):
-        """
+        '''
         Gets the CIFAR-100 training images and labels.
 
         Returns:
         
             | :code:`images` (:code:`torch.Tensor`): The CIFAR-100 training images.
             | :code:`labels` (:code:`torch.Tensor`): The CIFAR-100 training labels.
-        """
+        '''
         path = os.path.join(self.path, CIFAR100.train_pickle)
         if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
             # Download data if it isn't on disk.
@@ -693,14 +693,14 @@ class CIFAR100(Dataset):
         return torch.Tensor(images), torch.Tensor(labels)
 
     def get_test(self):
-        """
+        '''
         Gets the CIFAR-100 test images and labels.
 
         Returns:
         
             | :code:`images` (:code:`torch.Tensor`): The CIFAR-100 test images.
             | :code:`labels` (:code:`torch.Tensor`): The CIFAR-100 test labels.
-        """
+        '''
         path = os.path.join(self.path, CIFAR100.test_pickle)
         if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
             # Download data if it isn't on disk.
@@ -729,20 +729,20 @@ class CIFAR100(Dataset):
         return torch.Tensor(images), torch.Tensor(labels)
                 
     def _download(self, url, filename):
-        """
+        '''
         Downloads and unzips all CIFAR-100 data.
         
         Inputs:
         
             | :code:`url` (:code:`str`): The URL of the data archive to be downloaded.
-        """
+        '''
         urlretrieve(url, os.path.join(self.path, filename))
         tar = tarfile.open(os.path.join(self.path, filename), 'r:gz')
         tar.extractall(path=self.path)
         tar.close()
     
     def process_data(self, filenames):
-        """
+        '''
         Opens files of CIFAR-100 data and processes them into :code:`numpy` arrays.
         
         Inputs:
@@ -752,7 +752,7 @@ class CIFAR100(Dataset):
         Returns:
         
             | (:code:`tuple(numpy.ndarray)`): Two :code:`numpy` arrays with image and label data, respectively.
-        """
+        '''
         d = {'data' : [], 'labels' : []}
         for filename in filenames:
             with open(os.path.join(self.data_path, filename), 'rb') as f:
