@@ -1,39 +1,35 @@
 import torch
 import numpy as np
 
+from typing import Optional, Union, Iterable, Iterator
 
-def bernoulli(datum, time=None, **kwargs):
+
+def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torch.Tensor:
+    # language=rst
     """
-    Generates Bernoulli-distributed spike trains based on input intensity.
-    Inputs must be non-negative. Spikes correspond to successful Bernoulli
-    trials, with success probability equal to (normalized in [0, 1]) input value.
 
-    Inputs:
-    
-        | :code:`datum` (:code:`torch.Tensor`): Tensor of shape :code:`[n_1, ..., n_k]`.
-        | :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
-        
-        Keyword arguments:
-            
-            | :code:`max_prob` (:code:`float`): Maximum
-            probability of spike per Bernoulli trial.
-    
-    Returns:
-    
-        | (:code:`torch.Tensor`): Tensor of shape :code:`[time, n_1, ..., n_k]`
-        of Bernoulli-distributed spikes.
+    :param datum: Generates Bernoulli-distributed spike trains based on input intensity. Inputs must be non-negative.
+                  Spikes correspond to successful Bernoulli trials, with success probability equal to (normalized in
+                  [0, 1]) input value.
+    :param time: Tensor of shape ``[n_1, ..., n_k]``.
+    :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Bernoulli-distributed spikes.
+
+    Keyword arguments:
+
+    :param float max_prob: Maximum probability of spike per Bernoulli trial.
     """
     # Setting kwargs.
     max_prob = kwargs.get('max_prob', 1.0)
+    assert 0 <= max_prob <= 1, 'Maximum firing probability must be in range [0, 1]'
     
     datum = np.copy(datum)
     shape, size = datum.shape, datum.size
     datum = datum.ravel()
 
-    # Normalize inputs and rescale (spike probability
-    # proportional to normalized intensity).
+    # Normalize inputs and rescale (spike probability proportional to normalized intensity).
     if datum.max() > 1.0:
         datum /= datum.max()
+
     datum *= max_prob
 
     # Make spike data from Bernoulli sampling.
@@ -46,46 +42,35 @@ def bernoulli(datum, time=None, **kwargs):
     
     return torch.Tensor(s).byte()
 
-def bernoulli_loader(data, time=None, **kwargs):
-    """
-    Lazily invokes :code:`bindsnet.encoding.bernoulli` to iteratively encode a sequence of data.
 
-    Inputs:
-    
-        | :code:`data` (:code:`torch.Tensor` or iterable of :code:`torch.Tensor`s):
-        Tensor of shape :code:`[n_samples, n_1, ..., n_k]`.
-        | :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
-        
-        Keyword arguments:
-            
-            | :code:`max_prob` (:code:`float`): Maximum probability of spike per Bernoulli trial.
-    
-    Yields:
-    
-        | (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]`
-        of Bernoulli-distributed spikes.
+def bernoulli_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: Optional[int] = None,
+                     **kwargs) -> Iterator[torch.Tensor]:
+    # language=rst
     """
-    
+    Lazily invokes ``bindsnet.encoding.bernoulli`` to iteratively encode a sequence of data.
+
+    :param data: Tensor of shape ``[n_samples, n_1, ..., n_k]``.
+    :param time: Length of Bernoulli spike train per input variable.
+    :return: Tensors of shape ``[time, n_1, ..., n_k]`` of Bernoulli-distributed spikes.
+
+    Keyword arguments:
+
+    :param float max_prob: Maximum probability of spike per Bernoulli trial.
+    """
     # Setting kwargs.
     max_prob = kwargs.get('max_prob', 1.0)
     
     for i in range(len(data)):
         yield bernoulli(data[i], time, max_prob=max_prob)  # Encode datum as Bernoulli spike trains.
 
-def poisson(datum, time, **kwargs):
-    """
-    Generates Poisson-distributed spike trains based
-    on input intensity. Inputs must be non-negative.
 
-    Inputs:
-    
-        | :code:`datum` (:code:`torch.Tensor`): Tensor of shape :code:`[n_1, ..., n_k]`.
-        | :code:`time` (:code:`int`): Length of Bernoulli spike train per input variable.
-    
-    Returns:
-    
-        | (:code:`torch.Tensor`): Tensor of shape :code:`[time, n_1, ..., n_k]`
-        of Poisson-distributed spikes.
+def poisson(datum: torch.Tensor, time: int, **kwargs) -> torch.Tensor:
+    # language=rst
+    """
+    Generates Poisson-distributed spike trains based on input intensity. Inputs must be non-negative.
+    :param datum: Tensor of shape ``[n_1, ..., n_k]``.
+    :param time: Length of Bernoulli spike train per input variable.
+    :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
     """
     datum = np.copy(datum)
     shape, size = datum.shape, datum.size
@@ -108,43 +93,30 @@ def poisson(datum, time, **kwargs):
     s = s.reshape([time, *shape])
     
     return torch.Tensor(s).byte()
-   
-def poisson_loader(data, time, **kwargs):
-    """
-    Lazily invokes :code:`bindsnet.encoding.poisson` to iteratively encode a sequence of data.
-    
-    Inputs:
-    
-        | :code:`data` (:code:`torch.Tensor` or iterable of :code:`torch.Tensor`s):
-        Tensor of shape :code:`[n_samples, n_1, ..., n_k]`
-        | :code:`time` (:code:`int`): Length of Poisson spike train per input variable.
 
-    Yields:
-    
-        | (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]`
-        of Poisson-distributed spikes.
+
+def poisson_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: int, **kwargs) -> Iterator[torch.Tensor]:
+    # language=rst
+    """
+    Lazily invokes ``bindsnet.encoding.poisson`` to iteratively encode a sequence of data.
+
+    :param data: Tensor of shape ``[n_samples, n_1, ..., n_k]``.
+    :param time: Length of Poisson spike train per input variable.
+    :return: Tensors of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
     """
     for i in range(len(data)):
         yield poisson(data[i], time)  # Encode datum as Poisson spike trains.
 
 
-def rank_order(datum, time, **kwargs):
+def rank_order(datum: torch.Tensor, time: int, **kwargs) -> torch.Tensor:
+    # language=rst
     """
-    Encodes data via a rank order coding-like representation. One
-    spike per neuron, temporally ordered by decreasing intensity.
-    Inputs must be non-negative.
-    
-    Inputs:
-    
-        | :code:`data` (:code:`torch.Tensor`): Tensor
-        of shape :code:`[n_samples, n_1, ..., n_k]`
-        | :code:`time` (:code:`int`): Length of rank
-        order-encoded spike train per input variable.
+    Encodes data via a rank order coding-like representation. One spike per neuron, temporally ordered by decreasing
+    intensity. Inputs must be non-negative.
 
-    Returns:
-    
-        | (:code:`torch.Tensor`): Tensor of shape
-        :code:`[time, n_1, ..., n_k]` of rank order-encoded spikes.
+    :param datum: Tensor of shape ``[n_samples, n_1, ..., n_k]``.
+    :param time: Length of rank order-encoded spike train per input variable.
+    :return: Tensor of shape ``[time, n_1, ..., n_k]`` of rank order-encoded spikes.
     """
     datum = np.copy(datum)
     shape, size = datum.shape, datum.size
@@ -168,22 +140,15 @@ def rank_order(datum, time, **kwargs):
     
     return torch.Tensor(s).byte()
 
-def rank_order_loader(data, time, **kwargs):
-    """
-    Lazily invokes :code:`bindsnet.encoding.rank_order`
-    to iteratively encode a sequence of data.
-    
-    Inputs:
-    
-        | :code:`data` (:code:`torch.Tensor` or iterable of :code:`torch.Tensor`s):
-        Tensor of shape :code:`[n_samples, n_1, ..., n_k]`
-        | :code:`time` (:code:`int`): Length of rank
-        order-encoded spike train per input variable.
 
-    Yields:
-    
-        | (:code:`torch.Tensor`): Tensors of shape :code:`[time, n_1, ..., n_k]`
-        of rank order-encoded spikes.
+def rank_order_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: int, **kwargs) -> Iterator[torch.Tensor]:
+    # language=rst
+    """
+    Lazily invokes ``bindsnet.encoding.rank_order`` to iteratively encode a sequence of data.
+
+    :param data: Tensor of shape ``[n_samples, n_1, ..., n_k]``.
+    :param time: Length of rank order-encoded spike train per input variable.
+    :return: Tensors of shape ``[time, n_1, ..., n_k]`` of rank order-encoded spikes.
     """
     for i in range(len(data)):
         yield rank_order(data[i], time)  # Encode datum as rank order-encoded spike trains.

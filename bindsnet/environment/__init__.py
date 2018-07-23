@@ -16,27 +16,57 @@ class Environment(ABC):
     """
 
     @abstractmethod
-    def step(self, a):
+    def step(self, a: int) -> None:
+        # language=rst
+        """
+        Abstract method head for ``step()``.
+        :param a: Integer action to take in environment.
+        """
         pass
 
     @abstractmethod
-    def reset(self):
+    def reset(self) -> None:
+        # language=rst
+        """
+        Abstract method header for ``reset()``.
+        :return:
+        """
         pass
 
     @abstractmethod
-    def render(self):
+    def render(self) -> None:
+        # language=rst
+        """
+        Abstract method header for ``render()``.
+        :return:
+        """
         pass
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
+        # language=rst
+        """
+        Abstract method header for ``close()``.
+        :return:
+        """
         pass
 
     @abstractmethod
-    def preprocess(self):
+    def preprocess(self) -> None:
+        # language=rst
+        """
+        Abstract method header for ``preprocess()``.
+        :return:
+        """
         pass
 
     @abstractmethod
-    def reshape(self):
+    def reshape(self) -> None:
+        # language=rst
+        """
+        Abstract method header for ``reshape()``.
+        :return:
+        """
         pass
 
 
@@ -46,7 +76,7 @@ class DatasetEnvironment(Environment):
     A wrapper around any object from the ``datasets`` module to pass to the ``Pipeline`` object.
     """
 
-    def __init__(self, dataset: Dataset, train: bool=True, time: int=350, **kwargs):
+    def __init__(self, dataset: Dataset, train: bool = True, time: int = 350, **kwargs):
         # language=rst
         """
         Initializes the environment wrapper around the dataset.
@@ -66,6 +96,8 @@ class DatasetEnvironment(Environment):
 
         assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 
+        self.obs = None
+
         if train:
             self.data, self.labels = self.dataset.get_train()
             self.label_loader = iter(self.labels)
@@ -75,7 +107,7 @@ class DatasetEnvironment(Environment):
 
         self.env = iter(self.data)
 
-    def step(self, a: int=None) -> Tuple[torch.Tensor, int, bool, Dict[str, int]]:
+    def step(self, a: int = None) -> Tuple[torch.Tensor, int, bool, Dict[str, int]]:
         # language=rst
         """
         Dummy function for OpenAI Gym environment's ``step()`` function.
@@ -170,6 +202,8 @@ class GymEnvironment(Environment):
 
         # Keyword arguments.
         self.max_prob = kwargs.get('max_prob', 1)
+
+        self.obs = None
 
         assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 

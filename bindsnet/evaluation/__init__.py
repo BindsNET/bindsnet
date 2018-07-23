@@ -1,28 +1,20 @@
-import sys
 import torch
 
+from typing import Optional, Tuple, Dict
 
-def assign_labels(spikes, labels, n_labels, rates=None, alpha=1.0):
+
+def assign_labels(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, rates: Optional[torch.Tensor] = None,
+                  alpha: float = 1.0) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    # language=rst
     """
     Assign labels to the neurons based on highest average spiking activity.
 
-    Inputs:
-
-        | :code:`spikes` (:code:`torch.Tensor`): Binary tensor of shape
-        :code:`(n_samples, time, n_neurons)` of a single layer's spiking activity.
-        | :code:`labels` (:code:`torch.Tensor`): Vector of shape :code:`(n_samples,)`
-        with data labels corresponding to spiking activity.
-        | :code:`n_labels` (:code:`int`): The number of target labels in the data.
-        | :code:`rates` (:code:`torch.Tensor`): If passed, these represent spike
-        rates from a previous :code:`assign_labels()` call.
-        | :code:`alpha` (:code:`float`): Rate of decay of label assignments.
-
-    Returns:
-
-        | (:code:`torch.Tensor`): Vector of shape
-        :code:`(n_neurons,)` of neuron label assignments.
-        | (:code:`torch.Tensor`): Vector of shape :code:`(n_neurons, n_labels)`
-        of proportions of firing activity per neuron, per data label.
+    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a single layer's spiking activity.
+    :param labels: Vector of shape ``(n_samples,)`` with data labels corresponding to spiking activity.
+    :param n_labels: The number of target labels in the data.
+    :param rates: If passed, these represent spike rates from a previous ``assign_labels()`` call.
+    :param alpha: Rate of decay of label assignments.
+    :return: Tuple of class assignments, per-class spike proportions, and per-class firing rates.
     """
     n_neurons = spikes.size(2)
 
@@ -53,31 +45,22 @@ def assign_labels(spikes, labels, n_labels, rates=None, alpha=1.0):
     return assignments, proportions, rates
 
 
-def all_activity(spikes, assignments, n_labels):
+def all_activity(spikes: torch.Tensor, assignments: torch.Tensor, n_labels: int) -> torch.Tensor:
+    # language=rst
     """
     Classify data with the label with highest average spiking activity over all neurons.
 
-    Inputs:
-
-        | :code:`spikes` (:code:`torch.Tensor`): Binary tensor of shape
-        :code:`(n_samples, time, n_neurons)` of a layer's spiking activity.
-        | :code:`assignments` (:code:`torch.Tensor`): A vector of shape
-        :code:`(n_neurons,)` of neuron label assignments.
-        | :code:`n_labels` (:code:`int`): The number of target labels in the data.
-
-    Returns:
-
-        | (:code:`torch.Tensor`): Predictions tensor of shape :code:`(n_samples,)`
-        resulting from the "all activity" classification scheme.
+    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a layer's spiking activity.
+    :param assignments: A vector of shape ``(n_neurons,)`` of neuron label assignments.
+    :param n_labels: The number of target labels in the data.
+    :return: Predictions tensor of shape ``(n_samples,)`` resulting from the "all activity" classification scheme.
     """
     n_samples = spikes.size(0)
 
     # Sum over time dimension (spike ordering doesn't matter).
     spikes = spikes.sum(1)
 
-    # Summed rates per label (to be calculated).
     rates = torch.zeros(n_samples, n_labels)
-
     for i in range(n_labels):
         # Count the number of neurons with this label assignment.
         n_assigns = torch.sum(assignments == i).float()
@@ -90,39 +73,30 @@ def all_activity(spikes, assignments, n_labels):
             rates[:, i] = torch.sum(spikes[:, indices], 1) / n_assigns
 
     # Predictions are arg-max of layer-wise firing rates.
-    predictions = torch.sort(rates, dim=1, descending=True)[1][:, 0]
-
-    return predictions
+    return torch.sort(rates, dim=1, descending=True)[1][:, 0]
 
 
-def proportion_weighting(spikes, assignments, proportions, n_labels):
+def proportion_weighting(spikes: torch.Tensor, assignments: torch.Tensor, proportions: torch.Tensor,
+                         n_labels: int) -> torch.Tensor:
+    # language=rst
     """
-    Classify data with the label with highest average spiking
-    activity over all neurons, weighted by class-wise proportion.
+    Classify data with the label with highest average spiking activity over all neurons, weighted by class-wise
+    proportion.
 
-    Inputs:
-
-        | :code:`spikes` (:code:`torch.Tensor`): Binary tensor of shape
-        :code:`(n_samples, time, n_neurons)` of a single layer's spiking activity.
-        | :code:`assignments` (:code:`torch.Tensor`): A vector of shape
-        :code:`(n_neurons,)` of neuron label assignments.
-        | :code:`proportions` (torch.Tensor): A matrix of shape :code:`(n_neurons, n_labels)`
-        giving the per-class proportions of neuron spiking activity.
-        | :code:`n_labels` (:code:`int`): The number of target labels in the data.
-
-    Returns:
-
-        | (:code:`torch.Tensor`): Predictions tensor of shapez:code:`(n_samples,)`
-        resulting from the "proportion weighting" classification scheme.
+    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a single layer's spiking activity.
+    :param assignments: A vector of shape ``(n_neurons,)`` of neuron label assignments.
+    :param proportions: A matrix of shape ``(n_neurons, n_labels)`` giving the per-class proportions of neuron spiking
+                        activity.
+    :param n_labels: The number of target labels in the data.
+    :return: Predictions tensor of shape ``(n_samples,)`` resulting from the "proportion weighting" classification
+             scheme.
     """
     n_samples = spikes.size(0)
 
     # Sum over time dimension (spike ordering doesn't matter).
     spikes = spikes.sum(1)
 
-    # Summed rates per label (to be calculated).
     rates = torch.zeros(n_samples, n_labels)
-
     for i in range(n_labels):
         # Count the number of neurons with this label assignment.
         n_assigns = torch.sum(assignments == i).float()
@@ -139,20 +113,18 @@ def proportion_weighting(spikes, assignments, proportions, n_labels):
 
     return predictions
 
-def ngram(spikes, ngram_scores, n_labels, n) :
+
+def ngram(spikes: torch.Tensor, ngram_scores: Dict[Tuple[int, ...], torch.Tensor], n_labels: int,
+          n: int) -> torch.Tensor:
+    # language=rst
     """
-    Predicts between :code:`n_labels` using :code:`ngram_scores`.
+    Predicts between ``n_labels`` using ``ngram_scores``.
 
-    Inputs:
-
-        | :code:`spikes` (:code:`tensor.Tensor`): Spikes of shape :code:`(n_examples, time, n_neurons)`.
-        | :code:`n_labels` (:code:`int`): The number of target labels in the data.
-        | :code:`n` (:code:`int`): The max size of ngram to use.
-        | :code:`ngram_scores` (:code:`dict`): Previously recorded scores to update.
-
-    Outputs:
-
-        | :code:`predictions` (:code:`torch.Tensor`): Predictions per example.
+    :param spikes: Spikes of shape ``(n_examples, time, n_neurons)``.
+    :param ngram_scores: Previously recorded scores to update.
+    :param n_labels: The number of target labels in the data.
+    :param n: The max size of n-gram to use.
+    :return: Predictions per example.
     """
     predictions = []
     for activity in spikes:
@@ -166,7 +138,7 @@ def ngram(spikes, ngram_scores, n_labels, n) :
                 ordering = ordering[:, 0].tolist()
                 fire_order += ordering
 
-        # Consider all ngram sequences.
+        # Consider all n-gram sequences.
         for j in range(len(fire_order) - n):
             if tuple(fire_order[j:j + n]) in ngram_scores:
                 score += ngram_scores[tuple(fire_order[j:j + n])]
@@ -176,30 +148,22 @@ def ngram(spikes, ngram_scores, n_labels, n) :
     return torch.LongTensor(predictions)
 
 
-def update_ngram_scores(spikes, labels, n_labels, n, ngram_scores):
+def update_ngram_scores(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, n: int,
+                        ngram_scores: Dict[Tuple[int, ...], torch.Tensor]) -> Dict[Tuple[int, ...], torch.Tensor]:
+    # language=rst
     """
     Updates ngram scores.
 
-    Inputs:
-
-        | :code:`spikes` (:code:`tensor.Tensor`): Spikes of shape :code:`(n_examples, time, n_neurons)`.
-        | :code:`labels` (:code:`int`) : The ground truth value of shape :code:`(n_examples)`
-        | :code:`n_labels` (:code:`int`): The number of target labels in the data.
-        | :code:`n` (:code:`int`): The max size of ngram to use.
-        | :code:`ngram_scores` (:code:`dict`): Previously recorded scores to update.
-
-    Outputs:
-
-        | :code:`ngram_scores` (:code:`dict`): Keys are ngram :code:`tuple` and values are
-            :code:`torch.Tensor` of size :code:`n_labels` containing scores per label.
+    :param spikes: Spikes of shape ``(n_examples, time, n_neurons)``.
+    :param labels: The ground truth labels of shape ``(n_examples)``.
+    :param n_labels: The number of target labels in the data.
+    :param n: The max size of n-gram to use.
+    :param ngram_scores: Previously recorded scores to update.
+    :return: Dictionary mapping n-grams to vectors of per-class spike counts.
     """
-
-    assert spikes.size()[0] == len(labels), 'Every example must have a label.'
-
     for i, activity in enumerate(spikes):
         # Obtain firing order for spiking activity
         fire_order = []
-        timesteps_to_keep = torch.nonzero(torch.sum(activity, dim=0))
 
         # Aggregate all of the firing neurons' indices
         for t in range(activity.size()[0]):
@@ -217,4 +181,3 @@ def update_ngram_scores(spikes, labels, n_labels, n, ngram_scores):
             ngram_scores[tuple(fire_order[j:j + n])][int(labels[i])] += 1
 
     return ngram_scores
-
