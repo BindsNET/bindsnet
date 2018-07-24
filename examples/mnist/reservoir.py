@@ -60,7 +60,7 @@ for i, (datum, label) in enumerate(loader):
     
     plt.pause(1e-8)
     
-    network.reset_()
+    network._reset()
     
     if i > n_iters:
         break
@@ -119,7 +119,7 @@ for i, (datum, label) in enumerate(loader):
     
     plt.pause(1e-8)
     
-    network.reset_()
+    network._reset()
     
     if i > n_iters:
         break

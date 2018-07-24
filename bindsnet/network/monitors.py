@@ -10,9 +10,18 @@ from .topology import AbstractConnection
 
 
 class AbstractMonitor(ABC):
+    # language=rst
     """
     Abstract base class for state variable monitors.
     """
+
+    @abstractmethod
+    def __init__(self):
+        # language=rst
+        """
+        Abstract method stub for monitor constructor.
+        """
+        super().__init__()
 
     @abstractmethod
     def get(self):
@@ -114,6 +123,7 @@ class Monitor(AbstractMonitor):
 
 
 class NetworkMonitor(AbstractMonitor):
+    # language=rst
     """
     Record state variables of all layers and connections.
     """

@@ -1,7 +1,7 @@
 import torch
 
-from ..utils import im2col_indices
 from ..network.topology import AbstractConnection, Connection, Conv2dConnection
+from ..utils import im2col_indices
 
 
 def post_pre(conn: AbstractConnection, **kwargs) -> None:
@@ -26,13 +26,24 @@ def post_pre(conn: AbstractConnection, **kwargs) -> None:
         # Get convolutional layer parameters.
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
+        
+        x_source = im2col_indices(conn.source.x,
+                                  kernel_height,
+                                  kernel_width,
+                                  padding=padding,
+                                  stride=stride)
 
-        # Unpack / reshape quantities of interest (spikes and spike_traces).
-        s_source = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
-        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
-        x_source = im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
-        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels,
+                                                             -1)
+        s_source = im2col_indices(conn.source.s,
+                                  kernel_height,
+                                  kernel_width,
+                                  padding=padding,
+                                  stride=stride).float()
 
+        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels,
+                                                             -1).float()
+        
         # Post-synaptic.
         post = s_target @ x_source.t()
         conn.w += conn.nu_post * post.view(conn.w.size())
@@ -60,8 +71,9 @@ def hebbian(conn: AbstractConnection, **kwargs) -> None:
         conn.w += conn.nu_pre * conn.source.s.float().unsqueeze(-1) * conn.target.x.unsqueeze(0)  # Pre-synaptic.
         conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)  # Bound weights.
 
-    elif isinstance(conn, Conv2dConnection):
-        # Get convolutional layer parameters.
+        # Bound weights.
+        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+    else:
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
 
@@ -79,7 +91,7 @@ def hebbian(conn: AbstractConnection, **kwargs) -> None:
         conn.w += conn.nu_post * post
 
         # Pre-synaptic.
-        pre = s_source @ x_target.t()
+        pre = (s_source @ x_target.t()).view(conn.w.size())
         if pre.max() > 0:
             pre = pre / pre.max()
 
@@ -87,9 +99,6 @@ def hebbian(conn: AbstractConnection, **kwargs) -> None:
 
         # Bound weights.
         conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
-
-    else:
-        raise NotImplementedError('This learning rule is not supported for this Connection type.')
 
 
 def m_stdp(conn: AbstractConnection, **kwargs) -> None:
@@ -110,7 +119,7 @@ def m_stdp(conn: AbstractConnection, **kwargs) -> None:
     try:
         reward = kwargs['reward']
     except KeyError:
-        raise KeyError('Function m_stdp requires a reward kwarg')
+        raise KeyError('function m_stdp requires a reward kwarg')
 
     a_plus = kwargs.get('a_plus', 1)
     a_minus = kwargs.get('a_plus', -1)
@@ -132,8 +141,7 @@ def m_stdp(conn: AbstractConnection, **kwargs) -> None:
 
         # Bound weights.
         conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
-
-    elif isinstance(conn, Conv2dConnection):
+    else:
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
 
@@ -162,9 +170,6 @@ def m_stdp(conn: AbstractConnection, **kwargs) -> None:
         # Bound weights.
         conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
 
-    else:
-        raise NotImplementedError('This learning rule is not supported for this Connection type.')
-
 
 def m_stdp_et(conn: AbstractConnection, **kwargs) -> None:
     # language=rst
@@ -184,7 +189,7 @@ def m_stdp_et(conn: AbstractConnection, **kwargs) -> None:
     try:
         reward = kwargs['reward']
     except KeyError:
-        raise KeyError('function m_stdp_et requires a reward kwarg')
+        raise KeyError('Function m_stdp_et requires a reward keyword argument')
 
     a_plus = kwargs.get('a_plus', 1)
     a_minus = kwargs.get('a_plus', -1)
@@ -201,10 +206,12 @@ def m_stdp_et(conn: AbstractConnection, **kwargs) -> None:
         # Calculate value of eligibility trace.
         conn.e_trace += -(conn.tc_e_trace * conn.e_trace) + conn.p_plus * post_fire + pre_fire * conn.p_minus
 
-        conn.w += conn.nu * reward * conn.e_trace  # Compute weight update.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)  # Bound weights.
+        # Compute weight update.
+        conn.w += conn.nu * reward * conn.e_trace
 
-    elif isinstance(conn, Conv2dConnection):
+        # Bound weights.
+        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+    else:
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
         
@@ -225,9 +232,9 @@ def m_stdp_et(conn: AbstractConnection, **kwargs) -> None:
 
         # Calculate point eligibility value.
         conn.e_trace += -(conn.tc_e_trace * conn.e_trace) + (post + pre)
-
-        conn.w += conn.nu * reward * conn.e_trace  # Compute weight update.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)  # Bound weights.
-
-    else:
-        raise NotImplementedError('This learning rule is not supported for this Connection type.')
+        
+        # Compute weight update.
+        conn.w += conn.nu * reward * conn.e_trace
+            
+        # Bound weights.
+        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)

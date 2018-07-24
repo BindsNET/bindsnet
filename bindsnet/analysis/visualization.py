@@ -76,7 +76,6 @@ def plot_spike_trains_for_example(spikes: torch.Tensor, n_ex: Optional[int]=None
     plt.xlabel('Simulation Time'); plt.ylabel('Neuron index')
     plt.show()
 
-
 def plot_voltage(voltage: torch.Tensor, n_ex: int=0, n_neuron: int=0, time: Optional[Tuple[int, int]]=None,
                  threshold: float=None) -> None:
     # language=rst
@@ -89,7 +88,6 @@ def plot_voltage(voltage: torch.Tensor, n_ex: int=0, n_neuron: int=0, time: Opti
     :param time: Plot spiking activity of neurons between the given range of time.
     :param threshold: Neuron spiking threshold.
     """
-
     assert (n_ex >= 0 and n_neuron >= 0)
     assert (n_ex < voltage.shape[0] and n_neuron < voltage.shape[1])
 

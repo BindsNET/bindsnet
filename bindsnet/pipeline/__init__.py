@@ -2,14 +2,14 @@ import time
 import torch
 import matplotlib.pyplot as plt
 
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 from ..network import Network
 from ..encoding import bernoulli
 from ..network.nodes import Input
 from ..environment import Environment
 from ..network.monitors import Monitor
-from ..analysis.plotting import plot_spikes, plot_voltages
+from ..analysis import plot_spikes, plot_voltages
 
 plt.ion()
 
@@ -21,8 +21,8 @@ class Pipeline:
     action.
     """
 
-    def __init__(self, network: Network, environment: Environment, encoding: Callable=bernoulli,
-                 action_function: Optional[Callable]=None, **kwargs):
+    def __init__(self, network: Network, environment: Environment, encoding: Callable = bernoulli,
+                 action_function: Optional[Callable] = None, **kwargs):
         # language=rst
         """
         Initializes the pipeline.
@@ -48,10 +48,6 @@ class Pipeline:
         self.env = environment
         self.encoding = encoding
         self.action_function = action_function
-
-        self.obs = None
-        self.reward = None
-        self.done = None
 
         self.iteration = 0
         self.history_index = 1
@@ -91,6 +87,12 @@ class Pipeline:
         # Set up for multiple layers of input layers.
         self.encoded = {key: torch.Tensor() for key, val in network.layers.items() if type(val) == Input}
 
+        self.obs = None
+        self.reward = None
+        self.done = None
+
+        self.voltage_record = None
+
         self.first = True
         self.clock = time.time()
 
@@ -115,6 +117,10 @@ class Pipeline:
         # language=rst
         """
         Run an iteration of the pipeline.
+
+        Keyword arguments:
+
+        :param Dict[str, torch.Tensor] clamp: Mapping from layer names to neurons to clamping to spiking.
         """
         clamp = kwargs.get('clamp', {})
 
@@ -132,12 +138,12 @@ class Pipeline:
 
         # Choose action based on output neuron spiking.
         if self.action_function is not None:
-            action = self.action_function(self, output=self.output)
+            a = self.action_function(self, output=self.output)
         else:
-            action = None
+            a = None
 
         # Run a step of the environment.
-        self.obs, self.reward, self.done, info = self.env.step(action)
+        self.obs, self.reward, _, info = self.env.step(a)
 
         # Store frame of history and encode the inputs.
         if len(self.history) > 0:
@@ -166,9 +172,9 @@ class Pipeline:
         Plot the processed observation after difference against history
         """
         if self.obs_im is None and self.obs_ax is None:
-            fig, self.obs_ax = plt.subplots();
+            fig, self.obs_ax = plt.subplots()
             self.obs_ax.set_title('Observation')
-            self.obs_ax.set_xticks(());
+            self.obs_ax.set_xticks(())
             self.obs_ax.set_yticks(())
             self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap='gray')
         else:
@@ -198,9 +204,9 @@ class Pipeline:
     def update_history(self) -> None:
         # language=rst
         """
-        Updates the observations inside history by performing subtraction from most recent observation and the sum of
+        Updates the observations inside history by performing subtraction from  most recent observation and the sum of
         previous observations. If there are not enough observations to take a difference from, simply store the
-        observation without any subtraction.
+        observation without any differencing.
         """
         # Recording initial observations
         if self.iteration < len(self.history) * self.delta:
@@ -221,7 +227,9 @@ class Pipeline:
     def update_index(self) -> None:
         # language=rst
         """
-        Updates the index to keep track of history.
+        Updates the index to keep track of history. For example: history = 4, delta = 3 will produce self.history = {1,
+        4, 7, 10} and self.history_index will be updated according to self.delta and will wrap around the history
+        dictionary.
         """
         if self.iteration % self.delta == 0:
             if self.history_index != max(self.history.keys()):
@@ -230,12 +238,12 @@ class Pipeline:
             else:
                 self.history_index = (self.history_index % max(self.history.keys())) + 1
 
-    def reset_(self) -> None:
+    def _reset(self) -> None:
         # language=rst
         """
         Reset the pipeline.
         """
         self.env.reset()
-        self.network.reset_()
+        self.network._reset()
         self.iteration = 0
         self.history = {i: torch.Tensor() for i in self.history}

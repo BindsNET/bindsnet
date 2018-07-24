@@ -1,15 +1,14 @@
 import torch
-
-from bindsnet.datasets import MNIST
-from bindsnet.network import Network
-from bindsnet.pipeline import Pipeline
-from bindsnet.learning import m_stdp_et
-from bindsnet.models import DiehlAndCook2015
-from bindsnet.network.topology import Connection
-from bindsnet.encoding import poisson, bernoulli
-from bindsnet.network.nodes import Input, LIFNodes
-from bindsnet.environment import DatasetEnvironment, GymEnvironment
-from bindsnet.pipeline.action import select_multinomial, select_random
+from bindsnet.environment       import *
+from bindsnet.encoding          import *
+from bindsnet.pipeline.action   import *
+from bindsnet.datasets          import MNIST
+from bindsnet.network           import Network
+from bindsnet.pipeline          import Pipeline
+from bindsnet.learning          import m_stdp_et
+from bindsnet.network.topology  import Connection
+from bindsnet.network.nodes     import Input, LIFNodes
+from bindsnet.models            import DiehlAndCook2015
 
 
 class TestPipeline:

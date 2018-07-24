@@ -2,8 +2,8 @@ from typing import Optional
 
 import torch
 
-from ..learning import post_pre
 from ..network import Network
+from ..learning import post_pre
 from ..network.topology import Connection
 from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes
 
@@ -102,7 +102,7 @@ class DiehlAndCook2015(Network):
                                        decay=Ae_Ai_decay),
                             source='Ae', target='Ai')
 
-        w= -self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons)))
+        w = -self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons)))
         self.add_connection(Connection(source=self.layers['Ai'], target=self.layers['Ae'], w=w, wmin=-self.inh, wmax=0,
                                        decay=Ai_Ae_decay),
                             source='Ai', target='Ae')

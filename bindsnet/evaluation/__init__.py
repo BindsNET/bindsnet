@@ -135,8 +135,7 @@ def ngram(spikes: torch.Tensor, ngram_scores: Dict[Tuple[int, ...], torch.Tensor
         for t in range(activity.size()[0]):
             ordering = torch.nonzero(activity[t].view(-1))
             if ordering.numel() > 0:
-                ordering = ordering[:, 0].tolist()
-                fire_order += ordering
+                fire_order += ordering[:, 0].tolist()
 
         # Consider all n-gram sequences.
         for j in range(len(fire_order) - n):

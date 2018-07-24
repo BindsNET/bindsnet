@@ -1,22 +1,23 @@
-import torch
-
 from typing import Dict
 
-from .nodes import Nodes, Input
+import torch
+
+from .nodes import Input, Nodes
 from .topology import AbstractConnection
 from .monitors import AbstractMonitor
 
 
-def load_network(file_name: str) -> None:
+def load_network(fname: str) -> 'Network':
     # language=rst
     """
     Loads serialized network object from disk.
-    
-    :param file_name: Path to serialized network object on disk.
+
+    :param fname: Path to serialized network object on disk.
+    :return:
     """
     try:
-        with open(file_name, 'rb') as f:
-            return torch.load(open(file_name, 'rb'))
+        with open(fname, 'rb') as f:
+            return torch.load(open(fname, 'rb'))
     except FileNotFoundError:
         print('Network not found on disk.')
 
@@ -24,47 +25,48 @@ def load_network(file_name: str) -> None:
 class Network:
     # language=rst
     """
-    Central object of the ``bindsnet`` package. Responsible for the simulation and interaction of nodes and connections.
-    
+    Most important object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and
+    connections.
+
     **Example:**
-    
+
     .. code-block:: python
-    
+
         import torch
         import matplotlib.pyplot as plt
-        
+
         from bindsnet         import encoding
         from bindsnet.network import Network, nodes, topology, monitors
-        
+
         network = Network(dt=1.0)  # Instantiates network.
-        
+
         X = nodes.Input(100)  # Input layer.
         Y = nodes.LIFNodes(100)  # Layer of LIF neurons.
         C = topology.Connection(source=X, target=Y, w=torch.rand(X.n, Y.n))  # Connection from X to Y.
-        
+
         # Spike monitor objects.
         M1 = monitors.Monitor(obj=X, state_vars=['s'])
         M2 = monitors.Monitor(obj=Y, state_vars=['s'])
-        
+
         # Add everything to the network object.
         network.add_layer(layer=X, name='X')
         network.add_layer(layer=Y, name='Y')
         network.add_connection(connection=C, source='X', target='Y')
         network.add_monitor(monitor=M1, name='X')
         network.add_monitor(monitor=M2, name='Y')
-        
+
         # Create Poisson-distributed spike train inputs.
         data = 15 * torch.rand(1, 100)  # Generate random Poisson rates for 100 input neurons.
-        trains = encoding.poisson_loader(data=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
-        
+        trains = encoding.get_poisson(data=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
+
         # Simulate network on generated spike trains.
         for train in trains:
             inpts = {'X' : train}  # Create inputs mapping.
             network.run(inpts=inpts, time=5000)  # Run network simulation.
-            
+
         # Plot spikes of input and output layers.
         spikes = {'X' : M1.get('s'), 'Y' : M2.get('s')}
-        
+
         fig, axes = plt.subplots(2, 1, figsize=(12, 7))
         for i, layer in enumerate(spikes):
             axes[i].matshow(spikes[layer], cmap='binary')
@@ -72,15 +74,16 @@ class Network:
             axes[i].set_xlabel('Time'); axes[i].set_ylabel('Index of neuron')
             axes[i].set_xticks(()); axes[i].set_yticks(())
             axes[i].set_aspect('auto')
-        
+
         plt.tight_layout(); plt.show()
     """
-    def __init__(self, dt: float=1.0) -> None:
+
+    def __init__(self, dt: float = 1.0):
         # language=rst
         """
-        Initializes network object. 
-        
-        :param dt: Simulation time step. All other objects' time constants are relative to this value.
+        Initializes network object.
+
+        :param dt: Simulation timestep. All other objects' time constants are relative to this value.
         """
         self.dt = dt
         self.layers = {}
@@ -91,7 +94,7 @@ class Network:
         # language=rst
         """
         Adds a layer of nodes to the network.
-        
+
         :param layer: A subclass of the ``Nodes`` object.
         :param name: Logical name of layer.
         """
@@ -102,7 +105,7 @@ class Network:
         """
         Adds a connection between layers of nodes to the network.
 
-        :param connection: An instance of class ``AbstractConnection``.
+        :param connection: An instance of class ``Connection``.
         :param source: Logical name of the connection's source layer.
         :param target: Logical name of the connection's target layer.
         """
@@ -112,24 +115,24 @@ class Network:
         # language=rst
         """
         Adds a monitor on a network object to the network.
-        
+
         :param monitor: An instance of class ``Monitor``.
         :param name: Logical name of monitor object.
         """
         self.monitors[name] = monitor
 
-    def save(self, file_name: str) -> None:
+    def save(self, fname: str) -> None:
         # language=rst
         """
         Serializes the network object to disk.
-        
-        :param file_name: Path to store serialized network object on disk.
-        
+
+        :param fname: Path to store serialized network object on disk.
+
         **Example:**
-        
+
         .. code-block:: python
-        
-            import torch                                         
+
+            import torch
             import matplotlib.pyplot as plt
 
             from pathlib          import Path
@@ -151,13 +154,12 @@ class Network:
             # Save the network to disk.
             network.save(str(Path.home()) + '/network.p')
         """
-        with open(file_name, 'wb') as f:
-            torch.save(self, f)
+        torch.save(self, open(fname, 'wb'))
 
     def get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
         """
-        Fetches outputs from network layers for input to downstream layers.
+        Fetches outputs from network layers to use as input to downstream layers.
 
         :return: Inputs to all layers for the current iteration.
         """
@@ -181,38 +183,38 @@ class Network:
         # language=rst
         """
         Simulation network for given inputs and time.
-        
-        :param inpts: Dictionary of ``torch.Tensor``s of input spikes or current.
+
+        :param inpts: Dictionary of ``Tensor``s of shape ``[time, n_input]``.
         :param time: Simulation time.
 
         Keyword arguments:
 
-        :param Dict[str,torch.Tensor] clamps: Mapping of layer names to neurons which to "clamp" to spiking.
+        :param Dict[str, Union[int, torch.Tensor]] clamps: Mapping of layer names to neurons to "clamp" to spiking.
         :param float reward: Scalar value used in reward-modulated learning.
-        :param Dict[str,torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
-               clamp to zero.
-        
+        :param Dict[str, torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
+                                              clamp to zero.
+
         **Example:**
-    
+
         .. code-block:: python
-        
+
             import torch
             import matplotlib.pyplot as plt
-            
+
             from bindsnet.network import *
             from bindsnet.network.monitors import Monitor
-            
+
             # Build simple network.
             network = Network()
             network.add_layer(Input(500), name='I')
             network.add_monitor(Monitor(network.layers['I'], state_vars=['s']), 'I')
-            
+
             # Generate spikes by running Bernoulli trials on Uniform(0, 0.5) samples.
             spikes = torch.bernoulli(0.5 * torch.rand(500, 500))
-            
+
             # Run network simulation.
             network.run(inpts={'I' : spikes}, time=500)
-            
+
             # Look at input spiking activity.
             spikes = network.monitors['I'].get('s')
             plt.matshow(spikes, cmap='binary')
@@ -226,7 +228,7 @@ class Network:
         reward = kwargs.get('reward', None)
         masks = kwargs.get('masks', {})
         
-        # Effective number of timesteps.
+        # Effective number of timesteps
         timesteps = int(time / self.dt)
 
         # Get input to all layers.
@@ -261,16 +263,16 @@ class Network:
         for c in self.connections:
             self.connections[c].normalize()
 
-    def reset_(self) -> None:
+    def _reset(self) -> None:
         # language=rst
         """
         Reset state variables of objects in network.
         """
         for layer in self.layers:
-            self.layers[layer].reset_()
+            self.layers[layer]._reset()
 
         for connection in self.connections:
-            self.connections[connection].reset_()
+            self.connections[connection]._reset()
 
         for monitor in self.monitors:
-            self.monitors[monitor].reset_()
+            self.monitors[monitor]._reset()

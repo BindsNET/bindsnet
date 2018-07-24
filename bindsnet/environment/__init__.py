@@ -1,6 +1,9 @@
+import os
+import sys
 import gym
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
 
 from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
@@ -89,7 +92,7 @@ class DatasetEnvironment(Environment):
         self.dataset = dataset
         self.train = train
         self.time = time
-
+        
         # Keyword arguments.
         self.intensity = kwargs.get('intensity', 1)
         self.max_prob = kwargs.get('max_prob', 1)
@@ -104,7 +107,7 @@ class DatasetEnvironment(Environment):
         else:
             self.data, self.labels = self.dataset.get_test()
             self.label_loader = iter(self.labels)
-
+        
         self.env = iter(self.data)
 
     def step(self, a: int = None) -> Tuple[torch.Tensor, int, bool, Dict[str, int]]:
@@ -123,13 +126,13 @@ class DatasetEnvironment(Environment):
             self.env = iter(self.data)
             self.label_loader = iter(self.labels)
             self.obs = next(self.env)
-
+        
         # Preprocess observation.
         self.preprocess()
-
+        
         # Info dictionary contains label of MNIST digit.
-        info = {'label': next(self.label_loader)}
-
+        info = {'label' : next(self.label_loader)}
+        
         return self.obs, 0, False, info
 
     def reset(self) -> None:
@@ -199,11 +202,12 @@ class GymEnvironment(Environment):
         self.name = name
         self.env = gym.make(name)
         self.action_space = self.env.action_space
-
+        
         # Keyword arguments.
         self.max_prob = kwargs.get('max_prob', 1)
 
         self.obs = None
+        self.reward = None
 
         assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 
@@ -232,7 +236,7 @@ class GymEnvironment(Environment):
         # Call gym's environment reset function.
         self.obs = self.env.reset()
         self.preprocess()
-
+        
         return self.obs
 
     def render(self) -> None:
@@ -261,10 +265,10 @@ class GymEnvironment(Environment):
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = self.obs[26:104, :]
             self.obs = binary_image(self.obs)
-        else:  # Default pre-processing step
+        else: # Default pre-processing step
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = binary_image(self.obs)
-
+            
         self.obs = torch.from_numpy(self.obs).float()
 
     def reshape(self) -> torch.Tensor:

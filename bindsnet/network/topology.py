@@ -3,11 +3,12 @@ import warnings
 import numpy as np
 import torch.nn.functional as F
 
-from abc import ABC, abstractmethod
 from typing import Union, Tuple
+from abc import ABC, abstractmethod
 from torch.nn.modules.utils import _pair
 
-from ..network.nodes import Nodes
+from .nodes import Nodes
+from ..learning import m_stdp, m_stdp_et
 
 
 class AbstractConnection(ABC):
@@ -51,13 +52,13 @@ class AbstractConnection(ABC):
         self.norm = kwargs.get('norm', None)
         self.decay = kwargs.get('decay', None)
 
-        # For reward-modulated STDP rules.
-        self.e_trace = 0
-        self.tc_e_trace = 0.04
-        self.p_plus = 0
-        self.tc_plus = 0.05
-        self.p_minus = 0
-        self.tc_minus = 0.05
+        if self.update_rule is m_stdp or self.update_rule is m_stdp_et:
+            self.e_trace = 0
+            self.tc_e_trace = 0.04
+            self.p_plus = 0
+            self.tc_plus = 0.05
+            self.p_minus = 0
+            self.tc_minus = 0.05
 
     @abstractmethod
     def compute(self, s: torch.Tensor) -> None:
@@ -184,7 +185,7 @@ class Connection(AbstractConnection):
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super()._reset()
 
 
 class Conv2dConnection(AbstractConnection):
@@ -243,7 +244,6 @@ class Conv2dConnection(AbstractConnection):
         assert tuple(target.shape) == shape, error
 
         self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, *self.kernel_size))
-
         self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
@@ -282,7 +282,7 @@ class Conv2dConnection(AbstractConnection):
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super()._reset()
 
 
 class SparseConnection(AbstractConnection):
@@ -318,8 +318,7 @@ class SparseConnection(AbstractConnection):
         self.sparsity = kwargs.get('sparsity', None)
 
         assert (self.w is not None and self.sparsity is None or
-                self.w is None and self.sparsity is not None), \
-            'Only one of "weights" or "sparsity" must be specified'
+                self.w is None and self.sparsity is not None), 'Only one of "weights" or "sparsity" must be specified'
 
         if self.w is None and self.sparsity is not None:
             i = torch.bernoulli(1 - self.sparsity * torch.ones(*source.shape, *target.shape))
@@ -359,4 +358,4 @@ class SparseConnection(AbstractConnection):
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super()._reset()

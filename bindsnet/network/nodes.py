@@ -1,6 +1,6 @@
 import torch
 
-from operator import mul
+from operator  import mul
 from functools import reduce
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional
@@ -11,7 +11,6 @@ class Nodes(ABC):
     """
     Abstract base class for groups of neurons.
     """
-
     @abstractmethod
     def __init__(self, n: Optional[int]=None, shape: Optional[Iterable[int]]=None, traces: bool=False,
                  trace_tc: float=5e-2) -> None:
@@ -29,14 +28,14 @@ class Nodes(ABC):
         assert n is not None or shape is not None, 'Must provide either no. of neurons or shape of layer'
 
         if n is None:
-            self.n = reduce(mul, shape)  # No. of neurons product of shape.
+            self.n = reduce(mul, shape)          # No. of neurons product of shape.
         else:
-            self.n = n  # No. of neurons provided.
+            self.n = n                           # No. of neurons provided.
 
         if shape is None:
-            self.shape = [self.n]  # Shape is equal to the size of the layer.
+            self.shape = [self.n]                # Shape is equal to the size of the layer.
         else:
-            self.shape = shape  # Shape is passed in as an argument.
+            self.shape = shape                   # Shape is passed in as an argument.
 
         assert self.n == reduce(mul, self.shape), 'No. of neurons and shape do not match'
 
@@ -44,8 +43,8 @@ class Nodes(ABC):
         self.s = torch.zeros(self.shape).byte()  # Spike occurrences.
 
         if self.traces:
-            self.x = torch.zeros(self.shape)  # Firing traces.
-            self.trace_tc = trace_tc  # Rate of decay of spike trace time constant.
+            self.x = torch.zeros(self.shape)     # Firing traces.
+            self.trace_tc = trace_tc             # Rate of decay of spike trace time constant.
 
     @abstractmethod
     def step(self, inpts: torch.Tensor, dt: float) -> None:
@@ -71,7 +70,7 @@ class Nodes(ABC):
         self.s = torch.zeros(self.shape).byte()  # Spike occurrences.
 
         if self.traces:
-            self.x = torch.zeros(self.shape)  # Firing traces.
+            self.x = torch.zeros(self.shape)     # Firing traces.
 
 
 class Input(Nodes):
@@ -111,7 +110,7 @@ class Input(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super()._reset()
 
 
 class McCullochPitts(Nodes):
@@ -135,8 +134,8 @@ class McCullochPitts(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc)
 
-        self.thresh = thresh  # Spike threshold voltage.
-        self.v = torch.zeros(self.shape)  # Neuron voltages.
+        self.thresh = thresh             # Spike threshold voltage.
+        self.v = torch.zeros(self.shape) # Neuron voltages.
 
     def step(self, inpts: torch.Tensor, dt: float) -> None:
         # language=rst
@@ -156,7 +155,7 @@ class McCullochPitts(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super()._reset()
 
 
 class IFNodes(Nodes):
@@ -181,12 +180,12 @@ class IFNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc)
 
-        self.reset = reset  # Post-spike reset voltage.
+        self.reset = reset    # Post-spike reset voltage.
         self.thresh = thresh  # Spike threshold voltage.
         self.refrac = refrac  # Post-spike refractory period.
 
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
-        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+        self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
 
     def step(self, inpts: torch.Tensor, dt: float) -> None:
         # language=rst
@@ -216,8 +215,8 @@ class IFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
-        self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
+        super()._reset()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
@@ -247,11 +246,11 @@ class LIFNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc)
 
-        self.rest = rest  # Rest voltage.
-        self.reset = reset  # Post-spike reset voltage.
-        self.thresh = thresh  # Spike threshold voltage.
-        self.refrac = refrac  # Post-spike refractory period.
-        self.decay = decay  # Rate of decay of neuron voltage.
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay     # Rate of decay of neuron voltage.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -287,7 +286,7 @@ class LIFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super()._reset()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
@@ -320,15 +319,15 @@ class CurrentLIFNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc)
 
-        self.rest = rest  # Rest voltage.
-        self.reset = reset  # Post-spike reset voltage.
-        self.thresh = thresh  # Spike threshold voltage.
-        self.refrac = refrac  # Post-spike refractory period.
-        self.decay = decay  # Rate of decay of neuron voltage.
-        self.i_decay = i_decay  # Rate of decay of synaptic input current.
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay     # Rate of decay of neuron voltage.
+        self.i_decay = i_decay # Rate of decay of synaptic input current.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.i = torch.zeros(self.shape)  # Synaptic input currents.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
     def step(self, inpts: torch.Tensor, dt: float) -> None:
@@ -364,9 +363,9 @@ class CurrentLIFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super()._reset()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.i = torch.zeros(self.shape)  # Synaptic input currents.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
@@ -398,16 +397,16 @@ class AdaptiveLIFNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc)
 
-        self.rest = rest  # Rest voltage.
-        self.reset = reset  # Post-spike reset voltage.
-        self.thresh = thresh  # Spike threshold voltage.
-        self.refrac = refrac  # Post-spike refractory period.
-        self.decay = decay  # Rate of decay of neuron voltage.
-        self.theta_plus = theta_plus  # Constant threshold increase on spike.
+        self.rest = rest                # Rest voltage.
+        self.reset = reset              # Post-spike reset voltage.
+        self.thresh = thresh            # Spike threshold voltage.
+        self.refrac = refrac            # Post-spike refractory period.
+        self.decay = decay              # Rate of decay of neuron voltage.
+        self.theta_plus = theta_plus    # Constant threshold increase on spike.
         self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.theta = torch.zeros(self.shape)  # Adaptive thresholds.
+        self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
     def step(self, inpts: torch.Tensor, dt: float) -> None:
@@ -443,7 +442,7 @@ class AdaptiveLIFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super()._reset()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
@@ -479,18 +478,18 @@ class AdaptiveCurrentLIFNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc)
 
-        self.rest = rest  # Rest voltage.
-        self.reset = reset  # Post-spike reset voltage.
-        self.thresh = thresh  # Spike threshold voltage.
-        self.refrac = refrac  # Post-spike refractory period.
-        self.decay = decay  # Rate of decay of neuron voltage.
-        self.i_decay = i_decay  # Rate of decay of synaptic input current.
-        self.theta_plus = theta_plus  # Constant threshold increase on spike.
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay # Rate of decay of neuron voltage.
+        self.i_decay = i_decay # Rate of decay of synaptic input current.
+        self.theta_plus = theta_plus    # Constant threshold increase on spike.
         self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.i = torch.zeros(self.shape)  # Synaptic input currents.
-        self.theta = torch.zeros(self.shape)  # Adaptive thresholds.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
+        self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
     def step(self, inpts: torch.Tensor, dt: float) -> None:
@@ -516,7 +515,7 @@ class AdaptiveCurrentLIFNodes(Nodes):
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta) & (self.refrac_count == 0)
 
-        # Refractoriness, voltage reset, and adaptive thresholds.
+         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
         self.theta += self.theta_plus * self.s.float()
@@ -535,9 +534,9 @@ class AdaptiveCurrentLIFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super()._reset()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.i = torch.zeros(self.shape)  # Synaptic input currents.
+        self.i = torch.zeros(self.shape)             # Synaptic input currents.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
 
@@ -569,16 +568,16 @@ class DiehlAndCookNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc)
 
-        self.rest = rest  # Rest voltage.
-        self.reset = reset  # Post-spike reset voltage.
-        self.thresh = thresh  # Spike threshold voltage.
-        self.refrac = refrac  # Post-spike refractory period.
-        self.decay = decay  # Rate of decay of neuron voltage.
-        self.theta_plus = theta_plus  # Constant threshold increase on spike.
+        self.rest = rest                # Rest voltage.
+        self.reset = reset              # Post-spike reset voltage.
+        self.thresh = thresh            # Spike threshold voltage.
+        self.refrac = refrac            # Post-spike refractory period.
+        self.decay = decay              # Rate of decay of neuron voltage.
+        self.theta_plus = theta_plus    # Constant threshold increase on spike.
         self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.theta = torch.zeros(self.shape)  # Adaptive thresholds.
+        self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
     def step(self, inpts: torch.Tensor, dt: float) -> None:
@@ -597,7 +596,7 @@ class DiehlAndCookNodes(Nodes):
         self.refrac_count[self.refrac_count != 0] -= dt
 
         # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * inpts
+        self.v += (self.refrac_count  == 0).float() * inpts
 
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta)
@@ -621,7 +620,7 @@ class DiehlAndCookNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super()._reset()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
@@ -652,11 +651,11 @@ class IzhikevichNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc)
 
-        self.rest = rest  # Rest voltage.
-        self.reset = reset  # Post-spike reset voltage.
-        self.thresh = thresh  # Spike threshold voltage.
-        self.refrac = refrac  # Post-spike refractory period.
-        self.decay = decay  # Rate of decay of neuron voltage.
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay     # Rate of decay of neuron voltage.
 
         if excitatory:
             self.r = torch.rand(n)
@@ -672,7 +671,7 @@ class IzhikevichNodes(Nodes):
             self.d = 2 * torch.ones(n)
 
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
-        self.u = self.b * self.v  # Neuron recovery.
+        self.u = self.b * self.v            # Neuron recovery.
 
     def step(self, inpts: torch.Tensor, dt: float) -> None:
         # language=rst
@@ -701,6 +700,6 @@ class IzhikevichNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super()._reset()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.u = self.b * self.v  # Neuron recovery.
+        self.u = self.b * self.v                     # Neuron recovery.

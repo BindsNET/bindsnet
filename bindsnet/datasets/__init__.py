@@ -672,7 +672,7 @@ class CIFAR100(Dataset):
         tar.extractall(path=self.path)
         tar.close()
 
-    def process_data(self, file_names: str) -> Tuple[torch.Tensor, torch.Tensor]:
+    def process_data(self, file_names: List[str]) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
         """
         Opens files of CIFAR-100 data and processes them into :code:`numpy` arrays.
