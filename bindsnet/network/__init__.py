@@ -263,16 +263,16 @@ class Network:
         for c in self.connections:
             self.connections[c].normalize()
 
-    def _reset(self) -> None:
+    def reset_(self) -> None:
         # language=rst
         """
         Reset state variables of objects in network.
         """
         for layer in self.layers:
-            self.layers[layer]._reset()
+            self.layers[layer].reset_()
 
         for connection in self.connections:
-            self.connections[connection]._reset()
+            self.connections[connection].reset_()
 
         for monitor in self.monitors:
-            self.monitors[monitor]._reset()
+            self.monitors[monitor].reset_()

@@ -110,7 +110,7 @@ class Input(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
 
 
 class McCullochPitts(Nodes):
@@ -155,7 +155,7 @@ class McCullochPitts(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
 
 
 class IFNodes(Nodes):
@@ -215,7 +215,7 @@ class IFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
@@ -286,7 +286,7 @@ class LIFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
@@ -363,7 +363,7 @@ class CurrentLIFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.i = torch.zeros(self.shape)             # Synaptic input currents.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -442,7 +442,7 @@ class AdaptiveLIFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
@@ -534,7 +534,7 @@ class AdaptiveCurrentLIFNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.i = torch.zeros(self.shape)             # Synaptic input currents.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -620,7 +620,7 @@ class DiehlAndCookNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
@@ -700,6 +700,6 @@ class IzhikevichNodes(Nodes):
         """
         Resets relevant state variables.
         """
-        super()._reset()
+        super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.u = self.b * self.v                     # Neuron recovery.

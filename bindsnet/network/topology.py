@@ -184,7 +184,7 @@ class Connection(AbstractConnection):
         """
         Contains resetting logic for the connection.
         """
-        super()._reset()
+        super().reset_()
 
 
 class Conv2dConnection(AbstractConnection):
@@ -281,7 +281,7 @@ class Conv2dConnection(AbstractConnection):
         """
         Contains resetting logic for the connection.
         """
-        super()._reset()
+        super().reset_()
 
 
 class SparseConnection(AbstractConnection):
@@ -357,4 +357,4 @@ class SparseConnection(AbstractConnection):
         """
         Contains resetting logic for the connection.
         """
-        super()._reset()
+        super().reset_()

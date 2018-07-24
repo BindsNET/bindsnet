@@ -455,7 +455,7 @@ class CIFAR10(Dataset):
 
     url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
 
-    def __init__(self, path: str=os.path.join('data', 'CIFAR10'), download: bool=False):
+    def __init__(self, path: str=os.path.join('data', 'CIFAR10'), download: bool=False) -> None:
         # language=rst
         """
         Constructor for the ``CIFAR10`` object. Makes the data directory if it doesn't already exist.
@@ -498,7 +498,7 @@ class CIFAR10(Dataset):
                 print('Loading training images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
 
-        return torch.Tensor(images), torch.Tensor(labels)
+        return images, labels
 
     def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
@@ -532,7 +532,7 @@ class CIFAR10(Dataset):
                 print('Loading test images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
 
-        return torch.Tensor(images), torch.Tensor(labels)
+        return images, labels
 
     def _download(self, url: str, file_name: str) -> None:
         # language=rst
@@ -562,7 +562,7 @@ class CIFAR10(Dataset):
                 d['labels'].append(temp[b'labels'])
 
         data, labels = np.concatenate(d['data']), np.concatenate(d['labels'])
-        return torch.from_numpy(data), torch.from_numpy(labels)
+        return torch.from_numpy(data).float(), torch.from_numpy(labels)
 
 
 class CIFAR100(Dataset):
@@ -623,7 +623,7 @@ class CIFAR100(Dataset):
                 print('Loading training images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
 
-        return torch.Tensor(images), torch.Tensor(labels)
+        return images, labels
 
     def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
@@ -657,7 +657,7 @@ class CIFAR100(Dataset):
                 print('Loading test images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
 
-        return torch.Tensor(images), torch.Tensor(labels)
+        return images, labels
 
     def _download(self, url: str, filename: str) -> None:
         # language=rst
@@ -688,4 +688,4 @@ class CIFAR100(Dataset):
                 d['labels'].append(temp[b'fine_labels'])
 
         data, labels = np.concatenate(d['data']), np.concatenate(d['labels'])
-        return torch.from_numpy(data), torch.from_numpy(labels)
+        return torch.from_numpy(data).float(), torch.from_numpy(labels)
