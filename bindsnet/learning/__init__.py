@@ -27,22 +27,10 @@ def post_pre(conn: AbstractConnection, **kwargs) -> None:
         out_channels, _, kernel_height, kernel_width = conn.w.size()
         padding, stride = conn.padding, conn.stride
         
-        x_source = im2col_indices(conn.source.x,
-                                  kernel_height,
-                                  kernel_width,
-                                  padding=padding,
-                                  stride=stride)
-
-        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels,
-                                                             -1)
-        s_source = im2col_indices(conn.source.s,
-                                  kernel_height,
-                                  kernel_width,
-                                  padding=padding,
-                                  stride=stride).float()
-
-        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels,
-                                                             -1).float()
+        x_source = im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
+        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        s_source = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
+        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
         
         # Post-synaptic.
         post = s_target @ x_source.t()
