@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from torch.nn.modules.utils import _pair
 
 from .nodes import Nodes
-from ..learning import m_stdp, m_stdp_et
 
 
 class AbstractConnection(ABC):
@@ -52,13 +51,13 @@ class AbstractConnection(ABC):
         self.norm = kwargs.get('norm', None)
         self.decay = kwargs.get('decay', None)
 
-        if self.update_rule is m_stdp or self.update_rule is m_stdp_et:
-            self.e_trace = 0
-            self.tc_e_trace = 0.04
-            self.p_plus = 0
-            self.tc_plus = 0.05
-            self.p_minus = 0
-            self.tc_minus = 0.05
+        # For reward-modulated learning rules.
+        self.e_trace = 0
+        self.tc_e_trace = 0.04
+        self.p_plus = 0
+        self.tc_plus = 0.05
+        self.p_minus = 0
+        self.tc_minus = 0.05
 
     @abstractmethod
     def compute(self, s: torch.Tensor) -> None:
