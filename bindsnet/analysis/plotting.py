@@ -238,22 +238,25 @@ def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time=
     return ims, axes
 
 
-def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
+def plot_weights(weights: torch.Tensor, wmin: Optional[float] = None, wmax: Optional[float] = None,
+                 im: Optional[AxesImage] = None, figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
+    # language=rst
     """
     Plot a connection weight matrix.
 
-    Inputs:
-
-        | :code:`weights` (:code:`torch.Tensor`): Weight matrix of Connection object.
-        | :code:`wmin` (:code:`float`): Minimum allowed weight value.
-        | :code:`wmax` (:code:`float`): Maximum allowed weight value.
-        | :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+    :param weights: Weight matrix of ``Connection`` object.
+    :param wmin: Minimum allowed weight value.
+    :param wmax: Maximum allowed weight value.
+    :param im: Used for re-drawing the weights plot.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :return: ``AxesImage`` for re-drawing the weights plot.
     """
+    if wmin is None:
+        wmin = weights.min()
+
+    if wmax is None:
+        wmax = weights.max()
+
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title('Connection weights')
