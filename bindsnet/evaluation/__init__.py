@@ -1,3 +1,5 @@
+from itertools import product
+
 import torch
 
 from typing import Optional, Tuple, Dict
@@ -151,7 +153,7 @@ def update_ngram_scores(spikes: torch.Tensor, labels: torch.Tensor, n_labels: in
                         ngram_scores: Dict[Tuple[int, ...], torch.Tensor]) -> Dict[Tuple[int, ...], torch.Tensor]:
     # language=rst
     """
-    Updates ngram scores.
+    Updates ngram scores by adding the count of each spike sequence of length n from the past ``n_examples``.
 
     :param spikes: Spikes of shape ``(n_examples, time, n_neurons)``.
     :param labels: The ground truth labels of shape ``(n_examples)``.
@@ -161,22 +163,25 @@ def update_ngram_scores(spikes: torch.Tensor, labels: torch.Tensor, n_labels: in
     :return: Dictionary mapping n-grams to vectors of per-class spike counts.
     """
     for i, activity in enumerate(spikes):
-        # Obtain firing order for spiking activity
+        # Obtain firing order for spiking activity.
         fire_order = []
 
-        # Aggregate all of the firing neurons' indices
-        for t in range(activity.size()[0]):
-            ordering = torch.nonzero(activity[t].view(-1))
-            if ordering.numel() > 0:
-                ordering = ordering[:, 0].tolist()
-                fire_order += ordering
+        # Aggregate all of the firing neurons' indices.
+        for t in range(spikes.size(1)):
+            # Gets the indices of the neurons which fired on this timestep.
+            ordering = torch.nonzero(activity[t]).view(-1)
+            if ordering.numel() > 0:  # If there was more than one spike...
+                # Add the indices of spiked neurons to the fire ordering.
+                ordering = ordering.tolist()
+                fire_order.append(ordering)
 
-        # Add counts for every n-gram
-        for j in range(len(fire_order) - n):
-            # For every ordering based on n
-            if tuple(fire_order[j:j + n]) not in ngram_scores:
-                ngram_scores[tuple(fire_order[j:j + n])] = torch.zeros(n_labels)
+        # Check every sequence of length n.
+        for order in zip(*(fire_order[k:] for k in range(n))):
+            for sequence in product(*order):
+                print(sequence)
+                if sequence not in ngram_scores:
+                    ngram_scores[sequence] = torch.zeros(n_labels)
 
-            ngram_scores[tuple(fire_order[j:j + n])][int(labels[i])] += 1
+                ngram_scores[sequence][int(labels[i])] += 1
 
     return ngram_scores
