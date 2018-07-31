@@ -51,7 +51,102 @@ def plot_input(image, inpt, label=None, axes=None, ims=None, figsize=(8, 4)):
     return axes, ims
 
 
-def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time={}, n_neurons={}, ims=None, axes=None, figsize=(8, 4.5)):
+def plot_spikes(spikes, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
+    '''
+    Plot spikes for any group(s) of neurons.
+
+    Inputs:
+
+        | :code:`spikes` (:code:`dict(torch.Tensor)`): Contains
+        spiking data for groups of neurons of interest.
+        | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
+        | :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
+        | :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons
+        in the given time range. Default is entire simulation time.
+        | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity
+        of neurons in the given range of neurons. Default is all neurons.
+        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
+
+    Returns:
+
+        | (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
+        | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
+
+    '''
+    n_subplots = len(spikes.keys())
+    spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
+
+    if time is not None:
+        assert len(time) == 2, 'Need (start, stop) values for time argument'
+        assert time[0] < time[1], 'Need start < stop in time argument'
+    else:
+        # Set it for entire duration
+        for key in spikes.keys():
+            time = (0, spikes[key].shape[1])
+            break
+
+    if len(n_neurons.keys()) != 0:
+        assert len(n_neurons.keys()) <= n_subplots, \
+            'n_neurons argument needs fewer entries than n_subplots'
+        assert all(key in spikes.keys() for key in n_neurons.keys()), \
+            'n_neurons keys must be subset of spikes keys'
+
+    # Use all neurons if no argument provided.
+    for key, val in spikes.items():
+        if key not in n_neurons.keys():
+            n_neurons[key] = (0, val.shape[0])
+
+    if not ims:
+        fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
+        ims = []
+
+        if n_subplots == 1:
+            for datum in spikes.items():
+                ims.append(axes.imshow(spikes[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                       time[0]:time[1]],
+                                       cmap='binary'))
+
+                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
+                plt.title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+                plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
+                axes.set_aspect('auto')
+        else:
+            for i, datum in enumerate(spikes.items()):
+                ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                          time[0]:time[1]],
+                                          cmap='binary'))
+
+                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
+                axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+
+            for ax in axes:
+                ax.set_aspect('auto')
+
+        plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
+        plt.tight_layout()
+
+    else:
+        if n_subplots == 1:
+            for datum in spikes.items():
+                ims[0].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+                ims[0].autoscale()
+
+                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
+                axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+
+        else:
+            for i, datum in enumerate(spikes.items()):
+                ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+                ims[i].autoscale()
+
+                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
+                axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+
+    plt.draw()
+    return ims, axes
+
+
+def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], time={}, n_neurons={}, ims=None, axes=None, figsize=(8, 4.5)):
     '''
     Plot spikes for any group(s) of neurons. Default behavior will plot everything.
 
@@ -63,7 +158,7 @@ def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time=
         of interest.
         | :code:`layer_to_monitor` (:code:`dict(str)`): Contains mapping of names for layer to monitors.
         | :code:`layers` (:code:`list(str)`): Contains network's layer names to plot spikes for.
-        | :code:`time` (:code:`dict(tuple(int))`): Plot spiking activity of neurons
+        | :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons
         in the given time range. Default is entire simulation time.
         | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity
         of neurons in the given range of neurons. Default is all neurons.
@@ -77,7 +172,6 @@ def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time=
         | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
 
     '''
-
     assert network is not None or spikes is not None, 'No plotting information'
 
     # Set to all layers if no layers were requested
@@ -100,8 +194,10 @@ def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time=
                     Spikes contain layers: {list(spikes.keys())}"
 
     # Pre-setup plots
-    n_subplots = len(layers)
-    if network is None: # Obtain information from spikes
+    if network is not None:
+        n_subplots = len(layers)
+    else: # Obtain information from spikes
+        n_subplots = len(layers)
         spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
 
     # Set up monitor to layer names
@@ -196,8 +292,8 @@ def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time=
                                    time[layer][0]:time[layer][1]],
                                    cmap='binary'))
 
-                args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+                    args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
+                    axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
 
             for ax in axes:
                 ax.set_aspect('auto')
@@ -454,23 +550,127 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
 
     return ax
 
-def plot_voltages(network=None, voltages=None, layer_to_monitor={}, layers=[], time={}, n_neurons={}, ims=None, axes=None, figsize=(8, 4.5)):
+
+def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None, figsize=(8,4.5)):
+    '''
+    General plotting function for variables being monitored.
+
+    Inputs:
+
+        | :code:`monitor` (:code:`monitors.Monitor`):
+        Contains state variables to be plotted.
+        | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`):
+        Used for re-drawing plots.
+        | :code:`axes` (:code:`list(matplotlib.axes.Axes)`):
+        Used for re-drawing plots.
+        | :code:`labels` (:code:`dict(dict(string))`):
+        Used to set axis labels and titles for plotted variables.
+        | :code:`parameters` (:code:`dict(dict(tuples(int)))`):
+        Set time, number of neurons for plotted variables.
+        | :code:`figsize` (:code:`tuple(int)`):
+        Horizontal, vertical figure size in inches.
+
+    Returns:
+
+        | (:code:`ims` (:code:`list(matplotlib.axes.Axes)):
+        Used for re-drawing plots.
+        | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`):
+        Used for re-drawing plots.
+    '''
+    default = {'xlabel' : 'Simulation time', 'ylabel' : 'Index'}
+
+    if monitor is None:
+        print("Did you forget to provide monitors?")
+        raise TypeError
+
+    if labels is None:
+        labels = {var : {'title' : 'Recording of %s'%(var),
+                         'xlabel' : 'Simulation time',
+                         'ylabel' : 'Index'} for var in monitor.state_vars}
+
+    # Default axis parameters
+    else:
+        for var in monitor.state_vars:
+            for lb in ['title', 'xlabel', 'ylabel']:
+
+                if lb not in labels[var].keys() and lb == 'title':
+                    labels[var][lb] = 'Recording of %s'%var
+
+                elif lb not in labels[var].keys():
+                    labels[var][lb] = default[lb]
+
+    if parameters is None:
+        # Monitor object is of a class in nodes
+        parameters = {var : {'time' : (0, monitor.get(var).shape[1]),
+                           'n_neurons' : (0, monitor.get(var).shape[0]),
+                           'cmap' : 'binary'} for var in monitor.state_vars}
+
+    else:
+        #if type(monitor.obj) in nodes.__dict__.values():
+        for var in monitor.state_vars:
+            if 'time' not in parameters[var].keys():
+                parameters[var]['time'] = (0, monitor.get(var).shape[1])
+
+            if 'n_neurons' not in parameters[var].keys():
+                parameters[var]['n_neurons'] = (0, monitor.get(var).shape[0])
+
+            if 'cmap' not in parameters[var].keys():
+                parameters[var]['cmap'] = 'binary'
+
+    n_subplots = len(monitor.state_vars)
+    if not ims:
+        fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
+        ims = []
+
+        if n_subplots == 1:
+            for var in monitor.state_vars:
+                # For Weights
+                if parameters[var]['cmap'] == 'hot_r' or parameters[var]['cmap'] == 'hot':
+                    ims.append(axes.matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
+                                            parameters[var]['time'][0]:parameters[var]['time'][1]]))
+                else:
+                    ims.append(axes.imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
+                                           parameters[var]['time'][0]:parameters[var]['time'][1]]))
+
+                plt.title(labels[var]['title'])
+                plt.xlabel(labels[var]['xlabel'])
+                plt.ylabel(labels[var]['ylabel'])
+
+            axes.set_aspect('auto')
+
+        else: # Plot each monitor variable at a time
+            for i, var in enumerate(monitor.state_vars):
+                if parameters[var]['cmap'] == 'hot_r' or parameters[var]['cmap'] == 'hot':
+                    ims.append(axes[i].matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
+                                               parameters[var]['time'][0]:parameters[var]['time'][1]]))
+                else:
+                    ims.append(axes[i].imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
+                                              parameters[var]['time'][0]:parameters[var]['time'][1]]))
+
+                axes.set_title(labels[var]['title'])
+                axes.set_xlabel(labels[var]['xlabel'])
+                axes.set_ylabel(labels[var]['ylabel'])
+
+            axes.set_aspect('auto')
+
+    # axes given
+    else:
+        assert(len(ims) == n_subplots)
+
+    return ims, axes
+
+
+def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
     '''
     Plot voltages for any group(s) of neurons.
 
     Inputs:
 
-        | :code:`network` (:code:`bindsnet.Network`): Network containing spiking information
-        and monitors.
         | :code:`voltages` (:code:`dict(torch.Tensor`)): Contains voltage data by neuron layers.
-        | :code:`layer_to_monitor` (:code:`dict(str)`): Contains mapping of names for layer to monitors.
-        | :code:`layers` (:code:`list(str)`): Contains network's layer names to plot spikes for.
-        | :code:`time` (:code:`dict(tuple(int))`): Plot spiking activity of neurons
-        in the given time range. Default is entire simulation time.
-        | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot voltages of neurons in given
-        range of neurons. Default is all neurons.
         | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
         | :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
+        | :code:`time` (:code:`tuple(int)`): Plot voltages of neurons in given time range. Default is entire simulation time.
+        | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot voltages of neurons in given range of neurons. Default is all neurons.
         | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
 
     Returns:
@@ -479,159 +679,91 @@ def plot_voltages(network=None, voltages=None, layer_to_monitor={}, layers=[], t
         | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
 
     '''
+    n_subplots = len(voltages.keys())
 
-    assert network is not None or voltages is not None, 'No plotting information'
+    # Confirm only 2 values for time were given
+    if time is not None:
+        assert(len(time) == 2)
+        assert(time[0] < time[1])
 
-    # Set to all layers if no layers were requested
-    if layers == []:
-        if network is not None: # If network is provided
-            for layer in network.layers:
-                layers.append(layer)
-        else: # Use layers from voltages
-            for layer in voltages.keys():
-                layers.append(layer)
-    else: # Specific layers in network or voltages were provided
-        for layer in layers:
-            if network is not None:
-                assert layer in network.layers,\
-                    f"'{layer}' does not exist within network's layers. \
-                    Network contains layers: {list(network.layers.keys())}"
-            else:
-                assert layer in voltages.keys(), \
-                    f"'{layer}' does not exist within given spiking information.\
-                    Voltages contain layers: {list(voltages.keys())}"
+    else:  # Set it for entire duration
+        for key in voltages.keys():
+            time = (0, voltages[key].shape[1])
+            break
 
-    # Pre-setup plots
-    n_subplots = len(layers)
-    if network is None: # Obtain information from voltages
-        voltages = {k : v.view(-1, v.size(-1)) for (k, v) in voltages.items()}
+    # Number of neurons setup
+    if len(n_neurons.keys()) != 0:
+        # Don't have to give numbers for all keys
+        assert(len(n_neurons.keys()) <= n_subplots)
+        # Keys given must be same as the ones used in spikes dict
+        assert(all(key in voltages.keys() for key in n_neurons.keys()))
 
-    # Set up monitor to layer names
-    if network is not None:
-        for layer, monitor_name in layer_to_monitor.items():
-            assert monitor_name in network.monitors, \
-                f"'{monitor_name}' does not exist within network. Network contains layers: {list(network.layers.keys())}"
-            assert layer in network.layers, \
-                f"'{layer}' does not exist within network. Network contains monitors: {list(network.monitors.keys())}"
-
-        # Not all mappings were provided. Assume layer names.
-        if len(layer_to_monitor) != len(layers):
-            for layer in set(network.layers) - set(layer_to_monitor):
-                layer_to_monitor[layer] = layer
-
-    assert len(n_neurons) <= n_subplots, \
-        'n_neurons argument needs fewer entries than n_subplots'
-    assert len(time) <= n_subplots, \
-        'time argument needs fewer entries than n_subplots'
-
-    # Check if appropriate values for time were provided
-    if time != {}:
-        for key, val in time.items():
-            if network is not None:
-                assert layer in network.layers,\
-                    f"'{layer}' given in 'time' paramter does not exist within \
-                    network's layers. Network contains layers: {list(network.layers.keys())}"
-            else:
-                assert layer in voltages.keys(), \
-                    f"'{layer}' given in 'time' paramter does not exist within \
-                     spiking information. Voltages contain layers: {list(voltages.keys())}"
-            assert len(val) == 2, 'Need (start, stop) values for time argument'
-            assert val[0] < val[1], 'Need start < stop in time argument'
-
-    # Set it for entire duration
-    for layer in layers:
-        if layer not in time.keys():
-            if network is not None: # Take from monitors
-                time[layer] = (0, network.monitors[layer_to_monitor[layer]].get('v').shape[1])
-            else: # Take from voltages
-                time[layer] = (0, voltages[layer].shape[1])
-
-    # Check if appropriate values for n_neurons were provided
-    if n_neurons != {}:
-        for key, val in n_neurons.items():
-            if network is not None:
-                assert layer in network.layers,\
-                    f"'{layer}' given in 'n_neurons' paramter does not exist within \
-                    network's layers. Network contains layers: {list(network.layers.keys())}"
-            else:
-                assert layer in voltages.keys(), \
-                    f"'{layer}' given in 'n_neurons' paramter does not exist within \
-                    voltage information. Voltages contain layers: {list(voltages.keys())}"
-
-    # Set to use all neurons
-    for layer in layers:
-        if layer not in n_neurons.keys():
-            if network is not None: # Take from monitors
-                n_neurons[layer] = (0, network.monitors[layer_to_monitor[layer]].get('v').shape[0])
-            else:
-                n_neurons[layer] = (0, voltages[layer].shape[0])
+    for key, val in voltages.items():
+        if key not in n_neurons.keys():
+            n_neurons[key] = (0, val.shape[0])
 
     if not ims:
         fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
         ims = []
 
-        if n_subplots == 1:
-            # Assuming monitor names and layer names are matching
-            for layer in layers:
-                if network is not None: # Plot using network monitors
-                    ims.append(axes.matshow(network.monitors[layer_to_monitor[layer]].get('v')[n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]]))
-                else: # Plot using voltages
-                    ims.append(axes.matshow(spikes[layer][n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]]))
+        if n_subplots == 1:  # Plotting only one image
+            for datum in voltages.items():
+                ims.append(axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                        time[0]:time[1]]))
+                plt.title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                    n_neurons[datum[0]][0],
+                                                                                    n_neurons[datum[0]][1],
+                                                                                    time[0],
+                                                                                    time[1]))
+                plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
 
-                args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                plt.title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
-                plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
                 axes.set_aspect('auto')
-        else: # Multiple subplots
-            for i, layer in enumerate(layers):
-                if network is not None: # Plot using network monitors
-                    ims.append(axes[i].matshow(network.monitors[layer_to_monitor[layer]].get('v')[n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]]))
-                else: # Plot using voltages
-                    ims.append(axes[i].matshow(spikes[layer][n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]]))
 
-                args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
+        else:  # Plot each layer at a time
+            for i, datum in enumerate(voltages.items()):
+                    ims.append(axes[i].matshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                               time[0]:time[1]]))
+                    axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                               n_neurons[datum[0]][0],
+                                                                                               n_neurons[datum[0]][1],
+                                                                                               time[0],
+                                                                                               time[1]))
 
             for ax in axes:
                 ax.set_aspect('auto')
 
         plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
         plt.tight_layout()
-    else: # Update subplots
-        if n_subplots == 1:
-            axes.clear()
-            for layer in layers:
-                if network is not None: # Plot using network monitors
-                    axes.matshow(network.monitors[layer_to_monitor[layer]].get('v')[n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]])
-                else: # Plot using spikes
-                    axes.matshow(voltages[layer][n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]])
+
+    else:  # Plotting figure given
+        if n_subplots == 1:  # Plotting only one image
+            for datum in voltages.items():
+                axes.clear()
+                axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                             time[0]:time[1]])
+                axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                         n_neurons[datum[0]][0],
+                                                                                         n_neurons[datum[0]][1],
+                                                                                         time[0],
+                                                                                         time[1]))
 
                 axes.set_aspect('auto')
 
-                args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-        else: # Multiple subplots
-            for i, layer in enumerate(layers):
+        else: # Plot each layer at a time
+            for i, datum in enumerate(voltages.items()):
                 axes[i].clear()
+                axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                time[0]:time[1]])
+                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                            n_neurons[datum[0]][0],
+                                                                                            n_neurons[datum[0]][1],
+                                                                                            time[0],
+                                                                                            time[1]))
 
-                if network is not None: # Plot using network monitors
-                    axes[i].matshow(network.monitors[layer_to_monitor[layer]].get('v')[n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]])
-                else: # Plot using spikes
-                    axes[i].matshow(voltages[layer][n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]])
-
-                axes[i].set_aspect('auto')
-
-                args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
+            for ax in axes:
+                ax.set_aspect('auto')
 
         plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
         plt.tight_layout()
+
     return ims, axes
