@@ -178,7 +178,6 @@ def update_ngram_scores(spikes: torch.Tensor, labels: torch.Tensor, n_labels: in
         # Check every sequence of length n.
         for order in zip(*(fire_order[k:] for k in range(n))):
             for sequence in product(*order):
-                print(sequence)
                 if sequence not in ngram_scores:
                     ngram_scores[sequence] = torch.zeros(n_labels)
 
