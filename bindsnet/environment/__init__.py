@@ -1,9 +1,6 @@
-import os
-import sys
 import gym
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 
 from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
@@ -19,7 +16,7 @@ class Environment(ABC):
     """
 
     @abstractmethod
-    def step(self, a: int) -> None:
+    def step(self, a: int) -> Tuple[Any, ...]:
         # language=rst
         """
         Abstract method head for ``step()``.
