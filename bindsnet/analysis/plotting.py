@@ -74,14 +74,14 @@ def plot_spikes(network: Optional[Network] = None, spikes: Optional[Dict[str, to
     n_subplots = len(spikes.keys())
     spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
 
-    if time is not None:
-        assert len(time) == 2, 'Need (start, stop) values for time argument'
-        assert time[0] < time[1], 'Need start < stop in time argument'
-    else:
-        # Set it for entire duration
-        for key in spikes.keys():
-            time = (0, spikes[key].shape[1])
-            break
+    #if time is not None:
+    #    assert len(time) == 2, 'Need (start, stop) values for time argument'
+    #    assert time[0] < time[1], 'Need start < stop in time argument'
+    #else:
+    #    # Set it for entire duration
+    #    for key in spikes.keys():
+    #        time = (0, spikes[key].shape[1])
+    #        break
 
     if len(n_neurons.keys()) != 0:
         assert len(n_neurons.keys()) <= n_subplots, \
