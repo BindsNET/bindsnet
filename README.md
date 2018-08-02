@@ -124,7 +124,7 @@ archivePrefix = "arXiv",
 
 - Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu))
 
-- Hananel Hazan ([email](mailto:hananel@cs.umass.edu))
+- Hananel Hazan ([email](mailto:hananel@hazan.org.il))
 
 - Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu))
 
