@@ -1,19 +1,21 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from bindsnet.network import AbstractMonitor, Network
 
+from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
-from typing import Tuple, List, Optional
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from typing import Tuple, List, Optional, Any, Sized, Dict
 
 from ..utils import reshape_locally_connected_weights
 
 plt.ion()
 
 
-def plot_input(image: torch.Tensor, inpt: torch.Tensor, label: Optional[int] = None, axes: List['AxesSubplot'] = None,
+def plot_input(image: torch.Tensor, inpt: torch.Tensor, label: Optional[int] = None, axes: List[Axes] = None,
                ims: List[AxesImage] = None,
-               figsize: Tuple[int, int]=(8, 4)) -> Tuple[List['AxesSubplot'], List[AxesImage]]:
+               figsize: Tuple[int, int]=(8, 4)) -> Tuple[List[Axes], List[AxesImage]]:
     # language=rst
     """
     Plots a two-dimensional image and its corresponding spike-train representation.
@@ -51,37 +53,128 @@ def plot_input(image: torch.Tensor, inpt: torch.Tensor, label: Optional[int] = N
     return axes, ims
 
 
-def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time={}, n_neurons={}, ims=None, axes=None, figsize=(8, 4.5)):
+def plot_spikes(network: Optional[Network] = None, spikes: Optional[Dict[str, torch.Tensor]] = None,
+                layer_to_monitor: Optional[Dict[str, str]] = None, layers: Optional[List[str]] = None,
+                time: Optional[Dict[str, Tuple[int, int]]] = None,
+                n_neurons: Optional[Dict[str, Tuple[int, int]]] = None, ims=None, axes: List[AxesImage] = None,
+                figsize: Tuple[float, float] = (8.0, 4.5)) -> Tuple[List[AxesImage], List[Axes]]:
+    # language=rst
+    """
+    Plot spikes for any group(s) of neurons.
+
+    :param spikes: Mapping from layer names to spiking data.
+    :param time: Plot spiking activity of neurons in the given time range. Default is entire simulation time.
+    :param n_neurons: Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
+    :param ims: Used for re-drawing the plots.
+    :param axes: Used for re-drawing the plots.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :return: ``ims, axes``: Used for re-drawing the plots.
+    """
+
+    n_subplots = len(spikes.keys())
+    spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
+
+    if time is not None:
+        assert len(time) == 2, 'Need (start, stop) values for time argument'
+        assert time[0] < time[1], 'Need start < stop in time argument'
+    else:
+        # Set it for entire duration
+        for key in spikes.keys():
+            time = (0, spikes[key].shape[1])
+            break
+
+    if len(n_neurons.keys()) != 0:
+        assert len(n_neurons.keys()) <= n_subplots, \
+            'n_neurons argument needs fewer entries than n_subplots'
+        assert all(key in spikes.keys() for key in n_neurons.keys()), \
+            'n_neurons keys must be subset of spikes keys'
+
+    # Use all neurons if no argument provided.
+    for key, val in spikes.items():
+        if key not in n_neurons.keys():
+            n_neurons[key] = (0, val.shape[0])
+
+    if not ims:
+        fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
+        ims = []
+
+        if n_subplots == 1:
+            for datum in spikes.items():
+                ims.append(axes.imshow(spikes[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                       time[0]:time[1]],
+                                       cmap='binary'))
+
+                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
+                plt.title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+                plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
+                axes.set_aspect('auto')
+        else:
+            for i, datum in enumerate(spikes.items()):
+                ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                                          time[0]:time[1]],
+                                          cmap='binary'))
+
+                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
+                axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+
+            for ax in axes:
+                ax.set_aspect('auto')
+
+        plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
+        plt.tight_layout()
+
+    else:
+        if n_subplots == 1:
+            for datum in spikes.items():
+                ims[0].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+                ims[0].autoscale()
+
+                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
+                axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+
+        else:
+            for i, datum in enumerate(spikes.items()):
+                ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+                ims[i].autoscale()
+
+                args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
+                axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
+
+    plt.draw()
+    return ims, axes
+
+
+def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], time={}, n_neurons={}, ims=None, axes=None, figsize=(8, 4.5)):
     """
     Plot spikes for any group(s) of neurons. Default behavior will plot everything.
 
-    Inputs:
-
-        | :code:`network` (:code:`bindsnet.Network`): Network containing spiking information
-        and monitors.
-        | :code:`spikes` (:code:`dict(torch.Tensor)`): Contains spiking data for groups of neurons
-        of interest.
-        | :code:`layer_to_monitor` (:code:`dict(str)`): Contains mapping of names for layer to monitors.
-        | :code:`layers` (:code:`list(str)`): Contains network's layer names to plot spikes for.
-        | :code:`time` (:code:`tuple(int)`): Plot spiking activity of neurons
-        in the given time range. Default is entire simulation time.
-        | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot spiking activity
-        of neurons in the given range of neurons. Default is all neurons.
-        | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
-        | :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the spike plots.
-        | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
-
+    :param network: ``Network`` containing spike monitor objects.
+    :param spikes: Mapping from layer names to spiking data.
+    :param layer_to_monitor: Mapping of layer names to monitors.
+    :param layers: List of network's layer names to plot spikes for.
+    :param time: Plot spiking activity of neurons in the given time range. Default is entire simulation time.
+    :param n_neurons: Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
+    :param ims: Used for re-drawing the plots.
+    :param axes: Used for re-drawing the plots.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :return: ``ims, axes``: Used for re-drawing the plots.
     """
+    assert network is not None or spikes is not None, 'Need either "network" or "spikes" argument.'
+
+    if layer_to_monitor is None:
+        layer_to_monitor = {}
 
     assert network is not None or spikes is not None, 'No plotting information'
 
+    if time is None:
+        time = {}
+
+    if n_neurons is None:
+        n_neurons = {}
+
     # Set to all layers if no layers were requested
-    if layers == []:
+    if layers is None:
+        layers = []
         if network is not None: # If network is provided
             for layer in network.layers:
                 layers.append(layer)
@@ -238,22 +331,25 @@ def plot_spikes(network=None, spikes=None, layer_to_monitor={}, layers=[], time=
     return ims, axes
 
 
-def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
+def plot_weights(weights: torch.Tensor, wmin: Optional[float] = None, wmax: Optional[float] = None,
+                 im: Optional[AxesImage] = None, figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
+    # language=rst
     """
     Plot a connection weight matrix.
 
-    Inputs:
-
-        | :code:`weights` (:code:`torch.Tensor`): Weight matrix of Connection object.
-        | :code:`wmin` (:code:`float`): Minimum allowed weight value.
-        | :code:`wmax` (:code:`float`): Maximum allowed weight value.
-        | :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+    :param weights: Weight matrix of ``Connection`` object.
+    :param wmin: Minimum allowed weight value.
+    :param wmax: Maximum allowed weight value.
+    :param im: Used for re-drawing the weights plot.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :return: ``AxesImage`` for re-drawing the weights plot.
     """
+    if wmin is None:
+        wmin = weights.min()
+
+    if wmax is None:
+        wmax = weights.max()
+
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title('Connection weights')
@@ -273,21 +369,18 @@ def plot_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
     return im
 
 
-def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
+def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 1.0, im: Optional[AxesImage] = None,
+                        figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
+    # language=rst
     """
     Plot a connection weight matrix of a Conv2dConnection.
 
-    Inputs:
-
-        | :code:`weights` (:code:`torch.Tensor`): Weight matrix of Conv2dConnection object.
-        | :code:`wmin` (:code:`float`): Minimum allowed weight value.
-        | :code:`wmax` (:code:`float`): Maximum allowed weight value.
-        | :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+    :param weights: Weight matrix of Conv2dConnection object.
+    :param wmin: Minimum allowed weight value.
+    :param wmax: Maximum allowed weight value.
+    :param im: Used for re-drawing the weights plot.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :return: Used for re-drawing the weights plot.
     """
     n_sqrt = int(np.ceil(np.sqrt(weights.size(0))))
     height = weights.size(2)
@@ -298,8 +391,7 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
         for j in range(n_sqrt):
             if i * n_sqrt + j < weights.size(0):
                 fltr = weights[i * n_sqrt + j].view(height, width)
-                reshaped[i * height : (i + 1) * height,
-                        (j % n_sqrt) * width : ((j % n_sqrt) + 1) * width] = fltr
+                reshaped[i * height: (i + 1) * height, (j % n_sqrt) * width: ((j % n_sqrt) + 1) * width] = fltr
 
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
@@ -326,32 +418,27 @@ def plot_conv2d_weights(weights, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
     return im
 
 
-def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, locations,
-                            input_sqrt, wmin=0.0, wmax=1.0, im=None, figsize=(5, 5)):
+def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel_size: int, conv_size: int,
+                                   locations: torch.Tensor, input_sqrt: int, wmin: float = 0.0, wmax: float = 1.0,
+                                   im: Optional[AxesImage] = None, figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
+    # language=rst
     """
-    Plot a connection weight matrix of a :code:`Connection` with
-    `locally connected structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
+    Plot a connection weight matrix of a :code:`Connection` with `locally connected structure
+    <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
 
-    Inputs:
-
-        | :code:`weights` (:code:`torch.Tensor`): Weight matrix of Conv2dConnection object.
-        | :code:`n_filters` (:code:`int`): No. of convolution kernels in use.
-        | :code:`kernel_size` (:code:`int`): Side length of 2D convolution kernels.
-        | :code:`conv_size` (:code:`int`): Side length of 2D convolution population.
-        | :code:`locations` (:code:`torch.Tensor`): Indices of input
-            receptive fields for convolution population neurons.
-        | :code:`input_sqrt` (:code:`int`): Side length of 2D input data.
-        | :code:`wmin` (:code:`float`): Minimum allowed weight value.
-        | :code:`wmax` (:code:`float`): Maximum allowed weight value.
-        | :code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`im` (:code:`matplotlib.image.AxesImage`): Used for re-drawing the weights plot.
+    :param weights: Weight matrix of Conv2dConnection object.
+    :param n_filters: No. of convolution kernels in use.
+    :param kernel_size: Side length of 2D convolution kernels.
+    :param conv_size: Side length of 2D convolution population.
+    :param locations: Indices of input receptive fields for convolution population neurons.
+    :param input_sqrt: Side length of 2D input data.
+    :param wmin: Minimum allowed weight value.
+    :param wmax: Maximum allowed weight value.
+    :param im: Used for re-drawing the weights plot.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :return: Used for re-drawing the weights plot.
     """
-    reshaped = reshape_locally_connected_weights(weights, n_filters, kernel_size,
-                                                 conv_size, locations, input_sqrt)
+    reshaped = reshape_locally_connected_weights(weights, n_filters, kernel_size, conv_size, locations, input_sqrt)
 
     n_sqrt = int(np.ceil(np.sqrt(n_filters)))
 
@@ -380,24 +467,17 @@ def plot_locally_connected_weights(weights, n_filters, kernel_size, conv_size, l
     return im
 
 
-def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
+def plot_assignments(assignments: torch.Tensor, im: Optional[AxesImage] = None, figsize: Tuple[int, int] = (5, 5),
+                     classes: Optional[Sized] = None) -> AxesImage:
+    # language=rst
     """
     Plot the two-dimensional neuron assignments.
 
-    Inputs:
-
-        | :code:`assignments` (:code:`torch.Tensor`): Vector of neuron label assignments.
-        | :code:`im` (:code:`matplotlib.image.AxesImage`):
-        Used for re-drawing the assignments plot.
-        | :code:`figsize` (:code:`tuple(int)`):
-        Horizontal, vertical figure size in inches.
-        | :code:`classes` (:code:`iterable`): Iterable of
-        labels for colorbar ticks corresponding to data labels.
-
-    Returns:
-
-        | (:code:`im` (:code:`matplotlib.image.AxesImage`):
-        Used for re-drawing the assigments plot.
+    :param assignments: Vector of neuron label assignments.
+    :param im: Used for re-drawing the assignments plot.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :param classes: Iterable of labels for colorbar ticks corresponding to data labels.
+    :return: Used for re-drawing the assigments plot.
     """
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
@@ -422,23 +502,16 @@ def plot_assignments(assignments, im=None, figsize=(5, 5), classes=None):
     return im
 
 
-def plot_performance(performances, ax=None, figsize=(7, 4)):
+def plot_performance(performances: Dict[str, List[float]], ax: Optional[Axes] = None,
+                     figsize: Tuple[int, int] = (7, 4)) -> Axes:
+    # language=rst
     """
     Plot training accuracy curves.
 
-    Inputs:
-
-        | :code:`performances` (:code:`dict(list(float))`):
-        Lists of training accuracy estimates per voting scheme.
-        | :code:`ax` (:code:`matplotlib.axes.Axes`):
-        Used for re-drawing the performance plot.
-        | :code:`figsize` (:code:`tuple(int)`):
-        Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`ax` (:code:`matplotlib.axes.Axes`):
-        Used for re-drawing the performance plot.
+    :param performances: Lists of training accuracy estimates per voting scheme.
+    :param ax: Used for re-drawing the performance plot.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :return: Used for re-drawing the performance plot.
     """
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
@@ -457,152 +530,31 @@ def plot_performance(performances, ax=None, figsize=(7, 4)):
     return ax
 
 
-def plot_general(monitor=None, ims=None, axes=None, labels=None, parameters=None, figsize=(8,4.5)):
-    """
-    General plotting function for variables being monitored.
-
-    Inputs:
-
-        | :code:`monitor` (:code:`monitors.Monitor`):
-        Contains state variables to be plotted.
-        | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`):
-        Used for re-drawing plots.
-        | :code:`axes` (:code:`list(matplotlib.axes.Axes)`):
-        Used for re-drawing plots.
-        | :code:`labels` (:code:`dict(dict(string))`):
-        Used to set axis labels and titles for plotted variables.
-        | :code:`parameters` (:code:`dict(dict(tuples(int)))`):
-        Set time, number of neurons for plotted variables.
-        | :code:`figsize` (:code:`tuple(int)`):
-        Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`ims` (:code:`list(matplotlib.axes.Axes)):
-        Used for re-drawing plots.
-        | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`):
-        Used for re-drawing plots.
-    """
-    default = {'xlabel' : 'Simulation time', 'ylabel' : 'Index'}
-
-    if monitor is None:
-        print("Did you forget to provide monitors?")
-        raise TypeError
-
-    if labels is None:
-        labels = {var : {'title' : 'Recording of %s'%(var),
-                         'xlabel' : 'Simulation time',
-                         'ylabel' : 'Index'} for var in monitor.state_vars}
-
-    # Default axis parameters
-    else:
-        for var in monitor.state_vars:
-            for lb in ['title', 'xlabel', 'ylabel']:
-
-                if lb not in labels[var].keys() and lb == 'title':
-                    labels[var][lb] = 'Recording of %s'%var
-
-                elif lb not in labels[var].keys():
-                    labels[var][lb] = default[lb]
-
-    if parameters is None:
-        # Monitor object is of a class in nodes
-        parameters = {var : {'time' : (0, monitor.get(var).shape[1]),
-                           'n_neurons' : (0, monitor.get(var).shape[0]),
-                           'cmap' : 'binary'} for var in monitor.state_vars}
-
-    else:
-        #if type(monitor.obj) in nodes.__dict__.values():
-        for var in monitor.state_vars:
-            if 'time' not in parameters[var].keys():
-                parameters[var]['time'] = (0, monitor.get(var).shape[1])
-
-            if 'n_neurons' not in parameters[var].keys():
-                parameters[var]['n_neurons'] = (0, monitor.get(var).shape[0])
-
-            if 'cmap' not in parameters[var].keys():
-                parameters[var]['cmap'] = 'binary'
-
-    n_subplots = len(monitor.state_vars)
-    if not ims:
-        fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
-        ims = []
-
-        if n_subplots == 1:
-            for var in monitor.state_vars:
-                # For Weights
-                if parameters[var]['cmap'] == 'hot_r' or parameters[var]['cmap'] == 'hot':
-                    ims.append(axes.matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
-                                            parameters[var]['time'][0]:parameters[var]['time'][1]]))
-                else:
-                    ims.append(axes.imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
-                                           parameters[var]['time'][0]:parameters[var]['time'][1]]))
-
-                plt.title(labels[var]['title'])
-                plt.xlabel(labels[var]['xlabel'])
-                plt.ylabel(labels[var]['ylabel'])
-
-            axes.set_aspect('auto')
-
-        else: # Plot each monitor variable at a time
-            for i, var in enumerate(monitor.state_vars):
-                if parameters[var]['cmap'] == 'hot_r' or parameters[var]['cmap'] == 'hot':
-                    ims.append(axes[i].matshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
-                                               parameters[var]['time'][0]:parameters[var]['time'][1]]))
-                else:
-                    ims.append(axes[i].imshow(monitor.get(var)[parameters[var]['n_neurons'][0]:parameters[var]['n_neurons'][1],
-                                              parameters[var]['time'][0]:parameters[var]['time'][1]]))
-
-                axes.set_title(labels[var]['title'])
-                axes.set_xlabel(labels[var]['xlabel'])
-                axes.set_ylabel(labels[var]['ylabel'])
-
-            axes.set_aspect('auto')
-
-    # axes given
-    else:
-        assert(len(ims) == n_subplots)
-
-    return ims, axes
-
-
-def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsize=(8, 4.5)):
+def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImage]] = None,
+                  axes: Optional[List[Axes]] = None, time: Tuple[int, int] = None,
+                  n_neurons: Optional[Dict[str, Tuple[int, int]]] = None,
+                  figsize: Tuple[float, float] = (8.0, 4.5)) -> Tuple[List[Axes], List[AxesImage]]:
+    # language=rst
     """
     Plot voltages for any group(s) of neurons.
 
-    Inputs:
-
-        | :code:`voltages` (:code:`dict(torch.Tensor`)): Contains voltage data by neuron layers.
-        | :code:`ims` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the spike plots.
-        | :code:`axes` (:code:`list(matplotlib.axes.Axes)`): Used for re-drawing the spike plots.
-        | :code:`time` (:code:`tuple(int)`): Plot voltages of neurons in given time range. Default is entire simulation time.
-        | :code:`n_neurons` (:code:`dict(tuple(int))`): Plot voltages of neurons in given range of neurons. Default is all neurons.
-        | :code:`figsize` (:code:`tuple(int)`): Horizontal, vertical figure size in inches.
-
-    Returns:
-
-        | (:code:`ims` (:code:`list(matplotlib.axes.Axes)): Used for re-drawing the voltage plots.
-        | (:code:`axes` (:code:`list(matplotlib.image.AxesImage)`): Used for re-drawing the voltage plots.
-
+    :param voltages: Contains voltage data by neuron layers.
+    :param ims: Used for re-drawing the plots.
+    :param axes: Used for re-drawing the plots.
+    :param time: Plot voltages of neurons in given time range. Default is entire simulation time.
+    :param n_neurons: Plot voltages of neurons in given range of neurons. Default is all neurons.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :return: ``ims, axes``: Used for re-drawing the plots.
     """
     n_subplots = len(voltages.keys())
 
-    # Confirm only 2 values for time were given
-    if time is not None:
-        assert(len(time) == 2)
-        assert(time[0] < time[1])
-
-    else:  # Set it for entire duration
+    if time is None:
         for key in voltages.keys():
             time = (0, voltages[key].shape[1])
             break
 
-    # Number of neurons setup
-    if len(n_neurons.keys()) != 0:
-        # Don't have to give numbers for all keys
-        assert(len(n_neurons.keys()) <= n_subplots)
-        # Keys given must be same as the ones used in spikes dict
-        assert(all(key in voltages.keys() for key in n_neurons.keys()))
+    if n_neurons is None:
+        n_neurons = {}
 
     for key, val in voltages.items():
         if key not in n_neurons.keys():
@@ -627,13 +579,12 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
 
         else:  # Plot each layer at a time
             for i, datum in enumerate(voltages.items()):
-                    ims.append(axes[i].matshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
-                                               time[0]:time[1]]))
-                    axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
-                                                                                               n_neurons[datum[0]][0],
-                                                                                               n_neurons[datum[0]][1],
-                                                                                               time[0],
-                                                                                               time[1]))
+                ims.append(axes[i].matshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
+                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
+                                                                                            n_neurons[datum[0]][0],
+                                                                                            n_neurons[datum[0]][1],
+                                                                                            time[0],
+                                                                                            time[1]))
 
             for ax in axes:
                 ax.set_aspect('auto')
@@ -645,8 +596,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
         if n_subplots == 1:  # Plotting only one image
             for datum in voltages.items():
                 axes.clear()
-                axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
-                             time[0]:time[1]])
+                axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
                 axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
                                                                                          n_neurons[datum[0]][0],
                                                                                          n_neurons[datum[0]][1],
@@ -658,8 +608,7 @@ def plot_voltages(voltages, ims=None, axes=None, time=None, n_neurons={}, figsiz
         else: # Plot each layer at a time
             for i, datum in enumerate(voltages.items()):
                 axes[i].clear()
-                axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
-                                time[0]:time[1]])
+                axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
                                                                                             n_neurons[datum[0]][0],
                                                                                             n_neurons[datum[0]][1],
