@@ -242,7 +242,7 @@ class Pipeline:
             else:
                 self.history_index = (self.history_index % max(self.history.keys())) + 1
 
-    def _reset(self) -> None:
+    def reset_(self) -> None:
         # language=rst
         """
         Reset the pipeline.

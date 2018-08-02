@@ -1,9 +1,6 @@
-import os
-import sys
 import gym
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 
 from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
@@ -19,10 +16,11 @@ class Environment(ABC):
     """
 
     @abstractmethod
-    def step(self, a: int) -> None:
+    def step(self, a: int) -> Tuple[Any, ...]:
         # language=rst
         """
         Abstract method head for ``step()``.
+
         :param a: Integer action to take in environment.
         """
         pass
@@ -32,7 +30,6 @@ class Environment(ABC):
         # language=rst
         """
         Abstract method header for ``reset()``.
-        :return:
         """
         pass
 
@@ -41,7 +38,6 @@ class Environment(ABC):
         # language=rst
         """
         Abstract method header for ``render()``.
-        :return:
         """
         pass
 
@@ -50,7 +46,6 @@ class Environment(ABC):
         # language=rst
         """
         Abstract method header for ``close()``.
-        :return:
         """
         pass
 
@@ -59,7 +54,6 @@ class Environment(ABC):
         # language=rst
         """
         Abstract method header for ``preprocess()``.
-        :return:
         """
         pass
 
@@ -68,7 +62,6 @@ class Environment(ABC):
         # language=rst
         """
         Abstract method header for ``reshape()``.
-        :return:
         """
         pass
 
