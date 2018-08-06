@@ -1,12 +1,20 @@
 import os
-import sys
 import torch
-import numpy             as np
 import argparse
+import numpy as np
 import matplotlib.pyplot as plt
 
-from bindsnet import *
-from time     import time as t
+from time import time as t
+
+from bindsnet.datasets import CIFAR10
+from bindsnet.encoding import poisson
+from bindsnet.pipeline import Pipeline
+from bindsnet.models import DiehlAndCook2015
+from bindsnet.network.monitors import Monitor
+from bindsnet.environment import DatasetEnvironment
+from bindsnet.utils import get_square_assignments, get_square_weights
+from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
+from bindsnet.analysis.plotting import plot_input, plot_assignments, plot_performance, plot_weights
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
@@ -26,7 +34,22 @@ parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
 parser.set_defaults(plot=False, gpu=False, train=True)
 
-locals().update(vars(parser.parse_args()))
+args = parser.parse_args()
+
+seed = args.seed
+n_neurons = args.n_neurons
+n_train = args.n_train
+n_test = args.n_test
+exc = args.exc
+inh = args.inh
+time = args.time
+dt = args.dt
+intensity = args.intensity
+progress_interval = args.progress_interval
+update_interval = args.update_interval
+train = args.train
+plot = args.plot
+gpu = args.gpu
 
 if gpu and torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -41,20 +64,11 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 path = os.path.join('..', '..', 'data', 'CIFAR10')
     
 # Build network.
-network = DiehlAndCook2015(n_inpt=32*32*3,
-                           n_neurons=n_neurons,
-                           exc=exc,
-                           inh=inh,
-                           dt=dt,
-                           nu_pre=2e-5,
-                           nu_post=2e-3,
+network = DiehlAndCook2015(n_inpt=32*32*3, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt, nu_pre=2e-5, nu_post=2e-3,
                            norm=10.0)
 
 # Initialize data "environment".
-environment = DatasetEnvironment(dataset=CIFAR10(path=path, download=True),
-                                 train=train,
-                                 time=time,
-                                 intensity=intensity)
+environment = DatasetEnvironment(dataset=CIFAR10(path=path, download=True), train=train, time=time, intensity=intensity)
 
 # Specify data encoding.
 encoding = poisson
@@ -157,7 +171,7 @@ for i in range(n_train):
         
         plt.pause(1e-8)
     
-    network._reset()  # Reset state variables.
+    network.reset_()  # Reset state variables.
 
 print('Progress: %d / %d (%.4f seconds)\n' % (n_train, n_train, t() - start))
 print('Training complete.\n')

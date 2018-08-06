@@ -11,7 +11,7 @@ from struct import unpack
 from scipy.io import wavfile
 from abc import ABC, abstractmethod
 from urllib.request import urlretrieve
-from typing import Tuple, List, Iterable
+from typing import Tuple, List, Iterable, Any
 
 __all__ = [
     'Dataset', 'MNIST', 'SpokenMNIST', 'CIFAR10', 'CIFAR100', 'preprocess'
@@ -39,7 +39,7 @@ class Dataset(ABC):
         self.download = download
 
     @abstractmethod
-    def get_train(self) -> None:
+    def get_train(self) -> Tuple[Any, ...]:
         # language=rst
         """
         Abstract method stub for fetching training data from a dataset.
@@ -47,7 +47,7 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def get_test(self) -> None:
+    def get_test(self) -> Tuple[Any, ...]:
         # language=rst
         """
         Abstract method stub for fetching test data from a dataset.
