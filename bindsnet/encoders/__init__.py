@@ -1,17 +1,16 @@
 import hashlib
 import itertools
-
-import numpy as np
-from pyproj import Proj
-import pandas as pd
 import os
 import math
-from abc import abstractmethod, ABC
-from typing import Tuple
-from random import getrandbits, seed, randint
-
 import torch
 import pickle
+
+import numpy as np
+import pandas as pd
+from pyproj import Proj
+from typing import Tuple
+from abc import abstractmethod, ABC
+from random import getrandbits, seed, randint
 
 
 class AbstractEncoder(ABC):
@@ -119,13 +118,13 @@ class NumentaEncoder(AbstractEncoder):
         self.n = n
         self.scale = scale
         self.timestep = timestep
-        self.__map = Proj(init="epsg:3785")
+        self.__map = Proj(init="epsg:3785")  # Spherical Mercator
 
     def _encode(self) -> torch.tensor:
         # language=rst
         """
         Numenta encoding as described here: http://chetansurpur.com/slides/2014/8/5/geospatial-encoder.html
-         :return: Generated encoding
+        :return: Encoding
         """
 
         speeds = self.data['speed'].tolist()
@@ -142,23 +141,57 @@ class NumentaEncoder(AbstractEncoder):
         return torch.tensor(values)
 
     def __hash_coordinate(self, latitude: float, longitude: float) -> int:
+        # language=rst
+        """
+        Returns the hash for a given coordinate
+        :param latitude: latitude value
+        :param longitude: longitude value
+        :return: integer value to be used as a seed for the coordinate
+        """
         coordainte_str = (str(latitude) + ',' + str(longitude)).encode('utf-8')
         m = hashlib.md5(coordainte_str)
         return int(int(m.hexdigest(), 16) % (2 ** 64))
 
     def __coordinate_order(self, latitude: float, longitude: float):
+        # language=rst
+        """
+        Returns the order `w` for a given coordinate
+        :param latitude: latitude value
+        :param longitude: longitude value
+        :return: integer value to be used as a seed for the coordinate
+        """
         seed(self.__hash_coordinate(latitude, longitude))
         return getrandbits(64)
 
-    def __coordinate_bit(self, latitude: float, longitude: float):
+    def __coordinate_bit(self, latitude: float, longitude: float) -> int:
+        # language=rst
+        """
+        Returns the bit in the output vector for given coordinate
+        :param latitude: latitude value
+        :param longitude: longitude value
+        :return: bit index in the output vector
+        """
         seed(self.__hash_coordinate(latitude, longitude))
         return randint(0, self.n)
 
     def __map_transform(self, latitude: float, longitude: float) -> Tuple[int, int]:
+        # language=rst
+        """
+        Returns the bit in the output vector for given coordinate
+        :param latitude: latitude value
+        :param longitude: longitude value
+        :return: transforms the input coordinates to spherical mercator coordinates
+        """
         longitude, latitude = self.__map(longitude, latitude)
         return int(latitude / self.scale), int(longitude / self.scale)
 
     def __radius(self, speed: float) -> int:
+        # language=rst
+        """
+        Returns the radius for a given speed
+        :param speed: speed value in meters per second
+        :return: radius
+        """
         overlap = 1.5
         coordinates = speed * self.timestep / self.scale
         radius = int(round(float(coordinates) / 2 * overlap))
@@ -166,15 +199,35 @@ class NumentaEncoder(AbstractEncoder):
         return max(radius, min_radius)
 
     def __neighbors(self, latitude: int, longitude: int, radius: int) -> np.ndarray:
+        # language=rst
+        """
+        Generates an ndarray of neighbors for a given coordinate and radius
+        :param latitude: latitude value
+        :param longitude: longitude value
+        :param radius: radius to consider order values
+        :return:
+        """
         ranges = (range(n - radius, n + radius + 1) for n in [latitude, longitude])
         return np.array(list(itertools.product(*ranges)))
 
-    def __select(self, neighbors):
+    def __select(self, neighbors: np.ndarray) -> np.ndarray:
+        # language=rst
+        """
+        Selects the top `w` neighbors
+        :param neighbors: neighbors to consider
+        :return: top `w` neighbors
+        """
         orders = np.array([self.__coordinate_order(n[0], n[1]) for n in neighbors])
         indices = np.argsort(orders)[-self.w:]
         return np.array(neighbors[indices])
 
     def __generate_vector(self, data_point: Tuple[float, float, float], output: torch.tensor) -> torch.tensor:
+        """
+        Generates a vector of length `n` for a single data point
+        :param data_point: Tuple: (speed, latitude, longitude)
+        :param output: binary vector containing
+        :return: tensor containing binary values
+        """
         speed, latitude, longitude = data_point
         latitude, longitude = self.__map_transform(latitude, longitude)
         radius = self.__radius(speed)
