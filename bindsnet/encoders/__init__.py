@@ -1,7 +1,14 @@
 import hashlib
-import csv
+import itertools
+
+import numpy as np
+from pyproj import Proj
+import pandas as pd
 import os
+import math
 from abc import abstractmethod, ABC
+from typing import Tuple
+from random import getrandbits, seed, randint
 
 import torch
 import pickle
@@ -19,12 +26,13 @@ class AbstractEncoder(ABC):
         Abstract constructor for the Encoder class.
         :param csvfile: File to encode
         :param save: Whether to save the encoding to file.
-        :param download: Where to save encoding to. (./encodings/encoding.p) by default
+        :param encodingfile: Where to save encoding to. (./encodings/encoding.p) by default
         """
-        self.__csvfile = csvfile
+        self.data = pd.read_csv(csvfile)
         self.__save_file = save
         self.__enc = {}
         if save:
+            self.__enc['verify'] = self.__gen_hash(csvfile)
             self.file = encodingfile
             if not os.path.exists(os.path.dirname(encodingfile)):
                 os.makedirs(os.path.dirname(encodingfile), exist_ok=True)
@@ -34,18 +42,20 @@ class AbstractEncoder(ABC):
     def _encode(self) -> torch.Tensor:
         # language=rst
         """
-        Abstract method for defining how encoding is done from the csv file.
+        Method for defining how encoding is done from the csv file.
          :return: Generated encoding
         """
         pass
 
-    def __gen_hash(self) -> str:
+    @staticmethod
+    def __gen_hash(filename: str) -> str:
         # language=rst
         """
-        Generates an md5 hash for the csv file.
-         :return: md5 hash for the csv file
+        Generates an hash for a csv file.
+        :param filename: file to generate hash for
+         :return: hash for the csv file
         """
-        with open(self.__csvfile, 'r') as f:
+        with open(filename, 'r') as f:
             lines = f.readlines()
         m = hashlib.md5(''.join(lines).encode('utf-8'))
         return m.hexdigest()
@@ -55,7 +65,6 @@ class AbstractEncoder(ABC):
         """
         Compares the csv file and the save encoding to see if a new encoding needs to be generated.
         """
-        self.__enc['verify'] = self.__gen_hash()
         try:
             with open(self.file, 'rb') as f:
                 temp = pickle.load(f)
@@ -63,7 +72,7 @@ class AbstractEncoder(ABC):
             temp = {
                 'verify': ''
             }
-        if 'verify' in self.__enc and self.__enc['verify'] == temp['verify']:
+        if self.__enc['verify'] == temp['verify']:
             self.__enc = temp
 
     def __save(self) -> None:
@@ -89,8 +98,93 @@ class AbstractEncoder(ABC):
 
 
 class NumentaEncoder(AbstractEncoder):
-    def __init__(self, csvfile: str, save=False, encodingfile='./encodings/encoding.p'):
+    def __init__(self, csvfile: str, scale=5, w=21, n=1000, timestep=10, save=False,
+                 encodingfile='./encodings/encoding.p'):
         super().__init__(csvfile, save, encodingfile)
+        # language=rst
+        """
+        Numenta Encoder for geospatial data as decribed here: http://chetansurpur.com/slides/2014/8/5/geospatial-encoder.html
+        
+        The csv file is expected to have three columns with headers: `speed,latitude,longitude`
+        
+        :param csvfile: File to encode
+        :param save: Whether to save the encoding to file.
+        :param encodingfile: Where to save encoding to. (./encodings/encoding.p) by default
+        :param scale: how much to zoom in
+        :param w: number of neighbor square to choose
+        :param n: length of output binary vector for each encoding step
+        :param timestep: used to determine radius for considering neighbors
+        """
+        self.w = w
+        self.n = n
+        self.scale = scale
+        self.timestep = timestep
+        self.__map = Proj(init="epsg:3785")
 
-    def _encode(self):
-        return torch.ones(1000)
+    def _encode(self) -> torch.tensor:
+        # language=rst
+        """
+        Numenta encoding as described here: http://chetansurpur.com/slides/2014/8/5/geospatial-encoder.html
+         :return: Generated encoding
+        """
+
+        speeds = self.data['speed'].tolist()
+        latitudes = self.data['latitude'].tolist()
+        longitudes = self.data['longitude'].tolist()
+
+        values = []
+        for speed, latitude, longitude in zip(speeds, latitudes, longitudes):
+            output = torch.zeros(self.n)
+            self.__generate_vector((speed, latitude, longitude), output)
+
+            values.append(output.tolist())
+
+        return torch.tensor(values)
+
+    def __hash_coordinate(self, latitude: float, longitude: float) -> int:
+        coordainte_str = (str(latitude) + ',' + str(longitude)).encode('utf-8')
+        m = hashlib.md5(coordainte_str)
+        return int(int(m.hexdigest(), 16) % (2 ** 64))
+
+    def __coordinate_order(self, latitude: float, longitude: float):
+        seed(self.__hash_coordinate(latitude, longitude))
+        return getrandbits(64)
+
+    def __coordinate_bit(self, latitude: float, longitude: float):
+        seed(self.__hash_coordinate(latitude, longitude))
+        return randint(0, self.n)
+
+    def __map_transform(self, latitude: float, longitude: float) -> Tuple[int, int]:
+        longitude, latitude = self.__map(longitude, latitude)
+        return int(latitude / self.scale), int(longitude / self.scale)
+
+    def __radius(self, speed: float) -> int:
+        overlap = 1.5
+        coordinates = speed * self.timestep / self.scale
+        radius = int(round(float(coordinates) / 2 * overlap))
+        min_radius = int(math.ceil((math.sqrt(self.w) - 1) / 2))
+        return max(radius, min_radius)
+
+    def __neighbors(self, latitude: int, longitude: int, radius: int) -> np.ndarray:
+        ranges = (range(n - radius, n + radius + 1) for n in [latitude, longitude])
+        return np.array(list(itertools.product(*ranges)))
+
+    def __select(self, neighbors):
+        orders = np.array([self.__coordinate_order(n[0], n[1]) for n in neighbors])
+        indices = np.argsort(orders)[-self.w:]
+        return np.array(neighbors[indices])
+
+    def __generate_vector(self, data_point: Tuple[float, float, float], output: torch.tensor) -> torch.tensor:
+        speed, latitude, longitude = data_point
+        latitude, longitude = self.__map_transform(latitude, longitude)
+        radius = self.__radius(speed)
+
+        neighbors = self.__neighbors(latitude, longitude, radius)
+
+        top = self.__select(neighbors)
+        indices = np.array([self.__coordinate_bit(w[0], w[1]) for w in top])
+
+        output[:] = 0
+        output[indices] = 1
+
+        return output

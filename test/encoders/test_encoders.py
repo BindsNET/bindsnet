@@ -29,4 +29,10 @@ class TestEncoders:
             v1, v2 = enc1.get_encoding(), enc2.get_encoding()
             assert torch.all(torch.eq(v1, v2))
 
-        test1(), test2(), test3()
+        def test4():
+            enc = NumentaEncoder(csvfile, save=False, encodingfile=encodingfile)
+            val = enc.get_encoding()
+            assert val is not None
+            assert not os.path.exists(encodingfile)
+
+        test1(), test2(), test3(), test4()
