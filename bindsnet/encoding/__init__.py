@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from typing import Optional, Union, Iterable, Iterator
-from .encoders import *
+from .numenta import *
 
 
 def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torch.Tensor:
