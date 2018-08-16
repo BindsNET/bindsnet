@@ -1,17 +1,18 @@
 import hashlib
 import itertools
-import os
 import math
-import torch
+import hashlib
+import os
 import pickle
-
+import torch
 import numpy as np
 import pandas as pd
-from pyproj import Proj
-from typing import Tuple
+
 from abc import abstractmethod, ABC
-from random import getrandbits, seed, randint
+from pyproj import Proj
+from random import getrandbits, randint, seed
 from tqdm import tqdm
+from typing import Tuple
 
 
 class AbstractEncoder(ABC):
@@ -105,9 +106,9 @@ class NumentaEncoder(AbstractEncoder):
         # language=rst
         """
         Numenta Encoder for geospatial data as decribed here: http://chetansurpur.com/slides/2014/8/5/geospatial-encoder.html
-        
+
         The csv file is expected to have three columns with headers: `speed,latitude,longitude`
-        
+
         :param csvfile: File to encode
         :param save: Whether to save the encoding to file.
         :param encodingfile: Where to save encoding to. (./encodings/encoding.p) by default
@@ -174,7 +175,7 @@ class NumentaEncoder(AbstractEncoder):
         :return: bit index in the output vector
         """
         seed(self.__hash_coordinate(latitude, longitude))
-        return randint(0, self.n-1)
+        return randint(0, self.n - 1)
 
     def __map_transform(self, latitude: float, longitude: float) -> Tuple[int, int]:
         # language=rst
