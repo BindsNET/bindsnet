@@ -174,7 +174,7 @@ class NumentaEncoder(AbstractEncoder):
         :return: bit index in the output vector
         """
         seed(self.__hash_coordinate(latitude, longitude))
-        return randint(0, self.n)
+        return randint(0, self.n-1)
 
     def __map_transform(self, latitude: float, longitude: float) -> Tuple[int, int]:
         # language=rst
