@@ -11,6 +11,7 @@ from pyproj import Proj
 from typing import Tuple
 from abc import abstractmethod, ABC
 from random import getrandbits, seed, randint
+from tqdm import tqdm
 
 
 class AbstractEncoder(ABC):
@@ -132,7 +133,7 @@ class NumentaEncoder(AbstractEncoder):
         longitudes = self.data['longitude'].tolist()
 
         values = []
-        for speed, latitude, longitude in zip(speeds, latitudes, longitudes):
+        for speed, latitude, longitude in tqdm(zip(speeds, latitudes, longitudes), unit='datapt'):
             output = torch.zeros(self.n)
             self.__generate_vector((speed, latitude, longitude), output)
 
@@ -222,6 +223,7 @@ class NumentaEncoder(AbstractEncoder):
         return np.array(neighbors[indices])
 
     def __generate_vector(self, data_point: Tuple[float, float, float], output: torch.tensor) -> torch.tensor:
+        # language=rst
         """
         Generates a vector of length `n` for a single data point
         :param data_point: Tuple: (speed, latitude, longitude)

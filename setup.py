@@ -25,5 +25,10 @@ setup(name='bindsnet',
 						'scikit_image>=0.13.1',
 						'scikit_learn>=0.19.1',
 						'opencv-python>=3.4.0.12',
-						'sphinx_rtd_theme',
-						'pytest>=3.4.0'])
+						'sphinx_rtd_theme>=0.4.1e',
+						'pytest>=3.4.0',
+                        'scipy>=1.1.0',
+                        'cython>=0.28.5',
+                        'pandas>=0.23.4',
+                        'pyproj<=1.9.5.2'],
+      dependency_links=['https://github.com/jswhit/pyproj/archive/429a4fe6fa404ba1bc1c0a88bee68c1a30a9b6f9.zip#egg=pyproj-1.9.5.2',])
