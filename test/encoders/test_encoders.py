@@ -31,8 +31,8 @@ class TestEncoders:
             assert len(v1) == 30
 
         def test4():
-            enc1 = NumentaEncoder(csvfile, save=False, encodingfile=encodingfile, n=5000, w=35)
-            val = enc1.get_encoding()
+            enc = NumentaEncoder(csvfile, save=False, encodingfile=encodingfile, n=5000, w=35)
+            val = enc.get_encoding()
             assert val.shape[1] == 5000
             assert sum(sum(val)) == 35 * 30
 

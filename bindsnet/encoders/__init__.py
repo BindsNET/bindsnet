@@ -34,9 +34,8 @@ class AbstractEncoder(ABC):
         if save:
             self.__enc['verify'] = self.__gen_hash(csvfile)
             self.file = encodingfile
-            if not os.path.exists(os.path.dirname(encodingfile)):
-                os.makedirs(os.path.dirname(encodingfile), exist_ok=True)
-            self.__check_file()
+            if os.path.exists(self.file):
+                self.__check_file()
 
     @abstractmethod
     def _encode(self) -> torch.Tensor:
@@ -80,6 +79,8 @@ class AbstractEncoder(ABC):
         """
         Creates/Overwrites existing encoding file
         """
+        if not os.path.exists(os.path.dirname(self.file)):
+            os.makedirs(os.path.dirname(self.file), exist_ok=True)
         with open(self.file, 'wb') as f:
             pickle.dump(self.__enc, f)
 
@@ -99,7 +100,7 @@ class AbstractEncoder(ABC):
 
 class NumentaEncoder(AbstractEncoder):
     def __init__(self, csvfile: str, scale=5, w=21, n=1000, timestep=10, save=False,
-                 encodingfile='./encodings/encoding.p'):
+                 encodingfile='./encodings/encoding.p') -> None:
         super().__init__(csvfile, save, encodingfile)
         # language=rst
         """
@@ -153,7 +154,7 @@ class NumentaEncoder(AbstractEncoder):
         m = hashlib.md5(coordainte_str)
         return int(int(m.hexdigest(), 16) % (2 ** 64))
 
-    def __coordinate_order(self, latitude: float, longitude: float):
+    def __coordinate_order(self, latitude: float, longitude: float) -> int:
         # language=rst
         """
         Returns the order `w` for a given coordinate
