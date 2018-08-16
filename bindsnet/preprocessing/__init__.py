@@ -1,116 +1,122 @@
 import hashlib
 import itertools
-import os
 import math
-import torch
+import os
 import pickle
-
+import torch
 import numpy as np
 import pandas as pd
-from pyproj import Proj
-from typing import Tuple
+
 from abc import abstractmethod, ABC
-from random import getrandbits, seed, randint
+from pyproj import Proj
+from random import getrandbits, randint, seed
 from tqdm import tqdm
+from typing import Tuple
 
 
-class AbstractEncoder(ABC):
+class AbstractPreprocessor(ABC):
     # language=rst
     """
-    Abstract base class for Encoder.
+    Abstract base class for Preprocessor.
     """
 
-    def __init__(self, csvfile: str, save=False, encodingfile='./encodings/encoding.p') -> None:
-        # language=rst
-        """
-        Abstract constructor for the Encoder class.
-        :param csvfile: File to encode
-        :param save: Whether to save the encoding to file.
-        :param encodingfile: Where to save encoding to. (./encodings/encoding.p) by default
-        """
-        self.data = pd.read_csv(csvfile)
-        self.__save_file = save
-        self.__enc = {}
-        if save:
-            self.__enc['verify'] = self.__gen_hash(csvfile)
-            self.file = encodingfile
-            if os.path.exists(self.file):
-                self.__check_file()
+    def process(self, csvfile: str, use_cache: bool = True, cachedfile: str = './processed/data.p') -> torch.tensor:
+        # cache dictionary for storing encodings if previously encoded
+        cache = {'verify': '', 'data': None}
+
+        # if the file exists
+        if use_cache:
+            # generate a hash
+            cache['verify'] = self.__gen_hash(csvfile)
+
+            # compare hash, if valid return cached value
+            if self.__check_file(cachedfile, cache):
+                return cache['data']
+
+        # otherwise process the data
+        self._process(csvfile, cache)
+
+        # save if use_cache
+        if use_cache:
+            self.__save(cachedfile, cache)
+
+        # return data
+        return cache['data']
 
     @abstractmethod
-    def _encode(self) -> torch.Tensor:
+    def _process(self, filename: str, cache: dict):
         # language=rst
         """
-        Method for defining how encoding is done from the csv file.
-         :return: Generated encoding
+        Method for defining how to preprocess the data.
+         :param filename: file to load raw data from
+         :param cache: dict for caching 'data' needs to be updated for caching to work
         """
         pass
 
-    @staticmethod
-    def __gen_hash(filename: str) -> str:
+    def __gen_hash(self, filename: str) -> str:
         # language=rst
         """
-        Generates an hash for a csv file.
+        Generates an hash for a csv file and the preprocessor name
         :param filename: file to generate hash for
          :return: hash for the csv file
         """
+        # read all the lines
         with open(filename, 'r') as f:
             lines = f.readlines()
-        m = hashlib.md5(''.join(lines).encode('utf-8'))
+        # generate md5 hash after concatenating all of the lines
+        pre = ''.join(lines) + str(self.__class__.__name__)
+        m = hashlib.md5(pre.encode('utf-8'))
         return m.hexdigest()
 
-    def __check_file(self) -> None:
+    @staticmethod
+    def __check_file(cachedfile: str, cache: dict) -> bool:
         # language=rst
         """
-        Compares the csv file and the save encoding to see if a new encoding needs to be generated.
+        Compares the csv file and the saved file to see if a new encoding needs to be generated.
+        :param cachedfile: the filename of the cached data
+        :param cache: dict containing the current csvfile hash. This is updated if the cachefile has valid data
+        :return: whether the cache is valid
+
         """
+        # try opening the cached file
         try:
-            with open(self.file, 'rb') as f:
+            with open(cachedfile, 'rb') as f:
                 temp = pickle.load(f)
         except FileNotFoundError:
             temp = {
-                'verify': ''
+                'verify': '', 'data': None,
             }
-        if self.__enc['verify'] == temp['verify']:
-            self.__enc = temp
 
-    def __save(self) -> None:
+        # if the hash matches up, keep the data from the cache
+        if cache['verify'] == temp['verify']:
+            cache['data'] = temp['data']
+            return True
+
+        # otherwise don't do anything
+        return False
+
+    @staticmethod
+    def __save(filename: str, data: dict) -> None:
         # language=rst
         """
         Creates/Overwrites existing encoding file
+        :param filename: filename to save to
         """
-        if not os.path.exists(os.path.dirname(self.file)):
-            os.makedirs(os.path.dirname(self.file), exist_ok=True)
-        with open(self.file, 'wb') as f:
-            pickle.dump(self.__enc, f)
+        # if the directories in path don't exist create them
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
 
-    def get_encoding(self) -> torch.tensor:
-        # language=rst
-        """
-        Returns encoding for the csv file
-        :return: Encoding for specified csv file
-        """
-        if 'encoding' in self.__enc and self.__enc['encoding'] is not None:
-            return self.__enc['encoding']
-        self.__enc['encoding'] = self._encode()
-        if self.__save_file:
-            self.__save()
-        return self.__enc['encoding']
+        # save file
+        with open(filename, 'wb') as f:
+            pickle.dump(data, f)
 
 
-class NumentaEncoder(AbstractEncoder):
-    def __init__(self, csvfile: str, scale=5, w=21, n=1000, timestep=10, save=False,
-                 encodingfile='./encodings/encoding.p') -> None:
-        super().__init__(csvfile, save, encodingfile)
+class NumentaPreprocessor(AbstractPreprocessor):
+    def __init__(self, scale=5, w=21, n=1000, timestep=10) -> None:
         # language=rst
         """
         Numenta Encoder for geospatial data as decribed here: http://chetansurpur.com/slides/2014/8/5/geospatial-encoder.html
-        
-        The csv file is expected to have three columns with headers: `speed,latitude,longitude`
-        
-        :param csvfile: File to encode
-        :param save: Whether to save the encoding to file.
-        :param encodingfile: Where to save encoding to. (./encodings/encoding.p) by default
+
         :param scale: how much to zoom in
         :param w: number of neighbor square to choose
         :param n: length of output binary vector for each encoding step
@@ -122,25 +128,28 @@ class NumentaEncoder(AbstractEncoder):
         self.timestep = timestep
         self.__map = Proj(init="epsg:3785")  # Spherical Mercator
 
-    def _encode(self) -> torch.tensor:
+    def _process(self, filename: str, cache: dict) -> None:
         # language=rst
         """
         Numenta encoding as described here: http://chetansurpur.com/slides/2014/8/5/geospatial-encoder.html
-        :return: Encoding
-        """
 
-        speeds = self.data['speed'].tolist()
-        latitudes = self.data['latitude'].tolist()
-        longitudes = self.data['longitude'].tolist()
+        The csv file is expected to have three columns with headers: `speed,latitude,longitude`
+        :param filename: csv file containing raw data
+        :param cache: dict containing 'data'
+        """
+        data = pd.read_csv(filename)
+        speeds = data['speed'].tolist()
+        latitudes = data['latitude'].tolist()
+        longitudes = data['longitude'].tolist()
 
         values = []
-        for speed, latitude, longitude in tqdm(zip(speeds, latitudes, longitudes), unit='datapt'):
+        for speed, latitude, longitude in tqdm(zip(speeds, latitudes, longitudes), unit='Entry'):
             output = torch.zeros(self.n)
             self.__generate_vector((speed, latitude, longitude), output)
 
             values.append(output.tolist())
 
-        return torch.tensor(values)
+        cache['data'] = torch.tensor(values)
 
     def __hash_coordinate(self, latitude: float, longitude: float) -> int:
         # language=rst
@@ -174,7 +183,7 @@ class NumentaEncoder(AbstractEncoder):
         :return: bit index in the output vector
         """
         seed(self.__hash_coordinate(latitude, longitude))
-        return randint(0, self.n)
+        return randint(0, self.n - 1)
 
     def __map_transform(self, latitude: float, longitude: float) -> Tuple[int, int]:
         # language=rst

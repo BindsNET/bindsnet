@@ -1,4 +1,4 @@
 __all__ = [
-    'utils', 'network', 'models', 'analysis', 'datasets', 'encoding', 'pipeline', 'learning', 'evaluation',
-    'environment'
+    'utils', 'network', 'models', 'analysis', 'preprocessing', 'datasets', 'encoding', 'pipeline', 'learning',
+    'evaluation', 'environment'
 ]

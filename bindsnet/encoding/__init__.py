@@ -21,7 +21,7 @@ def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torc
     # Setting kwargs.
     max_prob = kwargs.get('max_prob', 1.0)
     assert 0 <= max_prob <= 1, 'Maximum firing probability must be in range [0, 1]'
-    
+
     datum = np.copy(datum)
     shape, size = datum.shape, datum.size
     datum = datum.ravel()
@@ -39,7 +39,7 @@ def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torc
     else:
         s = np.random.binomial(1, datum, [time, size])
         s = s.reshape([time, *shape])
-    
+
     return torch.Tensor(s).byte()
 
 
@@ -59,7 +59,7 @@ def bernoulli_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: Op
     """
     # Setting kwargs.
     max_prob = kwargs.get('max_prob', 1.0)
-    
+
     for i in range(len(data)):
         yield bernoulli(data[i], time, max_prob=max_prob)  # Encode datum as Bernoulli spike trains.
 
@@ -78,12 +78,12 @@ def poisson(datum: torch.Tensor, time: int, **kwargs) -> torch.Tensor:
 
     # Invert inputs (firing rate inverse of inter-arrival time).
     datum[datum != 0] = 1 / datum[datum != 0] * 1000
-    
+
     # Make spike data from Poisson sampling.
     s_times = np.random.poisson(datum, [time, size])
     s_times = np.cumsum(s_times, axis=0)
     s_times[s_times >= time] = 0
-    
+
     # Create spike trains from spike times.
     s = np.zeros([time, size])
     for i in range(time):
@@ -91,7 +91,7 @@ def poisson(datum: torch.Tensor, time: int, **kwargs) -> torch.Tensor:
 
     s[0, :] = 0
     s = s.reshape([time, *shape])
-    
+
     return torch.Tensor(s).byte()
 
 
@@ -121,7 +121,7 @@ def rank_order(datum: torch.Tensor, time: int, **kwargs) -> torch.Tensor:
     datum = np.copy(datum)
     shape, size = datum.shape, datum.size
     datum = datum.ravel()
-    
+
     # Compute single spike times in order of decreasing intensity.
     datum /= datum.max()
     s_times = np.zeros(size)
@@ -129,15 +129,15 @@ def rank_order(datum: torch.Tensor, time: int, **kwargs) -> torch.Tensor:
     s_times *= time / s_times.max()
     s_times = np.ceil(s_times).astype(np.int)
     s_times[s_times > time] = time
-    
+
     # Create spike times tensor.
     s = np.zeros([time, size])
     for i in range(size):
         if s_times[i] != 0:
             s[s_times[i] - 1, i] = 1
-    
+
     s = s.reshape([time, *shape])
-    
+
     return torch.Tensor(s).byte()
 
 
