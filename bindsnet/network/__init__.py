@@ -6,6 +6,10 @@ from .nodes import Input, Nodes
 from .topology import AbstractConnection
 from .monitors import AbstractMonitor
 
+__all__ = [
+    'load_network', 'Network', 'nodes', 'monitors', 'topology'
+]
+
 
 def load_network(fname: str) -> 'Network':
     # language=rst
@@ -201,7 +205,8 @@ class Network:
             import torch
             import matplotlib.pyplot as plt
 
-            from bindsnet.network import *
+            from bindsnet.network import Network
+            from bindsnet.network.nodes import Input
             from bindsnet.network.monitors import Monitor
 
             # Build simple network.
