@@ -1,12 +1,18 @@
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
-import torchvision.datasets as dsets
-import torchvision.transforms as transforms
 
-from bindsnet import *
+from bindsnet.analysis.plotting import plot_input, plot_spikes, plot_voltages, plot_weights
+from bindsnet.datasets import MNIST
+from bindsnet.encoding import poisson_loader
+from bindsnet.network import Network, Input
 
 # Build a simple two-layer, input-output network.
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.nodes import LIFNodes
+from bindsnet.network.topology import Connection
+from bindsnet.utils import get_square_weights
+
 network = Network(dt=1.0)
 inpt = Input(784, shape=(28, 28)); network.add_layer(inpt, name='I')
 output = LIFNodes(625, thresh=-52 + torch.randn(625)); network.add_layer(output, name='O')
@@ -53,17 +59,19 @@ for i, (datum, label) in enumerate(loader):
     training_pairs.append([spikes['O'].get('s').sum(-1), label])
     
     inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
-    spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
-    voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
+    spike_ims, spike_axes = plot_spikes({layer: spikes[layer].get('s').view(-1, 250) for layer in spikes},
+                                        axes=spike_axes, ims=spike_ims)
+    voltage_ims, voltage_axes = plot_voltages({layer: voltages[layer].get('v').view(-1, 250) for layer in voltages},
+                                              ims=voltage_ims, axes=voltage_axes)
     weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2)
     weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
     
     plt.pause(1e-8)
-    
-    network._reset()
+    network.reset_()
     
     if i > n_iters:
         break
+
 
 # Define logistic regression model using PyTorch.
 class LogisticRegression(nn.Module):
@@ -74,6 +82,7 @@ class LogisticRegression(nn.Module):
     def forward(self, x):
         out = self.linear(x)
         return out
+
 
 # Create and train logistic regression model on reservoir outputs.
 model = LogisticRegression(625, 10)
@@ -90,9 +99,8 @@ for epoch in range(10):
         loss.backward()
         optimizer.step()
 
-        if (i+1) % 100 == 0:
-            print ('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' 
-                   % (epoch+1, 10, i+1, len(training_pairs), loss.data[0]))
+        if (i + 1) % 100 == 0:
+            print('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' % (epoch+1, 10, i+1, len(training_pairs), loss.data[0]))
 
 # Get MNIST test images and labels.
 images, labels = MNIST(path='../../data/MNIST',
@@ -112,14 +120,15 @@ for i, (datum, label) in enumerate(loader):
     test_pairs.append([spikes['O'].get('s').sum(-1), label])
     
     inpt_axes, inpt_ims = plot_input(images[i], datum.sum(0), label=label, axes=inpt_axes, ims=inpt_ims)
-    spike_ims, spike_axes = plot_spikes({layer : spikes[layer].get('s').view(-1, 250) for layer in spikes}, axes=spike_axes, ims=spike_ims)
-    voltage_ims, voltage_axes = plot_voltages({layer : voltages[layer].get('v').view(-1, 250) for layer in voltages}, ims=voltage_ims, axes=voltage_axes)
+    spike_ims, spike_axes = plot_spikes({layer: spikes[layer].get('s').view(-1, 250) for layer in spikes},
+                                        axes=spike_axes, ims=spike_ims)
+    voltage_ims, voltage_axes = plot_voltages({layer: voltages[layer].get('v').view(-1, 250) for layer in voltages},
+                                              ims=voltage_ims, axes=voltage_axes)
     weights_im = plot_weights(get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2)
     weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
     
     plt.pause(1e-8)
-    
-    network._reset()
+    network.reset_()
     
     if i > n_iters:
         break
