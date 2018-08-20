@@ -19,7 +19,9 @@ out = LIFNodes(n=60, refrac=0, traces=True, thresh=-40.0)
 
 # Connections between layers.
 inpt_middle = Connection(source=inpt, target=middle, wmax=1e-2)
-middle_out = Connection(source=middle, target=out, wmax=0.5, update_rule=m_stdp_et, nu=2e-2, norm=0.15 * middle.n)
+middle_out = Connection(source=middle, target=out, wmax=0.5,
+                        update_rule=m_stdp_et, nu=2e-2,
+                        norm=0.15 * middle.n)
 
 # Add all layers and connections to the network.
 network.add_layer(inpt, name='X')
@@ -33,11 +35,12 @@ environment = GymEnvironment('SpaceInvaders-v0')
 environment.reset()
 
 # Build pipeline from specified components.
-pipeline = Pipeline(network, environment, encoding=bernoulli, feedback=select_multinomial, output='Z', time=1,
-                    history_length=2, delta=4, plot_interval=100, render_interval=5)
+pipeline = Pipeline(network, environment, encoding=bernoulli,
+                    feedback=select_multinomial, output='Z',
+                    time=1, history_length=2, delta=4,
+                    plot_interval=100, render_interval=5)
 
 # Run environment simulation and network training.
 while True:
     pipeline.step()
-    if pipeline.done:
-        pipeline.reset_()
+    if pipeline.done: pipeline.reset_()
