@@ -1,16 +1,22 @@
 import os
-import sys
 import torch
-import numpy             as np
 import argparse
+import numpy as np
 import matplotlib.pyplot as plt
 
-from bindsnet import *
-from time     import time
+from bindsnet.datasets import MNIST
+from bindsnet.encoding import bernoulli_loader
+from bindsnet.network import Network
+from bindsnet.learning import m_stdp_et
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.topology import Connection
+from bindsnet.utils import get_square_weights
+from bindsnet.network.nodes import AdaptiveLIFNodes, Input
+from bindsnet.analysis.plotting import plot_spikes, plot_weights
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', type=int, default=100)
-parser.add_argument('-i', type=int, default=500 * 1000)
+parser.add_argument('--iters', type=int, default=500 * 1000)
 parser.add_argument('--intensity', type=float, default=2.0)
 parser.add_argument('--clamped', type=int, default=5)
 parser.add_argument('--target_rate', type=float, default=0.03)
@@ -22,6 +28,20 @@ parser.add_argument('--plot', dest='plot', action='store_true')
 parser.add_argument('--gpu', dest='gpu', action='store_true')
 parser.set_defaults(plot=False, gpu=False, train=True)
 locals().update(vars(parser.parse_args()))
+
+args = parser.parse_args()
+
+n = args.n
+iters = args.iters
+intensity = args.intensity
+clamped = args.clamped
+target_rate = args.target_rate
+low_rate = args.low_rate
+plot_interval = args.plot_interval
+print_interval = args.print_interval
+change_interval = args.change_interval
+plot = args.plot
+gpu = args.gpu
 
 clamped = min(clamped, int(n / 10))
 
@@ -51,11 +71,11 @@ images /= 4
 
 # Lazily encode data as Poisson spike trains.
 ims = []
-for j in range(0, i, change_interval):
+for j in range(0, iters, change_interval):
     ims.extend([images[j % 60000]] * change_interval)
 
 lbls = []
-for j in range(0, i, change_interval):
+for j in range(0, iters, change_interval):
     lbls.extend([int(labels[j % 60000])] * change_interval)
 
 loader = bernoulli_loader(data=torch.stack(ims), time=1, max_prob=0.05)
@@ -77,15 +97,15 @@ perfs = [[0] * 2]
 spike_record = {layer : torch.zeros(network.layers[layer].n, plot_interval) for layer in network.layers}
 
 print()
-for i in range(i):
+for i in range(iters):
     if i > 0 and i % change_interval == 0:
         avg_rates = torch.zeros(n)
         target_rates = low_rate * torch.ones(n)
         for j in np.random.choice(range(n)[lbls[i]::10], clamped, replace=False):
             target_rates[j] = target_rate
         
-    inpts = {'X' : next(loader).view(1, 784)}
-    kwargs = {'reward' : reward, 'a_plus' : a_plus, 'a_minus' : a_minus}
+    inpts = {'X': next(loader).view(1, 784)}
+    kwargs = {'reward': reward, 'a_plus': a_plus, 'a_minus': a_minus}
 
     network.run(inpts, 1, **kwargs)
     
@@ -135,7 +155,7 @@ for i in range(i):
         print('Performance on iteration %d: (%.2f, %.2f)' % (i / change_interval, p[0] * 100, p[1] * 100))
         
     for m in spike_monitors:
-        spike_monitors[m]._reset()
+        spike_monitors[m].reset_()
     
     if plot:
         if i == 0:
@@ -174,9 +194,9 @@ for i in range(i):
             plt.pause(1e-8)
 
         elif (i + 1) % plot_interval == 0:
-            spike_ims, spike_axes = plot_spikes(spike_record, spike_ims, spike_axes)
+            spikes_ims, spike_axes = plot_spikes(spike_record, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(get_square_weights(econn.w, sqrt, side=28), im=weights_im)
-            
+
             im.set_data(torch.stack([avg_rates, target_rates]))
             
             if not len(distances) > change_interval:
@@ -197,3 +217,5 @@ for i in range(i):
             ax3.autoscale_view(True, True, True)
             
             plt.pause(1e-8)
+
+    i += 1

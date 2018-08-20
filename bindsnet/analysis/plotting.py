@@ -6,7 +6,7 @@ from bindsnet.network import AbstractMonitor, Network
 from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from typing import Tuple, List, Optional, Any, Sized, Dict
+from typing import Tuple, List, Optional, Any, Sized, Dict, Union
 
 from ..utils import reshape_locally_connected_weights
 
@@ -14,8 +14,7 @@ plt.ion()
 
 
 def plot_input(image: torch.Tensor, inpt: torch.Tensor, label: Optional[int] = None, axes: List[Axes] = None,
-               ims: List[AxesImage] = None,
-               figsize: Tuple[int, int]=(8, 4)) -> Tuple[List[Axes], List[AxesImage]]:
+               ims: List[AxesImage] = None, figsize: Tuple[int, int]=(8, 4)) -> Tuple[List[Axes], List[AxesImage]]:
     # language=rst
     """
     Plots a two-dimensional image and its corresponding spike-train representation.
@@ -40,7 +39,8 @@ def plot_input(image: torch.Tensor, inpt: torch.Tensor, label: Optional[int] = N
         axes[1].set_title('Reconstruction')
 
         for ax in axes:
-            ax.set_xticks(()); ax.set_yticks(())
+            ax.set_xticks(())
+            ax.set_yticks(())
 
         fig.tight_layout()
     else:
@@ -53,10 +53,11 @@ def plot_input(image: torch.Tensor, inpt: torch.Tensor, label: Optional[int] = N
     return axes, ims
 
 
-def plot_spikes(spikes: Dict[str, torch.Tensor], layer_to_monitor: Optional[Dict[str, str]] = None,
-                layers: Optional[List[str]] = None, time: Optional[Dict[str, Tuple[int, int]]] = None,
-                n_neurons: Optional[Dict[str, Tuple[int, int]]] = None, ims=None, axes: List[AxesImage] = None,
+def plot_spikes(spikes: Dict[str, torch.Tensor], time: Optional[Tuple[int, int]] = None,
+                n_neurons: Optional[Dict[str, Tuple[int, int]]] = None, ims: Optional[List[AxesImage]] = None,
+                axes: Optional[Union[Axes, List[Axes]]] = None,
                 figsize: Tuple[float, float] = (8.0, 4.5)) -> Tuple[List[AxesImage], List[Axes]]:
+    # language=rst
     """
     Plot spikes for any group(s) of neurons.
     
@@ -72,27 +73,25 @@ def plot_spikes(spikes: Dict[str, torch.Tensor], layer_to_monitor: Optional[Dict
     if n_neurons is None:
         n_neurons = {}
     
-    spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
-    if time is not None:
-        assert len(time) == 2, 'Need (start, stop) values for time argument'
-        assert time[0] < time[1], 'Need start < stop in time argument'
-    else:
+    spikes = {k: v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
+    if time is None:
         # Set it for entire duration
         for key in spikes.keys():
             time = (0, spikes[key].shape[1])
             break
+
     # Use all neurons if no argument provided.
     for key, val in spikes.items():
         if key not in n_neurons.keys():
             n_neurons[key] = (0, val.shape[0])
-    if not ims:
+
+    if ims is None:
         fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
         ims = []
         if n_subplots == 1:
             for datum in spikes.items():
                 ims.append(axes.imshow(spikes[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
-                                       time[0]:time[1]],
-                                       cmap='binary'))
+                                       time[0]:time[1]], cmap='binary'))
                 args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
                 plt.title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
                 plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
@@ -100,12 +99,12 @@ def plot_spikes(spikes: Dict[str, torch.Tensor], layer_to_monitor: Optional[Dict
         else:
             for i, datum in enumerate(spikes.items()):
                 ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
-                                          time[0]:time[1]],
-                                          cmap='binary'))
+                                          time[0]:time[1]], cmap='binary'))
                 args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
                 axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
             for ax in axes:
                 ax.set_aspect('auto')
+
         plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
         plt.tight_layout()
     else:
@@ -125,194 +124,7 @@ def plot_spikes(spikes: Dict[str, torch.Tensor], layer_to_monitor: Optional[Dict
     return ims, axes
 
 
-def plot_spikes_new(network=None, spikes=None, layer_to_monitor={}, layers=[], time={}, n_neurons={}, ims=None, axes=None, figsize=(8, 4.5)):
-    """
-    Plot spikes for any group(s) of neurons. Default behavior will plot everything.
-
-    :param network: ``Network`` containing spike monitor objects.
-    :param spikes: Mapping from layer names to spiking data.
-    :param layer_to_monitor: Mapping of layer names to monitors.
-    :param layers: List of network's layer names to plot spikes for.
-    :param time: Plot spiking activity of neurons in the given time range. Default is entire simulation time.
-    :param n_neurons: Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
-    :param ims: Used for re-drawing the plots.
-    :param axes: Used for re-drawing the plots.
-    :param figsize: Horizontal, vertical figure size in inches.
-    :return: ``ims, axes``: Used for re-drawing the plots.
-    """
-    assert network is not None or spikes is not None, 'Need either "network" or "spikes" argument.'
-
-    if layer_to_monitor is None:
-        layer_to_monitor = {}
-
-    assert network is not None or spikes is not None, 'No plotting information'
-
-    if time is None:
-        time = {}
-
-    if n_neurons is None:
-        n_neurons = {}
-
-    # Set to all layers if no layers were requested
-    if layers is None:
-        layers = []
-        if network is not None: # If network is provided
-            for layer in network.layers:
-                layers.append(layer)
-        else: # Use layers from spikes
-            for layer in spikes.keys():
-                layers.append(layer)
-    else: # Specific layers in network or spikes were provided
-        for layer in layers:
-            if network is not None:
-                assert layer in network.layers,\
-                    f"'{layer}' does not exist within network's layers. \
-                    Network contains layers: {list(network.layers.keys())}"
-            else:
-                assert layer in spikes.keys(), \
-                    f"'{layer}' does not exist within given spiking information.\
-                    Spikes contain layers: {list(spikes.keys())}"
-
-    # Pre-setup plots
-    if network is not None:
-        n_subplots = len(layers)
-    else: # Obtain information from spikes
-        n_subplots = len(layers)
-        spikes = {k : v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
-
-    # Set up monitor to layer names
-    if network is not None:
-        for layer, monitor_name in layer_to_monitor.items():
-            assert monitor_name in network.monitors, \
-                f"'{monitor_name}' does not exist within network. Network contains layers: {list(network.layers.keys())}"
-            assert layer in network.layers, \
-                f"'{layer}' does not exist within network. Network contains monitors: {list(network.monitors.keys())}"
-
-        # Not all mappings were provided. Assume layer names.
-        if len(layer_to_monitor) != len(layers):
-            for layer in set(network.layers) - set(layer_to_monitor):
-                layer_to_monitor[layer] = layer
-
-    assert len(n_neurons) <= n_subplots, \
-        'n_neurons argument needs fewer entries than n_subplots'
-    assert len(time) <= n_subplots, \
-        'time argument needs fewer entries than n_subplots'
-
-    # Check if appropriate values for time were provided
-    if time != {}:
-        for key, val in time.items():
-            if network is not None:
-                assert layer in network.layers,\
-                    f"'{layer}' given in 'time' paramter does not exist within \
-                    network's layers. Network contains layers: {list(network.layers.keys())}"
-            else:
-                assert layer in spikes.keys(), \
-                    f"'{layer}' given in 'time' paramter does not exist within \
-                    spiking information. Spikes contain layers: {list(spikes.keys())}"
-            assert len(val) == 2, 'Need (start, stop) values for time argument'
-            assert val[0] < val[1], 'Need start < stop in time argument'
-
-    # Set it for entire duration
-    for layer in layers:
-        if layer not in time.keys():
-            if network is not None: # Take from monitors
-                time[layer] = (0, network.monitors[layer_to_monitor[layer]].get('s').shape[1])
-            else: # Take from spikes
-                time[layer] = (0, spikes[layer].shape[1])
-
-    # Check if appropriate values for n_neurons were provided
-    if n_neurons != {}:
-        for key, val in n_neurons.items():
-            if network is not None:
-                assert layer in network.layers,\
-                    f"'{layer}' given in 'n_neurons' paramter does not exist within \
-                    network's layers. Network contains layers: {list(network.layers.keys())}"
-            else:
-                assert layer in spikes.keys(), \
-                    f"'{layer}' given in 'n_neurons' paramter does not exist within \
-                    spiking information. Spikes contain layers: {list(spikes.keys())}"
-
-    # Set to use all neurons
-    for layer in layers:
-        if layer not in n_neurons.keys():
-            if network is not None: # Take from monitors
-                n_neurons[layer] = (0, network.monitors[layer_to_monitor[layer]].get('s').shape[0])
-            else:
-                n_neurons[layer] = (0, spikes[layer].shape[0])
-
-    # Create subplots
-    if not ims:
-        fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
-        ims = []
-
-        if n_subplots == 1:
-            # Assuming monitor names and layer names are matching
-            for layer in layers:
-                if network is not None: # Plot using network monitors
-                    ims.append(axes.imshow(network.monitors[layer_to_monitor[layer]].get('s')[n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]],
-                                   cmap='binary'))
-                else: # Plot using spikes
-                    ims.append(axes.imshow(spikes[layer][n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]],
-                                   cmap='binary'))
-
-                args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                plt.title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-                plt.xlabel('Simulation time'); plt.ylabel('Neuron index')
-                axes.set_aspect('auto')
-        else: # Multiple subplots
-            for i, layer in enumerate(layers):
-                if network is not None: # Plot using network monitors
-                    ims.append(axes[i].imshow(network.monitors[layer_to_monitor[layer]].get('s')[n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]],
-                                   cmap='binary'))
-                else: # Plot using spikes
-                    ims.append(axes[i].imshow(spikes[layer][n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]],
-                                   cmap='binary'))
-
-                    args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                    axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-
-            for ax in axes:
-                ax.set_aspect('auto')
-
-        plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
-        plt.tight_layout()
-    else: # Update subplots
-        if n_subplots == 1:
-            for layer in layers:
-                if network is not None: # Plot using network monitors
-                    ims[0].set_data(network.monitors[layer_to_monitor[layer]].get('s')[n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]])
-                else: # Plot using spikes
-                    ims[0].set_data(spikes[layer][n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]])
-
-                ims[0].autoscale()
-
-                args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-        else: # Multiple subplots
-            for i, layer in enumerate(layers):
-                if network is not None: # Plot using network monitors
-                    ims[i].set_data(network.monitors[layer_to_monitor[layer]].get('s')[n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]])
-                else: # Plot using spikes
-                    ims[i].set_data(spikes[layer][n_neurons[layer][0]:n_neurons[layer][1],
-                                   time[layer][0]:time[layer][1]])
-
-                ims[i].autoscale()
-
-                args = (layer, n_neurons[layer][0], n_neurons[layer][1], time[layer][0], time[layer][1])
-                axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
-
-    plt.draw()
-    return ims, axes
-
-
-def plot_weights(weights: torch.Tensor, wmin: Optional[float] = None, wmax: Optional[float] = None,
+def plot_weights(weights: torch.Tensor, wmin: Optional[float] = 0, wmax: Optional[float] = 1,
                  im: Optional[AxesImage] = None, figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
     # language=rst
     """
@@ -325,12 +137,6 @@ def plot_weights(weights: torch.Tensor, wmin: Optional[float] = None, wmax: Opti
     :param figsize: Horizontal, vertical figure size in inches.
     :return: ``AxesImage`` for re-drawing the weights plot.
     """
-    if wmin is None:
-        wmin = weights.min()
-
-    if wmax is None:
-        wmax = weights.max()
-
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title('Connection weights')

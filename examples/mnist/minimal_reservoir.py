@@ -1,8 +1,15 @@
 import torch
 import torch.nn as nn
-from bindsnet import *
 
 # Define logistic regression model using PyTorch.
+from bindsnet.datasets import MNIST
+from bindsnet.network import Network
+from bindsnet.encoding import poisson_loader
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.topology import Connection
+from bindsnet.network.nodes import LIFNodes, Input
+
+
 class LogisticRegression(nn.Module):
     def __init__(self, input_size, num_classes):
         super(LogisticRegression, self).__init__()
@@ -10,6 +17,7 @@ class LogisticRegression(nn.Module):
     
     def forward(self, x):
         return self.linear(x)
+
 
 # Build a simple, two layer, "input-output" network.
 network = Network(dt=1.0)
@@ -28,7 +36,7 @@ training_pairs = []
 for i, (datum, label) in enumerate(loader):
     network.run(inpts={'I' : datum}, time=250)
     training_pairs.append([network.monitors['output_spikes'].get('s').sum(-1), label])
-    network._reset()
+    network.reset_()
     
     if (i + 1) % 50 == 0: print('Train progress: (%d / 500)' % (i + 1))
     if (i + 1) == 500: print(); break  # stop after 500 training examples
@@ -45,7 +53,7 @@ for epoch in range(10):
         loss.backward(); optimizer.step()
 
 # Get MNIST test images and labels and create data loader.
-images, labels = MNIST(path='../../data/MNIST').get_test(); images *= 0.25
+images, labels = MNIST(path='../../data/MNIST', download=True).get_test(); images *= 0.25
 loader = zip(poisson_loader(images, time=250), iter(labels))
 
 # Run test data on reservoir and store (spikes per neuron, label) pairs.
@@ -53,12 +61,12 @@ test_pairs = []
 for i, (datum, label) in enumerate(loader):
     network.run(inpts={'I' : datum}, time=250)
     test_pairs.append([network.monitors['output_spikes'].get('s').sum(-1), label])
-    network._reset()
+    network.reset_()
     
     if (i + 1) % 50 == 0: print('Test progress: (%d / 500)' % (i + 1))
     if (i + 1) == 500: print(); break  # stop after 500 test examples
 
-# Test the logistic regresion model on (spikes, label) pairs.
+# Test the logistic regression model on (spikes, label) pairs.
 correct, total = 0, 0
 for s, label in test_pairs:
     output = model(s); _, predicted = torch.max(output.data.unsqueeze(0), 1)
