@@ -703,3 +703,86 @@ class IzhikevichNodes(Nodes):
         super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.u = self.b * self.v                     # Neuron recovery.
+
+
+class IzhikevichMetabolicNodes(Nodes):
+    # language=rst
+    """
+    Layer of Izhikevich neurons.
+    """
+
+    def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
+                 excitatory: bool = True, thresh: float = -52.0, rest: float = -65.0, reset: float = -65.0,
+                 refrac: int = 5, decay: float = 1e-2, trace_tc: float = 5e-2, beta: float = 0.5) -> None:
+        # language=rst
+        """
+        Instantiates a layer of Izhikevich neurons.
+
+        :param n: The number of neurons in the layer.
+        :param shape: The dimensionality of the layer.
+        :param traces: Whether to record spike traces.
+        :param excitatory: Whether layer is excitatory.
+        :param thresh: Spike threshold voltage.
+        :param rest: Resting membrane voltage.
+        :param reset: Post-spike reset voltage.
+        :param refrac: Refractory (non-firing) period of the neuron.
+        :param decay: Time constant of neuron voltage decay.
+        :param trace_tc: Time constant of spike trace decay.
+        :param beta: beta_input of the metabolic model.
+        """
+        super().__init__(n, shape, traces, trace_tc)
+
+        self.rest = rest       # Rest voltage.
+        self.reset = reset     # Post-spike reset voltage.
+        self.thresh = thresh   # Spike threshold voltage.
+        self.refrac = refrac   # Post-spike refractory period.
+        self.decay = decay     # Rate of decay of neuron voltage.
+        self.beta = beta
+
+        if excitatory:
+            self.r = torch.rand(n)
+            self.a = 0.02 * torch.ones(n)
+            self.b = 0.2 * torch.ones(n)
+            self.c = -65.0 + 15 * (self.r ** 2)
+            self.d = 8 - 6 * (self.r ** 2)
+        else:
+            self.r = torch.rand(n)
+            self.a = 0.02 + 0.08 * self.r
+            self.b = 0.25 - 0.05 * self.r
+            self.c = -65.0 * torch.ones(n)
+            self.d = 2 * torch.ones(n)
+
+        m = 0.7
+        self.v = self.rest * torch.ones(n)  # Neuron voltages.
+        self.u = self.b * self.v            # Neuron recovery.
+
+    def step(self, inpts: torch.Tensor, dt: float) -> None:
+        # language=rst
+        """
+        Runs a single simulation step.
+
+        :param inpts: Inputs to the layer.
+        :param dt: Simulation time step.
+        """
+        # Apply v and u updates.
+        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.u += self.a * ((self.b + self.beta * self.m) * self.v - self.u)
+
+        # Check for spiking neurons.
+        self.s = (self.v >= self.thresh)
+
+        # Refractoriness and voltage reset.
+        self.v = torch.where(self.s, self.c, self.v)
+        self.u = torch.where(self.s, self.u + self.d, self.u)
+
+        super().step(inpts, dt)
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.u = self.b * self.v                     # Neuron recovery.
