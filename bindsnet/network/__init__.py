@@ -11,17 +11,17 @@ __all__ = [
 ]
 
 
-def load_network(fname: str) -> 'Network':
+def load_network(file_name: str) -> 'Network':
     # language=rst
     """
     Loads serialized network object from disk.
 
-    :param fname: Path to serialized network object on disk.
+    :param file_name: Path to serialized network object on disk.
     :return:
     """
     try:
-        with open(fname, 'rb') as f:
-            return torch.load(open(fname, 'rb'))
+        with open(file_name, 'rb') as f:
+            return torch.load(open(file_name, 'rb'))
     except FileNotFoundError:
         print('Network not found on disk.')
 
