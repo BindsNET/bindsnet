@@ -119,3 +119,5 @@ results/
 # PyCharm project folder.
 .idea/
 
+# macOS
+.DS_Store
