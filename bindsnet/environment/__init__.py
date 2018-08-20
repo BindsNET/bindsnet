@@ -169,7 +169,7 @@ class DatasetEnvironment(Environment):
         if type(self.dataset) == MNIST:
             return self.obs.view(28, 28)
         elif type(self.dataset) in [CIFAR10, CIFAR100]:
-            temp = self.obs.view(3, 32, 32).cpu().numpy().transpose(1, 2, 0) / self.intensity
+            temp = self.obs.view(32, 32, 3).cpu().numpy() / self.intensity
             return temp / temp.max()
         elif type(self.dataset) in SpokenMNIST:
             return self.obs.view(-1, 40)
