@@ -9,11 +9,8 @@ from ..encoding import bernoulli
 from ..network.nodes import Input
 from ..environment import Environment
 from ..network.monitors import Monitor
-from ..analysis.plotting import plot_spikes, plot_voltages
+from ..analysis import plot_spikes, plot_voltages
 
-__all__ = [
-    'Pipeline', 'action'
-]
 
 plt.ion()
 

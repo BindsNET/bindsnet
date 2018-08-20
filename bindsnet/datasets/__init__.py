@@ -13,10 +13,6 @@ from abc import ABC, abstractmethod
 from urllib.request import urlretrieve
 from typing import Tuple, List, Iterable, Any
 
-__all__ = [
-    'Dataset', 'MNIST', 'SpokenMNIST', 'CIFAR10', 'CIFAR100', 'preprocess'
-]
-
 
 class Dataset(ABC):
     # language=rst
