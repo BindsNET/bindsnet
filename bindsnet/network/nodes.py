@@ -632,8 +632,8 @@ class IzhikevichNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 excitatory: bool = True, thresh: float = -52.0, rest: float = -65.0, reset: float = -65.0,
-                 refrac: int = 5, decay: float = 1e-2, trace_tc: float = 5e-2) -> None:
+                 excitatory: bool = True, thresh: float = -52.0, rest: float = -65.0, 
+				 trace_tc: float = 5e-2) -> None:
         # language=rst
         """
         Instantiates a layer of Izhikevich neurons.
@@ -644,18 +644,12 @@ class IzhikevichNodes(Nodes):
         :param excitatory: Whether layer is excitatory.
         :param thresh: Spike threshold voltage.
         :param rest: Resting membrane voltage.
-        :param reset: Post-spike reset voltage.
-        :param refrac: Refractory (non-firing) period of the neuron.
-        :param decay: Time constant of neuron voltage decay.
         :param trace_tc: Time constant of spike trace decay.
         """
         super().__init__(n, shape, traces, trace_tc)
 
         self.rest = rest       # Rest voltage.
-        self.reset = reset     # Post-spike reset voltage.
         self.thresh = thresh   # Spike threshold voltage.
-        self.refrac = refrac   # Post-spike refractory period.
-        self.decay = decay     # Rate of decay of neuron voltage.
 
         if excitatory:
             self.r = torch.rand(n)
@@ -712,8 +706,8 @@ class IzhikevichMetabolicNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 excitatory: bool = True, thresh: float = -52.0, rest: float = -65.0, reset: float = -65.0,
-                 refrac: int = 5, decay: float = 1e-2, trace_tc: float = 5e-2, beta: float = 0.5) -> None:
+                 excitatory: bool = True, thresh: float = -52.0, rest: float = -65.0, 
+				 trace_tc: float = 5e-2, beta: float = 0.5) -> None:
         # language=rst
         """
         Instantiates a layer of Izhikevich neurons.
@@ -724,19 +718,13 @@ class IzhikevichMetabolicNodes(Nodes):
         :param excitatory: Whether layer is excitatory.
         :param thresh: Spike threshold voltage.
         :param rest: Resting membrane voltage.
-        :param reset: Post-spike reset voltage.
-        :param refrac: Refractory (non-firing) period of the neuron.
-        :param decay: Time constant of neuron voltage decay.
         :param trace_tc: Time constant of spike trace decay.
         :param beta: beta_input of the metabolic model.
         """
         super().__init__(n, shape, traces, trace_tc)
 
         self.rest = rest       # Rest voltage.
-        self.reset = reset     # Post-spike reset voltage.
         self.thresh = thresh   # Spike threshold voltage.
-        self.refrac = refrac   # Post-spike refractory period.
-        self.decay = decay     # Rate of decay of neuron voltage.
         self.beta = beta
 
         if excitatory:
