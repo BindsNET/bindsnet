@@ -61,7 +61,7 @@ class Network:
 
         # Create Poisson-distributed spike train inputs.
         data = 15 * torch.rand(1, 100)  # Generate random Poisson rates for 100 input neurons.
-        trains = encoding.get_poisson(data=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
+        trains = encoding.poisson(data=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
 
         # Simulate network on generated spike trains.
         for train in trains:
