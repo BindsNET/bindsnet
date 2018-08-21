@@ -708,7 +708,7 @@ class IzhikevichNodes(Nodes):
 class IzhikevichMetabolicNodes(Nodes):
     # language=rst
     """
-    Layer of Izhikevich neurons.
+    Layer of Metabolic Izhikevich neurons.
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
