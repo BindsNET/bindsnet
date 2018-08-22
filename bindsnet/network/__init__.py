@@ -29,6 +29,7 @@ def load_network(file_name: str) -> 'Network':
 class Network:
     # language=rst
     """
+
     Most important object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and
     connections.
 
@@ -61,12 +62,11 @@ class Network:
 
         # Create Poisson-distributed spike train inputs.
         data = 15 * torch.rand(1, 100)  # Generate random Poisson rates for 100 input neurons.
-        trains = encoding.poisson(data=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
+        train = encoding.poisson(datum=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
 
         # Simulate network on generated spike trains.
-        for train in trains:
-            inpts = {'X' : train}  # Create inputs mapping.
-            network.run(inpts=inpts, time=5000)  # Run network simulation.
+        inpts = {'X' : train}  # Create inputs mapping.
+        network.run(inpts=inpts, time=5000)  # Run network simulation.
 
         # Plot spikes of input and output layers.
         spikes = {'X' : M1.get('s'), 'Y' : M2.get('s')}
@@ -193,7 +193,10 @@ class Network:
 
         Keyword arguments:
 
-        :param Dict[str, Union[int, torch.Tensor]] clamps: Mapping of layer names to neurons to "clamp" to spiking.
+        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to T/F if neuron at time should be
+                                                            "clamp". The ``Tensor``s of shape ``[time, n_input]``
+        :param Dict[str, torch.Tensor] clamp_v: value 1 at clamps node from clapms to define value.
+                                                               ``Tensor``s of shape ``[time, n_input]``
         :param float reward: Scalar value used in reward-modulated learning.
         :param Dict[str, torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
                                               clamp to zero.
@@ -230,6 +233,7 @@ class Network:
         """
         # Parse keyword arguments.
         clamps = kwargs.get('clamp', {})
+        clamps_v = kwargs.get('clamp_v', {})
         reward = kwargs.get('reward', None)
         masks = kwargs.get('masks', {})
         
@@ -241,17 +245,24 @@ class Network:
         
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
-            # Update each layer of nodes.
+
+            # iterate on each layer
             for l in self.layers:
+                # Force neurons to spike.
+                clamp = clamps.get(l, None)
+                if clamp is not None:
+                    print('in=1.01 clamp', clamp)
+                    print('clamp = ',clamps_v[l][t,clamp])
+                    print('in=1.1')
+                    if clamp[l][t,clamp]:
+                        print('in=2')
+                        self.layers[l].v[clamp] = clamps_v[l][t,clamp]
+
+                # Update each layer of nodes.
                 if type(self.layers[l]) is Input:
                     self.layers[l].step(inpts[l][t, :], self.dt)
                 else:
                     self.layers[l].step(inpts[l], self.dt)
-                
-                # Force neurons to spike.
-                clamp = clamps.get(l, None)
-                if clamp is not None:
-                    self.layers[l].s[clamp] = 1
 
             # Run synapse updates.
             for c in self.connections:
