@@ -251,12 +251,7 @@ class Network:
                 # Force neurons to spike.
                 clamp = clamps.get(l, None)
                 if clamp is not None:
-                    print('in=1.01 clamp', clamp)
-                    print('clamp = ',clamps_v[l][t,clamp])
-                    print('in=1.1')
-                    if clamp[l][t,clamp]:
-                        print('in=2')
-                        self.layers[l].v[clamp] = clamps_v[l][t,clamp]
+                    self.layers[l].v = torch.where(clamp[t,:], clamps_v[l][t,:], self.layers[l].v)
 
                 # Update each layer of nodes.
                 if type(self.layers[l]) is Input:
