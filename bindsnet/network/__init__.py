@@ -193,10 +193,10 @@ class Network:
 
         Keyword arguments:
 
-        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to T/F if neuron at time should be
-                                                            "clamp". The ``Tensor``s of shape ``[time, n_input]``
-        :param Dict[str, torch.Tensor] clamp_v: value 1 at clamps node from clapms to define value.
-                                                               ``Tensor``s of shape ``[time, n_input]``
+        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to T/F if neuron at time t should be "clamp" to a
+                                              certain value specify in clamp_v. The ``Tensor``s of shape ``[time, n_input]``
+        :param Dict[str, torch.Tensor] clamp_v: Mapping of layer names to certain value to clamps the True node specify
+                                                by clamp. ``Tensor``s of shape ``[time, n_input]``
         :param float reward: Scalar value used in reward-modulated learning.
         :param Dict[str, torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
                                               clamp to zero.
