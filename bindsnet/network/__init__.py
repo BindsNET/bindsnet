@@ -248,7 +248,7 @@ class Network:
 
             # iterate on each layer
             for l in self.layers:
-                # Force neurons to spike.
+                # Force neurons to certain voltage.
                 clamp = clamps.get(l, None)
                 if clamp is not None:
                     self.layers[l].v = torch.where(clamp[t,:], clamps_v[l][t,:], self.layers[l].v)
