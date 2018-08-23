@@ -740,7 +740,7 @@ class IzhikevichMetabolicNodes(Nodes):
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
 
-        m = 0.7
+        self.m = 0.7
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
         self.u = self.b * self.v            # Neuron recovery.
 
