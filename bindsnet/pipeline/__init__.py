@@ -124,9 +124,13 @@ class Pipeline:
 
         Keyword arguments:
 
-        :param Dict[str, torch.Tensor] clamp: Mapping from layer names to neurons to clamping to spiking.
+        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to T/F if neuron at time t should be "clamp" to a
+                                              certain value specify in clamp_v. The ``Tensor``s of shape ``[time, n_input]``
+        :param Dict[str, torch.Tensor] clamp_v: Mapping of layer names to certain value to clamps the True node specify
+                                                by clamp. ``Tensor``s of shape ``[time, n_input]``
         """
         clamp = kwargs.get('clamp', {})
+        clamp_v = kwargs.get('clamp_v', {})
 
         if self.print_interval is not None and self.iteration % self.print_interval == 0:
             print(f'Iteration: {self.iteration} (Time: {time.time() - self.clock:.4f})')
@@ -159,7 +163,7 @@ class Pipeline:
             self.encoded[inpt] = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(inpts=self.encoded, time=self.time, reward=self.reward, clamp=clamp)
+        self.network.run(inpts=self.encoded, time=self.time, reward=self.reward, clamp=clamp, clamp_v=clamp_v)
 
         # Plot relevant data.
         if self.plot_interval is not None and self.iteration % self.plot_interval == 0:
