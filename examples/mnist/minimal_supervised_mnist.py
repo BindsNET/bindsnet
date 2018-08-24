@@ -22,10 +22,11 @@ labels = environment.labels
 for i in range(60000):
     # Choose an output neuron to clamp to spiking behavior.
     c = choice(10, size=1, replace=False)
+    c = 10 * labels[i].long() + Tensor(c).long()
     clamp = torch.zeros(pipeline.time, network.n_neurons,dtype=torch.uint8)
-    clamp[c, :] = 1
+    clamp[:, c] = 1
     clamp_v = torch.zeros(pipeline.time, network.n_neurons,dtype=torch.float)
-    clamp_v[c,:] = 10 * labels[i].float() + Tensor(c).float()
+    clamp_v[:,c] =  network.layers['Ae'].thresh + network.layers['Ae'].theta[c] + 10
 
     # Run a step of the pipeline with clamped neuron.
     pipeline.step(clamp={'Ae':clamp},clamp_v={'Ae':clamp_v})
