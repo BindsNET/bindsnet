@@ -632,7 +632,7 @@ class IzhikevichNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 excitatory: bool = True, thresh: float = -52.0, rest: float = -65.0, 
+                 excitatory: float = 1, thresh: float = -52.0, rest: float = -65.0,
 				 trace_tc: float = 5e-2) -> None:
         # language=rst
         """
@@ -641,7 +641,7 @@ class IzhikevichNodes(Nodes):
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
         :param traces: Whether to record spike traces.
-        :param excitatory: Whether layer is excitatory.
+        :param excitatory: 0 = inhibitory layer, 1 = excitatory layer, 0<value<1 percent of ecitatory neurons in the layer.
         :param thresh: Spike threshold voltage.
         :param rest: Resting membrane voltage.
         :param trace_tc: Time constant of spike trace decay.
@@ -651,18 +651,33 @@ class IzhikevichNodes(Nodes):
         self.rest = rest       # Rest voltage.
         self.thresh = thresh   # Spike threshold voltage.
 
-        if excitatory:
+        if excitatory==1:
             self.r = torch.rand(n)
             self.a = 0.02 * torch.ones(n)
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
-        else:
+        elif excitatory==0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
+        else:
+            ex = int(n * excitatory)
+            inh = n - ex
+            # excitation
+            self.r = torch.rand(ex)
+            self.a = 0.02 * torch.ones(ex)
+            self.b = 0.2 * torch.ones(ex)
+            self.c = -65.0 + 15 * (self.r ** 2)
+            self.d = 8 - 6 * (self.r ** 2)
+            #inhibitory
+            self.r = torch.rand(inh)
+            self.a = 0.02 + 0.08 * self.r
+            self.b = 0.25 - 0.05 * self.r
+            self.c = -65.0 * torch.ones(inh)
+            self.d = 2 * torch.ones(inh)
 
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
         self.u = self.b * self.v            # Neuron recovery.
@@ -715,7 +730,7 @@ class IzhikevichMetabolicNodes(Nodes):
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
         :param traces: Whether to record spike traces.
-        :param excitatory: Whether layer is excitatory.
+        :param excitatory: 0 = inhibitory layer, 1 = excitatory layer, 0<value<1 percent of ecitatory neurons in the layer.
         :param thresh: Spike threshold voltage.
         :param rest: Resting membrane voltage.
         :param trace_tc: Time constant of spike trace decay.
@@ -727,18 +742,33 @@ class IzhikevichMetabolicNodes(Nodes):
         self.thresh = thresh   # Spike threshold voltage.
         self.beta = beta
 
-        if excitatory:
+        if excitatory==1:
             self.r = torch.rand(n)
             self.a = 0.02 * torch.ones(n)
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
-        else:
+        elif excitatory==0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
+        else:
+            ex = int(n * excitatory)
+            inh = n - ex
+            # excitation
+            self.r = torch.rand(ex)
+            self.a = 0.02 * torch.ones(ex)
+            self.b = 0.2 * torch.ones(ex)
+            self.c = -65.0 + 15 * (self.r ** 2)
+            self.d = 8 - 6 * (self.r ** 2)
+            #inhibitory
+            self.r = torch.rand(inh)
+            self.a = 0.02 + 0.08 * self.r
+            self.b = 0.25 - 0.05 * self.r
+            self.c = -65.0 * torch.ones(inh)
+            self.d = 2 * torch.ones(inh)
 
         self.m = 0.7
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
