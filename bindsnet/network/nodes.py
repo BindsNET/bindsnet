@@ -657,27 +657,35 @@ class IzhikevichNodes(Nodes):
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
+            self.excitatory = True
         elif excitatory==0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
+            self.excitatory = False
         else:
             ex = int(n * excitatory)
             inh = n - ex
+            # init
+            self.r = self.a = self.b = self.c = self.d = self.excitatory = torch.zeros(n)
+
             # excitation
-            self.r = torch.rand(ex)
-            self.a = 0.02 * torch.ones(ex)
-            self.b = 0.2 * torch.ones(ex)
-            self.c = -65.0 + 15 * (self.r ** 2)
-            self.d = 8 - 6 * (self.r ** 2)
+            self.r[0:ex] = torch.rand(ex)
+            self.a[0:ex] = 0.02 * torch.ones(ex)
+            self.b[0:ex] = 0.2 * torch.ones(ex)
+            self.c[0:ex] = -65.0 + 15 * (self.r ** 2)
+            self.d[0:ex] = 8 - 6 * (self.r ** 2)
+            self.excitatory[0:ex] = self.excitatory[0:ex] == 0 # True
+
             #inhibitory
-            self.r = torch.rand(inh)
-            self.a = 0.02 + 0.08 * self.r
-            self.b = 0.25 - 0.05 * self.r
-            self.c = -65.0 * torch.ones(inh)
-            self.d = 2 * torch.ones(inh)
+            self.r[ex:] = torch.rand(inh)
+            self.a[ex:] = 0.02 + 0.08 * self.r
+            self.b[ex:] = 0.25 - 0.05 * self.r
+            self.c[ex:] = -65.0 * torch.ones(inh)
+            self.d[ex:] = 2 * torch.ones(inh)
+            self.excitatory[0:ex] = self.excitatory[0:ex] > 0 # False
 
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
         self.u = self.b * self.v            # Neuron recovery.
@@ -748,27 +756,35 @@ class IzhikevichMetabolicNodes(Nodes):
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
+            self.excitatory = True
         elif excitatory==0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
+            self.excitatory = False
         else:
             ex = int(n * excitatory)
             inh = n - ex
+            # init
+            self.r = self.a = self.b = self.c = self.d = self.excitatory = torch.zeros(n)
+
             # excitation
-            self.r = torch.rand(ex)
-            self.a = 0.02 * torch.ones(ex)
-            self.b = 0.2 * torch.ones(ex)
-            self.c = -65.0 + 15 * (self.r ** 2)
-            self.d = 8 - 6 * (self.r ** 2)
+            self.r[0:ex] = torch.rand(ex)
+            self.a[0:ex] = 0.02 * torch.ones(ex)
+            self.b[0:ex] = 0.2 * torch.ones(ex)
+            self.c[0:ex] = -65.0 + 15 * (self.r ** 2)
+            self.d[0:ex] = 8 - 6 * (self.r ** 2)
+            self.excitatory[0:ex] = self.excitatory[0:ex] == 0 # True
+
             #inhibitory
-            self.r = torch.rand(inh)
-            self.a = 0.02 + 0.08 * self.r
-            self.b = 0.25 - 0.05 * self.r
-            self.c = -65.0 * torch.ones(inh)
-            self.d = 2 * torch.ones(inh)
+            self.r[ex:] = torch.rand(inh)
+            self.a[ex:] = 0.02 + 0.08 * self.r
+            self.b[ex:] = 0.25 - 0.05 * self.r
+            self.c[ex:] = -65.0 * torch.ones(inh)
+            self.d[ex:] = 2 * torch.ones(inh)
+            self.excitatory[0:ex] = self.excitatory[0:ex] > 0 # False
 
         self.m = 0.7
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
