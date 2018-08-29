@@ -207,7 +207,8 @@ def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 
 
 def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel_size: int, conv_size: int,
                                    locations: torch.Tensor, input_sqrt: int, wmin: float = 0.0, wmax: float = 1.0,
-                                   im: Optional[AxesImage] = None, figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
+                                   im: Optional[AxesImage] = None, lines: bool = True,
+                                   figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
     # language=rst
     """
     Plot a connection weight matrix of a :code:`Connection` with `locally connected structure
@@ -222,11 +223,11 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
     :param wmin: Minimum allowed weight value.
     :param wmax: Maximum allowed weight value.
     :param im: Used for re-drawing the weights plot.
+    :param lines: Whether or not to draw horizontal and vertical lines separating input regions.
     :param figsize: Horizontal, vertical figure size in inches.
     :return: Used for re-drawing the weights plot.
     """
     reshaped = reshape_locally_connected_weights(weights, n_filters, kernel_size, conv_size, locations, input_sqrt)
-
     n_sqrt = int(np.ceil(np.sqrt(n_filters)))
 
     if not im:
@@ -237,11 +238,12 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
-        for i in range(n_sqrt * kernel_size, n_sqrt * conv_size * kernel_size, n_sqrt * kernel_size):
-            ax.axhline(i - 0.5, color='g', linestyle='--')
+        if lines:
+            for i in range(n_sqrt * kernel_size, n_sqrt * conv_size * kernel_size, n_sqrt * kernel_size):
+                ax.axhline(i - 0.5, color='g', linestyle='--')
 
-        for i in range(n_sqrt * kernel_size, n_sqrt * conv_size * kernel_size, n_sqrt * kernel_size):
-            ax.axvline(i - 0.5, color='g', linestyle='--')
+            for i in range(n_sqrt * kernel_size, n_sqrt * conv_size * kernel_size, n_sqrt * kernel_size):
+                ax.axvline(i - 0.5, color='g', linestyle='--')
 
         ax.set_xticks(()); ax.set_yticks(())
         ax.set_aspect('auto')
@@ -352,26 +354,19 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         ims = []
 
         if n_subplots == 1:  # Plotting only one image
-            for datum in voltages.items():
-                ims.append(axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
-                                        time[0]:time[1]]))
-                plt.title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
-                                                                                    n_neurons[datum[0]][0],
-                                                                                    n_neurons[datum[0]][1],
-                                                                                    time[0],
-                                                                                    time[1]))
-                plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
+            for v in voltages.items():
+                ims.append(axes.matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]]))
 
+                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                plt.title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
+                plt.xlabel('Time (ms)'); plt.ylabel('Neuron index')
                 axes.set_aspect('auto')
 
         else:  # Plot each layer at a time
-            for i, datum in enumerate(voltages.items()):
-                ims.append(axes[i].matshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]]))
-                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
-                                                                                            n_neurons[datum[0]][0],
-                                                                                            n_neurons[datum[0]][1],
-                                                                                            time[0],
-                                                                                            time[1]))
+            for i, v in enumerate(voltages.items()):
+                ims.append(axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]]))
+                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 
             for ax in axes:
                 ax.set_aspect('auto')
@@ -381,26 +376,19 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
 
     else:  # Plotting figure given
         if n_subplots == 1:  # Plotting only one image
-            for datum in voltages.items():
+            for v in voltages.items():
                 axes.clear()
-                axes.matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-                axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
-                                                                                         n_neurons[datum[0]][0],
-                                                                                         n_neurons[datum[0]][1],
-                                                                                         time[0],
-                                                                                         time[1]))
-
+                axes.matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]])
+                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
                 axes.set_aspect('auto')
 
         else: # Plot each layer at a time
-            for i, datum in enumerate(voltages.items()):
+            for i, v in enumerate(voltages.items()):
                 axes[i].clear()
-                axes[i].matshow(voltages[datum[0]][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
-                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % (datum[0],
-                                                                                            n_neurons[datum[0]][0],
-                                                                                            n_neurons[datum[0]][1],
-                                                                                            time[0],
-                                                                                            time[1]))
+                axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]])
+                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 
             for ax in axes:
                 ax.set_aspect('auto')

@@ -193,10 +193,11 @@ class Network:
 
         Keyword arguments:
 
-        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to T/F if neuron at time t should be "clamp" to a
-                                              certain value specify in clamp_v. The ``Tensor``s of shape ``[time, n_input]``
-        :param Dict[str, torch.Tensor] clamp_v: Mapping of layer names to certain value to clamps the True node specify
-                                                by clamp. ``Tensor``s of shape ``[time, n_input]``
+        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to boolean masks if neurons should be clamped to
+                                              values specified in the ``clamp_v`` argument. The ``Tensor``s have shape
+                                              ``[time, n_input]``.
+        :param Dict[str, torch.Tensor] clamp_v: Mapping of layer names to certain voltages to clamp nodes specified by
+                                                the ``clamp`` argument. ``Tensor``s of shape ``[time, n_input]``.
         :param float reward: Scalar value used in reward-modulated learning.
         :param Dict[str, torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
                                               clamp to zero.
@@ -245,23 +246,25 @@ class Network:
         
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
-
-            # iterate on each layer
             for l in self.layers:
-                # Force neurons to certain voltage.
+                # Clamp neurons to certain voltage.
                 clamp = clamps.get(l, None)
                 if clamp is not None:
-                    self.layers[l].v = torch.where(clamp[t,:], clamps_v[l][t,:], self.layers[l].v)
+                    self.layers[l].v = torch.where(
+                        clamp[t], clamps_v[l][t], self.layers[l].v
+                    )
 
                 # Update each layer of nodes.
                 if type(self.layers[l]) is Input:
-                    self.layers[l].step(inpts[l][t, :], self.dt)
+                    self.layers[l].step(inpts[l][t], self.dt)
                 else:
                     self.layers[l].step(inpts[l], self.dt)
 
             # Run synapse updates.
             for c in self.connections:
-                self.connections[c].update(reward=reward, mask=masks.get(c, None))
+                self.connections[c].update(
+                    reward=reward, mask=masks.get(c, None)
+                )
 
             # Get input to all layers.
             inpts.update(self.get_inputs())

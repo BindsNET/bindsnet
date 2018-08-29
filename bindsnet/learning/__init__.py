@@ -104,11 +104,7 @@ def m_stdp(conn: AbstractConnection, **kwargs) -> None:
     :param float a_minus: Learning rate (pre-synaptic).
     """
     # Parse keyword arguments.
-    try:
-        reward = kwargs['reward']
-    except KeyError:
-        raise KeyError('function m_stdp requires a reward kwarg')
-
+    reward = kwargs['reward']
     a_plus = kwargs.get('a_plus', 1)
     a_minus = kwargs.get('a_plus', -1)
 
@@ -174,11 +170,7 @@ def m_stdp_et(conn: AbstractConnection, **kwargs) -> None:
     :param float a_minus: Learning rate (pre-synaptic).
     """
     # Parse keyword arguments.
-    try:
-        reward = kwargs['reward']
-    except KeyError:
-        raise KeyError('Function m_stdp_et requires a reward keyword argument')
-
+    reward = kwargs['reward']
     a_plus = kwargs.get('a_plus', 1)
     a_minus = kwargs.get('a_plus', -1)
 

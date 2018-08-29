@@ -3,8 +3,8 @@ import torch
 import numpy as np
 
 from torch import Tensor
-from typing import Tuple
 from numpy import ndarray
+from typing import Tuple, Union
 
 
 def get_im2col_indices(x_shape: Tuple[int, int, int, int], kernel_height: int,
@@ -98,24 +98,31 @@ def col2im_indices(cols: Tensor, x_shape: Tuple[int, int, int, int], kernel_heig
     return x_padded[:, :, padding[0]:-padding[0], padding[1]:-padding[1]]
 
 
-def get_square_weights(weights: Tensor, n_sqrt: int, side: int) -> Tensor:
+def get_square_weights(weights: Tensor, n_sqrt: int, side: Union[int, Tuple[int, int]]) -> Tensor:
     # language=rst
     """
     Return a grid of a number of filters ``sqrt ** 2`` with side lengths ``side``.
 
     :param weights: Two-dimensional tensor of weights for two-dimensional data.
     :param n_sqrt: Square root of no. of filters.
-    :param side: Side length of filter.
+    :param side: Side length(s) of filter.
     :return: Reshaped weights to square matrix of filters.
     """
-    square_weights = torch.zeros_like(torch.Tensor(side * n_sqrt, side * n_sqrt))
+    if isinstance(side, int):
+        side = (side, side)
+
+    square_weights = torch.zeros_like(torch.Tensor(side[0] * n_sqrt, side[1] * n_sqrt))
     for i in range(n_sqrt):
         for j in range(n_sqrt):
-            if not i * n_sqrt + j < weights.size(1):
+            n = i * n_sqrt + j
+
+            if not n < weights.size(1):
                 break
 
-            fltr = weights[:, i * n_sqrt + j].contiguous().view(side, side)
-            square_weights[i * side: (i + 1) * side, (j % n_sqrt) * side: ((j % n_sqrt) + 1) * side] = fltr
+            x = i * side[0]
+            y = (j % n_sqrt) * side[1]
+            filter_ = weights[:, n].contiguous().view(*side)
+            square_weights[x: x + side[0], y: y + side[1]] = filter_
 
     return square_weights
 
@@ -135,8 +142,8 @@ def get_square_assignments(assignments: Tensor, n_sqrt: int) -> Tensor:
             if not i * n_sqrt + j < assignments.size(0):
                 break
 
-            assignment = assignments[i * n_sqrt + j]
-            square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = assignments[i * n_sqrt + j]
+            n = i * n_sqrt + j
+            square_assignments[i: (i + 1), (j % n_sqrt): ((j % n_sqrt) + 1)] = assignments[n]
 
     return square_assignments
 
@@ -162,8 +169,8 @@ def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: in
 
     for n in range(c ** 2):
         for feature in range(n_filters):
-            fltr = w[locations[:, n], feature * (c ** 2) + (n // cs) * cs + (n % cs)].view(k, k)
-            w_[feature * k: (feature + 1) * k, n * k: (n + 1) * k] = fltr
+            filter_ = w[locations[:, n], feature * (c ** 2) + (n // cs) * cs + (n % cs)].view(k, k)
+            w_[feature * k: (feature + 1) * k, n * k: (n + 1) * k] = filter_
 
     if c == 1:
         square = torch.zeros((input_sqrt * fs, input_sqrt * fs))
