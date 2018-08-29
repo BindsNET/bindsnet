@@ -3,8 +3,8 @@ import torch
 import numpy as np
 
 from torch import Tensor
-from typing import Tuple
 from numpy import ndarray
+from typing import Tuple, Union
 
 
 def get_im2col_indices(x_shape: Tuple[int, int, int, int], kernel_height: int,
@@ -98,7 +98,7 @@ def col2im_indices(cols: Tensor, x_shape: Tuple[int, int, int, int], kernel_heig
     return x_padded[:, :, padding[0]:-padding[0], padding[1]:-padding[1]]
 
 
-def get_square_weights(weights: Tensor, n_sqrt: int, side: int) -> Tensor:
+def get_square_weights(weights: Tensor, n_sqrt: int, side: Union[int, Tuple[int, int]]) -> Tensor:
     # language=rst
     """
     Return a grid of a number of filters ``sqrt ** 2`` with side lengths ``side``.
@@ -108,14 +108,17 @@ def get_square_weights(weights: Tensor, n_sqrt: int, side: int) -> Tensor:
     :param side: Side length of filter.
     :return: Reshaped weights to square matrix of filters.
     """
-    square_weights = torch.zeros_like(torch.Tensor(side * n_sqrt, side * n_sqrt))
+    if isinstance(side, int):
+        side = (side, side)
+
+    square_weights = torch.zeros_like(torch.Tensor(side[0] * n_sqrt, side[1] * n_sqrt))
     for i in range(n_sqrt):
         for j in range(n_sqrt):
             if not i * n_sqrt + j < weights.size(1):
                 break
 
-            fltr = weights[:, i * n_sqrt + j].contiguous().view(side, side)
-            square_weights[i * side: (i + 1) * side, (j % n_sqrt) * side: ((j % n_sqrt) + 1) * side] = fltr
+            filter_ = weights[:, i * n_sqrt + j].contiguous().view(side[0], side[1])
+            square_weights[i * side[0]: (i + 1) * side[0], (j % n_sqrt) * side[1]: ((j % n_sqrt) + 1) * side[1]] = filter_
 
     return square_weights
 
