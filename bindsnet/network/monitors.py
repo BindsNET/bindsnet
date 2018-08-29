@@ -74,11 +74,11 @@ class Monitor(AbstractMonitor):
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
-            self.recording = {var : torch.Tensor() for var in self.state_vars}
+            self.recording = {var: torch.Tensor() for var in self.state_vars}
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = {var : torch.zeros(*self.obj.__dict__[var].size(), self.time) for var in self.state_vars}
+            self.recording = {var: torch.zeros(*self.obj.__dict__[var].size(), self.time) for var in self.state_vars}
 
     def get(self, var: str) -> torch.Tensor:
         # language=rst
