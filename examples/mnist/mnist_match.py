@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import bernoulli_loader
 from bindsnet.network import Network
-from bindsnet.learning import m_stdp_et
+from bindsnet.learning import MSTDPET
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.topology import Connection
 from bindsnet.utils import get_square_weights
@@ -53,7 +53,7 @@ inpt = Input(n=784, traces=True)
 exc = AdaptiveLIFNodes(n=n, traces=True)
 
 ew = 0.3 * torch.rand(784, n)
-econn = Connection(inpt, exc, w=ew, update_rule=m_stdp_et, nu=0.1, wmin=0, wmax=1, norm=78.4)
+econn = Connection(inpt, exc, w=ew, update_rule=MSTDPET, nu=0.1, wmin=0, wmax=1, norm=78.4)
 
 network.add_layer(inpt, 'X')
 network.add_layer(exc, 'Y')

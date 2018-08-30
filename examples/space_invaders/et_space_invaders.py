@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from bindsnet.encoding import bernoulli
 from bindsnet.environment import GymEnvironment
-from bindsnet.learning import m_stdp_et
+from bindsnet.learning import MSTDPET
 from bindsnet.network import Network, Input
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import LIFNodes
@@ -58,7 +58,7 @@ input_exc_conn = Connection(source=layers['X'], target=layers['E'],
 
 # Excitatory -> readout.
 exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=torch.rand(layers['E'].n, layers['R'].n),
-                              wmax=0.5, update_rule=m_stdp_et, nu=2e-2, norm=0.15 * layers['E'].n)
+                              wmax=0.5, update_rule=MSTDPET, nu=2e-2, norm=0.15 * layers['E'].n)
 
 # Spike recordings for all layers.
 spikes = {}

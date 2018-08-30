@@ -7,7 +7,7 @@ from time import time as t
 
 from bindsnet.datasets import MNIST
 from bindsnet.network import Network
-from bindsnet.learning import post_pre
+from bindsnet.learning import PostPre
 from bindsnet.encoding import poisson_loader
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import DiehlAndCookNodes, Input
@@ -73,7 +73,7 @@ conv_layer = DiehlAndCookNodes(n=n_filters * conv_size * conv_size,
                                shape=(1, n_filters, conv_size, conv_size),
                                traces=True)
 
-conv_conn = Conv2dConnection(input_layer, conv_layer, kernel_size=kernel_size, stride=stride, update_rule=post_pre,
+conv_conn = Conv2dConnection(input_layer, conv_layer, kernel_size=kernel_size, stride=stride, update_rule=PostPre,
                              norm=0.4 * kernel_size ** 2, nu_pre=1e-4, nu_post=1e-2, wmax=1.0)
 
 # indices, values = [], []
