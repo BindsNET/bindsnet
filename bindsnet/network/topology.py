@@ -100,6 +100,7 @@ class AbstractConnection(ABC):
         """
         pass
 
+
 class Connection(AbstractConnection):
     # language=rst
     """
@@ -184,6 +185,7 @@ class Connection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_()
+
 
 class Conv2dConnection(AbstractConnection):
     # language=rst
