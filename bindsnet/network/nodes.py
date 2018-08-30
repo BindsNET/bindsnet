@@ -1,6 +1,6 @@
 import torch
 
-from operator  import mul
+from operator import mul
 from functools import reduce
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional
@@ -651,18 +651,22 @@ class IzhikevichNodes(Nodes):
         self.rest = rest       # Rest voltage.
         self.thresh = thresh   # Spike threshold voltage.
 
-        if excitatory>1: excitatory=1
-        if excitatory<1: excitatory=0
+        if excitatory > 1:
+	    excitatory = 1
+        	
+        if excitatory < 1:
+            excitatory = 0
+
         self.excitatory = torch.zeros(n)
 
-        if excitatory==1:
+        if excitatory == 1:
             self.r = torch.rand(n)
             self.a = 0.02 * torch.ones(n)
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
-            self.excitatory = self.excitatory == 0
-        elif excitatory==0:
+            self.excitatory[:] = self.excitatory == 0
+        elif excitatory == 0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
@@ -754,18 +758,21 @@ class IzhikevichMetabolicNodes(Nodes):
         self.thresh = thresh   # Spike threshold voltage.
         self.beta = beta
 
-        if excitatory>1: excitatory=1
-        if excitatory<1: excitatory=0
-        self.excitatory = torch.zeros(n)
+        if excitatory > 1:
+            excitatory = 1
+        if excitatory < 1:
+            excitatory = 0
+        
+	self.excitatory = torch.zeros(n)
 
-        if excitatory==1:
+        if excitatory == 1:
             self.r = torch.rand(n)
             self.a = 0.02 * torch.ones(n)
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
-            self.excitatory = self.excitatory == 0
-        elif excitatory==0:
+            self.excitatory[:] = self.excitatory == 0
+        elif excitatory == 0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
@@ -776,7 +783,7 @@ class IzhikevichMetabolicNodes(Nodes):
             ex = int(n * excitatory)
             inh = n - ex
             # init
-            self.r = self.a = self.b = self.c = self.d =  torch.zeros(n)
+            self.r = self.a = self.b = self.c = self.d = torch.zeros(n)
 
             # excitation
             self.r[0:ex] = torch.rand(ex)
