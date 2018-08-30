@@ -651,38 +651,42 @@ class IzhikevichNodes(Nodes):
         self.rest = rest       # Rest voltage.
         self.thresh = thresh   # Spike threshold voltage.
 
+        if excitatory>1: excitatory=1
+        if excitatory<1: excitatory=0
+        self.excitatory = torch.zeros(n)
+
         if excitatory==1:
             self.r = torch.rand(n)
             self.a = 0.02 * torch.ones(n)
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
-            self.excitatory = True
+            self.excitatory = self.excitatory == 0
         elif excitatory==0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
-            self.excitatory = False
+            self.excitatory[:] = self.excitatory == 1
         else:
             ex = int(n * excitatory)
             inh = n - ex
             # init
-            self.r = self.a = self.b = self.c = self.d = self.excitatory = torch.zeros(n)
+            self.r = self.a = self.b = self.c = self.d = torch.zeros(n)
 
             # excitation
             self.r[0:ex] = torch.rand(ex)
             self.a[0:ex] = 0.02 * torch.ones(ex)
             self.b[0:ex] = 0.2 * torch.ones(ex)
-            self.c[0:ex] = -65.0 + 15 * (self.r ** 2)
-            self.d[0:ex] = 8 - 6 * (self.r ** 2)
+            self.c[0:ex] = -65.0 + 15 * (self.r[0:ex] ** 2)
+            self.d[0:ex] = 8 - 6 * (self.r[0:ex] ** 2)
             self.excitatory[0:ex] = self.excitatory[0:ex] == 0 # True
 
             #inhibitory
             self.r[ex:] = torch.rand(inh)
-            self.a[ex:] = 0.02 + 0.08 * self.r
-            self.b[ex:] = 0.25 - 0.05 * self.r
+            self.a[ex:] = 0.02 + 0.08 * self.r[ex:]
+            self.b[ex:] = 0.25 - 0.05 * self.r[ex:]
             self.c[ex:] = -65.0 * torch.ones(inh)
             self.d[ex:] = 2 * torch.ones(inh)
             self.excitatory[0:ex] = self.excitatory[0:ex] > 0 # False
@@ -750,25 +754,29 @@ class IzhikevichMetabolicNodes(Nodes):
         self.thresh = thresh   # Spike threshold voltage.
         self.beta = beta
 
+        if excitatory>1: excitatory=1
+        if excitatory<1: excitatory=0
+        self.excitatory = torch.zeros(n)
+
         if excitatory==1:
             self.r = torch.rand(n)
             self.a = 0.02 * torch.ones(n)
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
-            self.excitatory = True
+            self.excitatory = self.excitatory == 0
         elif excitatory==0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
-            self.excitatory = False
+            self.excitatory[:] = self.excitatory == 1
         else:
             ex = int(n * excitatory)
             inh = n - ex
             # init
-            self.r = self.a = self.b = self.c = self.d = self.excitatory = torch.zeros(n)
+            self.r = self.a = self.b = self.c = self.d =  torch.zeros(n)
 
             # excitation
             self.r[0:ex] = torch.rand(ex)
