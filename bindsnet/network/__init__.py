@@ -1,6 +1,6 @@
-from typing import Dict
-
 import torch
+
+from typing import Dict
 
 from .nodes import Input, Nodes
 from .topology import AbstractConnection
@@ -17,7 +17,6 @@ def load_network(file_name: str) -> 'Network':
     Loads serialized network object from disk.
 
     :param file_name: Path to serialized network object on disk.
-    :return:
     """
     try:
         with open(file_name, 'rb') as f:
@@ -82,7 +81,7 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0):
+    def __init__(self, dt: float = 1.0) -> None:
         # language=rst
         """
         Initializes network object.

@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import torch.nn.functional as F
 
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 from abc import ABC, abstractmethod
 from torch.nn.modules.utils import _pair
 
@@ -16,14 +16,14 @@ class AbstractConnection(ABC):
     Abstract base method for connections between ``Nodes``.
     """
 
-    def __init__(self, source: Nodes, target: Nodes, nu: float = 1e-2, nu_pre: float = 1e-4, nu_post: float = 1e-2,
-                 **kwargs) -> None:
+    def __init__(self, source: Nodes, target: Nodes,
+                 nu: Optional[Union[float, Tuple[float, float]]] = None, **kwargs) -> None:
         # language=rst
         """
         Constructor for abstract base class for connection objects.
 
         :param source: A layer of nodes from which the connection originates.
-        :param target (:code:`nodes`.Nodes): A layer of nodes to which the connection connects.
+        :param target: A layer of nodes to which the connection connects.
         :param nu: Learning rate for both pre- and post-synaptic events.
         :param nu_pre: Learning rate for pre-synaptic events.
         :param nu_post: Learning rate for post-synpatic events.
@@ -39,13 +39,13 @@ class AbstractConnection(ABC):
         self.source = source
         self.target = target
         self.nu = nu
-        self.nu_pre = nu_pre
-        self.nu_post = nu_post
 
         assert isinstance(source, Nodes), 'Source is not a Nodes object'
         assert isinstance(target, Nodes), 'Target is not a Nodes object'
 
-        self.update_rule = kwargs.get('update_rule', None)
+        from ..learning import NoOp
+
+        self.update_rule = kwargs.get('update_rule', NoOp)
         self.wmin = kwargs.get('wmin', float('-inf'))
         self.wmax = kwargs.get('wmax', float('inf'))
         self.norm = kwargs.get('norm', None)
@@ -58,6 +58,10 @@ class AbstractConnection(ABC):
         self.tc_plus = 0.05
         self.p_minus = 0
         self.tc_minus = 0.05
+
+        self.update_rule = self.update_rule(
+            connection=self, nu=self.nu
+        )
 
     @abstractmethod
     def compute(self, s: torch.Tensor) -> None:
@@ -76,11 +80,9 @@ class AbstractConnection(ABC):
         Compute connection's update rule.
         """
         reward = kwargs.get('reward', None)
+        self.update_rule.update(reward=reward)
+
         mask = kwargs.get('mask', None)
-
-        if self.update_rule is not None:
-            self.update_rule(self, reward=reward)
-
         if mask is not None:
             self.w.masked_fill_(mask, 0)
 
@@ -107,7 +109,7 @@ class Connection(AbstractConnection):
     Specifies synapses between one or two populations of neurons.
     """
 
-    def __init__(self, source: Nodes, target: Nodes, nu: float = 1e-2, nu_pre: float = 1e-4, nu_post: float = 1e-2,
+    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
                  **kwargs) -> None:
         # language=rst
         """
@@ -127,7 +129,7 @@ class Connection(AbstractConnection):
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
         """
-        super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
+        super().__init__(source, target, nu, **kwargs)
 
         self.w = kwargs.get('w', None)
 
@@ -195,8 +197,8 @@ class Conv2dConnection(AbstractConnection):
 
     def __init__(self, source: Nodes, target: Nodes, kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
-                 dilation: Union[int, Tuple[int, int]] = 1, nu: float = 1e-2, nu_pre: float = 1e-4,
-                 nu_post: float = 1e-2, **kwargs) -> None:
+                 dilation: Union[int, Tuple[int, int]] = 1, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 **kwargs) -> None:
         # language=rst
         """
         Instantiates a ``Conv2dConnection`` object.
@@ -219,7 +221,7 @@ class Conv2dConnection(AbstractConnection):
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
         """
-        super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
+        super().__init__(source, target, nu, **kwargs)
 
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
@@ -290,7 +292,7 @@ class SparseConnection(AbstractConnection):
     Specifies sparse synapses between one or two populations of neurons.
     """
 
-    def __init__(self, source: Nodes, target: Nodes, nu: float=1e-2, nu_pre: float=1e-4, nu_post: float=1e-2,
+    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
                  **kwargs) -> None:
         # language=rst
         """
@@ -311,7 +313,7 @@ class SparseConnection(AbstractConnection):
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
         """
-        super().__init__(source, target, nu, nu_pre, nu_post, **kwargs)
+        super().__init__(source, target, nu, **kwargs)
 
         self.w = kwargs.get('w', None)
         self.sparsity = kwargs.get('sparsity', None)

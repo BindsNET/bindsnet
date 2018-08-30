@@ -633,7 +633,7 @@ class IzhikevichNodes(Nodes):
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
                  excitatory: bool = True, thresh: float = -52.0, rest: float = -65.0, 
-				 trace_tc: float = 5e-2) -> None:
+                trace_tc: float = 5e-2) -> None:
         # language=rst
         """
         Instantiates a layer of Izhikevich neurons.

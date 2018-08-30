@@ -1,92 +1,233 @@
 import torch
 
-from ..network.topology import AbstractConnection, Connection, Conv2dConnection
+from abc import ABC
+from typing import Union, Tuple, Optional
+
 from ..utils import im2col_indices
+from ..network.topology import AbstractConnection, Connection, Conv2dConnection
 
 
-def post_pre(conn: AbstractConnection, **kwargs) -> None:
+class LearningRule(ABC):
     # language=rst
     """
-    Simple STDP rule involving both pre- and post-synaptic spiking activity.
-    
-    :param conn: An ``AbstractConnection`` object whose weights are to be modified by the post-pre STDP rule.
+    Abstract base class for learning rules.
     """
-    if isinstance(conn, Connection):
-        # Unpack / reshape quantities of interest (spikes and spike_traces).
-        s_source = conn.source.s.float()
-        s_target = conn.target.s.float()
-        x_source = conn.source.x
-        x_target = conn.target.x
 
-        conn.w += conn.nu_post * torch.ger(x_source, s_target)  # Post-synaptic.
-        conn.w -= conn.nu_pre * torch.ger(s_source, x_target)  # Pre-synaptic.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)  # Bound weights.
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+        # language=rst
+        """
+        Abstract constructor for the ``LearningRule`` object.
 
-    elif isinstance(conn, Conv2dConnection):
+        :param connection: An ``AbstractConnection`` object.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        """
+        # Connection parameters.
+        self.connection = connection
+        self.source = connection.source
+        self.target = connection.target
+
+        self.wmin = connection.wmin
+        self.wmax = connection.wmax
+
+        # Learning rate(s).
+        if nu is None:
+            nu = 0.0
+
+        if isinstance(nu, float):
+            nu = (nu, nu)
+
+        self.nu = nu
+
+    def update(self) -> None:
+        # language=rst
+        """
+        Abstract method for a learning rule update.
+        """
+        pass
+
+
+class NoOp(LearningRule):
+    # language=rst
+    """
+    Learning rule with no effect.
+    """
+
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+        # language=rst
+        """
+        Abstract constructor for the ``LearningRule`` object.
+
+        :param connection: An ``AbstractConnection`` object which this learning rule will have no effect on.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        """
+        super().__init__(
+            connection=connection, nu=nu
+        )
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Abstract method for a learning rule update.
+        """
+        pass
+
+
+class PostPre(LearningRule):
+    # language=rst
+    """
+    Simple STDP rule involving both pre- and post-synaptic spiking activity. The pre-synpatic update is negative, while
+    the post-synpatic update is positive.
+    """
+
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+        # language=rst
+        """
+        Constructor for ``PostPre`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object which this learning rule will have no effect on.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        """
+        super().__init__(
+            connection=connection, nu=nu
+        )
+
+        assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
+
+        if isinstance(connection, Connection):
+            self.update = self._connection_update
+        elif isinstance(connection, Conv2dConnection):
+            self.update = self._conv2d_connection_update
+        else:
+            raise NotImplementedError(
+                'This learning rule is not supported for this Connection type.'
+            )
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Post-pre learning rule for ``Connection`` subclass of ``AbstractionConnection`` class.
+        """
+        # Pre-synaptic update.
+        self.connection.w -= self.nu[0] * torch.ger(
+            self.source.s.float(), self.target.x
+        )
+        # Post-synaptic update.
+        self.connection.w += self.nu[1] * torch.ger(
+            self.source.x, self.target.s.float()
+        )
+        # Bound weights.
+        self.connection.w = torch.clamp(
+            self.connection.w, self.connection.wmin, self.connection.wmax
+        )
+
+    def _conv2d_connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Post-pre learning rule for ``Conv2dConnection`` subclass of ``AbstractionConnection`` class.
+        """
         # Get convolutional layer parameters.
-        out_channels, _, kernel_height, kernel_width = conn.w.size()
-        padding, stride = conn.padding, conn.stride
-        
-        x_source = im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
-        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
-        s_source = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
-        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
-        
-        # Post-synaptic.
-        post = s_target @ x_source.t()
-        conn.w += conn.nu_post * post.view(conn.w.size())
+        out_channels, _, kernel_height, kernel_width = self.connection.w.size()
+        padding, stride = self.connection.padding, self.connection.stride
 
-        # Pre-synaptic.
+        # Reshaping spike traces and spike occurrences.
+        x_source = im2col_indices(
+            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
+        )
+        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        s_source = im2col_indices(
+            self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
+        )
+        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+
+        # Pre-synaptic update.
         pre = x_target @ s_source.t()
-        conn.w -= conn.nu_pre * pre.view(conn.w.size())
+        self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
+
+        # Post-synaptic update.
+        post = s_target @ x_source.t()
+        self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         # Bound weights.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+        self.connection.w = torch.clamp(
+            self.connection.w, self.connection.wmin, self.connection.wmax
+        )
 
-    else:
-        raise NotImplementedError('This learning rule is not supported for this Connection type.')
 
-
-def hebbian(conn: AbstractConnection, **kwargs) -> None:
+class Hebbian(LearningRule):
     # language=rst
     """
     Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
-
-    :param conn: An ``AbstractConnection`` object whose weights are to be modified by the post-pre STDP rule.
     """
-    if isinstance(conn, Connection):
-        conn.w += conn.nu_post * conn.source.x.unsqueeze(-1) * conn.target.s.float().unsqueeze(0)  # Post-synaptic.
-        conn.w += conn.nu_pre * conn.source.s.float().unsqueeze(-1) * conn.target.x.unsqueeze(0)  # Pre-synaptic.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)  # Bound weights.
+
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+        # language=rst
+        """
+        Constructor for ``PostPre`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object which this learning rule will have no effect on.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        """
+        super().__init__(connection=connection, nu=nu)
+
+        assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
+
+        if isinstance(connection, Connection):
+            self.update = self._connection_update
+        elif isinstance(connection, Conv2dConnection):
+            self.update = self._conv2d_connection_update
+        else:
+            raise NotImplementedError(
+                'This learning rule is not supported for this Connection type.'
+            )
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Hebbian learning rule for ``Connection`` subclass of ``AbstractionConnection`` class.
+        """
+        # Pre-synaptic update.
+        self.connection.w += self.nu[0] * torch.ger(
+            self.source.s.float(), self.target.x
+        )
+        # Post-synaptic update.
+        self.connection.w += self.nu[1] * torch.ger(
+            self.source.x, self.target.s.float()
+        )
+        # Bound weights.
+        self.connection.w = torch.clamp(
+            self.connection.w, self.connection.wmin, self.connection.wmax
+        )
+
+    def _conv2d_connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Hebbian learning rule for ``Conv2dConnection`` subclass of ``AbstractionConnection`` class.
+        """
+        out_channels, _, kernel_height, kernel_width = self.connection.w.size()
+        padding, stride = self.connection.padding, self.connection.stride
+
+        # Reshaping spike traces and spike occurrences.
+        x_source = im2col_indices(
+            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
+        )
+        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        s_source = im2col_indices(
+            self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
+        )
+        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+
+        # Pre-synaptic update.
+        pre = x_target @ s_source.t()
+        self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
+
+        # Post-synaptic update.
+        post = s_target @ x_source.t()
+        self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         # Bound weights.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
-    else:
-        out_channels, _, kernel_height, kernel_width = conn.w.size()
-        padding, stride = conn.padding, conn.stride
-
-        # Unpack / reshape quantities of interest (spikes and spike_traces).
-        x_source = im2col_indices(conn.source.x, kernel_height, kernel_width, padding=padding, stride=stride)
-        x_target = conn.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
-        s_source = im2col_indices(conn.source.s, kernel_height, kernel_width, padding=padding, stride=stride).float()
-        s_target = conn.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
-
-        # Post-synaptic.
-        post = (x_source @ s_target.t()).view(conn.w.size())
-        if post.max() > 0:
-            post = post / post.max()
-
-        conn.w += conn.nu_post * post
-
-        # Pre-synaptic.
-        pre = (s_source @ x_target.t()).view(conn.w.size())
-        if pre.max() > 0:
-            pre = pre / pre.max()
-
-        conn.w += conn.nu_pre * pre.view(conn.w.size())
-
-        # Bound weights.
-        conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)
+        self.connection.w = torch.clamp(
+            self.connection.w, self.connection.wmin, self.connection.wmax
+        )
 
 
 def m_stdp(conn: AbstractConnection, **kwargs) -> None:
