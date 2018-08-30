@@ -139,10 +139,11 @@ def get_square_assignments(assignments: Tensor, n_sqrt: int) -> Tensor:
     square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
     for i in range(n_sqrt):
         for j in range(n_sqrt):
-            if not i * n_sqrt + j < assignments.size(0):
+            n = i * n_sqrt + j
+
+            if not n < assignments.size(0):
                 break
 
-            n = i * n_sqrt + j
             square_assignments[i: (i + 1), (j % n_sqrt): ((j % n_sqrt) + 1)] = assignments[n]
 
     return square_assignments

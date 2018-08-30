@@ -13,13 +13,13 @@ def post_pre(conn: AbstractConnection, **kwargs) -> None:
     """
     if isinstance(conn, Connection):
         # Unpack / reshape quantities of interest (spikes and spike_traces).
-        s_source = conn.source.s.float().unsqueeze(-1)
-        s_target = conn.target.s.float().unsqueeze(0)
-        x_source = conn.source.x.unsqueeze(-1)
-        x_target = conn.target.x.unsqueeze(0)
+        s_source = conn.source.s.float()
+        s_target = conn.target.s.float()
+        x_source = conn.source.x
+        x_target = conn.target.x
 
-        conn.w += conn.nu_post * x_source * s_target  # Post-synaptic.
-        conn.w -= conn.nu_pre * s_source * x_target  # Pre-synaptic.
+        conn.w += conn.nu_post * torch.ger(x_source, s_target)  # Post-synaptic.
+        conn.w -= conn.nu_pre * torch.ger(s_source, x_target)  # Pre-synaptic.
         conn.w = torch.clamp(conn.w, conn.wmin, conn.wmax)  # Bound weights.
 
     elif isinstance(conn, Conv2dConnection):
