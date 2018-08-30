@@ -1,6 +1,7 @@
 import os
 import torch
-from bindsnet.preprocessing import *
+
+from bindsnet.preprocessing import NumentaPreprocessor
 
 
 class TestPreprocessing:
@@ -26,7 +27,7 @@ class TestPreprocessing:
             enc = NumentaPreprocessor()
             v1 = enc.process(csvfile, use_cache=False, cachedfile=processedfile)
             v2 = enc.process(csvfile, use_cache=False, cachedfile=processedfile)
-            assert torch.all(torch.eq(v1, v2))
+            assert torch.eq(v1, v2).all()
             assert len(v1) == 30
 
         def test4():

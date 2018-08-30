@@ -51,14 +51,6 @@ class AbstractConnection(ABC):
         self.norm = kwargs.get('norm', None)
         self.decay = kwargs.get('decay', None)
 
-        # For reward-modulated learning rules.
-        self.e_trace = 0
-        self.tc_e_trace = 0.04
-        self.p_plus = 0
-        self.tc_plus = 0.05
-        self.p_minus = 0
-        self.tc_minus = 0.05
-
         self.update_rule = self.update_rule(
             connection=self, nu=self.nu
         )
