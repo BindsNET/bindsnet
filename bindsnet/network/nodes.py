@@ -652,7 +652,7 @@ class IzhikevichNodes(Nodes):
 
         if excitatory > 1:
             excitatory = 1
-        	
+
         if excitatory < 1:
             excitatory = 0
 
