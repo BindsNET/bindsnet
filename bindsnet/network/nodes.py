@@ -661,16 +661,16 @@ class IzhikevichNodes(Nodes):
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
-            self.excitatory = torch.ones(n)
+            self.excitatory = torch.ones(n).byte()
         elif excitatory == 0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
-            self.excitatory = torch.zeros(n)
+            self.excitatory = torch.zeros(n).byte()
         else:
-            self.excitatory = torch.zeros(n)
+            self.excitatory = torch.zeros(n).byte()
 
             ex = int(n * excitatory)
             inh = n - ex
@@ -760,7 +760,6 @@ class IzhikevichMetabolicNodes(Nodes):
             excitatory = 1
         elif excitatory < 0:
             excitatory = 0
-        
 
         if excitatory == 1:
             self.r = torch.rand(n)
@@ -768,16 +767,16 @@ class IzhikevichMetabolicNodes(Nodes):
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
-            self.excitatory = torch.ones(n)
+            self.excitatory = torch.ones(n).byte()
         elif excitatory == 0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
-            self.excitatory = torch.zeros(n)
+            self.excitatory = torch.zeros(n).byte()
         else:
-            self.excitatory = torch.zeros(n)
+            self.excitatory = torch.zeros(n).byte()
 
             ex = int(n * excitatory)
             inh = n - ex
@@ -790,7 +789,7 @@ class IzhikevichMetabolicNodes(Nodes):
             self.b[:ex] = 0.2 * torch.ones(ex)
             self.c[:ex] = -65.0 + 15 * (self.r ** 2)
             self.d[:ex] = 8 - 6 * (self.r ** 2)
-            self.excitatory[0:ex] = 1
+            self.excitatory[:ex] = 1
 
             # inhibitory
             self.r[ex:] = torch.rand(inh)
