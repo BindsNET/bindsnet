@@ -2,8 +2,8 @@ import torch
 
 from bindsnet.datasets import MNIST
 from bindsnet.network import Network
+from bindsnet.learning import MSTDPET
 from bindsnet.pipeline import Pipeline
-from bindsnet.learning import m_stdp_et
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.encoding import poisson, bernoulli
 from bindsnet.network.topology import Connection
@@ -36,8 +36,7 @@ class TestPipeline:
 
         # Connections between layers.
         inpt_middle = Connection(source=inpt, target=middle, wmax=1e-2)
-        middle_out = Connection(source=middle, target=out, wmax=0.5, update_rule=m_stdp_et, nu=2e-2,
-                                norm=0.15 * middle.n)
+        middle_out = Connection(source=middle, target=out, wmax=0.5, update_rule=MSTDPET, nu=2e-2, norm=0.15 * middle.n)
 
         # Add all layers and connections to the network.
         network.add_layer(inpt, name='X')

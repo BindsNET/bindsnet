@@ -3,7 +3,7 @@ from typing import Optional
 import torch
 
 from ..network import Network
-from ..learning import post_pre
+from ..learning import PostPre
 from ..network.topology import Connection
 from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes
 
@@ -39,8 +39,8 @@ class TwoLayerNetwork(Network):
                                 decay=1e-2, trace_tc=5e-2), name='Y')
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
-        self.add_connection(Connection(source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=post_pre,
-                                       nu_pre=nu_pre, nu_post=nu_post, wmin=wmin, wmax=wmax, norm=norm),
+        self.add_connection(Connection(source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
+                                       nu=(nu_pre, nu_post), wmin=wmin, wmax=wmax, norm=norm),
                             source='X', target='Y')
         
 
@@ -92,9 +92,8 @@ class DiehlAndCook2015(Network):
                        name='Ai')
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
-        self.add_connection(Connection(source=self.layers['X'], target=self.layers['Ae'], w=w, update_rule=post_pre,
-                                       nu_pre=nu_pre, nu_post=nu_post, wmin=wmin, wmax=wmax, norm=norm,
-                                       decay=X_Ae_decay),
+        self.add_connection(Connection(source=self.layers['X'], target=self.layers['Ae'], w=w, update_rule=PostPre,
+                                       nu=(nu_pre, nu_post), wmin=wmin, wmax=wmax, norm=norm, decay=X_Ae_decay),
                             source='X', target='Ae')
 
         w = self.exc * torch.diag(torch.ones(self.n_neurons))

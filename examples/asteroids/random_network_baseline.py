@@ -2,7 +2,7 @@ import torch
 import argparse
 
 from bindsnet.network import Network
-from bindsnet.learning import hebbian
+from bindsnet.learning import Hebbian
 from bindsnet.pipeline import Pipeline
 from bindsnet.encoding import bernoulli
 from bindsnet.network.monitors import Monitor
@@ -56,7 +56,7 @@ input_exc_conn = Connection(source=layers['X'], target=layers['E'], w=0.01 * tor
 
 # Excitatory -> readout.
 exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=0.01 * torch.rand(layers['E'].n, layers['R'].n),
-                              update_rule=hebbian, nu_pre=1e-2, nu_post=1e-2, norm=0.5 * layers['E'].n)
+                              update_rule=Hebbian, nu_pre=1e-2, nu_post=1e-2, norm=0.5 * layers['E'].n)
 
 # Spike recordings for all layers.
 spikes = {}
