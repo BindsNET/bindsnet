@@ -25,8 +25,6 @@ class AbstractConnection(ABC):
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param nu: Learning rate for both pre- and post-synaptic events.
-        :param nu_pre: Learning rate for pre-synaptic events.
-        :param nu_post: Learning rate for post-synpatic events.
 
         Keyword arguments:
 
@@ -110,8 +108,6 @@ class Connection(AbstractConnection):
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param nu: Learning rate for both pre- and post-synaptic events.
-        :param nu_pre: Learning rate for pre-synaptic events.
-        :param nu_post: Learning rate for post-synpatic events.
 
         Keyword arguments:
 
@@ -202,8 +198,6 @@ class Conv2dConnection(AbstractConnection):
         :param padding: Horizontal and vertical padding for convolution.
         :param dilation: Horizontal and vertical dilation for convolution.
         :param nu: Learning rate for both pre- and post-synaptic events.
-        :param nu_pre: Learning rate for pre-synaptic events.
-        :param nu_post: Learning rate for post-synpatic events.
 
         Keyword arguments:
 
@@ -269,6 +263,88 @@ class Conv2dConnection(AbstractConnection):
                 self.w[fltr] *= self.norm / self.w[fltr].sum(0)
 
             self.w = self.w.view(*shape)
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Contains resetting logic for the connection.
+        """
+        super().reset_()
+
+
+class MeanFieldConnection(AbstractConnection):
+    # language=rst
+    """
+    A connection between one or two populations of neurons which computes a summary of the pre-synaptic population to
+    use as weighted input to the post-synaptic population.
+    """
+
+    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 **kwargs) -> None:
+        # language=rst
+        """
+        Instantiates a :code:`SimpleConnection` object.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param nu: Learning rate for both pre- and post-synaptic events.
+
+        Keyword arguments:
+
+        :param function update_rule: Modifies connection parameters according to some rule.
+        :param torch.Tensor w: Strengths of synapses.
+        :param float wmin: Minimum allowed value on the connection weights.
+        :param float wmax: Maximum allowed value on the connection weights.
+        :param float norm: Total weight per target neuron normalization constant.
+        """
+        super().__init__(source, target, nu, **kwargs)
+
+        self.w = kwargs.get('w', None)
+
+        if self.w is None:
+            if self.wmin == -np.inf or self.wmax == np.inf:
+                self.w = torch.rand(1, *target.shape)
+            else:
+                self.w = self.wmin + torch.rand(1, *target.shape) * (self.wmax - self.wmin)
+        else:
+            if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
+                warnings.warn(f'Weight matrix will be clamped between [{self.wmin}, {self.wmax}]')
+                self.w = torch.clamp(self.w, self.wmin, self.wmax)
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Compute pre-activations given spikes using layer weights.
+
+        :param s: Incoming spikes.
+        :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
+        """
+        # Decaying spike activation from previous iteration.
+        if self.decay is not None:
+            self.a_pre = self.a_pre * self.decay + s.float().mean()
+        else:
+            self.a_pre = s.float().mean()
+
+        # Compute multiplication of mean-field pre-activation by connection weights.
+        a_post = self.a_pre * self.w
+        return a_post.view(self.target.shape)
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Compute connection's update rule.
+        """
+        super().update(**kwargs)
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Normalize weights so each target neuron has sum of connection weights equal to ``self.norm``.
+        """
+        if self.norm is not None:
+            self.w = self.w.view(1, self.target.n)
+            self.w *= self.norm / self.w.sum()
+            self.w = self.w.view(1, *self.target.shape)
 
     def reset_(self) -> None:
         # language=rst
