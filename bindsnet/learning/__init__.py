@@ -417,12 +417,12 @@ class MSTDPET(LearningRule):
         post_fire = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
 
         # Post-synaptic.
-        post = (p_plus @ post_fire.t()).view(self.connection.w.size())
+        post = (self.p_plus @ post_fire.t()).view(self.connection.w.size())
         if post.max() > 0:
             post = post / post.max()
 
         # Pre-synaptic.
-        pre = (pre_fire @ p_minus.t()).view(self.connection.w.size())
+        pre = (pre_fire @ self.p_minus.t()).view(self.connection.w.size())
         if pre.max() > 0:
             pre = pre / pre.max()
 
