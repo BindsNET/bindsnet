@@ -79,8 +79,8 @@ class Input(Nodes):
     Layer of nodes with user-specified spiking behavior.
     """
 
-    def __init__(self, n: Optional[int] = None, RealValueInput: bool = False, shape: Optional[Iterable[int]] = None,
-                 traces: bool = False, trace_tc: float = 5e-2) -> None:
+    def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None,
+                 traces: bool = False, trace_tc: float = 5e-2, real_value_input: bool = False) -> None:
         # language=rst
         """
         Instantiates a layer of input neurons.
@@ -91,7 +91,7 @@ class Input(Nodes):
         :param trace_tc: Time constant of spike trace decay.
         """
         super().__init__(n, shape, traces, trace_tc)
-        self.RealValueInput = RealValueInput;
+        self.real_value_input = real_value_input;
 
     def step(self, inpts: torch.Tensor, dt: float) -> None:
         # language=rst
@@ -103,7 +103,7 @@ class Input(Nodes):
         """
         # Set spike occurrences to input values.
 
-        if (self.RealValueInput):
+        if (self.real_value_input):
             self.s = inpts
         else:
             self.s = inpts.byte()

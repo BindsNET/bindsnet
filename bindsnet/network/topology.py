@@ -51,6 +51,11 @@ class AbstractConnection(ABC):
         self.norm = kwargs.get('norm', None)
         self.decay = kwargs.get('decay', None)
 
+        if self.decay is None:
+            self.decay = 0.0 # full decay, no memory of the previues spikes
+
+        self.a_pre = 0.0
+
         self.update_rule = self.update_rule(
             connection=self, nu=self.nu
         )
@@ -143,11 +148,7 @@ class Connection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
         """
-        # Decaying spike activation from previous iteration.
-        if self.decay is not None:
-            self.a_pre = self.a_pre * self.decay + s.float().view(-1)
-        else:
-            self.a_pre = s.float().view(-1)
+        self.a_pre = self.a_pre * self.decay + s.float().view(-1)
 
         # Compute multiplication of pre-activations by connection weights.
         if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
