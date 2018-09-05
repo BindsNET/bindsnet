@@ -143,12 +143,12 @@ class CANs(Network):
             wi = torch.zeros(self.n_inpt, self.n_neurons)
             # wi[i, :] = torch.rand(Nu_Neurons_in_CAN)
 
-            temp = CAN.excitatory == False
+            temp = CAN.excitatory == True
             if torch.sum(temp) > 0:
                 w = torch.where(temp, 0.5 * w, -w)
                 # create weights between input to output.
                 # Excitatory neurons get 5 time the input and Inhibitory 1 time the input
-                wi[i, :] = torch.where(temp, 5. * temp, 1. * temp)
+                wi[i, :] = torch.where(temp, 5. * torch.ones(self.n_neurons), 1. * torch.ones(self.n_neurons))
 
             # connect the internal connection in CAN
             C = Connection(source=CAN, target=CAN, w=w)
