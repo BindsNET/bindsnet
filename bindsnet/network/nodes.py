@@ -676,7 +676,11 @@ class IzhikevichNodes(Nodes):
             ex = int(n * excitatory)
             inh = n - ex
             # init
-            self.r = self.a = self.b = self.c = self.d = torch.zeros(n)
+            self.r = torch.zeros(n)
+            self.a = torch.zeros(n)
+            self.b = torch.zeros(n)
+            self.c = torch.zeros(n)
+            self.d = torch.zeros(n)
 
             # excitatory
             self.r[:ex] = torch.rand(ex)
@@ -783,7 +787,11 @@ class IzhikevichMetabolicNodes(Nodes):
             ex = int(n * excitatory)
             inh = n - ex
             # init
-            self.r = self.a = self.b = self.c = self.d = torch.zeros(n)
+            self.r = torch.zeros(n)
+            self.a = torch.zeros(n)
+            self.b = torch.zeros(n)
+            self.c = torch.zeros(n)
+            self.d = torch.zeros(n)
 
             # excitatory
             self.r[:ex] = torch.rand(ex)
