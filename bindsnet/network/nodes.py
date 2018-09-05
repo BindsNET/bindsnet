@@ -709,7 +709,7 @@ class IzhikevichNodes(Nodes):
         :param inpts: Inputs to the layer.
         :param dt: Simulation time step.
         """
-        # Apply v and u updates.
+
         # Apply v and u updates.
         self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
         self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
