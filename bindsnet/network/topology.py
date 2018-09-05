@@ -52,7 +52,7 @@ class AbstractConnection(ABC):
         self.decay = kwargs.get('decay', None)
 
         if self.decay is None:
-            self.decay = 0.0 # full decay, no memory of the previues spikes
+            self.decay = 0.0 # full decay, no memory of the previous spikes
 
         self.a_pre = 0.0
 
