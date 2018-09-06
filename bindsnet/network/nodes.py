@@ -11,7 +11,7 @@ class Nodes(ABC):
     """
     Abstract base class for groups of neurons.
     """
-    @abstractmethod
+
     def __init__(self, n: Optional[int]=None, shape: Optional[Iterable[int]]=None, traces: bool=False,
                  trace_tc: float=5e-2) -> None:
         # language=rst
@@ -54,7 +54,6 @@ class Nodes(ABC):
 
         :param inpts: Inputs to the layer.
         :param dt: Simulation time step.
-        :return:
         """
         if self.traces:
             # Decay and set spike traces.
@@ -73,7 +72,14 @@ class Nodes(ABC):
             self.x = torch.zeros(self.shape)     # Firing traces.
 
 
-class Input(Nodes):
+class AbstractInput(ABC):
+    # language=rst
+    """
+    Abstract base class for groups of input neurons.
+    """
+
+
+class Input(Nodes, AbstractInput):
     # language=rst
     """
     Layer of nodes with user-specified spiking behavior.
@@ -105,6 +111,52 @@ class Input(Nodes):
         self.s = inpts.byte()
 
         super().step(inpts, dt)
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+
+
+class RealInput(Input, AbstractInput):
+    """
+    Layer of nodes with user-specified real-valued outputs.
+    """
+
+    def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
+                 trace_tc: float = 5e-2) -> None:
+        # language=rst
+        """
+        Instantiates a layer of input neurons.
+
+        :param n: The number of neurons in the layer.
+        :param shape: The dimensionality of the layer.
+        :param traces: Whether to record decaying spike traces.
+        :param trace_tc: Time constant of spike trace decay.
+        """
+        super().__init__(n, shape, traces, trace_tc)
+
+        self.s = self.s.float()
+
+    def step(self, inpts: torch.Tensor, dt: float) -> None:
+        # language=rst
+        """
+        On each simulation step, set the outputs of the population equal to the inputs.
+
+        :param inpts: Inputs to the layer.
+        :param dt: Simulation time step.
+        """
+        # Set spike occurrences to input values.
+        self.s = inpts
+
+        super().step(inpts, dt)
+
+        if self.traces:
+            # Decay and set spike traces.
+            self.x -= dt * self.trace_tc * self.x
+            self.x.masked_fill_(self.s != 0, 1)
 
     def reset_(self) -> None:
         # language=rst
