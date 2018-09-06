@@ -108,7 +108,7 @@ class Connection(AbstractConnection):
                  **kwargs) -> None:
         # language=rst
         """
-        Instantiates a :code:`SimpleConnection` object.
+        Instantiates a :code:`Connection` object.
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
@@ -340,6 +340,8 @@ class LocallyConnectedConnection(AbstractConnection):
                 warnings.warn(f'Weight matrix will be clamped between [{self.wmin}, {self.wmax}]')
                 self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
+        self.mask = self.w == 0
+
         if self.norm is not None:
             self.norm *= kernel_size ** 2
 
@@ -365,6 +367,9 @@ class LocallyConnectedConnection(AbstractConnection):
         """
         Compute connection's update rule.
         """
+        if kwargs['mask'] is None:
+            kwargs['mask'] = self.mask
+
         super().update(**kwargs)
 
     def normalize(self) -> None:
@@ -396,7 +401,7 @@ class MeanFieldConnection(AbstractConnection):
                  **kwargs) -> None:
         # language=rst
         """
-        Instantiates a :code:`SimpleConnection` object.
+        Instantiates a :code:`MeanFieldConnection` object.
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.

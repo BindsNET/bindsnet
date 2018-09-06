@@ -66,10 +66,13 @@ class Nodes(ABC):
         """
         Abstract base class method for resetting state variables.
         """
-        self.s = torch.zeros(self.shape).byte()  # Spike occurrences.
+        if not isinstance(self, RealInput):
+            self.s = torch.zeros(self.shape).byte()  # Spike occurrences.
+        else:
+            self.s = torch.zeros(self.shape)  # Real-valued "spikes".
 
         if self.traces:
-            self.x = torch.zeros(self.shape)     # Firing traces.
+            self.x = torch.zeros(self.shape)  # Firing traces.
 
 
 class AbstractInput(ABC):
@@ -120,7 +123,7 @@ class Input(Nodes, AbstractInput):
         super().reset_()
 
 
-class RealInput(Input, AbstractInput):
+class RealInput(Nodes, AbstractInput):
     """
     Layer of nodes with user-specified real-valued outputs.
     """

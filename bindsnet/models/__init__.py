@@ -6,7 +6,7 @@ from typing import Optional, Union, Tuple
 from ..network import Network
 from ..learning import PostPre
 from ..network.topology import Connection, LocallyConnectedConnection
-from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes, IzhikevichNodes
+from ..network.nodes import Input, RealInput, LIFNodes, DiehlAndCookNodes, IzhikevichNodes
 
 
 class TwoLayerNetwork(Network):
@@ -128,7 +128,7 @@ class CANs(Network):
         self.n_neurons = n_neurons
         self.n_cans = n_cans
 
-        self.add_layer(Input(n=self.n_inpt), name='X')
+        self.add_layer(RealInput(n=self.n_inpt), name='X')
 
         for i in range(self.n_cans):
             # Add CAN unit.
