@@ -146,7 +146,7 @@ class CANs(Network):
 
                 # Create weights between input to output. Excitatory neurons
                 # get 5 times the input that inhibitory neurons get.
-                wi[i, :] = torch.where(CAN.excitatory, 5.0, 1.0)
+                wi[i, :] = torch.where(CAN.excitatory, torch.Tensor([5]), torch.Tensor([1]))
 
             # Connect the internal connection in the CAN unit.
             C = Connection(source=CAN, target=CAN, w=w)
