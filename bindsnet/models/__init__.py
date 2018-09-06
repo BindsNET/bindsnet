@@ -1,6 +1,6 @@
 import torch
-import numpy as np
 
+from torch.nn.modules.utils import _pair
 from typing import Optional, Union, Tuple
 
 from ..network import Network
@@ -165,16 +165,17 @@ class LocallyConnectedNetwork(Network):
     layer is recurrently inhibited connected such that neurons with the same input receptive field inhibit each other.
     """
 
-    def __init__(self, n_inpt: int, kernel_size: Union[int, Tuple[int, int]], stride: Union[int, Tuple[int, int]],
-                 n_filters: int, inh: float = 25.0, dt: float = 1.0, nu_pre: float = 1e-4, nu_post: float = 1e-2,
-                 theta_plus: float = 0.05, theta_decay: float = 1e-7, wmin: float = 0.0, wmax: float = 1.0,
-                 norm: float = 0.2) -> None:
+    def __init__(self, n_inpt: int, input_shape: Tuple[int, int], kernel_size: Union[int, Tuple[int, int]],
+                 stride: Union[int, Tuple[int, int]], n_filters: int, inh: float = 25.0, dt: float = 1.0,
+                 nu_pre: float = 1e-4, nu_post: float = 1e-2, theta_plus: float = 0.05, theta_decay: float = 1e-7,
+                 wmin: float = 0.0, wmax: float = 1.0, norm: float = 0.2) -> None:
         # language=rst
         """
         Constructor for class ``LocallyConnectedNetwork``. Uses ``DiehlAndCookNodes`` to avoid multiple spikes per
         timestep in the output layer population.
 
         :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
+        :param input_shape: Two-dimensional shape of input population.
         :param kernel_size: Size of input windows. Integer or two-tuple of integers.
         :param stride: Length of horizontal, vertical stride across input space. Integer or two-tuple of integers.
         :param n_filters: Number of locally connected filters per input region. Integer or two-tuple of integers.
@@ -190,7 +191,11 @@ class LocallyConnectedNetwork(Network):
         """
         super().__init__(dt=dt)
 
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+
         self.n_inpt = n_inpt
+        self.input_shape = input_shape
         self.kernel_size = kernel_size
         self.stride = stride
         self.n_filters = n_filters
@@ -202,28 +207,28 @@ class LocallyConnectedNetwork(Network):
         self.wmax = wmax
         self.norm = norm
 
-        sqrt = int(np.sqrt(self.n_inpt))
-        if kernel_size == sqrt:
+        if kernel_size == input_shape:
             conv_size = 1
         else:
-            conv_size = int((sqrt - kernel_size) / stride) + 1
+            conv_size = (int((input_shape[0] - kernel_size[0]) / stride[0]) + 1,
+                         int((input_shape[1] - kernel_size[1]) / stride[1]) + 1)
 
         input_layer = Input(n=self.n_inpt, traces=True, trace_tc=5e-2)
         output_layer = DiehlAndCookNodes(
-            n=self.n_filters * conv_size ** 2, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0,
-            refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
+            n=self.n_filters * conv_size[0] * conv_size[1], traces=True, rest=-65.0, reset=-60.0,
+            thresh=-52.0, refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
         )
         input_output_conn = LocallyConnectedConnection(
             input_layer, output_layer, kernel_size=kernel_size, stride=stride, n_filters=n_filters,
-            nu=(nu_pre, nu_post), update_rule=PostPre, wmin=wmin, wmax=wmax, norm=norm
+            nu=(nu_pre, nu_post), update_rule=PostPre, wmin=wmin, wmax=wmax, norm=norm, input_shape=input_shape
         )
 
-        w = torch.zeros(n_filters, conv_size, conv_size, n_filters, conv_size, conv_size)
+        w = torch.zeros(n_filters, *conv_size, n_filters, *conv_size)
         for fltr1 in range(n_filters):
             for fltr2 in range(n_filters):
                 if fltr1 != fltr2:
-                    for i in range(conv_size):
-                        for j in range(conv_size):
+                    for i in range(conv_size[0]):
+                        for j in range(conv_size[1]):
                             w[fltr1, i, j, fltr2, i, j] = -inh
 
         recurrent_conn = Connection(output_layer, output_layer, w=w)

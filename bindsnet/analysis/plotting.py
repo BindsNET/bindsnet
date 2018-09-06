@@ -205,9 +205,9 @@ def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 
     return im
 
 
-def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel_size: int, conv_size: int,
-                                   locations: torch.Tensor, input_sqrt: int, wmin: float = 0.0, wmax: float = 1.0,
-                                   im: Optional[AxesImage] = None, lines: bool = True,
+def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel_size: Union[int, Tuple[int, int]],
+                                   conv_size: int, locations: torch.Tensor, input_sqrt: int, wmin: float = 0.0,
+                                   wmax: float = 1.0, im: Optional[AxesImage] = None, lines: bool = True,
                                    figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
     # language=rst
     """
