@@ -1,11 +1,12 @@
-from typing import Optional
-
 import torch
+import numpy as np
+
+from typing import Optional, Union, Tuple
 
 from ..network import Network
 from ..learning import PostPre
-from ..network.topology import Connection
-from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes, IzhikevichNodes
+from ..network.topology import Connection, LocallyConnectedConnection
+from ..network.nodes import Input, RealInput, LIFNodes, DiehlAndCookNodes, IzhikevichNodes
 
 
 class TwoLayerNetwork(Network):
@@ -110,29 +111,26 @@ class DiehlAndCook2015(Network):
 class CANs(Network):
     # language=rst
     """
-    Creates a number of capillary-astrocyte neuron (CAN) units.
+    Defines a number of capillary-astrocyte neuron (CAN) units.
     """
 
-    def __init__(self, n_inpt: int, n_neurons: int = 1000, n_CANs: int = 4, dt: float = 1.0,
-                 running_time: int = 500) -> None:
+    def __init__(self, n_inpt: int, n_neurons: int = 1000, n_cans: int = 4, dt: float = 1.0) -> None:
         # language=rst
         """
         :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of neurons in each CAN unit.
         :param n_CANs: Number of CAN units.
         :param dt: Simulation time step.
-        :param running_time: Minimum iteration to run for memory allocations.
         """
         super().__init__(dt=dt)
 
         self.n_inpt = n_inpt
         self.n_neurons = n_neurons
-        self.n_CANs = n_CANs
-        self.running_time = running_time
+        self.n_cans = n_cans
 
-        self.add_layer(Input(n=self.n_inpt), name='X')
+        self.add_layer(RealInput(n=self.n_inpt), name='X')
 
-        for i in range(self.n_CANs):
+        for i in range(self.n_cans):
             # Add CAN unit.
             CAN = IzhikevichNodes(n=self.n_neurons, excitatory=0.8)
 
@@ -158,3 +156,79 @@ class CANs(Network):
             self.add_layer(layer=CAN, name=name)
             self.add_connection(connection=C, source=name, target=name)
             self.add_connection(connection=Ci, source='X', target=name)
+
+
+class LocallyConnectedNetwork(Network):
+    # language=rst
+    """
+    Defines a two-layer network in which the input layer is "locally connected" to the output layer, and the output
+    layer is recurrently inhibited connected such that neurons with the same input receptive field inhibit each other.
+    """
+
+    def __init__(self, n_inpt: int, kernel_size: Union[int, Tuple[int, int]], stride: Union[int, Tuple[int, int]],
+                 n_filters: int, inh: float = 25.0, dt: float = 1.0, nu_pre: float = 1e-4, nu_post: float = 1e-2,
+                 theta_plus: float = 0.05, theta_decay: float = 1e-7, wmin: float = 0.0, wmax: float = 1.0,
+                 norm: float = 0.2) -> None:
+        # language=rst
+        """
+        Constructor for class ``LocallyConnectedNetwork``. Uses ``DiehlAndCookNodes`` to avoid multiple spikes per
+        timestep in the output layer population.
+
+        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
+        :param kernel_size: Size of input windows. Integer or two-tuple of integers.
+        :param stride: Length of horizontal, vertical stride across input space. Integer or two-tuple of integers.
+        :param n_filters: Number of locally connected filters per input region. Integer or two-tuple of integers.
+        :param inh: Strength of synapse weights from output layer back onto itself.
+        :param dt: Simulation time step.
+        :param nu_pre: Pre-synaptic learning rate.
+        :param nu_post: Post-synaptic learning rate.
+        :param wmin: Minimum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
+        :param wmax: Maximum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
+        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
+        :param theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        :param norm: ``Input`` to ``DiehlAndCookNodes`` layer connection weights normalization constant.
+        """
+        super().__init__(dt=dt)
+
+        self.n_inpt = n_inpt
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.n_filters = n_filters
+        self.inh = inh
+        self.dt = dt
+        self.theta_plus = theta_plus
+        self.theta_decay = theta_decay
+        self.wmin = wmin
+        self.wmax = wmax
+        self.norm = norm
+
+        sqrt = int(np.sqrt(self.n_inpt))
+        if kernel_size == sqrt:
+            conv_size = 1
+        else:
+            conv_size = int((sqrt - kernel_size) / stride) + 1
+
+        input_layer = Input(n=self.n_inpt, traces=True, trace_tc=5e-2)
+        output_layer = DiehlAndCookNodes(
+            n=self.n_filters * conv_size ** 2, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0,
+            refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
+        )
+        input_output_conn = LocallyConnectedConnection(
+            input_layer, output_layer, kernel_size=kernel_size, stride=stride, n_filters=n_filters,
+            nu=(nu_pre, nu_post), update_rule=PostPre, wmin=wmin, wmax=wmax, norm=norm
+        )
+
+        w = torch.zeros(n_filters, conv_size, conv_size, n_filters, conv_size, conv_size)
+        for fltr1 in range(n_filters):
+            for fltr2 in range(n_filters):
+                if fltr1 != fltr2:
+                    for i in range(conv_size):
+                        for j in range(conv_size):
+                            w[fltr1, i, j, fltr2, i, j] = -inh
+
+        recurrent_conn = Connection(output_layer, output_layer, w=w)
+
+        self.add_layer(input_layer, name='X')
+        self.add_layer(output_layer, name='Y')
+        self.add_connection(input_output_conn, source='X', target='Y')
+        self.add_connection(recurrent_conn, source='Y', target='Y')

@@ -108,7 +108,7 @@ class Connection(AbstractConnection):
                  **kwargs) -> None:
         # language=rst
         """
-        Instantiates a :code:`SimpleConnection` object.
+        Instantiates a :code:`Connection` object.
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
@@ -273,6 +273,123 @@ class Conv2dConnection(AbstractConnection):
         super().reset_()
 
 
+class LocallyConnectedConnection(AbstractConnection):
+    # language=rst
+    """
+    Specifies a locally connected connection between one or two populations of neurons.
+    """
+
+    def __init__(self, source: Nodes, target: Nodes, kernel_size: Union[int, Tuple[int, int]],
+                 stride: Union[int, Tuple[int, int]], n_filters: int,
+                 nu: Optional[Union[float, Tuple[float, float]]] = None, **kwargs) -> None:
+        # language=rst
+        """
+        Instantiates a ``Conv2dConnection`` object.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param kernel_size: Horizontal and vertical size of convolutional kernels.
+        :param stride: Horizontal and vertical stride for convolution.
+        :param n_filters: Number of locally connected filters per pre-synaptic region.
+        :param nu: Learning rate for both pre- and post-synaptic events.
+
+        Keyword arguments:
+
+        :param function update_rule: Modifies connection parameters according to some rule.
+        :param torch.Tensor w: Strengths of synapses.
+        :param float wmin: Minimum allowed value on the connection weights.
+        :param float wmax: Maximum allowed value on the connection weights.
+        :param float norm: Total weight per target neuron normalization constant.
+        """
+        super().__init__(source, target, nu, **kwargs)
+
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.n_filters = n_filters
+
+        sqrt = int(np.sqrt(source.n))
+        if kernel_size == sqrt:
+            conv_size = 1
+        else:
+            conv_size = int((sqrt - kernel_size) / stride) + 1
+
+        assert target.n == n_filters * conv_size ** 2, 'Target layer size must be n_filters * (kernel_size ** 2).'
+
+        locations = torch.zeros(kernel_size, kernel_size, conv_size ** 2).long()
+        for c in range(conv_size ** 2):
+            for k1 in range(kernel_size):
+                for k2 in range(kernel_size):
+                    locations[k1, k2, c] = (c % conv_size) * stride * sqrt + (c // conv_size) * stride + k1 * sqrt + k2
+
+        locations = locations.view(kernel_size ** 2, conv_size ** 2)
+
+        self.w = kwargs.get('w', None)
+
+        if self.w is None:
+            self.w = torch.zeros(source.n, target.n)
+            for f in range(n_filters):
+                for c in range(conv_size ** 2):
+                    for k in range(kernel_size ** 2):
+                        if self.wmin == -np.inf or self.wmax == np.inf:
+                            self.w[locations[k, c], f * (conv_size ** 2) + c] = np.random.rand()
+                        else:
+                            self.w[locations[k, c], f * (conv_size ** 2) + c] = \
+                                self.wmin + np.random.rand() * (self.wmax - self.wmin)
+        else:
+            if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
+                warnings.warn(f'Weight matrix will be clamped between [{self.wmin}, {self.wmax}]')
+                self.w = torch.clamp(self.w, self.wmin, self.wmax)
+
+        self.mask = self.w == 0
+
+        if self.norm is not None:
+            self.norm *= kernel_size ** 2
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Compute pre-activations given spikes using layer weights.
+
+        :param s: Incoming spikes.
+        :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
+        """
+        self.a_pre = self.a_pre * self.decay + s.float().view(-1)
+
+        # Compute multiplication of pre-activations by connection weights.
+        if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
+            return self.a_pre @ self.w
+        else:
+            a_post = self.a_pre @ self.w.view(self.source.n, self.target.n)
+            return a_post.view(*self.target.shape)
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Compute connection's update rule.
+        """
+        if kwargs['mask'] is None:
+            kwargs['mask'] = self.mask
+
+        super().update(**kwargs)
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Normalize weights so each target neuron has sum of connection weights equal to ``self.norm``.
+        """
+        if self.norm is not None:
+            self.w = self.w.view(self.source.n, self.target.n)
+            self.w *= self.norm / self.w.sum(0).view(1, -1)
+            self.w = self.w.view(*self.source.shape, *self.target.shape)
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Contains resetting logic for the connection.
+        """
+        super().reset_()
+
+
 class MeanFieldConnection(AbstractConnection):
     # language=rst
     """
@@ -284,7 +401,7 @@ class MeanFieldConnection(AbstractConnection):
                  **kwargs) -> None:
         # language=rst
         """
-        Instantiates a :code:`SimpleConnection` object.
+        Instantiates a :code:`MeanFieldConnection` object.
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.

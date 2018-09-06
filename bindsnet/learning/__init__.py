@@ -4,7 +4,7 @@ from abc import ABC
 from typing import Union, Tuple, Optional
 
 from ..utils import im2col_indices
-from ..network.topology import AbstractConnection, Connection, Conv2dConnection
+from ..network.topology import AbstractConnection, Connection, Conv2dConnection, LocallyConnectedConnection
 
 
 class LearningRule(ABC):
@@ -93,7 +93,7 @@ class PostPre(LearningRule):
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
 
-        if isinstance(connection, Connection):
+        if isinstance(connection, (Connection, LocallyConnectedConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
@@ -171,7 +171,7 @@ class Hebbian(LearningRule):
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
 
-        if isinstance(connection, Connection):
+        if isinstance(connection, (Connection, LocallyConnectedConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
@@ -248,7 +248,7 @@ class MSTDP(LearningRule):
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
 
-        if isinstance(connection, Connection):
+        if isinstance(connection, (Connection, LocallyConnectedConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
@@ -344,7 +344,7 @@ class MSTDPET(LearningRule):
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
 
-        if isinstance(connection, Connection):
+        if isinstance(connection, (Connection, LocallyConnectedConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
