@@ -5,7 +5,7 @@ import torch
 from ..network import Network
 from ..learning import PostPre
 from ..network.topology import Connection
-from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes
+from ..network.nodes import *
 
 
 class TwoLayerNetwork(Network):
@@ -105,3 +105,57 @@ class DiehlAndCook2015(Network):
         self.add_connection(Connection(source=self.layers['Ai'], target=self.layers['Ae'], w=w, wmin=-self.inh, wmax=0,
                                        decay=Ai_Ae_decay),
                             source='Ai', target='Ae')
+
+
+class CANs(Network):
+
+    def __init__(self, n_inpt: int, n_neurons: int = 1000, n_CANs: int = 4, dt: float = 1.0,
+                 running_time:int = 500, nu_pre: float = 1e-4, nu_post: float = 1e-2) -> None:
+        # language=rst
+        """
+        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
+        :param n_neurons: Number of neurons in each CAN unit.
+        :param n_CANs: Number of CAN units.
+        :param dt: Simulation time step.
+        :param running_time: Minimum iteration to run for memory allocations.
+        :param nu_pre: Pre-synaptic learning rate.
+        :param nu_post: Post-synaptic learning rate.
+
+        """
+        super().__init__(dt=dt)
+
+        self.n_inpt = n_inpt
+        self.n_neurons = n_neurons
+        self.n_CANs = n_CANs
+        self.running_time = running_time
+
+        In = Input(n=self.n_inpt)
+        self.add_layer(layer=In, name='Input Layer')
+
+        for i in range(self.n_CANs):
+            # add CAN column
+            CAN = IzhikevichNodes(n=self.n_neurons, excitatory=0.8)
+            # CAN = nodes.AdaptiveLIFNodes(n=Nu_Neurons_in_CAN)
+
+            # create random weights for internal connection of CAN
+            w = torch.rand(self.n_neurons, self.n_neurons)
+            # make the weights of inhibitory neurons negative
+            wi = torch.zeros(self.n_inpt, self.n_neurons)
+            # wi[i, :] = torch.rand(Nu_Neurons_in_CAN)
+
+            temp = CAN.excitatory == True
+            if torch.sum(temp) > 0:
+                w = torch.where(temp, 0.5 * w, -w)
+                # create weights between input to output.
+                # Excitatory neurons get 5 time the input and Inhibitory 1 time the input
+                wi[i, :] = torch.where(temp, 5. * torch.ones(self.n_neurons), 1. * torch.ones(self.n_neurons))
+
+            # connect the internal connection in CAN
+            C = Connection(source=CAN, target=CAN, w=w)
+            # connect the CAN to the input layer
+            Ci = Connection(source=In, target=CAN, w=wi)
+
+            temp_CAN_name = 'CAN-' + str(i)
+            self.add_layer(layer=CAN, name=temp_CAN_name)
+            self.add_connection(connection=C, source=temp_CAN_name, target=temp_CAN_name)
+            self.add_connection(connection=Ci, source='Input Layer', target=temp_CAN_name)

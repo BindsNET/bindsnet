@@ -78,8 +78,8 @@ class Input(Nodes):
     Layer of nodes with user-specified spiking behavior.
     """
 
-    def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2) -> None:
+    def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None,
+                 traces: bool = False, trace_tc: float = 5e-2) -> None:
         # language=rst
         """
         Instantiates a layer of input neurons.
@@ -100,6 +100,7 @@ class Input(Nodes):
         :param dt: Simulation time step.
         """
         # Set spike occurrences to input values.
+
         self.s = inpts.byte()
 
         super().step(inpts, dt)
@@ -719,7 +720,11 @@ class IzhikevichNodes(Nodes):
             ex = int(n * excitatory)
             inh = n - ex
             # init
-            self.r = self.a = self.b = self.c = self.d = torch.zeros(n)
+            self.r = torch.zeros(n)
+            self.a = torch.zeros(n)
+            self.b = torch.zeros(n)
+            self.c = torch.zeros(n)
+            self.d = torch.zeros(n)
 
             # excitatory
             self.r[:ex] = torch.rand(ex)
@@ -748,6 +753,7 @@ class IzhikevichNodes(Nodes):
         :param inpts: Inputs to the layer.
         :param dt: Simulation time step.
         """
+
         # Apply v and u updates.
         self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
         self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
@@ -825,7 +831,11 @@ class IzhikevichMetabolicNodes(Nodes):
             ex = int(n * excitatory)
             inh = n - ex
             # init
-            self.r = self.a = self.b = self.c = self.d = torch.zeros(n)
+            self.r = torch.zeros(n)
+            self.a = torch.zeros(n)
+            self.b = torch.zeros(n)
+            self.c = torch.zeros(n)
+            self.d = torch.zeros(n)
 
             # excitatory
             self.r[:ex] = torch.rand(ex)
