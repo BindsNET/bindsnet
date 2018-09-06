@@ -6,7 +6,7 @@ from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
 
 from ..datasets import Dataset, MNIST, CIFAR10, CIFAR100, SpokenMNIST
-from ..datasets.preprocess import subsample, gray_scale, binary_image
+from ..datasets.preprocess import subsample, gray_scale, binary_image, crop
 
 
 class Environment(ABC):
@@ -257,6 +257,9 @@ class GymEnvironment(Environment):
         elif self.name == 'SpaceInvaders-v0':
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = self.obs[26:104, :]
+            self.obs = binary_image(self.obs)
+        elif self.name == 'BreakoutDeterministic-v4':
+            self.obs = subsample(gray_scale(crop(self.obs, 34, 194, 0, 160)), 80, 80)
             self.obs = binary_image(self.obs)
         else: # Default pre-processing step
             self.obs = subsample(gray_scale(self.obs), 84, 110)
