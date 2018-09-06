@@ -11,7 +11,7 @@ class Nodes(ABC):
     """
     Abstract base class for groups of neurons.
     """
-    @abstractmethod
+
     def __init__(self, n: Optional[int]=None, shape: Optional[Iterable[int]]=None, traces: bool=False,
                  trace_tc: float=5e-2) -> None:
         # language=rst
@@ -72,7 +72,14 @@ class Nodes(ABC):
             self.x = torch.zeros(self.shape)     # Firing traces.
 
 
-class Input(Nodes):
+class AbstractInput(ABC):
+    # language=rst
+    """
+    Abstract base class for groups of input neurons.
+    """
+
+
+class Input(Nodes, AbstractInput):
     # language=rst
     """
     Layer of nodes with user-specified spiking behavior.
@@ -113,10 +120,11 @@ class Input(Nodes):
         super().reset_()
 
 
-class RealInput(Input):
+class RealInput(Input, AbstractInput):
     """
     Layer of nodes with user-specified real-valued outputs.
     """
+
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
                  trace_tc: float = 5e-2) -> None:
         # language=rst
