@@ -1,7 +1,7 @@
 import torch
 
 from torch.nn.modules.utils import _pair
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, List
 
 from ..network import Network
 from ..learning import PostPre
