@@ -317,14 +317,17 @@ class LocallyConnectedConnection(AbstractConnection):
             shape = _pair(sqrt)
 
         if kernel_size == shape:
-            conv_size = 1
+            conv_size = [1, 1]
         else:
             conv_size = (int((shape[0] - kernel_size[0]) / stride[0]) + 1,
                          int((shape[1] - kernel_size[1]) / stride[1]) + 1)
 
         self.conv_size = conv_size
 
-        assert target.n == n_filters * np.prod(conv_size), 'Target layer size must be n_filters * (kernel_size ** 2).'
+        conv_prod = int(np.prod(conv_size))
+        kernel_prod = int(np.prod(kernel_size))
+
+        assert target.n == n_filters * conv_prod, 'Target layer size must be n_filters * (kernel_size ** 2).'
 
         locations = torch.zeros(kernel_size[0], kernel_size[1], conv_size[0], conv_size[1]).long()
         for c1 in range(conv_size[0]):
@@ -334,18 +337,18 @@ class LocallyConnectedConnection(AbstractConnection):
                         locations[k1, k2, c1, c2] = (c1 % conv_size[0]) * stride[0] * shape[0] + \
                                                     (c2 // conv_size[1]) * stride[1] + k1 * shape[1] + k2
 
-        self.locations = locations.view(np.prod(kernel_size), np.prod(conv_size))
+        self.locations = locations.view(kernel_prod, conv_prod)
         self.w = kwargs.get('w', None)
 
         if self.w is None:
             self.w = torch.zeros(source.n, target.n)
             for f in range(n_filters):
-                for c in range(np.prod(conv_size)):
-                    for k in range(np.prod(kernel_size)):
+                for c in range(conv_prod):
+                    for k in range(kernel_prod):
                         if self.wmin == -np.inf or self.wmax == np.inf:
-                            self.w[self.locations[k, c], f * np.prod(conv_size) + c] = np.random.rand()
+                            self.w[self.locations[k, c], f * conv_prod + c] = np.random.rand()
                         else:
-                            self.w[self.locations[k, c], f * np.prod(conv_size) + c] = \
+                            self.w[self.locations[k, c], f * conv_prod + c] = \
                                 self.wmin + np.random.rand() * (self.wmax - self.wmin)
         else:
             if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
@@ -355,7 +358,7 @@ class LocallyConnectedConnection(AbstractConnection):
         self.mask = self.w == 0
 
         if self.norm is not None:
-            self.norm *= np.prod(kernel_size)
+            self.norm *= kernel_prod
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst

@@ -5,6 +5,7 @@ import numpy as np
 from torch import Tensor
 from numpy import ndarray
 from typing import Tuple, Union
+from torch.nn.modules.utils import _pair
 
 
 def get_im2col_indices(x_shape: Tuple[int, int, int, int], kernel_height: int,
@@ -149,49 +150,61 @@ def get_square_assignments(assignments: Tensor, n_sqrt: int) -> Tensor:
     return square_assignments
 
 
-def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: int, conv_size: int, locations: Tensor,
-                                      input_sqrt: int) -> Tensor:
+def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: Union[int, Tuple[int, int]],
+                                      conv_size: Union[int, Tuple[int, int]], locations: Tensor,
+                                      input_sqrt: Union[int, Tuple[int, int]]) -> Tensor:
     # language=rst
     """
     Get the weights from a locally connected layer and reshape them to be two-dimensional and square.
 
     :param w: Weights from a locally connected layer.
     :param n_filters: No. of neuron filters.
-    :param kernel_size: Side length of convolutional kernel.
-    :param conv_size: Side length of convolution population.
+    :param kernel_size: Side length(s) of convolutional kernel.
+    :param conv_size: Side length(s) of convolution population.
     :param locations: Binary mask indicating receptive fields of convolution population neurons.
-    :param input_sqrt: Square root of no. of input neurons.
+    :param input_sqrt: Sides length(s) of input neurons.
     :return: Locally connected weights reshaped as a collection of spatially ordered square grids.
     """
-    k, c = kernel_size, conv_size
-    cs, fs = int(np.sqrt(c)), int(math.ceil(math.sqrt(n_filters)))
+    kernel_size = _pair(kernel_size)
+    conv_size = _pair(conv_size)
+    input_sqrt = _pair(input_sqrt)
 
-    w_ = torch.zeros((n_filters * k, k * c ** 2))
+    k1, k2 = kernel_size
+    c1, c2 = conv_size
+    i1, i2 = input_sqrt
+    c1sqrt, c2sqrt = int(math.ceil(math.sqrt(c1))), int(math.ceil(math.sqrt(c2)))
+    fs = int(math.ceil(math.sqrt(n_filters)))
 
-    for n in range(c ** 2):
-        for feature in range(n_filters):
-            filter_ = w[locations[:, n], feature * (c ** 2) + (n // cs) * cs + (n % cs)].view(k, k)
-            w_[feature * k: (feature + 1) * k, n * k: (n + 1) * k] = filter_
+    w_ = torch.zeros((n_filters * k1, k2 * c1 * c2))
 
-    if c == 1:
-        square = torch.zeros((input_sqrt * fs, input_sqrt * fs))
+    print(c1sqrt, c2sqrt)
+
+    for n1 in range(c1):
+        for n2 in range(c2):
+            for feature in range(n_filters):
+                # w[locations[:, n], feature * (c ** 2) + (n // cs) * cs + (n % cs)].view(k, k)
+                n = n1 * c1 + n2
+                filter_ = w[locations[:, n], feature * (c1 * c2) + (n // c1sqrt) * c1sqrt + (n % c2sqrt)].view(k1, k2)
+                w_[feature * k1: (feature + 1) * k1, n * k2: (n + 1) * k2] = filter_
+
+    if c1 == 1 and c2 == 1:
+        square = torch.zeros((i1 * fs, i2 * fs))
 
         for n in range(n_filters):
-            square[(n // fs) * input_sqrt: ((n // fs) + 1) * input_sqrt,
-                   (n % fs) * input_sqrt: ((n % fs) + 1) * input_sqrt] = w_[n * input_sqrt: (n + 1) * input_sqrt, :]
+            square[(n // fs) * i1: ((n // fs) + 1) * i2, (n % fs) * i2: ((n % fs) + 1) * i2] = w_[n * i1: (n + 1) * i2]
 
         return square
     else:
-        square = torch.zeros((k * fs * c, k * fs * c))
+        square = torch.zeros((k1 * fs * c1, k2 * fs * c2))
 
-        for n_1 in range(c):
-            for n_2 in range(c):
-                for f_1 in range(fs):
-                    for f_2 in range(fs):
-                        if f_1 * fs + f_2 < n_filters:
-                            square[k * (n_2 * fs + f_1): k * (n_2 * fs + f_1 + 1),
-                                   k * (n_1 * fs + f_2): k * (n_1 * fs + f_2 + 1)] = \
-                                   w_[(f_1 * fs + f_2) * k: (f_1 * fs + f_2 + 1) * k,
-                                      (n_1 * c + n_2) * k: (n_1 * c + n_2 + 1) * k]
+        for n1 in range(c1):
+            for n2 in range(c2):
+                for f1 in range(fs):
+                    for f2 in range(fs):
+                        if f1 * fs + f2 < n_filters:
+                            square[k1 * (n2 * fs + f1): k1 * (n2 * fs + f1 + 1),
+                                   k2 * (n1 * fs + f2): k2 * (n1 * fs + f2 + 1)] = \
+                                   w_[(f1 * fs + f2) * k1: (f1 * fs + f2 + 1) * k1,
+                                      (n1 * c1 + n2) * k2: (n1 * c1 + n2 + 1) * k2]
 
         return square

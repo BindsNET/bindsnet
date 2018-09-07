@@ -1,12 +1,12 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from bindsnet.network import AbstractMonitor, Network
 
 from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
+from torch.nn.modules.utils import _pair
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from typing import Tuple, List, Optional, Any, Sized, Dict, Union
+from typing import Tuple, List, Optional, Sized, Dict, Union
 
 from ..utils import reshape_locally_connected_weights
 
@@ -206,8 +206,9 @@ def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 
 
 
 def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel_size: Union[int, Tuple[int, int]],
-                                   conv_size: int, locations: torch.Tensor, input_sqrt: int, wmin: float = 0.0,
-                                   wmax: float = 1.0, im: Optional[AxesImage] = None, lines: bool = True,
+                                   conv_size: Union[int, Tuple[int, int]], locations: torch.Tensor,
+                                   input_sqrt: Union[int, Tuple[int, int]], wmin: float = 0.0, wmax: float = 1.0,
+                                   im: Optional[AxesImage] = None, lines: bool = True,
                                    figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
     # language=rst
     """
@@ -216,10 +217,10 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
 
     :param weights: Weight matrix of Conv2dConnection object.
     :param n_filters: No. of convolution kernels in use.
-    :param kernel_size: Side length of 2D convolution kernels.
-    :param conv_size: Side length of 2D convolution population.
+    :param kernel_size: Side length(s) of 2D convolution kernels.
+    :param conv_size: Side length(s) of 2D convolution population.
     :param locations: Indices of input receptive fields for convolution population neurons.
-    :param input_sqrt: Side length of 2D input data.
+    :param input_sqrt: Side length(s) of 2D input data.
     :param wmin: Minimum allowed weight value.
     :param wmax: Maximum allowed weight value.
     :param im: Used for re-drawing the weights plot.
@@ -227,6 +228,10 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
     :param figsize: Horizontal, vertical figure size in inches.
     :return: Used for re-drawing the weights plot.
     """
+    kernel_size = _pair(kernel_size)
+    conv_size = _pair(conv_size)
+    input_sqrt = _pair(input_sqrt)
+
     reshaped = reshape_locally_connected_weights(weights, n_filters, kernel_size, conv_size, locations, input_sqrt)
     n_sqrt = int(np.ceil(np.sqrt(n_filters)))
 
@@ -239,13 +244,14 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
         cax = div.append_axes("right", size="5%", pad=0.05)
 
         if lines:
-            for i in range(n_sqrt * kernel_size, n_sqrt * conv_size * kernel_size, n_sqrt * kernel_size):
-                ax.axhline(i - 0.5, color='g', linestyle='--')
-
-            for i in range(n_sqrt * kernel_size, n_sqrt * conv_size * kernel_size, n_sqrt * kernel_size):
+            for i in range(n_sqrt * kernel_size[0], n_sqrt * conv_size[0] * kernel_size[0], n_sqrt * kernel_size[0]):
                 ax.axvline(i - 0.5, color='g', linestyle='--')
 
-        ax.set_xticks(()); ax.set_yticks(())
+            for i in range(n_sqrt * kernel_size[1], n_sqrt * conv_size[1] * kernel_size[1], n_sqrt * kernel_size[1]):
+                ax.axhline(i - 0.5, color='g', linestyle='--')
+
+        ax.set_xticks(())
+        ax.set_yticks(())
         ax.set_aspect('auto')
 
         plt.colorbar(im, cax=cax)

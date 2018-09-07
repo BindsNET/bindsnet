@@ -165,7 +165,7 @@ class LocallyConnectedNetwork(Network):
     layer is recurrently inhibited connected such that neurons with the same input receptive field inhibit each other.
     """
 
-    def __init__(self, n_inpt: int, input_shape: List[int, int], kernel_size: Union[int, Tuple[int, int]],
+    def __init__(self, n_inpt: int, input_shape: List[int], kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int, inh: float = 25.0, dt: float = 1.0,
                  nu_pre: float = 1e-4, nu_post: float = 1e-2, theta_plus: float = 0.05, theta_decay: float = 1e-7,
                  wmin: float = 0.0, wmax: float = 1.0, norm: float = 0.2) -> None:
@@ -208,7 +208,7 @@ class LocallyConnectedNetwork(Network):
         self.norm = norm
 
         if kernel_size == input_shape:
-            conv_size = 1
+            conv_size = [1, 1]
         else:
             conv_size = (int((input_shape[0] - kernel_size[0]) / stride[0]) + 1,
                          int((input_shape[1] - kernel_size[1]) / stride[1]) + 1)
