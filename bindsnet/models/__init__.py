@@ -5,7 +5,7 @@ from typing import Optional, Union, Tuple
 
 from ..network import Network
 from ..learning import PostPre
-from ..network.topology import Connection, LocallyConnectedConnection, MeanFieldConnection
+from ..network.topology import Connection, LocallyConnectedConnection
 from ..network.nodes import Input, RealInput, LIFNodes, DiehlAndCookNodes, IzhikevichNodes
 
 
