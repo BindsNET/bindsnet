@@ -107,57 +107,6 @@ class DiehlAndCook2015(Network):
                                        decay=Ai_Ae_decay),
                             source='Ai', target='Ae')
 
-
-class CANs(Network):
-    # language=rst
-    """
-    Defines a number of capillary-astrocyte neuron (CAN) units.
-    """
-
-    def __init__(self, n_inpt: int, n_neurons: int = 1000, n_cans: int = 4, dt: float = 1.0) -> None:
-        # language=rst
-        """
-        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
-        :param n_neurons: Number of neurons in each CAN unit.
-        :param n_CANs: Number of CAN units.
-        :param dt: Simulation time step.
-        """
-        super().__init__(dt=dt)
-
-        self.n_inpt = n_inpt
-        self.n_neurons = n_neurons
-        self.n_cans = n_cans
-
-        self.add_layer(RealInput(n=self.n_inpt), name='X')
-
-        for i in range(self.n_cans):
-            # Add CAN unit.
-            CAN = IzhikevichNodes(n=self.n_neurons, excitatory=0.8)
-
-            # Create random weights for internal connection of CAN unit.
-            w = torch.rand(self.n_neurons, self.n_neurons)
-
-            wi = torch.zeros(self.n_inpt, self.n_neurons)
-            if torch.sum(CAN.excitatory) > 0:
-                # Make the inhibitory neuron weights negative and halve the excitatory neuron weights.
-                w = torch.where(CAN.excitatory, 0.5 * w, -w)
-
-                # Create weights between input to output. Excitatory neurons
-                # get 5 times the input that inhibitory neurons get.
-                wi[i, :] = torch.where(CAN.excitatory, torch.Tensor([5]), torch.Tensor([1]))
-
-            # Connect the internal connection in the CAN unit.
-            C = Connection(source=CAN, target=CAN, w=w)
-
-            # Connect the input layer to the CAN unit.
-            Ci = Connection(source=self.layers['X'], target=CAN, w=wi)
-
-            name = f'CAN-{i}'
-            self.add_layer(layer=CAN, name=name)
-            self.add_connection(connection=C, source=name, target=name)
-            self.add_connection(connection=Ci, source='X', target=name)
-
-
 class LocallyConnectedNetwork(Network):
     # language=rst
     """
