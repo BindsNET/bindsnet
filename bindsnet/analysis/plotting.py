@@ -245,10 +245,10 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
 
         if lines:
             for i in range(n_sqrt * kernel_size[0], n_sqrt * conv_size[0] * kernel_size[0], n_sqrt * kernel_size[0]):
-                ax.axvline(i - 0.5, color='g', linestyle='--')
+                ax.axhline(i - 0.5, color='g', linestyle='--')
 
             for i in range(n_sqrt * kernel_size[1], n_sqrt * conv_size[1] * kernel_size[1], n_sqrt * kernel_size[1]):
-                ax.axhline(i - 0.5, color='g', linestyle='--')
+                ax.axvline(i - 0.5, color='g', linestyle='--')
 
         ax.set_xticks(())
         ax.set_yticks(())

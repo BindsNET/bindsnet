@@ -324,8 +324,9 @@ class LocallyConnectedConnection(AbstractConnection):
         if kernel_size == shape:
             conv_size = [1, 1]
         else:
-            conv_size = (int((shape[0] - kernel_size[0]) / stride[0]) + 1,
-                         int((shape[1] - kernel_size[1]) / stride[1]) + 1)
+            conv_size = (
+                int((shape[0] - kernel_size[0]) / stride[0]) + 1, int((shape[1] - kernel_size[1]) / stride[1]) + 1
+            )
 
         self.conv_size = conv_size
 
@@ -339,8 +340,8 @@ class LocallyConnectedConnection(AbstractConnection):
             for c2 in range(conv_size[1]):
                 for k1 in range(kernel_size[0]):
                     for k2 in range(kernel_size[1]):
-                        locations[k1, k2, c1, c2] = (c1 % conv_size[0]) * stride[0] * shape[0] + \
-                                                    (c2 // conv_size[1]) * stride[1] + k1 * shape[1] + k2
+                        location = c1 * stride[0] * shape[1] + c2 * stride[1] + k1 * shape[0] + k2
+                        locations[k1, k2, c1, c2] = location
 
         self.locations = locations.view(kernel_prod, conv_prod)
         self.w = kwargs.get('w', None)

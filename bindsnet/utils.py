@@ -177,14 +177,11 @@ def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: Un
 
     w_ = torch.zeros((n_filters * k1, k2 * c1 * c2))
 
-    print(c1sqrt, c2sqrt)
-
     for n1 in range(c1):
         for n2 in range(c2):
             for feature in range(n_filters):
-                # w[locations[:, n], feature * (c ** 2) + (n // cs) * cs + (n % cs)].view(k, k)
-                n = n1 * c1 + n2
-                filter_ = w[locations[:, n], feature * (c1 * c2) + (n // c1sqrt) * c1sqrt + (n % c2sqrt)].view(k1, k2)
+                n = n1 * c2 + n2
+                filter_ = w[locations[:, n], feature * (c1 * c2) + (n // c2sqrt) * c2sqrt + (n % c2sqrt)].view(k1, k2)
                 w_[feature * k1: (feature + 1) * k1, n * k2: (n + 1) * k2] = filter_
 
     if c1 == 1 and c2 == 1:
@@ -201,10 +198,9 @@ def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: Un
             for n2 in range(c2):
                 for f1 in range(fs):
                     for f2 in range(fs):
-                        if f1 * fs + f2 < n_filters:
-                            square[k1 * (n2 * fs + f1): k1 * (n2 * fs + f1 + 1),
-                                   k2 * (n1 * fs + f2): k2 * (n1 * fs + f2 + 1)] = \
-                                   w_[(f1 * fs + f2) * k1: (f1 * fs + f2 + 1) * k1,
-                                      (n1 * c1 + n2) * k2: (n1 * c1 + n2 + 1) * k2]
+                        square[k1 * (n1 * fs + f1): k1 * (n1 * fs + f1 + 1),
+                               k2 * (n2 * fs + f2): k2 * (n2 * fs + f2 + 1)] = \
+                               w_[(f1 * fs + f2) * k1: (f1 * fs + f2 + 1) * k1,
+                                  (n1 * c2 + n2) * k2: (n1 * c2 + n2 + 1) * k2]
 
         return square

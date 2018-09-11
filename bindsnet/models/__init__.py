@@ -113,8 +113,8 @@ class DiehlAndCook2015(Network):
 class IncreasingInhibitionNetwork(Network):
     # language=rst
     """
-    Implements the spiking neural network architecture from `(Diehl & Cook 2015)
-    <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
+    Implements the inhibitory layer structure of the spiking neural network architecture from `(Hazan et al. 2018)
+    <https://arxiv.org/abs/1807.09374>`_
     """
     def __init__(self, n_input: int, n_neurons: int = 100, start_inhib: float = 1.0, max_inhib: float = 100.0,
                  dt: float = 1.0, nu_pre: float = 1e-4, nu_post: float = 1e-2, wmin: float = 0.0, wmax: float = 1.0,
