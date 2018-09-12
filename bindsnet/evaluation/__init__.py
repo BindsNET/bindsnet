@@ -146,7 +146,7 @@ def ngram(spikes: torch.Tensor, ngram_scores: Dict[Tuple[int, ...], torch.Tensor
 
         predictions.append(torch.argmax(score))
 
-    return torch.LongTensor(predictions)
+    return torch.Tensor(predictions).long()
 
 
 def update_ngram_scores(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, n: int,
