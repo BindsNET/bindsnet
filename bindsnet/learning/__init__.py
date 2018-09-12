@@ -13,13 +13,15 @@ class LearningRule(ABC):
     Abstract base class for learning rules.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 weight_decay: float = 0.0) -> None:
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
 
         :param connection: An ``AbstractConnection`` object.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         # Connection parameters.
         self.connection = connection
@@ -38,12 +40,21 @@ class LearningRule(ABC):
 
         self.nu = nu
 
+        # Weight decay.
+        self.weight_decay = weight_decay
+
     def update(self) -> None:
         # language=rst
         """
         Abstract method for a learning rule update.
         """
-        pass
+        # Implement weight decay.
+        self.connection.w -= self.weight_decay * self.connection.w
+
+        # Bound weights.
+        self.connection.w = torch.clamp(
+            self.connection.w, self.connection.wmin, self.connection.wmax
+        )
 
 
 class NoOp(LearningRule):
@@ -52,16 +63,18 @@ class NoOp(LearningRule):
     Learning rule with no effect.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 weight_decay: float = 0.0) -> None:
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
 
         :param connection: An ``AbstractConnection`` object which this learning rule will have no effect on.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu
+            connection=connection, nu=nu, weight_decay=weight_decay
         )
 
     def update(self, **kwargs) -> None:
@@ -69,7 +82,7 @@ class NoOp(LearningRule):
         """
         Abstract method for a learning rule update.
         """
-        pass
+        super().update()
 
 
 class PostPre(LearningRule):
@@ -79,16 +92,18 @@ class PostPre(LearningRule):
     the post-synpatic update is positive.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 weight_decay: float = 0.0) -> None:
         # language=rst
         """
         Constructor for ``PostPre`` learning rule.
 
         :param connection: An ``AbstractConnection`` object whose weights the ``PostPre`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu
+            connection=connection, nu=nu, weight_decay=weight_decay
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
@@ -107,6 +122,8 @@ class PostPre(LearningRule):
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
+
         # Pre-synaptic update.
         self.connection.w -= self.nu[0] * torch.ger(
             self.source.s.float(), self.target.x
@@ -115,16 +132,14 @@ class PostPre(LearningRule):
         self.connection.w += self.nu[1] * torch.ger(
             self.source.x, self.target.s.float()
         )
-        # Bound weights.
-        self.connection.w = torch.clamp(
-            self.connection.w, self.connection.wmin, self.connection.wmax
-        )
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
+
         # Get convolutional layer parameters.
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
@@ -147,11 +162,6 @@ class PostPre(LearningRule):
         post = s_target @ x_source.t()
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
-        # Bound weights.
-        self.connection.w = torch.clamp(
-            self.connection.w, self.connection.wmin, self.connection.wmax
-        )
-
 
 class Hebbian(LearningRule):
     # language=rst
@@ -159,15 +169,19 @@ class Hebbian(LearningRule):
     Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 weight_decay: float = 0.0) -> None:
         # language=rst
         """
-        Constructor for ``PostPre`` learning rule.
+        Constructor for ``Hebbian`` learning rule.
 
         :param connection: An ``AbstractConnection`` object whose weights the ``Hebbian`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
-        super().__init__(connection=connection, nu=nu)
+        super().__init__(
+            connection=connection, nu=nu, weight_decay=weight_decay
+        )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
 
@@ -185,6 +199,8 @@ class Hebbian(LearningRule):
         """
         Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
+
         # Pre-synaptic update.
         self.connection.w += self.nu[0] * torch.ger(
             self.source.s.float(), self.target.x
@@ -193,16 +209,14 @@ class Hebbian(LearningRule):
         self.connection.w += self.nu[1] * torch.ger(
             self.source.x, self.target.s.float()
         )
-        # Bound weights.
-        self.connection.w = torch.clamp(
-            self.connection.w, self.connection.wmin, self.connection.wmax
-        )
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Hebbian learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
+
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
 
@@ -224,11 +238,6 @@ class Hebbian(LearningRule):
         post = s_target @ x_source.t()
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
-        # Bound weights.
-        self.connection.w = torch.clamp(
-            self.connection.w, self.connection.wmin, self.connection.wmax
-        )
-
 
 class MSTDP(LearningRule):
     # language=rst
@@ -236,7 +245,8 @@ class MSTDP(LearningRule):
     Reward-modulated STDP. Adapted from `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 weight_decay: float = 0.0) -> None:
         # language=rst
         """
         Constructor for ``MSTDP`` learning rule.
@@ -244,7 +254,9 @@ class MSTDP(LearningRule):
         :param connection: An ``AbstractConnection`` object whose weights the ``MSTDP`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         """
-        super().__init__(connection=connection, nu=nu)
+        super().__init__(
+            connection=connection, nu=nu, weight_decay=weight_decay
+        )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
 
@@ -268,6 +280,8 @@ class MSTDP(LearningRule):
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
+        super().update()
+
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
@@ -283,10 +297,19 @@ class MSTDP(LearningRule):
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * eligibility
 
-        # Bound weights.
-        self.connection.w = torch.clamp(self.connection.w, self.wmin, self.wmax)
-
     def _conv2d_connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        M-STDP learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+
+        Keyword arguments:
+
+        :param float reward: Reward signal from reinforcement learning task.
+        :param float a_plus: Learning rate (post-synaptic).
+        :param float a_minus: Learning rate (pre-synaptic).
+        """
+        super().update()
+
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
@@ -321,9 +344,6 @@ class MSTDP(LearningRule):
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * eligibility
 
-        # Bound weights.
-        self.connection.w = torch.clamp(self.connection.w, self.wmin, self.wmax)
-
 
 class MSTDPET(LearningRule):
     # language=rst
@@ -332,15 +352,19 @@ class MSTDPET(LearningRule):
     `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None) -> None:
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 weight_decay: float = 0.0) -> None:
         # language=rst
         """
         Constructor for ``MSTDPET`` learning rule.
 
         :param connection: An ``AbstractConnection`` object whose weights the ``MSTDPET`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
-        super().__init__(connection=connection, nu=nu)
+        super().__init__(
+            connection=connection, nu=nu, weight_decay=weight_decay
+        )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
 
@@ -371,6 +395,8 @@ class MSTDPET(LearningRule):
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
+        super().update()
+
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
@@ -391,10 +417,19 @@ class MSTDPET(LearningRule):
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
 
-        # Bound weights.
-        self.connection.w = torch.clamp(self.connection.w, self.wmin, self.wmax)
-
     def _conv2d_connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        M-STDP-ET learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+
+        Keyword arguments:
+
+        :param float reward: Reward signal from reinforcement learning task.
+        :param float a_plus: Learning rate (post-synaptic).
+        :param float a_minus: Learning rate (pre-synaptic).
+        """
+        super().update()
+
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
@@ -431,6 +466,3 @@ class MSTDPET(LearningRule):
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
-
-        # Bound weights.
-        self.connection.w = torch.clamp(self.connection.w, self.wmin, self.wmax)

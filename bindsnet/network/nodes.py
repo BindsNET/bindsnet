@@ -110,7 +110,6 @@ class Input(Nodes, AbstractInput):
         :param dt: Simulation time step.
         """
         # Set spike occurrences to input values.
-
         self.s = inpts.byte()
 
         super().step(inpts, dt)

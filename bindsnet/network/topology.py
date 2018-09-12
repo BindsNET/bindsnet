@@ -17,7 +17,7 @@ class AbstractConnection(ABC):
     """
 
     def __init__(self, source: Nodes, target: Nodes,
-                 nu: Optional[Union[float, Tuple[float, float]]] = None, **kwargs) -> None:
+                 nu: Optional[Union[float, Tuple[float, float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for abstract base class for connection objects.
@@ -25,6 +25,7 @@ class AbstractConnection(ABC):
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
 
@@ -37,6 +38,7 @@ class AbstractConnection(ABC):
         self.source = source
         self.target = target
         self.nu = nu
+        self.weight_decay = weight_decay
 
         assert isinstance(source, Nodes), 'Source is not a Nodes object'
         assert isinstance(target, Nodes), 'Target is not a Nodes object'
@@ -50,12 +52,12 @@ class AbstractConnection(ABC):
         self.decay = kwargs.get('decay', None)
 
         if self.decay is None:
-            self.decay = 0.0 # full decay, no memory of the previous spikes
+            self.decay = 0.0  # No memory of previous spikes.
 
         self.a_pre = 0.0
 
         self.update_rule = self.update_rule(
-            connection=self, nu=self.nu
+            connection=self, nu=self.nu, weight_decay=weight_decay
         )
 
     @abstractmethod
@@ -105,7 +107,7 @@ class Connection(AbstractConnection):
     """
 
     def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
-                 **kwargs) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Instantiates a :code:`Connection` object.
@@ -113,6 +115,7 @@ class Connection(AbstractConnection):
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
 
@@ -122,7 +125,7 @@ class Connection(AbstractConnection):
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
         """
-        super().__init__(source, target, nu, **kwargs)
+        super().__init__(source, target, nu, weight_decay, **kwargs)
 
         self.w = kwargs.get('w', None)
 
@@ -187,7 +190,7 @@ class Conv2dConnection(AbstractConnection):
     def __init__(self, source: Nodes, target: Nodes, kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
                  dilation: Union[int, Tuple[int, int]] = 1, nu: Optional[Union[float, Tuple[float, float]]] = None,
-                 **kwargs) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Instantiates a ``Conv2dConnection`` object.
@@ -199,6 +202,7 @@ class Conv2dConnection(AbstractConnection):
         :param padding: Horizontal and vertical padding for convolution.
         :param dilation: Horizontal and vertical dilation for convolution.
         :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
 
@@ -208,7 +212,7 @@ class Conv2dConnection(AbstractConnection):
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
         """
-        super().__init__(source, target, nu, **kwargs)
+        super().__init__(source, target, nu, weight_decay, **kwargs)
 
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
@@ -281,10 +285,10 @@ class LocallyConnectedConnection(AbstractConnection):
 
     def __init__(self, source: Nodes, target: Nodes, kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int,
-                 nu: Optional[Union[float, Tuple[float, float]]] = None, **kwargs) -> None:
+                 nu: Optional[Union[float, Tuple[float, float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
-        Instantiates a ``Conv2dConnection`` object.
+        Instantiates a ``Conv2dConnection`` object. Source population should be two-dimensional.
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
@@ -292,6 +296,7 @@ class LocallyConnectedConnection(AbstractConnection):
         :param stride: Horizontal and vertical stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
         :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
 
@@ -300,40 +305,56 @@ class LocallyConnectedConnection(AbstractConnection):
         :param float wmin: Minimum allowed value on the connection weights.
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
+        :param Tuple[int, int] input_shape: Shape of input population if it's not ``[sqrt, sqrt]``.
         """
-        super().__init__(source, target, nu, **kwargs)
+        super().__init__(source, target, nu, weight_decay, **kwargs)
 
-        self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride)
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+
+        self.kernel_size = kernel_size
+        self.stride = stride
         self.n_filters = n_filters
 
-        sqrt = int(np.sqrt(source.n))
-        if kernel_size == sqrt:
-            conv_size = 1
+        shape = kwargs.get('input_shape', None)
+        if shape is None:
+            sqrt = int(np.sqrt(source.n))
+            shape = _pair(sqrt)
+
+        if kernel_size == shape:
+            conv_size = [1, 1]
         else:
-            conv_size = int((sqrt - kernel_size) / stride) + 1
+            conv_size = (
+                int((shape[0] - kernel_size[0]) / stride[0]) + 1, int((shape[1] - kernel_size[1]) / stride[1]) + 1
+            )
 
-        assert target.n == n_filters * conv_size ** 2, 'Target layer size must be n_filters * (kernel_size ** 2).'
+        self.conv_size = conv_size
 
-        locations = torch.zeros(kernel_size, kernel_size, conv_size ** 2).long()
-        for c in range(conv_size ** 2):
-            for k1 in range(kernel_size):
-                for k2 in range(kernel_size):
-                    locations[k1, k2, c] = (c % conv_size) * stride * sqrt + (c // conv_size) * stride + k1 * sqrt + k2
+        conv_prod = int(np.prod(conv_size))
+        kernel_prod = int(np.prod(kernel_size))
 
-        locations = locations.view(kernel_size ** 2, conv_size ** 2)
+        assert target.n == n_filters * conv_prod, 'Target layer size must be n_filters * (kernel_size ** 2).'
 
+        locations = torch.zeros(kernel_size[0], kernel_size[1], conv_size[0], conv_size[1]).long()
+        for c1 in range(conv_size[0]):
+            for c2 in range(conv_size[1]):
+                for k1 in range(kernel_size[0]):
+                    for k2 in range(kernel_size[1]):
+                        location = c1 * stride[0] * shape[1] + c2 * stride[1] + k1 * shape[0] + k2
+                        locations[k1, k2, c1, c2] = location
+
+        self.locations = locations.view(kernel_prod, conv_prod)
         self.w = kwargs.get('w', None)
 
         if self.w is None:
             self.w = torch.zeros(source.n, target.n)
             for f in range(n_filters):
-                for c in range(conv_size ** 2):
-                    for k in range(kernel_size ** 2):
+                for c in range(conv_prod):
+                    for k in range(kernel_prod):
                         if self.wmin == -np.inf or self.wmax == np.inf:
-                            self.w[locations[k, c], f * (conv_size ** 2) + c] = np.random.rand()
+                            self.w[self.locations[k, c], f * conv_prod + c] = np.random.rand()
                         else:
-                            self.w[locations[k, c], f * (conv_size ** 2) + c] = \
+                            self.w[self.locations[k, c], f * conv_prod + c] = \
                                 self.wmin + np.random.rand() * (self.wmax - self.wmin)
         else:
             if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
@@ -343,7 +364,7 @@ class LocallyConnectedConnection(AbstractConnection):
         self.mask = self.w == 0
 
         if self.norm is not None:
-            self.norm *= kernel_size ** 2
+            self.norm *= kernel_prod
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -353,6 +374,7 @@ class LocallyConnectedConnection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
         """
+        # Decaying spike activation from previous iteration.
         self.a_pre = self.a_pre * self.decay + s.float().view(-1)
 
         # Compute multiplication of pre-activations by connection weights.
@@ -398,7 +420,7 @@ class MeanFieldConnection(AbstractConnection):
     """
 
     def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
-                 **kwargs) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Instantiates a :code:`MeanFieldConnection` object.
@@ -406,6 +428,7 @@ class MeanFieldConnection(AbstractConnection):
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
 
@@ -415,7 +438,7 @@ class MeanFieldConnection(AbstractConnection):
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
         """
-        super().__init__(source, target, nu, **kwargs)
+        super().__init__(source, target, nu, weight_decay, **kwargs)
 
         self.w = kwargs.get('w', None)
 
@@ -438,10 +461,7 @@ class MeanFieldConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
         """
         # Decaying spike activation from previous iteration.
-        if self.decay is not None:
-            self.a_pre = self.a_pre * self.decay + s.float().mean()
-        else:
-            self.a_pre = s.float().mean()
+        self.a_pre = self.a_pre * self.decay + s.float().mean()
 
         # Compute multiplication of mean-field pre-activation by connection weights.
         a_post = self.a_pre * self.w
@@ -479,7 +499,7 @@ class SparseConnection(AbstractConnection):
     """
 
     def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
-                 **kwargs) -> None:
+                 weight_decay: float = None, **kwargs) -> None:
         # language=rst
         """
         Instantiates a :code:`Connection` object with sparse weights.
@@ -489,6 +509,7 @@ class SparseConnection(AbstractConnection):
         :param nu: Learning rate for both pre- and post-synaptic events.
         :param nu_pre: Learning rate for pre-synaptic events.
         :param nu_post: Learning rate for post-synpatic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
 
@@ -499,7 +520,7 @@ class SparseConnection(AbstractConnection):
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
         """
-        super().__init__(source, target, nu, **kwargs)
+        super().__init__(source, target, nu, weight_decay, **kwargs)
 
         self.w = kwargs.get('w', None)
         self.sparsity = kwargs.get('sparsity', None)
