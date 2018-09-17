@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from torch.nn.modules.utils import _pair
 
 from .nodes import Nodes
-from ..learning import NoOp
 
 
 class AbstractConnection(ABC):
@@ -79,9 +78,10 @@ class AbstractConnection(ABC):
         """
         learning = kwargs.get('learning', True)
         reward = kwargs.get('reward', None)
-        if learning or isinstance(self.update_rule, NoOp):
+        if learning or 'bindsnet.learning.NoOp' in str(self.update_rule.__class__):
             self.update_rule.update(reward=reward)
         else:
+            from ..learning import NoOp
             NoOp(self.update_rule.connection).update()
 
         mask = kwargs.get('mask', None)
