@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from torch.nn.modules.utils import _pair
 
 from .nodes import Nodes
+from ..learning import NoOp
 
 
 class AbstractConnection(ABC):
@@ -76,8 +77,12 @@ class AbstractConnection(ABC):
         """
         Compute connection's update rule.
         """
+        learning = kwargs.get('learning', True)
         reward = kwargs.get('reward', None)
-        self.update_rule.update(reward=reward)
+        if learning or isinstance(self.update_rule, NoOp):
+            self.update_rule.update(reward=reward)
+        else:
+            NoOp(self.update_rule.connection).update()
 
         mask = kwargs.get('mask', None)
         if mask is not None:

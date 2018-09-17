@@ -92,6 +92,7 @@ class Network:
         self.layers = {}
         self.connections = {}
         self.monitors = {}
+        self.learning = True
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
@@ -262,7 +263,7 @@ class Network:
             # Run synapse updates.
             for c in self.connections:
                 self.connections[c].update(
-                    reward=reward, mask=masks.get(c, None)
+                    reward=reward, mask=masks.get(c, None), learning=self.learning
                 )
 
             # Get input to all layers.
