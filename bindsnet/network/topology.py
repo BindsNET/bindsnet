@@ -51,6 +51,9 @@ class AbstractConnection(ABC):
         self.norm = kwargs.get('norm', None)
         self.decay = kwargs.get('decay', None)
 
+        if self.update_rule is None:
+            self.update_rule = NoOp
+
         if self.decay is None:
             self.decay = 0.0  # No memory of previous spikes.
 
