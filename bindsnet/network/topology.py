@@ -78,11 +78,8 @@ class AbstractConnection(ABC):
         """
         learning = kwargs.get('learning', True)
         reward = kwargs.get('reward', None)
-        if learning or 'bindsnet.learning.NoOp' in str(self.update_rule.__class__):
+        if learning:
             self.update_rule.update(reward=reward)
-        else:
-            from ..learning import NoOp
-            NoOp(self.update_rule.connection).update()
 
         mask = kwargs.get('mask', None)
         if mask is not None:
