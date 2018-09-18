@@ -36,11 +36,12 @@ environment.reset()
 
 # Build pipeline from specified components.
 pipeline = Pipeline(network, environment, encoding=bernoulli,
-                    feedback=select_multinomial, output='Z',
+                    action_function=select_multinomial, output='Z',
                     time=1, history_length=2, delta=4,
                     plot_interval=100, render_interval=5)
 
 # Run environment simulation and network training.
 while True:
     pipeline.step()
-    if pipeline.done: pipeline.reset_()
+    if pipeline.done:
+        pipeline.reset_()
