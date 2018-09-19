@@ -278,16 +278,22 @@ def plot_assignments(assignments: torch.Tensor, im: Optional[AxesImage] = None, 
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title('Categorical assignments')
 
-        color = plt.get_cmap('RdBu', 11)
-        im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
+        if classes is None:
+            color = plt.get_cmap('RdBu', 11)
+            im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
+        else:
+            color = plt.get_cmap('RdBu', len(classes) + 1)
+            im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=len(classes) - 0.5)
+
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
         if classes is None:
-            plt.colorbar(im, cax=cax, ticks=np.arange(-1, 10))
+            cbar = plt.colorbar(im, cax=cax, ticks=list(range(-1, 11)))
+            cbar.ax.set_yticklabels(['none'] + list(range(10)))
         else:
             cbar = plt.colorbar(im, cax=cax, ticks=np.arange(-1, len(classes)))
-            cbar.ax.set_yticklabels(classes)
+            cbar.ax.set_yticklabels(['none'] + list(classes))
 
         ax.set_xticks(()); ax.set_yticks(())
         fig.tight_layout()

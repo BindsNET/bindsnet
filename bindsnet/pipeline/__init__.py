@@ -84,7 +84,7 @@ class Pipeline:
                     self.network.add_monitor(Monitor(self.network.layers[l], 'v', self.plot_interval * self.time),
                                              name=f'{l}_voltages')
 
-            self.spike_record = {l: torch.ByteTensor() for l in self.network.layers}
+            self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
             self.set_spike_data()
             self.plot_data()
 
@@ -252,6 +252,6 @@ class Pipeline:
         Reset the pipeline.
         """
         self.env.reset()
-        self.network._reset()
+        self.network.reset_()
         self.iteration = 0
         self.history = {i: torch.Tensor() for i in self.history}

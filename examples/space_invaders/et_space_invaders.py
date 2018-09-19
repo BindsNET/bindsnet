@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 from bindsnet.encoding import bernoulli
 from bindsnet.environment import GymEnvironment
 from bindsnet.learning import MSTDPET
-from bindsnet.network import Network, Input
+from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor
-from bindsnet.network.nodes import LIFNodes
+from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Connection
 from bindsnet.pipeline import Pipeline
 from bindsnet.pipeline.action import select_multinomial
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
@@ -90,7 +91,7 @@ environment.reset()
 
 pipeline = Pipeline(network, environment, encoding=bernoulli, time=1, history_length=5, delta=10,
                     plot_interval=plot_interval, print_interval=print_interval, render_interval=render_interval,
-                    feedback=select_multinomial, output='R')
+                    action_function=select_multinomial, output='R')
 
 try:
     while True:
