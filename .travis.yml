@@ -1,7 +1,4 @@
 language: python
-addons:
-  apt:
-    update: true
 python:
  - 3.6
 install:
