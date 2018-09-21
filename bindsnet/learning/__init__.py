@@ -144,6 +144,10 @@ class PostPre(LearningRule):
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
 
+        print(self.source.s.shape)
+        print(self.target.s.shape)
+        print()
+
         # Reshaping spike traces and spike occurrences.
         x_source = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
@@ -154,8 +158,14 @@ class PostPre(LearningRule):
         )
         s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
 
+        print(s_source.size(), x_target.size())
+        print()
+
         # Pre-synaptic update.
         pre = x_target @ s_source.t()
+
+        print(pre.size())
+
         self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.

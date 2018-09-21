@@ -110,6 +110,62 @@ class DiehlAndCook2015(Network):
                             source='Ai', target='Ae')
 
 
+class DiehlAndCook2015v2(Network):
+    # language=rst
+    """
+    Slightly modifies the spiking neural network architecture from `(Diehl & Cook 2015)
+    <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_ by removing the inhibitory layer and
+    replacing it with a recurrent inhibitory connection in the output layer (what used to be the excitatory layer).
+    """
+    def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
+                 nu_pre: float = 1e-4, nu_post: float = 1e-2, wmin: float = 0.0, wmax: float = 1.0, norm: float = 78.4,
+                 theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
+        # language=rst
+        """
+        Constructor for class ``DiehlAndCook2015``.
+
+        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
+        :param n_neurons: Number of excitatory, inhibitory neurons.
+        :param inh: Strength of synapse weights from inhibitory to excitatory layer.
+        :param dt: Simulation time step.
+        :param nu_pre: Pre-synaptic learning rate.
+        :param nu_post: Post-synaptic learning rate.
+        :param wmin: Minimum allowed weight on input to excitatory synapses.
+        :param wmax: Maximum allowed weight on input to excitatory synapses.
+        :param norm: Input to excitatory layer connection weights normalization constant.
+        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
+        :param theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        """
+        super().__init__(dt=dt)
+
+        self.n_inpt = n_inpt
+        self.n_neurons = n_neurons
+        self.inh = inh
+        self.dt = dt
+
+        input_layer = Input(n=self.n_inpt, traces=True, trace_tc=5e-2)
+        self.add_layer(input_layer, name='X')
+
+        output_layer = DiehlAndCookNodes(
+            n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
+            decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
+        )
+        self.add_layer(output_layer, name='Y')
+
+        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
+        input_connection = Connection(
+            source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
+            nu=(nu_pre, nu_post), wmin=wmin, wmax=wmax, norm=norm
+        )
+        self.add_connection(input_connection, source='X', target='Y')
+
+        w = -self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons)))
+        recurrent_connection = Connection(
+            source=self.layers['Y'], target=self.layers['Y'], w=w, wmin=-self.inh, wmax=0
+        )
+        self.add_connection(recurrent_connection, source='Y', target='Y')
+
+
 class IncreasingInhibitionNetwork(Network):
     # language=rst
     """
