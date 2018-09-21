@@ -1,8 +1,9 @@
-from itertools import product
-
 import torch
+import numpy as np
 
+from itertools import product
 from typing import Optional, Tuple, Dict
+from sklearn.linear_model import LogisticRegression
 
 
 def assign_labels(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, rates: Optional[torch.Tensor] = None,
@@ -45,6 +46,39 @@ def assign_labels(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, rat
     assignments = torch.max(proportions, 1)[1]
 
     return assignments, proportions, rates
+
+
+def logreg_fit(spikes: torch.Tensor, labels: torch.Tensor, logreg: LogisticRegression) -> LogisticRegression:
+    # language=rst
+    """
+
+    :param spikes: Spikes of shape ``(n_examples, time, n_neurons)``.
+    :param labels: Vector of shape ``(n_samples,)`` with data labels corresponding to spiking activity.
+    :param logreg: Logistic regression model from previous fits.
+    :return: (Re)fitted logistic regression model.
+    """
+    # (Re)fit logistic regression model.
+    spikes = spikes.sum(1)
+    logreg.fit(spikes, labels)
+    return logreg
+
+
+def logreg_predict(spikes: torch.Tensor, logreg: LogisticRegression) -> Tuple[torch.Tensor, LogisticRegression]:
+    # language=rst
+    """
+    Trains a logistic model on spike data and predicts classes accordingly.
+
+    :param spikes: Spikes of shape ``(n_examples, time, n_neurons)``.
+    :param logreg: Logistic regression model from previous fits.
+    :return: Predictions per example.
+    """
+    # Make class label predictions.
+    if not hasattr(logreg, 'coef_') or logreg.coef_ is None:
+        return -1 * torch.ones(spikes.size(0)).long()
+
+    spikes = spikes.sum(1)
+    predictions = logreg.predict(spikes)
+    return torch.Tensor(predictions).long()
 
 
 def all_activity(spikes: torch.Tensor, assignments: torch.Tensor, n_labels: int) -> torch.Tensor:
