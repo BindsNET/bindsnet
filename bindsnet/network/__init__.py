@@ -196,8 +196,6 @@ class Network:
         :param Dict[str, torch.Tensor] clamp: Mapping of layer names to boolean masks if neurons should be clamped to
                                               values specified in the ``clamp_v`` argument. The ``Tensor``s have shape
                                               ``[time, n_input]``.
-        :param Dict[str, torch.Tensor] clamp_v: Mapping of layer names to certain voltages to clamp nodes specified by
-                                                the ``clamp`` argument. ``Tensor``s of shape ``[time, n_input]``.
         :param float reward: Scalar value used in reward-modulated learning.
         :param Dict[str, torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
                                               clamp to zero.
@@ -247,18 +245,16 @@ class Network:
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
             for l in self.layers:
-                # Clamp neurons to certain voltage.
-                clamp = clamps.get(l, None)
-                if clamp is not None:
-                    self.layers[l].v = torch.where(
-                        clamp[t], clamps_v[l][t], self.layers[l].v
-                    )
-
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
                     self.layers[l].step(inpts[l][t], self.dt)
                 else:
                     self.layers[l].step(inpts[l], self.dt)
+
+                # Clamp neurons to spike.
+                clamp = clamps.get(l, None)
+                if clamp is not None:
+                    self.layers[l].s[clamp] = 1
 
             # Run synapse updates.
             for c in self.connections:
