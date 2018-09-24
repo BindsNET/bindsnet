@@ -448,12 +448,9 @@ class MeanFieldConnection(AbstractConnection):
         self.w = kwargs.get('w', None)
 
         if self.w is None:
-            if self.wmin == -np.inf or self.wmax == np.inf:
-                self.w = torch.rand(1, *target.shape)
-            else:
-                self.w = self.wmin + torch.rand(1, *target.shape) * (self.wmax - self.wmin)
+            self.w = (torch.randn(1)[0] + 1) / 10
         else:
-            if torch.max(self.w) > self.wmax or torch.min(self.w) < self.wmin:
+            if self.w > self.wmax or self.w < self.wmin:
                 warnings.warn(f'Weight matrix will be clamped between [{self.wmin}, {self.wmax}]')
                 self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
@@ -469,8 +466,7 @@ class MeanFieldConnection(AbstractConnection):
         self.a_pre = self.a_pre * self.decay + s.float().mean()
 
         # Compute multiplication of mean-field pre-activation by connection weights.
-        a_post = self.a_pre * self.w
-        return a_post.view(self.target.shape)
+        return self.a_pre * self.w
 
     def update(self, **kwargs) -> None:
         # language=rst

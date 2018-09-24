@@ -740,8 +740,8 @@ class IzhikevichNodes(Nodes):
             self.r[:ex] = torch.rand(ex)
             self.a[:ex] = 0.02 * torch.ones(ex)
             self.b[:ex] = 0.2 * torch.ones(ex)
-            self.c[:ex] = -65.0 + 15 * (self.r[0:ex] ** 2)
-            self.d[:ex] = 8 - 6 * (self.r[0:ex] ** 2)
+            self.c[:ex] = -65.0 + 15 * (self.r[:ex] ** 2)
+            self.d[:ex] = 8 - 6 * (self.r[:ex] ** 2)
             self.excitatory[:ex] = 1
 
             # inhibitory
