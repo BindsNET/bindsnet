@@ -169,30 +169,37 @@ def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 
     :param figsize: Horizontal, vertical figure size in inches.
     :return: Used for re-drawing the weights plot.
     """
-    n_sqrt = int(np.ceil(np.sqrt(weights.size(0))))
-    height = weights.size(2)
-    width = weights.size(3)
-    reshaped = torch.zeros(n_sqrt * weights.size(2), n_sqrt * weights.size(3))
+    sqrt1 = int(np.ceil(np.sqrt(weights.size(0))))
+    sqrt2 = int(np.ceil(np.sqrt(weights.size(1))))
+    height, width = weights.size(2), weights.size(3)
+    reshaped = torch.zeros(sqrt1 * sqrt2 * weights.size(2), sqrt1 * sqrt2 * weights.size(3))
 
-    for i in range(n_sqrt):
-        for j in range(n_sqrt):
-            if i * n_sqrt + j < weights.size(0):
-                fltr = weights[i * n_sqrt + j].view(height, width)
-                reshaped[i * height: (i + 1) * height, (j % n_sqrt) * width: ((j % n_sqrt) + 1) * width] = fltr
+    for i in range(sqrt1):
+        for j in range(sqrt1):
+            for k in range(sqrt2):
+                for l in range(sqrt2):
+                    if i * sqrt1 + j < weights.size(0) and k * sqrt2 + l < weights.size(1):
+                        fltr = weights[i * sqrt1 + j, k * sqrt2 + l].view(height, width)
+                        reshaped[i * height + k * height * sqrt1:
+                                 (i + 1) * height + k * height * sqrt1,
+                                 (j % sqrt1) * width + (l % sqrt2) * width * sqrt1:
+                                 ((j % sqrt1) + 1) * width + (l % sqrt2) * width * sqrt1] = fltr
 
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
-        ax.set_title('Connection weights')
-
         im = ax.imshow(reshaped, cmap='hot_r', vmin=wmin, vmax=wmax)
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
-        for i in range(height, n_sqrt * height, height):
+        for i in range(height, sqrt1 * sqrt2 * height, height):
             ax.axhline(i - 0.5, color='g', linestyle='--')
+            if i % sqrt1 == 0:
+                ax.axhline(i - 0.5, color='g', linestyle='-')
 
-        for i in range(width, n_sqrt * width, width):
+        for i in range(width, sqrt1 * sqrt2 * width, width):
             ax.axvline(i - 0.5, color='g', linestyle='--')
+            if i % sqrt1 == 0:
+                ax.axvline(i - 0.5, color='g', linestyle='-')
 
         ax.set_xticks(()); ax.set_yticks(())
         ax.set_aspect('auto')

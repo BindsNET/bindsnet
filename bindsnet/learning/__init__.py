@@ -124,14 +124,24 @@ class PostPre(LearningRule):
         """
         super().update()
 
+        source_s = self.source.s.view(-1).float()
+        source_x = self.source.x.view(-1)
+        target_s = self.target.s.view(-1).float()
+        target_x = self.target.x.view(-1)
+
+        shape = self.connection.w.shape
+        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
+
         # Pre-synaptic update.
         self.connection.w -= self.nu[0] * torch.ger(
-            self.source.s.float(), self.target.x
+            source_s, target_x
         )
         # Post-synaptic update.
         self.connection.w += self.nu[1] * torch.ger(
-            self.source.x, self.target.s.float()
+            source_x, target_s
         )
+
+        self.connection.w = self.connection.w.view(*shape)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -201,14 +211,24 @@ class Hebbian(LearningRule):
         """
         super().update()
 
+        source_s = self.source.s.view(-1).float()
+        source_x = self.source.x.view(-1)
+        target_s = self.target.s.view(-1).float()
+        target_x = self.target.x.view(-1)
+
+        shape = self.connection.w.shape
+        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
+
         # Pre-synaptic update.
         self.connection.w += self.nu[0] * torch.ger(
-            self.source.s.float(), self.target.x
+            source_s, target_x
         )
         # Post-synaptic update.
         self.connection.w += self.nu[1] * torch.ger(
-            self.source.x, self.target.s.float()
+            source_x, target_s
         )
+
+        self.connection.w = self.connection.w.view(*shape)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -282,20 +302,29 @@ class MSTDP(LearningRule):
         """
         super().update()
 
+        source_s = self.source.s.view(-1).float()
+        source_x = self.source.x.view(-1)
+        target_s = self.target.s.view(-1).float()
+        target_x = self.target.x.view(-1)
+
+        shape = self.connection.w.shape
+        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
+
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
         a_minus = kwargs.get('a_plus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
-        p_plus = a_plus * self.source.x
-        p_minus = a_minus * self.target.x
+        p_plus = a_plus * source_x
+        p_minus = a_minus * target_x
 
         # Calculate point eligibility value.
-        eligibility = torch.ger(p_plus, self.target.s.float()) + torch.ger(self.source.s.float(), p_minus)
+        eligibility = torch.ger(p_plus, target_s) + torch.ger(source_s, p_minus)
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * eligibility
+        self.connection.w = self.connection.w.view(*shape)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -397,25 +426,30 @@ class MSTDPET(LearningRule):
         """
         super().update()
 
+        source_s = self.source.s.view(-1).float()
+        source_x = self.source.x.view(-1)
+        target_s = self.target.s.view(-1).float()
+        target_x = self.target.x.view(-1)
+
+        shape = self.connection.w.shape
+        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
+
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
         a_minus = kwargs.get('a_plus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = -(self.tc_plus * self.p_plus) + a_plus * self.source.x
-        self.p_minus = -(self.tc_minus * self.p_minus) + a_minus * self.target.x
-
-        # Get pre- and post-synaptic spiking neurons.
-        pre_fire = self.source.s.float()
-        post_fire = self.target.s.float()
+        self.p_plus = -(self.tc_plus * self.p_plus) + a_plus * source_x
+        self.p_minus = -(self.tc_minus * self.p_minus) + a_minus * target_x
 
         # Calculate value of eligibility trace.
         self.e_trace -= self.tc_e_trace * self.e_trace
-        self.e_trace += torch.ger(self.p_plus, post_fire) + torch.ger(pre_fire, self.p_minus)
+        self.e_trace += torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
+        self.connection.w = self.connection.w.view(*shape)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
