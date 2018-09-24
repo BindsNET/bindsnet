@@ -51,6 +51,7 @@ def assign_labels(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, rat
 def logreg_fit(spikes: torch.Tensor, labels: torch.Tensor, logreg: LogisticRegression) -> LogisticRegression:
     # language=rst
     """
+    (Re)fit logistic regression model to spike data summed over time.
 
     :param spikes: Spikes of shape ``(n_examples, time, n_neurons)``.
     :param labels: Vector of shape ``(n_samples,)`` with data labels corresponding to spiking activity.
@@ -63,10 +64,10 @@ def logreg_fit(spikes: torch.Tensor, labels: torch.Tensor, logreg: LogisticRegre
     return logreg
 
 
-def logreg_predict(spikes: torch.Tensor, logreg: LogisticRegression) -> Tuple[torch.Tensor, LogisticRegression]:
+def logreg_predict(spikes: torch.Tensor, logreg: LogisticRegression) -> torch.Tensor:
     # language=rst
     """
-    Trains a logistic model on spike data and predicts classes accordingly.
+    Predicts classes according to spike data summed over time.
 
     :param spikes: Spikes of shape ``(n_examples, time, n_neurons)``.
     :param logreg: Logistic regression model from previous fits.
