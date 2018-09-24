@@ -224,15 +224,15 @@ class Conv2dConnection(AbstractConnection):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
 
-        assert source.shape[1] == target.shape[0], 'Minibatch size not equal across source and target'
+        assert source.shape[0] == target.shape[0], 'Minibatch size not equal across source and target'
 
-        source_channels = source.shape[1]
+        minibatch = source.shape[0]
         self.in_channels, input_height, input_width = source.shape[1], source.shape[2], source.shape[3]
         self.out_channels, output_height, output_width = target.shape[1], target.shape[2], target.shape[3]
 
         width = (input_height - self.kernel_size[0] + 2 * self.padding[0]) / self.stride[0] + 1
         height = (input_width - self.kernel_size[1] + 2 * self.padding[1]) / self.stride[1] + 1
-        shape = (source_channels, self.out_channels, width, height)
+        shape = (minibatch, self.out_channels, width, height)
 
         error = 'Target dimensionality must be (minibatch, out_channels,' \
                 '(input_height - filter_height + 2 * padding_height) / stride_height + 1,' \
@@ -267,7 +267,7 @@ class Conv2dConnection(AbstractConnection):
         """
         if self.norm is not None:
             shape = self.w.size()
-            self.w = self.w.view(self.w.size(0), self.w.size(2) * self.w.size(3))
+            self.w = self.w.view(self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3))
 
             for fltr in range(self.w.size(0)):
                 self.w[fltr] *= self.norm / self.w[fltr].sum(0)
@@ -293,7 +293,7 @@ class LocallyConnectedConnection(AbstractConnection):
                  nu: Optional[Union[float, Tuple[float, float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
-        Instantiates a ``Conv2dConnection`` object. Source population should be two-dimensional.
+        Instantiates a ``LocallyConnectedConnection`` object. Source population should be two-dimensional.
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
