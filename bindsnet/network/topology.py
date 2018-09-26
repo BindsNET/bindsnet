@@ -152,14 +152,22 @@ class Connection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
         """
-        self.a_pre = self.a_pre * self.decay + s.float().view(-1)
+        # print(self.w.size(), s.size())
+        # return s.float().view(-1) @ self.w
 
-        # Compute multiplication of pre-activations by connection weights.
-        if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
-            return self.a_pre @ self.w
-        else:
-            a_post = self.a_pre @ self.w.view(self.source.n, self.target.n)
-            return a_post.view(*self.target.shape)
+        # self.a_pre = self.a_pre * self.decay + s.float().view(-1)
+        #
+        # print(self.a_pre.size())
+        #
+        # # Compute multiplication of pre-activations by connection weights.
+        # if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
+        #     return self.a_pre @ self.w
+        # else:
+        #     a_post = self.a_pre @ self.w.view(self.source.n, self.target.n)
+        #     return a_post.view(*self.target.shape)
+
+        a_post = s.float().view(-1) @ self.w.view(self.source.n, self.target.n)
+        return a_post.view(*self.target.shape)
 
     def update(self, **kwargs) -> None:
         # language=rst

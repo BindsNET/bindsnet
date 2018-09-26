@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from abc import ABC
 from typing import Union, Tuple, Optional
@@ -49,12 +50,14 @@ class LearningRule(ABC):
         Abstract method for a learning rule update.
         """
         # Implement weight decay.
-        self.connection.w -= self.weight_decay * self.connection.w
+        if self.weight_decay:
+            self.connection.w -= self.weight_decay * self.connection.w
 
         # Bound weights.
-        self.connection.w = torch.clamp(
-            self.connection.w, self.connection.wmin, self.connection.wmax
-        )
+        if not (self.connection.wmin == -np.inf and self.connection.wmax == np.inf):
+            self.connection.w = torch.clamp(
+                self.connection.w, self.connection.wmin, self.connection.wmax
+            )
 
 
 class NoOp(LearningRule):
