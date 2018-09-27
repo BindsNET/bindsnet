@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 from abc import ABC
 from typing import Union, Tuple, Optional
