@@ -198,9 +198,10 @@ def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: Un
             for n2 in range(c2):
                 for f1 in range(fs):
                     for f2 in range(fs):
-                        square[k1 * (n1 * fs + f1): k1 * (n1 * fs + f1 + 1),
-                               k2 * (n2 * fs + f2): k2 * (n2 * fs + f2 + 1)] = \
-                               w_[(f1 * fs + f2) * k1: (f1 * fs + f2 + 1) * k1,
-                                  (n1 * c2 + n2) * k2: (n1 * c2 + n2 + 1) * k2]
+                        if f1 * fs + f2 < n_filters:
+                            square[k1 * (n1 * fs + f1): k1 * (n1 * fs + f1 + 1),
+                                   k2 * (n2 * fs + f2): k2 * (n2 * fs + f2 + 1)] = \
+                                   w_[(f1 * fs + f2) * k1: (f1 * fs + f2 + 1) * k1,
+                                      (n1 * c2 + n2) * k2: (n1 * c2 + n2 + 1) * k2]
 
         return square
