@@ -24,19 +24,21 @@ class Dataset(ABC):
     Abstract base class for dataset.
     """
 
-    def __init__(self, path: str='.', download: bool=False) -> None:
+    def __init__(self, path: str='.', download: bool = False, shuffle: bool = True) -> None:
         # language=rst
         """
         Abstract constructor for the Dataset class.
 
         :param path: Pathname of directory in which to store the dataset.
-        :param download: Whether or not to download the dataset (requires internet connection).
+        :param download: Whether to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
         """
         if not os.path.isdir(path):
             os.makedirs(path)
 
         self.path = path
         self.download = download
+        self.shuffle = shuffle
 
     @abstractmethod
     def get_train(self) -> Tuple[Any, ...]:
@@ -52,6 +54,7 @@ class Dataset(ABC):
         """
         Abstract method stub for fetching test data from a dataset.
         """
+        pass
 
 
 class MNIST(Dataset):
@@ -74,15 +77,16 @@ class MNIST(Dataset):
     test_images_url = 'http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz'
     test_labels_url = 'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz'
 
-    def __init__(self, path: str=os.path.join('data', 'MNIST'), download: bool=False) -> None:
+    def __init__(self, path: str = os.path.join('data', 'MNIST'), download: bool = False, shuffle: bool = True) -> None:
         # language=rst
         """
         Constructor for the ``MNIST`` object. Makes the data directory if it doesn't already exist.
 
         :param path: Pathname of directory in which to store the dataset.
         :param download: Whether or not to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
         """
-        super().__init__(path, download)
+        super().__init__(path, download, shuffle)
 
     def get_train(self) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
@@ -124,6 +128,10 @@ class MNIST(Dataset):
             # Load label data from disk if it has already been processed.
             print('Loading training labels from serialized object file.\n')
             labels = torch.load(open(os.path.join(self.path, MNIST.train_labels_pickle), 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
 
         return torch.Tensor(images), torch.Tensor(labels)
 
@@ -167,6 +175,10 @@ class MNIST(Dataset):
             # Load label data from disk if it has already been processed.
             print('Loading test labels from serialized object file.\n')
             labels = torch.load(open(os.path.join(self.path, MNIST.test_labels_pickle), 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
 
         return torch.Tensor(images), torch.Tensor(labels)
 
@@ -263,13 +275,15 @@ class SpokenMNIST(Dataset):
 
     n_files = len(files)
 
-    def __init__(self, path: str=os.path.join('data', 'SpokenMNIST'), download: bool=False) -> None:
+    def __init__(self, path: str = os.path.join('data', 'SpokenMNIST'), download: bool = False,
+                 shuffle: bool = True) -> None:
         # language=rst
         """
         Constructor for the ``SpokenMNIST`` object. Makes the data directory if it doesn't already exist.
 
         :param path: Pathname of directory in which to store the dataset.
         :param download: Whether or not to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
         """
         super().__init__(path, download)
         self.zip_path = os.path.join(path, 'repo.zip')
@@ -311,6 +325,12 @@ class SpokenMNIST(Dataset):
                 print('Loading training data from serialized object file.\n')
                 audio, labels = torch.load(open(path, 'rb'))
 
+        labels = torch.Tensor(labels)
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            audio, labels = audio[perm], labels[perm]
+
         return audio, torch.Tensor(labels)
 
     def get_test(self, split: float=0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
@@ -349,6 +369,12 @@ class SpokenMNIST(Dataset):
                 # Load image data from disk if it has already been processed.
                 print('Loading test data from serialized object file.\n')
                 audio, labels = torch.load(open(path, 'rb'))
+
+        labels = torch.Tensor(labels)
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            audio, labels = audio[perm], labels[perm]
 
         return audio, torch.Tensor(labels)
 
@@ -459,7 +485,8 @@ class CIFAR10(Dataset):
 
     url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
 
-    def __init__(self, path: str=os.path.join('data', 'CIFAR10'), download: bool=False) -> None:
+    def __init__(self, path: str = os.path.join('data', 'CIFAR10'), download: bool = False,
+                 shuffle: bool = True) -> None:
         # language=rst
         """
         Constructor for the ``CIFAR10`` object. Makes the data directory if it doesn't already exist.
@@ -467,7 +494,7 @@ class CIFAR10(Dataset):
         :param path: Pathname of directory in which to store the dataset.
         :param download: Whether or not to download the dataset (requires internet connection).
         """
-        super().__init__(path, download)
+        super().__init__(path, download, shuffle)
         self.data_path = os.path.join(self.path, CIFAR10.data_directory)
 
     def get_train(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -502,6 +529,10 @@ class CIFAR10(Dataset):
                 print('Loading training images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
 
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
+
         return images, labels
 
     def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -535,6 +566,10 @@ class CIFAR10(Dataset):
                 # Load image data from disk if it has already been processed.
                 print('Loading test images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
 
         return images, labels
 
@@ -585,14 +620,16 @@ class CIFAR100(Dataset):
 
     url = 'https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz'
 
-    def __init__(self, path: str=os.path.join('data', 'CIFAR100'), download: bool=False) -> None:
+    def __init__(self, path: str = os.path.join('data', 'CIFAR100'), download: bool = False,
+                 shuffle: bool = True) -> None:
         # language=rst
         """
         Constructor for the ``CIFAR100`` object. Makes the data directory if it doesn't already exist.
         :param path: Pathname of directory in which to store the dataset.
         :param download: Whether or not to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
         """
-        super().__init__(path, download)
+        super().__init__(path, download, shuffle)
         self.data_path = os.path.join(self.path, CIFAR100.data_directory)
 
     def get_train(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -627,6 +664,10 @@ class CIFAR100(Dataset):
                 print('Loading training images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
 
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
+
         return images, labels
 
     def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -660,6 +701,10 @@ class CIFAR100(Dataset):
                 # Load image data from disk if it has already been processed.
                 print('Loading test images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
 
         return images, labels
 
