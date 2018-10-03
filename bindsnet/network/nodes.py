@@ -267,11 +267,11 @@ class IFNodes(Nodes):
         :param inpts: Inputs to the layer.
         :param dt: Simulation time step.
         """
-        # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
-
         # Integrate input and decay voltages.
         self.v += (self.refrac_count == 0).float() * inpts
+
+        # Decrement refractory counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
@@ -339,11 +339,11 @@ class LIFNodes(Nodes):
         # Decay voltages.
         self.v -= dt * self.decay * (self.v - self.rest)
 
-        # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
-
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * inpts
+
+        # Decrement refractory counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
@@ -418,11 +418,11 @@ class AdaptiveLIFNodes(Nodes):
         self.v -= dt * self.decay * (self.v - self.rest)
         self.theta -= dt * self.theta_decay * self.theta
 
-        # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
-
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * inpts
+
+        # Decrement refractory counters.
+        self.refrac_count[self.refrac_count != 0] -= dt
 
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta)
@@ -498,11 +498,11 @@ class DiehlAndCookNodes(Nodes):
         self.v -= dt * self.decay * (self.v - self.rest)
         self.theta -= dt * self.theta_decay * self.theta
 
+        # Integrate inputs.
+        self.v += (self.refrac_count == 0).float() * inpts
+
         # Decrement refractory counters.
         self.refrac_count[self.refrac_count != 0] -= dt
-
-        # Integrate inputs.
-        self.v += (self.refrac_count  == 0).float() * inpts
 
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta)
@@ -582,6 +582,7 @@ class IzhikevichNodes(Nodes):
 
             ex = int(n * excitatory)
             inh = n - ex
+            
             # init
             self.r = torch.zeros(n)
             self.a = torch.zeros(n)
