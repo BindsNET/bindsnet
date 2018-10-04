@@ -26,18 +26,19 @@ class Pipeline:
     """
 
     def __init__(self, network: Network, environment: Environment, encoding: Callable = bernoulli,
-                 action_function: Optional[Callable] = None, **kwargs):
+                 action_function: Optional[Callable] = None, obs_function: Optional[Callable] = None,
+                 **kwargs):
         # language=rst
         """
         Initializes the pipeline.
-        
+
         :param network: Arbitrary network object.
         :param environment: Arbitrary environment.
         :param encoding: Function to encode observations into spike trains.
         :param action_function: Function to convert network outputs into environment inputs.
 
         Keyword arguments:
-            
+
         :param int plot_interval: Interval to update plots.
         :param str save_dir: Directory to save network object to.
         :param int print_interval: Interval to print text output.
@@ -52,6 +53,7 @@ class Pipeline:
         self.env = environment
         self.encoding = encoding
         self.action_function = action_function
+        self.obs_function = obs_function
 
         self.iteration = 0
         self.history_index = 1
@@ -151,7 +153,11 @@ class Pipeline:
             a = None
 
         # Run a step of the environment.
-        self.obs, self.reward, _, info = self.env.step(a)
+        self.obs, self.reward, self.done, info = self.env.step(a)
+
+        # Postprocess observation.
+        if self.obs_function is not None:
+            self.obs = self.obs_function(obs)
 
         # Store frame of history and encode the inputs.
         if len(self.history) > 0:

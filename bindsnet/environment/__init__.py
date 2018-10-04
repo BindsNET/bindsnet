@@ -85,7 +85,7 @@ class DatasetEnvironment(Environment):
         self.dataset = dataset
         self.train = train
         self.time = time
-        
+
         # Keyword arguments.
         self.intensity = kwargs.get('intensity', 1)
         self.max_prob = kwargs.get('max_prob', 1)
@@ -100,7 +100,7 @@ class DatasetEnvironment(Environment):
         else:
             self.data, self.labels = self.dataset.get_test()
             self.label_loader = iter(self.labels)
-        
+
         self.env = iter(self.data)
 
     def step(self, a: int = None) -> Tuple[torch.Tensor, int, bool, Dict[str, int]]:
@@ -119,13 +119,13 @@ class DatasetEnvironment(Environment):
             self.env = iter(self.data)
             self.label_loader = iter(self.labels)
             self.obs = next(self.env)
-        
+
         # Preprocess observation.
         self.preprocess()
-        
+
         # Info dictionary contains label of MNIST digit.
         info = {'label' : next(self.label_loader)}
-        
+
         return self.obs, 0, False, info
 
     def reset(self) -> None:
@@ -195,7 +195,7 @@ class GymEnvironment(Environment):
         self.name = name
         self.env = gym.make(name)
         self.action_space = self.env.action_space
-        
+
         # Keyword arguments.
         self.max_prob = kwargs.get('max_prob', 1)
 
@@ -213,11 +213,11 @@ class GymEnvironment(Environment):
         :return: Observation, reward, done flag, and information dictionary.
         """
         # Call gym's environment step function.
-        self.obs, self.reward, done, info = self.env.step(a)
+        self.obs, self.reward, self.done, info = self.env.step(a)
         self.preprocess()
 
         # Return converted observations and other information.
-        return self.obs, self.reward, done, info
+        return self.obs, self.reward, self.done, info
 
     def reset(self) -> None:
         # language=rst
@@ -229,7 +229,7 @@ class GymEnvironment(Environment):
         # Call gym's environment reset function.
         self.obs = self.env.reset()
         self.preprocess()
-        
+
         return self.obs
 
     def render(self) -> None:
@@ -246,14 +246,48 @@ class GymEnvironment(Environment):
         """
         self.env.close()
 
+    def cartpole_preprocess(self, obs: np.array) -> np.array:
+        # language=rst
+        X_RANGE = 2.4
+        X_DOT_RANGE = 2 * X_RANGE
+        THETA_RANGE = 0.21
+        THETA_DOT_RANGE = 2 * THETA_RANGE
+        X_LEVEL = 5
+        X_DOT_LEVEL = 5
+        THETA_LEVEL = 5
+        THETA_DOT_LEVEL = 5
+        N_FEATURE = X_LEVEL * X_DOT_LEVEL * THETA_LEVEL * THETA_DOT_LEVEL
+        X_SIG = X_RANGE * 2 / X_LEVEL
+        X_DOT_SIG = X_DOT_RANGE * 2 / X_DOT_LEVEL
+        THETA_SIG = THETA_RANGE * 2 / THETA_LEVEL
+        THETA_DOT_SIG = THETA_DOT_RANGE * 2 / THETA_DOT_LEVEL
+
+        x, x_dot, theta, theta_dot = obs
+        input_rate = np.zeros([N_FEATURE])
+        for i in range(X_LEVEL):
+            for j in range(X_DOT_LEVEL):
+                for k in range(THETA_LEVEL):
+                    for l in range(THETA_DOT_LEVEL):
+                        x_center = -X_RANGE + i * 2*X_RANGE/(X_LEVEL-1)
+                        x_dot_center = -X_DOT_RANGE + j * 2*X_DOT_RANGE/(X_DOT_LEVEL-1)
+                        theta_center = -THETA_RANGE + k * 2*THETA_RANGE/(THETA_LEVEL-1)
+                        theta_dot_center = -THETA_DOT_RANGE + l * 2*THETA_DOT_RANGE/(THETA_DOT_LEVEL-1)
+                        exponent = - (x - x_center)**2 / (2 * X_SIG**2) \
+                                   - (x_dot - x_dot_center)**2 / (2 * X_DOT_SIG**2) \
+                                   - (theta - theta_center)**2 / (2 * THETA_SIG**2) \
+                                   - (theta_dot - theta_dot_center)**2 / (2 * THETA_DOT_SIG**2)
+                        input_rate[i*X_DOT_LEVEL*THETA_LEVEL*THETA_DOT_LEVEL
+                                  +j*THETA_LEVEL*THETA_DOT_LEVEL
+                                  +k*THETA_DOT_LEVEL + l] = np.exp(exponent)
+        return input_rate
+
     def preprocess(self) -> None:
         # language=rst
         """
         Pre-processing step for an observation from a Gym environment.
         """
         if self.name == 'CartPole-v0':
-            self.obs = np.array([self.obs[0] + 2.4, -min(self.obs[1], 0), max(self.obs[1], 0),
-                                 self.obs[2] + 41.8, -min(self.obs[3], 0), max(self.obs[3], 0)])
+            self.obs = self.cartpole_preprocess(self.obs)
         elif self.name == 'SpaceInvaders-v0':
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = self.obs[26:104, :]
@@ -264,7 +298,7 @@ class GymEnvironment(Environment):
         else: # Default pre-processing step
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = binary_image(self.obs)
-            
+
         self.obs = torch.from_numpy(self.obs).float()
 
     def reshape(self) -> torch.Tensor:
