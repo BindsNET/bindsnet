@@ -49,12 +49,14 @@ class LearningRule(ABC):
         Abstract method for a learning rule update.
         """
         # Implement weight decay.
-        self.connection.w -= self.weight_decay * self.connection.w
+        if self.weight_decay:
+            self.connection.w -= self.weight_decay * self.connection.w
 
         # Bound weights.
-        self.connection.w = torch.clamp(
-            self.connection.w, self.connection.wmin, self.connection.wmax
-        )
+        if self.connection.wmin is not None or self.connection.wmax is not None:
+            self.connection.w = torch.clamp(
+                self.connection.w, self.connection.wmin, self.connection.wmax
+            )
 
 
 class NoOp(LearningRule):

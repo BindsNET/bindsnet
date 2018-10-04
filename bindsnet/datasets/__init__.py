@@ -24,19 +24,21 @@ class Dataset(ABC):
     Abstract base class for dataset.
     """
 
-    def __init__(self, path: str='.', download: bool=False) -> None:
+    def __init__(self, path: str='.', download: bool = False, shuffle: bool = True) -> None:
         # language=rst
         """
         Abstract constructor for the Dataset class.
 
         :param path: Pathname of directory in which to store the dataset.
-        :param download: Whether or not to download the dataset (requires internet connection).
+        :param download: Whether to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
         """
         if not os.path.isdir(path):
             os.makedirs(path)
 
         self.path = path
         self.download = download
+        self.shuffle = shuffle
 
     @abstractmethod
     def get_train(self) -> Tuple[Any, ...]:
@@ -52,6 +54,7 @@ class Dataset(ABC):
         """
         Abstract method stub for fetching test data from a dataset.
         """
+        pass
 
 
 class MNIST(Dataset):
@@ -59,10 +62,10 @@ class MNIST(Dataset):
     """
     Handles loading and saving of the MNIST handwritten digits `(link) <http://yann.lecun.com/exdb/mnist/>`_.
     """
-    train_images_pickle = 'train_images.p'
-    train_labels_pickle = 'train_labels.p'
-    test_images_pickle = 'test_images.p'
-    test_labels_pickle = 'test_labels.p'
+    train_images_pickle = 'train_images.pt'
+    train_labels_pickle = 'train_labels.pt'
+    test_images_pickle = 'test_images.pt'
+    test_labels_pickle = 'test_labels.pt'
 
     train_images_file = 'train-images-idx3-ubyte'
     train_labels_file = 'train-labels-idx1-ubyte'
@@ -74,15 +77,16 @@ class MNIST(Dataset):
     test_images_url = 'http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz'
     test_labels_url = 'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz'
 
-    def __init__(self, path: str=os.path.join('data', 'MNIST'), download: bool=False) -> None:
+    def __init__(self, path: str = os.path.join('data', 'MNIST'), download: bool = False, shuffle: bool = True) -> None:
         # language=rst
         """
         Constructor for the ``MNIST`` object. Makes the data directory if it doesn't already exist.
 
         :param path: Pathname of directory in which to store the dataset.
         :param download: Whether or not to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
         """
-        super().__init__(path, download)
+        super().__init__(path, download, shuffle)
 
     def get_train(self) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
@@ -124,6 +128,10 @@ class MNIST(Dataset):
             # Load label data from disk if it has already been processed.
             print('Loading training labels from serialized object file.\n')
             labels = torch.load(open(os.path.join(self.path, MNIST.train_labels_pickle), 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
 
         return torch.Tensor(images), torch.Tensor(labels)
 
@@ -167,6 +175,10 @@ class MNIST(Dataset):
             # Load label data from disk if it has already been processed.
             print('Loading test labels from serialized object file.\n')
             labels = torch.load(open(os.path.join(self.path, MNIST.test_labels_pickle), 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
 
         return torch.Tensor(images), torch.Tensor(labels)
 
@@ -244,6 +256,206 @@ class MNIST(Dataset):
         return labels
 
 
+class FashionMNIST(Dataset):
+    # language=rst
+    """
+    Handles loading and saving of the Fashion MNIST grayscale image dataset `(link) <>`_.
+    """
+    train_images_pickle = 'train_images.pt'
+    train_labels_pickle = 'train_labels.pt'
+    test_images_pickle = 'test_images.pt'
+    test_labels_pickle = 'test_labels.pt'
+
+    train_images_file = 'train-images-idx3-ubyte'
+    train_labels_file = 'train-labels-idx1-ubyte'
+    test_images_file = 't10k-images-idx3-ubyte'
+    test_labels_file = 't10k-labels-idx1-ubyte'
+
+    train_images_url = 'http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz'
+    train_labels_url = 'http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz'
+    test_images_url = 'http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz'
+    test_labels_url = 'http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz'
+
+    def __init__(self, path: str = os.path.join('data', 'FashionMNIST'), download: bool = False,
+                 shuffle: bool = True) -> None:
+        # language=rst
+        """
+        Constructor for the ``FashionMNIST`` object. Makes the data directory if it doesn't already exist.
+
+        :param path: Pathname of directory in which to store the dataset.
+        :param download: Whether or not to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
+        """
+        super().__init__(path, download, shuffle)
+
+    def get_train(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        # language=rst
+        """
+        Gets the Fashion-MNIST training images and labels.
+
+        :return: Fashion-MNIST training images and labels.
+        """
+        if not os.path.isfile(os.path.join(self.path, FashionMNIST.train_images_pickle)):
+            # Download training images if they aren't on disk.
+            if self.download:
+                print('Downloading training images.\n')
+                self._download(FashionMNIST.train_images_url, FashionMNIST.train_images_file)
+                images = self.process_images(FashionMNIST.train_images_file)
+
+                # Serialize image data on disk for next time.
+                torch.save(images, open(os.path.join(self.path, FashionMNIST.train_images_pickle), 'wb'))
+            else:
+                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                raise FileNotFoundError(msg)
+        else:
+            # Load image data from disk if it has already been processed.
+            print('Loading training images from serialized object file.\n')
+            images = torch.load(open(os.path.join(self.path, FashionMNIST.train_images_pickle), 'rb'))
+
+        if not os.path.isfile(os.path.join(self.path, FashionMNIST.train_labels_pickle)):
+            # Download training labels if they aren't on disk.
+            if self.download:
+                print('Downloading training labels.\n')
+                self._download(FashionMNIST.train_labels_url, FashionMNIST.train_labels_file)
+                labels = self.process_labels(FashionMNIST.train_labels_file)
+
+                # Serialize label data on disk for next time.
+                torch.save(labels, open(os.path.join(self.path, FashionMNIST.train_labels_pickle), 'wb'))
+            else:
+                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                raise FileNotFoundError(msg)
+        else:
+            # Load label data from disk if it has already been processed.
+            print('Loading training labels from serialized object file.\n')
+            labels = torch.load(open(os.path.join(self.path, FashionMNIST.train_labels_pickle), 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
+
+        return torch.Tensor(images), torch.Tensor(labels)
+
+    def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        # language=rst
+        """
+        Gets the Fashion-MNIST test images and labels.
+
+        :return: Fashion-MNIST test images and labels.
+        """
+        if not os.path.isfile(os.path.join(self.path, FashionMNIST.test_images_pickle)):
+            # Download test images if they aren't on disk.
+            if self.download:
+                print('Downloading test images.\n')
+                self._download(FashionMNIST.test_images_url, FashionMNIST.test_images_file)
+                images = self.process_images(FashionMNIST.test_images_file)
+
+                # Serialize image data on disk for next time.
+                torch.save(images, open(os.path.join(self.path, FashionMNIST.test_images_pickle), 'wb'))
+            else:
+                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                raise FileNotFoundError(msg)
+        else:
+            # Load image data from disk if it has already been processed.
+            print('Loading test images from serialized object file.\n')
+            images = torch.load(open(os.path.join(self.path, FashionMNIST.test_images_pickle), 'rb'))
+
+        if not os.path.isfile(os.path.join(self.path, FashionMNIST.test_labels_pickle)):
+            if self.download:
+                # Download test labels if they aren't on disk.
+                print('Downloading test labels.\n')
+                self._download(FashionMNIST.test_labels_url, FashionMNIST.test_labels_file)
+                labels = self.process_labels(FashionMNIST.test_labels_file)
+
+                # Serialize image data on disk for next time.
+                torch.save(labels, open(os.path.join(self.path, FashionMNIST.test_labels_pickle), 'wb'))
+            else:
+                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                raise FileNotFoundError(msg)
+        else:
+            # Load label data from disk if it has already been processed.
+            print('Loading test labels from serialized object file.\n')
+            labels = torch.load(open(os.path.join(self.path, FashionMNIST.test_labels_pickle), 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
+
+        return torch.Tensor(images), torch.Tensor(labels)
+
+    def _download(self, url: str, filename: str) -> None:
+        # language=rst
+        """
+         Downloads and unzips an Fashion-MNIST data file.
+
+        :param url: The URL of the data file to be downloaded.
+        :param filename: The name of the file to save the downloaded data to.
+        """
+        urlretrieve(url, os.path.join(self.path, filename + '.gz'))
+        with gzip.open(os.path.join(self.path, filename + '.gz'), 'rb') as _in:
+            with open(os.path.join(self.path, filename), 'wb') as _out:
+                shutil.copyfileobj(_in, _out)
+
+    def process_images(self, filename: str) -> np.ndarray:
+        # language=rst
+        """
+        Opens a file of Fashion-MNIST images and processes them into numpy arrays.
+
+        :param filename: Name of the file containing Fashion-MNIST images to load.
+        :return: A numpy array of shape ``[n_images, 28, 28]``, where ``n_images`` is the number of images in the file.
+        """
+        filename = os.path.join(self.path, filename)
+        data = open(filename, 'rb')
+
+        # Get metadata for images.
+        data.read(4)
+        n_images = unpack('>I', data.read(4))[0]
+        rows = unpack('>I', data.read(4))[0]
+        cols = unpack('>I', data.read(4))[0]
+
+        images = np.zeros((n_images, rows, cols), dtype=np.uint8)
+
+        print('\nProcessing images.\n')
+
+        for i in range(n_images):
+            if i % 1000 == 0:
+                print('Progress: %d / %d' % (i, n_images))
+
+            images[i] = [[unpack('>B', data.read(1))[0] for _ in range(cols)] for _ in range(rows)]
+
+        print('Progress: %d / %d\n' % (n_images, n_images))
+
+        return images
+
+    def process_labels(self, filename: str) -> np.ndarray:
+        # language=rst
+        """
+        Opens a file of Fashion-MNIST label data and processes it into a numpy vector.
+
+        :param filename: The name of the file containing Fashion-MNIST label data.
+        :return: An array of shape ``(n_labels,)``, where ``n_labels`` is the number of labels in the file.
+        """
+        filename = os.path.join(self.path, filename)
+        data = open(filename, 'rb')
+
+        # Get metadata for labels.
+        data.read(4)
+        n_labels = unpack('>I', data.read(4))[0]
+
+        labels = np.zeros(n_labels, dtype=np.uint8)
+
+        print('\nProcessing labels.\n')
+
+        for i in range(n_labels):
+            if i % 1000 == 0:
+                print('Progress: %d / %d' % (i, n_labels))
+
+            labels[i] = unpack('>B', data.read(1))[0]
+
+        print('Progress: %d / %d\n' % (n_labels, n_labels))
+
+        return labels
+
+
 class SpokenMNIST(Dataset):
     # language=rst
     """
@@ -263,13 +475,15 @@ class SpokenMNIST(Dataset):
 
     n_files = len(files)
 
-    def __init__(self, path: str=os.path.join('data', 'SpokenMNIST'), download: bool=False) -> None:
+    def __init__(self, path: str = os.path.join('data', 'SpokenMNIST'), download: bool = False,
+                 shuffle: bool = True) -> None:
         # language=rst
         """
         Constructor for the ``SpokenMNIST`` object. Makes the data directory if it doesn't already exist.
 
         :param path: Pathname of directory in which to store the dataset.
         :param download: Whether or not to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
         """
         super().__init__(path, download)
         self.zip_path = os.path.join(path, 'repo.zip')
@@ -311,6 +525,12 @@ class SpokenMNIST(Dataset):
                 print('Loading training data from serialized object file.\n')
                 audio, labels = torch.load(open(path, 'rb'))
 
+        labels = torch.Tensor(labels)
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            audio, labels = audio[perm], labels[perm]
+
         return audio, torch.Tensor(labels)
 
     def get_test(self, split: float=0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
@@ -349,6 +569,12 @@ class SpokenMNIST(Dataset):
                 # Load image data from disk if it has already been processed.
                 print('Loading test data from serialized object file.\n')
                 audio, labels = torch.load(open(path, 'rb'))
+
+        labels = torch.Tensor(labels)
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            audio, labels = audio[perm], labels[perm]
 
         return audio, torch.Tensor(labels)
 
@@ -459,7 +685,8 @@ class CIFAR10(Dataset):
 
     url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
 
-    def __init__(self, path: str=os.path.join('data', 'CIFAR10'), download: bool=False) -> None:
+    def __init__(self, path: str = os.path.join('data', 'CIFAR10'), download: bool = False,
+                 shuffle: bool = True) -> None:
         # language=rst
         """
         Constructor for the ``CIFAR10`` object. Makes the data directory if it doesn't already exist.
@@ -467,7 +694,7 @@ class CIFAR10(Dataset):
         :param path: Pathname of directory in which to store the dataset.
         :param download: Whether or not to download the dataset (requires internet connection).
         """
-        super().__init__(path, download)
+        super().__init__(path, download, shuffle)
         self.data_path = os.path.join(self.path, CIFAR10.data_directory)
 
     def get_train(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -502,6 +729,10 @@ class CIFAR10(Dataset):
                 print('Loading training images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
 
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
+
         return images, labels
 
     def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -535,6 +766,10 @@ class CIFAR10(Dataset):
                 # Load image data from disk if it has already been processed.
                 print('Loading test images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
 
         return images, labels
 
@@ -585,14 +820,16 @@ class CIFAR100(Dataset):
 
     url = 'https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz'
 
-    def __init__(self, path: str=os.path.join('data', 'CIFAR100'), download: bool=False) -> None:
+    def __init__(self, path: str = os.path.join('data', 'CIFAR100'), download: bool = False,
+                 shuffle: bool = True) -> None:
         # language=rst
         """
         Constructor for the ``CIFAR100`` object. Makes the data directory if it doesn't already exist.
         :param path: Pathname of directory in which to store the dataset.
         :param download: Whether or not to download the dataset (requires internet connection).
+        :param shuffle: Whether to randomly permute order of dataset.
         """
-        super().__init__(path, download)
+        super().__init__(path, download, shuffle)
         self.data_path = os.path.join(self.path, CIFAR100.data_directory)
 
     def get_train(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -627,6 +864,10 @@ class CIFAR100(Dataset):
                 print('Loading training images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
 
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
+
         return images, labels
 
     def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -660,6 +901,10 @@ class CIFAR100(Dataset):
                 # Load image data from disk if it has already been processed.
                 print('Loading test images from serialized object file.\n')
                 images, labels = torch.load(open(path, 'rb'))
+
+        if self.shuffle:
+            perm = np.random.permutation(np.arange(labels.shape[0]))
+            images, labels = images[perm], labels[perm]
 
         return images, labels
 
