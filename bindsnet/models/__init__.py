@@ -305,6 +305,7 @@ class LocallyConnectedNetwork(Network):
                         for j in range(conv_size[1]):
                             w[fltr1, i, j, fltr2, i, j] = -inh
 
+        w = w.view(n_filters * conv_size[0] * conv_size[1], n_filters * conv_size[0] * conv_size[1])
         recurrent_conn = Connection(output_layer, output_layer, w=w)
 
         self.add_layer(input_layer, name='X')
