@@ -167,12 +167,14 @@ class RealInput(Nodes, AbstractInput):
         # Set spike occurrences to input values.
         self.s = inpts
 
-        super().step(inpts, dt)
-
         if self.traces:
             # Decay and set spike traces.
             self.x -= dt * self.trace_tc * self.x
             self.x.masked_fill_(self.s != 0, 1)
+
+        if self.sum_input:
+            # Add current input to running sum.
+            self.summed += inpts.float()
 
     def reset_(self) -> None:
         # language=rst
