@@ -117,12 +117,12 @@ class DiehlAndCook2015v2(Network):
     <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_ by removing the inhibitory layer and
     replacing it with a recurrent inhibitory connection in the output layer (what used to be the excitatory layer).
     """
-    def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
-                 nu_pre: float = 1e-4, nu_post: float = 1e-2, wmin: float = 0.0, wmax: float = 1.0, norm: float = 78.4,
+    def __init__(self, n_inpt: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0, nu_pre: float = 1e-4,
+                 nu_post: float = 1e-2, wmin: float = None, wmax: float = None, norm: float = 78.4,
                  theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
         # language=rst
         """
-        Constructor for class ``DiehlAndCook2015``.
+        Constructor for class ``DiehlAndCook2015v2``.
 
         :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of excitatory, inhibitory neurons.

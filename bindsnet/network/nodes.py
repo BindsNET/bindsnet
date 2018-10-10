@@ -515,11 +515,10 @@ class DiehlAndCookNodes(Nodes):
         self.theta += self.theta_plus * self.s.float()
 
         # Choose only a single neuron to spike.
-        if torch.sum(self.s) > 0:
-            s = torch.zeros(self.s.size())
-            s = s.view(-1)
+        if self.s.any():
+            s = torch.zeros(self.n).byte()
             s[torch.multinomial(self.s.float().view(-1), 1)] = 1
-            self.s = s.view(self.s.size()).byte()
+            self.s = s.view(self.shape)
 
         super().step(inpts, dt)
 
