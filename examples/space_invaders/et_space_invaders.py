@@ -11,6 +11,7 @@ from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Connection
 from bindsnet.pipeline import Pipeline
 from bindsnet.pipeline.action import select_multinomial
+from bindsnet.analysis.plotting import plot_weights
 
 
 parser = argparse.ArgumentParser()
@@ -54,12 +55,15 @@ layers = {'X': inpt, 'E': exc, 'R': readout}
 
 # Connections between layers.
 # Input -> excitatory.
-input_exc_conn = Connection(source=layers['X'], target=layers['E'],
-                            w=torch.rand(layers['X'].n, layers['E'].n), wmax=1e-2)
+input_exc_conn = Connection(
+    source=layers['X'], target=layers['E'], w=torch.rand(layers['X'].n, layers['E'].n), wmax=1e-2
+)
 
 # Excitatory -> readout.
-exc_readout_conn = Connection(source=layers['E'], target=layers['R'], w=torch.rand(layers['E'].n, layers['R'].n),
-                              wmax=0.5, update_rule=MSTDPET, nu=2e-2, norm=0.15 * layers['E'].n)
+exc_readout_conn = Connection(
+    source=layers['E'], target=layers['R'], w=torch.rand(layers['E'].n, layers['R'].n), wmin=-0.5,
+    wmax=0.5, update_rule=MSTDPET, nu=1e-4, norm=0.15 * layers['E'].n
+)
 
 # Spike recordings for all layers.
 spikes = {}
@@ -93,12 +97,13 @@ pipeline = Pipeline(network, environment, encoding=bernoulli, time=1, history_le
                     plot_interval=plot_interval, print_interval=print_interval, render_interval=render_interval,
                     action_function=select_multinomial, output='R')
 
+weights_im = None
 try:
     while True:
         pipeline.step()
-
         if pipeline.done:
             pipeline.reset_()
+
 except KeyboardInterrupt:
     plt.close("all")
     environment.close()
