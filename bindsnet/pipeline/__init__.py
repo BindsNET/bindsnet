@@ -1,6 +1,7 @@
 import time
 import torch
 import matplotlib.pyplot as plt
+import numpy as np
 
 from typing import Callable, Optional
 
@@ -55,11 +56,15 @@ class Pipeline:
         self.action_function = action_function
         self.obs_function = obs_function
 
+        self.episode = 0
         self.iteration = 0
         self.history_index = 1
         self.s_ims, self.s_axes = None, None
         self.v_ims, self.v_axes = None, None
         self.obs_im, self.obs_ax = None, None
+        self.reward_im, self.reward_ax = None, None
+        self.accumulated_reward = 0
+        self.reward_list = []
 
         # Setting kwargs.
         self.time = kwargs.get('time', 1)
@@ -154,7 +159,7 @@ class Pipeline:
 
         # Run a step of the environment.
         self.obs, self.reward, self.done, info = self.env.step(a)
-
+        self.accumulated_reward += self.reward
         # Postprocess observation.
         if self.obs_function is not None:
             self.obs = self.obs_function(obs)
@@ -180,6 +185,13 @@ class Pipeline:
 
         self.iteration += 1
 
+        if self.done:
+            self.iteration = 0
+            self.episode += 1
+            self.reward_list.append(self.accumulated_reward)
+            self.accumulated_reward = 0
+            self.plot_reward()
+
     def plot_obs(self) -> None:
         # language=rst
         """
@@ -193,6 +205,23 @@ class Pipeline:
             self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap='gray')
         else:
             self.obs_im.set_data(self.env.reshape())
+
+    def plot_reward(self) -> None:
+        """
+        Plot the change of accumulated reward for each episodes
+        """
+        if self.reward_im is None and self.reward_ax is None:
+            fig, self.reward_ax = plt.subplots()
+            self.reward_ax.set_title('Reward')
+            self.reward_plot, = self.reward_ax.plot(self.reward_list)
+        else:
+            reward_array = np.array(self.reward_list)
+            y_min = reward_array.min()
+            y_max = reward_array.max()
+            self.reward_ax.set_xlim(left=0, right=self.episode)
+            self.reward_ax.set_ylim(bottom=y_min, top=y_max)
+            self.reward_plot.set_data(range(self.episode), self.reward_list)
+
 
     def plot_data(self) -> None:
         # language=rst

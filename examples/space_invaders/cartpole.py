@@ -1,4 +1,3 @@
-import torch
 import pdb
 
 from bindsnet.network import Network
@@ -17,10 +16,11 @@ from bindsnet.pipeline.action import select_multinomial
 network = Network(dt=1.0)
 
 # Layers of neurons.
+# TODO : Implement membrane potential clipping. (-1,1)
 inpt = Input(n=625, shape=[625], traces=True)
-middle = LIFNodes(n=225, traces=True, thresh=1.0, rest=0.0, reset=0.0, refrac=0,
+middle = LIFNodes(n=225, traces=True, thresh=1.0, lbound=-1.0, rest=0.0, reset=0.0, refrac=0,
                   decay=0.05)
-out = LIFNodes(n=60, refrac=0, traces=True, thresh=1.0, rest=0.0, reset=0.0)
+out = LIFNodes(n=60, refrac=0, traces=True, thresh=1.0, lbound=-1.0, rest=0.0, reset=0.0)
 
 # Connections between layers.
 # TODO : Understand current initializing process.
@@ -41,6 +41,7 @@ environment = GymEnvironment('CartPole-v0')
 environment.reset()
 
 # Build pipeline from specified components.
+# TODO : Implement continuous reward function.
 pipeline = Pipeline(network, environment, encoding=bernoulli,
                     action_function=select_multinomial,output='Z',
                     time=1, history_length=2, delta=4,

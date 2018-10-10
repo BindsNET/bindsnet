@@ -440,12 +440,12 @@ class MSTDPET(LearningRule):
         a_minus = kwargs.get('a_plus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = -(self.tc_plus * self.p_plus) + a_plus * source_x
-        self.p_minus = -(self.tc_minus * self.p_minus) + a_minus * target_x
+        self.p_plus = (1 - self.tc_plus) * self.p_plus + a_plus * source_s
+        self.p_minus = (1 - self.tc_minus) * self.p_minus + a_minus * target_s
 
         # Calculate value of eligibility trace.
-        self.e_trace -= self.tc_e_trace * self.e_trace
-        self.e_trace += torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
+        self.e_trace = (1 - self.tc_e_trace) * self.e_trace +   \
+            torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
