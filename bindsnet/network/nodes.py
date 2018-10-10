@@ -283,7 +283,7 @@ class LIFNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 thresh: float = -52.0, rest: float = -65.0, reset: float = -65.0, refrac: int = 5, decay: float = 1e-2,
+                 thresh: float = -52.0, lbound: Optional[float] = None, rest: float = -65.0, reset: float = -65.0, refrac: int = 5, decay: float = 1e-2,
                  trace_tc: float = 5e-2) -> None:
         # language=rst
         """
@@ -293,6 +293,7 @@ class LIFNodes(Nodes):
         :param shape: The dimensionality of the layer.
         :param traces: Whether to record spike traces.
         :param thresh: Spike threshold voltage.
+        :
         :param rest: Resting membrane voltage.
         :param reset: Post-spike reset voltage.
         :param refrac: Refractory (non-firing) period of the neuron.
@@ -304,6 +305,7 @@ class LIFNodes(Nodes):
         self.rest = rest       # Rest voltage.
         self.reset = reset     # Post-spike reset voltage.
         self.thresh = thresh   # Spike threshold voltage.
+        self.lbound = lbound   # Lower bound of voltage.
         self.refrac = refrac   # Post-spike refractory period.
         self.decay = decay     # Rate of decay of neuron voltage.
 
@@ -329,6 +331,10 @@ class LIFNodes(Nodes):
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
+
+        # If lower bound of voltage is set, clip the voltage.
+        if self.lbound is not None:
+            self.s = torch.clamp(self.s, min=self.lbound )
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -786,5 +792,3 @@ class IzhikevichNodes(Nodes):
         super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.u = self.b * self.v                     # Neuron recovery.
-
-

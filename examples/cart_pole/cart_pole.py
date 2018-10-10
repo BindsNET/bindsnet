@@ -10,16 +10,21 @@ from bindsnet.environment import GymEnvironment
 from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.pipeline.action import select_multinomial
 
+# TODO : Build critic network.
+
+
 # Build network.
 network = Network(dt=1.0)
 
 # Layers of neurons.
+# TODO : Implement membrane potential clipping. (-1,1)
 inpt = Input(n=625, shape=[625], traces=True)
 middle = LIFNodes(n=225, traces=True, thresh=1.0, rest=0.0, reset=0.0, refrac=0,
                   decay=0.05)
 out = LIFNodes(n=60, refrac=0, traces=True, thresh=1.0, rest=0.0, reset=0.0)
 
 # Connections between layers.
+# TODO : Understand current initializing process.
 inpt_middle = Connection(source=inpt, target=middle, wmin=-0.1,wmax=0.5)
 middle_out = Connection(source=middle, target=out, wmax=0.5,
                         update_rule=MSTDPET, nu=2e-2,
@@ -37,6 +42,7 @@ environment = GymEnvironment('CartPole-v0')
 environment.reset()
 
 # Build pipeline from specified components.
+# TODO : Implement continuous reward function.
 pipeline = Pipeline(network, environment, encoding=bernoulli,
                     action_function=select_multinomial,output='Z',
                     time=1, history_length=2, delta=4,
@@ -45,6 +51,8 @@ pipeline = Pipeline(network, environment, encoding=bernoulli,
 
 
 # Run environment simulation and network training.
+# TODO : Understand the current visualization process.
+# TODO : Build the reward progress visualization.
 n_episode = 0
 n_step = 0
 while True:
