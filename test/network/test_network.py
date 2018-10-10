@@ -18,11 +18,11 @@ class TestNetwork:
 
             network.run(inpts={}, time=1000)
 
-            network.save('net.p')
-            _network = load_network('net.p')
+            network.save('net.pt')
+            _network = load_network('net.pt')
             assert _network.dt == dt
 
-            os.remove('net.p')
+            os.remove('net.pt')
 
     def test_add_objects(self):
         network = Network(dt=1.0)

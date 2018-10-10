@@ -20,7 +20,7 @@ class AbstractPreprocessor(ABC):
     Abstract base class for Preprocessor.
     """
 
-    def process(self, csvfile: str, use_cache: bool = True, cachedfile: str = './processed/data.p') -> torch.tensor:
+    def process(self, csvfile: str, use_cache: bool = True, cachedfile: str = './processed/data.pt') -> torch.tensor:
         # cache dictionary for storing encodings if previously encoded
         cache = {'verify': '', 'data': None}
 

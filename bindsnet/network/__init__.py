@@ -156,7 +156,7 @@ class Network:
             network.add_connection(connection=C, source='X', target='Y')
 
             # Save the network to disk.
-            network.save(str(Path.home()) + '/network.p')
+            network.save(str(Path.home()) + '/network.pt')
         """
         torch.save(self, open(fname, 'wb'))
 
