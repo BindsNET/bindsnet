@@ -53,7 +53,7 @@ class LearningRule(ABC):
             self.connection.w -= self.weight_decay * self.connection.w
 
         # Bound weights.
-        if self.connection.wmin is not None or self.connection.wmax is not None:
+        if None not in [self.connection.wmin, self.connection.wmax] and not isinstance(self, NoOp):
             self.connection.w = torch.clamp(
                 self.connection.w, self.connection.wmin, self.connection.wmax
             )
