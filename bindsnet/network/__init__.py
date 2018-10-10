@@ -1,6 +1,7 @@
 import torch
 
 from typing import Dict
+from torch.multiprocessing import Pool
 
 from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
@@ -94,6 +95,15 @@ class Network:
         self.monitors = {}
         self.learning = True
 
+        self.t = None
+        self.clamps = {}
+        self.reward = None
+        self.masks = {}
+
+        self._layer_pool = None
+        self._connection_pool = None
+        self._monitor_pool = None
+
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
         """
@@ -103,6 +113,12 @@ class Network:
         :param name: Logical name of layer.
         """
         self.layers[name] = layer
+
+        if self._layer_pool is not None:
+            self._layer_pool._processes += 1
+            self._layer_pool._repopulate_pool()
+        else:
+            self._layer_pool = Pool(1)
 
     def add_connection(self, connection: AbstractConnection, source: str, target: str) -> None:
         # language=rst
@@ -115,6 +131,12 @@ class Network:
         """
         self.connections[(source, target)] = connection
 
+        if self._connection_pool is not None:
+            self._connection_pool._processes += 1
+            self._connection_pool._repopulate_pool()
+        else:
+            self._connection_pool = Pool(1)
+
     def add_monitor(self, monitor: AbstractMonitor, name: str) -> None:
         # language=rst
         """
@@ -124,6 +146,12 @@ class Network:
         :param name: Logical name of monitor object.
         """
         self.monitors[name] = monitor
+
+        if self._monitor_pool is not None:
+            self._monitor_pool._processes += 1
+            self._monitor_pool._repopulate_pool()
+        else:
+            self._monitor_pool = Pool(1)
 
     def save(self, fname: str) -> None:
         # language=rst
@@ -183,6 +211,18 @@ class Network:
             
         return inpts
 
+    def layer_update(self, l):
+        # Update each layer of nodes.
+        if isinstance(self.layers[l], AbstractInput):
+            self.layers[l].step(inpts[l][self.t], self.dt)
+        else:
+            self.layers[l].step(inpts[l], self.dt)
+
+        # Clamp neurons to spike.
+        clamp = clamps.get(l, None)
+        if clamp is not None:
+            self.layers[l].s[clamp] = 1
+
     def run(self, inpts: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
         # language=rst
         """
@@ -231,11 +271,10 @@ class Network:
             plt.show()
         """
         # Parse keyword arguments.
-        clamps = kwargs.get('clamp', {})
-        clamps_v = kwargs.get('clamp_v', {})
-        reward = kwargs.get('reward', None)
-        masks = kwargs.get('masks', {})
-        
+        self.clamps = kwargs.get('clamp', {})
+        self.reward = kwargs.get('reward', None)
+        self.masks = kwargs.get('masks', {})
+
         # Effective number of timesteps
         timesteps = int(time / self.dt)
 
@@ -244,17 +283,8 @@ class Network:
         
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
-            for l in self.layers:
-                # Update each layer of nodes.
-                if isinstance(self.layers[l], AbstractInput):
-                    self.layers[l].step(inpts[l][t], self.dt)
-                else:
-                    self.layers[l].step(inpts[l], self.dt)
-
-                # Clamp neurons to spike.
-                clamp = clamps.get(l, None)
-                if clamp is not None:
-                    self.layers[l].s[clamp] = 1
+            self.t = t
+            self._layer_pool.map(self.layer_update, self.layers)
 
             # Run synapse updates.
             for c in self.connections:
