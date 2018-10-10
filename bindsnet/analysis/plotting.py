@@ -1,3 +1,4 @@
+import pdb
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -60,7 +61,7 @@ def plot_spikes(spikes: Dict[str, torch.Tensor], time: Optional[Tuple[int, int]]
     # language=rst
     """
     Plot spikes for any group(s) of neurons.
-    
+
     :param spikes: Mapping from layer names to spiking data.
     :param time: Plot spiking activity of neurons in the given time range. Default is entire simulation time.
     :param n_neurons: Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
@@ -72,7 +73,7 @@ def plot_spikes(spikes: Dict[str, torch.Tensor], time: Optional[Tuple[int, int]]
     n_subplots = len(spikes.keys())
     if n_neurons is None:
         n_neurons = {}
-    
+
     spikes = {k: v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
     if time is None:
         # Set it for entire duration
@@ -341,7 +342,8 @@ def plot_performance(performances: Dict[str, List[float]], ax: Optional[Axes] = 
 def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImage]] = None,
                   axes: Optional[List[Axes]] = None, time: Tuple[int, int] = None,
                   n_neurons: Optional[Dict[str, Tuple[int, int]]] = None,
-                  figsize: Tuple[float, float] = (8.0, 4.5)) -> Tuple[List[Axes], List[AxesImage]]:
+                  cmap: Optional[str] = 'jet',
+                  figsize: Tuple[float, float] = (8.0, 4.5),) -> Tuple[List[Axes], List[AxesImage]]:
     # language=rst
     """
     Plot voltages for any group(s) of neurons.
@@ -355,7 +357,6 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
     :return: ``ims, axes``: Used for re-drawing the plots.
     """
     n_subplots = len(voltages.keys())
-
     if time is None:
         for key in voltages.keys():
             time = (0, voltages[key].shape[1])
@@ -374,7 +375,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
 
         if n_subplots == 1:  # Plotting only one image
             for v in voltages.items():
-                ims.append(axes.matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]]))
+                ims.append(axes.pcolormesh(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
 
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 plt.title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
@@ -383,7 +384,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
 
         else:  # Plot each layer at a time
             for i, v in enumerate(voltages.items()):
-                ims.append(axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]]))
+                ims.append(axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 
@@ -397,7 +398,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         if n_subplots == 1:  # Plotting only one image
             for v in voltages.items():
                 axes.clear()
-                axes.matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]])
+                axes.matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
                 axes.set_aspect('auto')
@@ -405,7 +406,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         else: # Plot each layer at a time
             for i, v in enumerate(voltages.items()):
                 axes[i].clear()
-                axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]])
+                axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 

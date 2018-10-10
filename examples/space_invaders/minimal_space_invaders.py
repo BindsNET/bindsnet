@@ -42,7 +42,6 @@ pipeline = Pipeline(network, environment, encoding=bernoulli,
                     plot_interval=100, render_interval=5)
 
 # Run environment simulation and network training.
-pdb.set_trace()
 n_episode = 0
 n_step = 0
 while True:
@@ -53,4 +52,3 @@ while True:
         n_episode += 1
         n_step = 0
         pipeline.reset_()
-

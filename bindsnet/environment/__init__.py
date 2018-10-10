@@ -262,7 +262,9 @@ class GymEnvironment(Environment):
         THETA_SIG = THETA_RANGE * 2 / THETA_LEVEL
         THETA_DOT_SIG = THETA_DOT_RANGE * 2 / THETA_DOT_LEVEL
 
+        THETA_COEFF = (np.pi / 2) / THETA_RANGE
         x, x_dot, theta, theta_dot = obs
+        cos_reward = np.cos(THETA_COEFF*theta)
         input_rate = np.zeros([N_FEATURE])
         for i in range(X_LEVEL):
             for j in range(X_DOT_LEVEL):
@@ -279,7 +281,7 @@ class GymEnvironment(Environment):
                         input_rate[i*X_DOT_LEVEL*THETA_LEVEL*THETA_DOT_LEVEL
                                   +j*THETA_LEVEL*THETA_DOT_LEVEL
                                   +k*THETA_DOT_LEVEL + l] = np.exp(exponent)
-        return input_rate
+        return input_rate, cos_reward
 
     def preprocess(self) -> None:
         # language=rst
@@ -287,7 +289,7 @@ class GymEnvironment(Environment):
         Pre-processing step for an observation from a Gym environment.
         """
         if self.name == 'CartPole-v0':
-            self.obs = self.cartpole_preprocess(self.obs)
+            self.obs, self.reward = self.cartpole_preprocess(self.obs)
         elif self.name == 'SpaceInvaders-v0':
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = self.obs[26:104, :]
