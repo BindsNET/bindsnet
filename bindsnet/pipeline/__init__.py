@@ -63,7 +63,7 @@ class Pipeline:
         self.time = kwargs.get('time', 1)
         self.delta = kwargs.get('delta', 1)
         self.output = kwargs.get('output', None)
-        self.save_dir = kwargs.get('save_dir', 'network.p')
+        self.save_dir = kwargs.get('save_dir', 'network.pt')
         self.plot_interval = kwargs.get('plot_interval', None)
         self.save_interval = kwargs.get('save_interval', None)
         self.print_interval = kwargs.get('print_interval', None)

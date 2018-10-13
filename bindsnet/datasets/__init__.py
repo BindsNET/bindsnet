@@ -14,7 +14,7 @@ from urllib.request import urlretrieve
 from typing import Tuple, List, Iterable, Any
 
 __all__ = [
-    'Dataset', 'MNIST', 'SpokenMNIST', 'CIFAR10', 'CIFAR100', 'preprocess'
+    'Dataset', 'MNIST', 'FashionMNIST', 'SpokenMNIST', 'CIFAR10', 'CIFAR100', 'preprocess'
 ]
 
 

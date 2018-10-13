@@ -156,7 +156,7 @@ class Network:
             network.add_connection(connection=C, source='X', target='Y')
 
             # Save the network to disk.
-            network.save(str(Path.home()) + '/network.p')
+            network.save(str(Path.home()) + '/network.pt')
         """
         torch.save(self, open(fname, 'wb'))
 
@@ -232,7 +232,6 @@ class Network:
         """
         # Parse keyword arguments.
         clamps = kwargs.get('clamp', {})
-        clamps_v = kwargs.get('clamp_v', {})
         reward = kwargs.get('reward', None)
         masks = kwargs.get('masks', {})
         
@@ -259,7 +258,7 @@ class Network:
             # Run synapse updates.
             for c in self.connections:
                 self.connections[c].update(
-                    reward=reward, mask=masks.get(c, None), learning=self.learning
+                    dt=self.dt, reward=reward, mask=masks.get(c, None), learning=self.learning
                 )
 
             # Get input to all layers.

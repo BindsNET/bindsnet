@@ -68,4 +68,4 @@ while i < n:
     i += 1
 
 save = (total, rewards, avg_rewards, lengths, avg_lengths)
-p.dump(save, open(os.path.join('..', '..', 'results', 'SI_random_baseline_%d.p' % n), 'wb'))
+p.dump(save, open(os.path.join('..', '..', 'results', 'SI_random_baseline_%d.pt' % n), 'wb'))
