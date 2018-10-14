@@ -1,9 +1,10 @@
 import torch
+import numpy as np
 
 from operator import mul
 from functools import reduce
 from abc import ABC, abstractmethod
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 
 
 class Nodes(ABC):
@@ -13,7 +14,7 @@ class Nodes(ABC):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2, sum_input: bool = False) -> None:
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False) -> None:
         # language=rst
         """
         Abstract base class constructor.
@@ -29,27 +30,31 @@ class Nodes(ABC):
         assert n is not None or shape is not None, 'Must provide either no. of neurons or shape of layer'
 
         if n is None:
-            self.n = reduce(mul, shape)            # No. of neurons product of shape.
+            self.n = reduce(mul, shape)                 # No. of neurons product of shape.
         else:
-            self.n = n                             # No. of neurons provided.
+            self.n = n                                  # No. of neurons provided.
 
         if shape is None:
-            self.shape = [self.n]                  # Shape is equal to the size of the layer.
+            self.shape = [self.n]                       # Shape is equal to the size of the layer.
         else:
-            self.shape = shape                     # Shape is passed in as an argument.
+            self.shape = shape                          # Shape is passed in as an argument.
 
         assert self.n == reduce(mul, self.shape), 'No. of neurons and shape do not match'
 
-        self.traces = traces                       # Whether to record synaptic traces.
-        self.s = torch.zeros(self.shape).byte()    # Spike occurrences.
-        self.sum_input = sum_input                 # Whether to sum all inputs.
+        self.traces = traces                            # Whether to record synaptic traces.
+        self.s = torch.zeros(self.shape).byte()         # Spike occurrences.
+        self.sum_input = sum_input                      # Whether to sum all inputs.
 
         if self.traces:
-            self.x = torch.zeros(self.shape)       # Firing traces.
-            self.trace_tc = trace_tc               # Rate of decay of spike trace time constant.
+            self.x = torch.zeros(self.shape)            # Firing traces.
+
+            if isinstance(trace_tc, float):
+                self.trace_tc = torch.tensor(trace_tc)  # Rate of decay of spike trace time constant.
+            else:
+                self.trace_tc = trace_tc
 
         if self.sum_input:
-            self.summed = torch.zeros(self.shape)  # Summed inputs.
+            self.summed = torch.zeros(self.shape)       # Summed inputs.
 
     @abstractmethod
     def step(self, inpts: torch.Tensor, dt: float) -> None:
@@ -101,7 +106,7 @@ class Input(Nodes, AbstractInput):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None,
-                 traces: bool = False, trace_tc: float = 5e-2, sum_input: bool = False) -> None:
+                 traces: bool = False, trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False) -> None:
         # language=rst
         """
         Instantiates a layer of input neurons.
@@ -141,7 +146,7 @@ class RealInput(Nodes, AbstractInput):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2, sum_input: bool = False) -> None:
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False) -> None:
         # language=rst
         """
         Instantiates a layer of input neurons.
@@ -192,7 +197,8 @@ class McCullochPitts(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2, sum_input: bool = False, thresh: float = 1.0) -> None:
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
+                 thresh: Union[float, torch.Tensor] = 1.0) -> None:
         # language=rst
         """
         Instantiates a McCulloch-Pitts layer of neurons.
@@ -217,7 +223,7 @@ class McCullochPitts(Nodes):
         :param inpts: Inputs to the layer.
         :param dt: Simulation time step.
         """
-        self.v = inpts  # Voltages are equal to the inputs.
+        self.v = inpts                  # Voltages are equal to the inputs.
         self.s = self.v >= self.thresh  # Check for spiking neurons.
 
         super().step(inpts, dt)
@@ -237,8 +243,9 @@ class IFNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2, sum_input: bool = False, thresh: float = -52.0, reset: float = -65.0,
-                 refrac: int = 5) -> None:
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
+                 thresh: Union[float, torch.Tensor] = -52.0, reset: Union[float, torch.Tensor] = -65.0,
+                 refrac: Union[int, torch.Tensor] = 5) -> None:
         # language=rst
         """
         Instantiates a layer of IF neurons.
@@ -254,9 +261,23 @@ class IFNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
-        self.reset = reset    # Post-spike reset voltage.
-        self.thresh = thresh  # Spike threshold voltage.
-        self.refrac = refrac  # Post-spike refractory period.
+        # Post-spike reset voltage.
+        if isinstance(reset, float):
+            self.reset = torch.tensor(reset)
+        else:
+            self.reset = reset
+
+        # Spike threshold voltage.
+        if isinstance(thresh, float):
+            self.thresh = torch.tensor(thresh)
+        else:
+            self.thresh = thresh
+
+        # Post-spike refractory period.
+        if isinstance(refrac, float):
+            self.refrac = torch.tensor(refrac)
+        else:
+            self.refrac = refrac
 
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
@@ -269,7 +290,7 @@ class IFNodes(Nodes):
         :param inpts: Inputs to the layer.
         :param dt: Simulation time step.
         """
-        # Integrate input and decay voltages.
+        # Integrate input voltages.
         self.v += (self.refrac_count == 0).float() * inpts
 
         # Decrement refractory counters.
@@ -302,8 +323,10 @@ class LIFNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2, sum_input: bool = False, thresh: float = -52.0, rest: float = -65.0,
-                 reset: float = -65.0, refrac: int = 5, decay: float = 1e-2) -> None:
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
+                 thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
+                 reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
+                 decay: Union[float, torch.Tensor] = 1e-2) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons.
@@ -321,11 +344,35 @@ class LIFNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
-        self.rest = rest       # Rest voltage.
-        self.reset = reset     # Post-spike reset voltage.
-        self.thresh = thresh   # Spike threshold voltage.
-        self.refrac = refrac   # Post-spike refractory period.
-        self.decay = decay     # Rate of decay of neuron voltage.
+        # Rest voltage.
+        if isinstance(rest, float):
+            self.rest = torch.tensor(rest)
+        else:
+            self.rest = rest
+
+        # Post-spike reset voltage.
+        if isinstance(reset, float):
+            self.reset = torch.tensor(reset)
+        else:
+            self.reset = reset
+
+        # Spike threshold voltage.
+        if isinstance(thresh, float):
+            self.thresh = torch.tensor(thresh)
+        else:
+            self.thresh = thresh
+
+        # Post-spike refractory period.
+        if isinstance(refrac, float):
+            self.refrac = torch.tensor(refrac)
+        else:
+            self.refrac = refrac
+
+        # Rate of decay of neuron voltage.
+        if isinstance(decay, float):
+            self.decay = torch.tensor(decay)
+        else:
+            self.decay = decay
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -374,9 +421,11 @@ class AdaptiveLIFNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2, sum_input: bool = False, rest: float = -65.0, reset: float = -65.0,
-                 thresh: float = -52.0, refrac: int = 5, decay: float = 1e-2, theta_plus: float = 0.05,
-                 theta_decay: float = 1e-7) -> None:
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
+                 rest: Union[float, torch.Tensor] = -65.0, reset: Union[float, torch.Tensor] = -65.0,
+                 thresh: Union[float, torch.Tensor] = -52.0, refrac: Union[int, torch.Tensor] = 5,
+                 decay: Union[float, torch.Tensor] = 1e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
+                 theta_decay: Union[float, torch.Tensor] = 1e-7) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons with adaptive firing thresholds.
@@ -396,13 +445,47 @@ class AdaptiveLIFNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
-        self.rest = rest                # Rest voltage.
-        self.reset = reset              # Post-spike reset voltage.
-        self.thresh = thresh            # Spike threshold voltage.
-        self.refrac = refrac            # Post-spike refractory period.
-        self.decay = decay              # Rate of decay of neuron voltage.
-        self.theta_plus = theta_plus    # Constant threshold increase on spike.
-        self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
+        # Rest voltage.
+        if isinstance(rest, float):
+            self.rest = torch.tensor(rest)
+        else:
+            self.rest = rest
+
+        # Post-spike reset voltage.
+        if isinstance(reset, float):
+            self.reset = torch.tensor(reset)
+        else:
+            self.reset = reset
+
+        # Spike threshold voltage.
+        if isinstance(thresh, float):
+            self.thresh = torch.tensor(thresh)
+        else:
+            self.thresh = thresh
+
+        # Post-spike refractory period.
+        if isinstance(refrac, float):
+            self.refrac = torch.tensor(refrac)
+        else:
+            self.refrac = refrac
+
+        # Rate of decay of neuron voltage.
+        if isinstance(decay, float):
+            self.decay = torch.tensor(decay)
+        else:
+            self.decay = decay
+
+        # Constant threshold increase on spike.
+        if isinstance(theta_plus, float):
+            self.theta_plus = torch.tensor(theta_plus)
+        else:
+            self.theta_plus = theta_plus
+
+        # Rate of decay of adaptive thresholds.
+        if isinstance(theta_decay, float):
+            self.theta_decay = torch.tensor(theta_decay)
+        else:
+            self.theta_decay = theta_decay
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
@@ -454,9 +537,11 @@ class DiehlAndCookNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2, sum_input: bool = False, thresh: float = -52.0, rest: float = -65.0,
-                 reset: float = -65.0, refrac: int = 5, decay: float = 1e-2, theta_plus: float = 0.05,
-                 theta_decay: float = 1e-7) -> None:
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
+                 thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
+                 reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
+                 decay: Union[float, torch.Tensor] = 1e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
+                 theta_decay: Union[float, torch.Tensor] = 1e-7) -> None:
         # language=rst
         """
         Instantiates a layer of Diehl & Cook 2015 neurons.
@@ -476,13 +561,47 @@ class DiehlAndCookNodes(Nodes):
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
-        self.rest = rest                # Rest voltage.
-        self.reset = reset              # Post-spike reset voltage.
-        self.thresh = thresh            # Spike threshold voltage.
-        self.refrac = refrac            # Post-spike refractory period.
-        self.decay = decay              # Rate of decay of neuron voltage.
-        self.theta_plus = theta_plus    # Constant threshold increase on spike.
-        self.theta_decay = theta_decay  # Rate of decay of adaptive thresholds.
+        # Rest voltage.
+        if isinstance(rest, float):
+            self.rest = torch.tensor(rest)
+        else:
+            self.rest = rest
+
+        # Post-spike reset voltage.
+        if isinstance(reset, float):
+            self.reset = torch.tensor(reset)
+        else:
+            self.reset = reset
+
+        # Spike threshold voltage.
+        if isinstance(thresh, float):
+            self.thresh = torch.tensor(thresh)
+        else:
+            self.thresh = thresh
+
+        # Post-spike refractory period.
+        if isinstance(refrac, float):
+            self.refrac = torch.tensor(refrac)
+        else:
+            self.refrac = refrac
+
+        # Rate of decay of neuron voltage.
+        if isinstance(decay, float):
+            self.decay = torch.tensor(decay)
+        else:
+            self.decay = decay
+
+        # Constant threshold increase on spike.
+        if isinstance(theta_plus, float):
+            self.theta_plus = torch.tensor(theta_plus)
+        else:
+            self.theta_plus = theta_plus
+
+        # Rate of decay of adaptive thresholds.
+        if isinstance(theta_decay, float):
+            self.theta_decay = torch.tensor(theta_decay)
+        else:
+            self.theta_decay = theta_decay
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
@@ -539,8 +658,8 @@ class IzhikevichNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 trace_tc: float = 5e-2, sum_input: bool = False, excitatory: float = 1, thresh: float = 45.0,
-                 rest: float = -65.0) -> None:
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False, excitatory: float = 1,
+                 thresh: Union[float, torch.Tensor] = 45.0, rest: Union[float, torch.Tensor] = -65.0) -> None:
         # language=rst
         """
         Instantiates a layer of Izhikevich neurons.
@@ -618,7 +737,6 @@ class IzhikevichNodes(Nodes):
         :param inpts: Inputs to the layer.
         :param dt: Simulation time step.
         """
-
         # Apply v and u updates.
         self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
         self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
