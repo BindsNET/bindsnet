@@ -61,10 +61,9 @@ def select_softmax(pipeline: Pipeline, **kwargs) -> int:
         'Output layer size not equal to size of action space.'
 
     # Sum of previous iterations' spikes (Not yet implemented)
-    spikes = pipeline.network.layers[output].s
+    spikes = torch.sum(pipeline.spike_record[output], dim=1)
     _sum = torch.sum(torch.exp(spikes.float()))
 
-    # Choose action based on readout neuron spiking
     if _sum == 0:
         action = np.random.choice(pipeline.env.action_space.n)
     else:
