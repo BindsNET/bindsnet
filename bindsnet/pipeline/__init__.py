@@ -186,7 +186,7 @@ class Pipeline:
             self.obs_ax.set_yticks(())
             self.obs_im = self.obs_ax.imshow(self.obs, cmap='gray')
         else:
-            self.obs_im.set_data(self.obs())
+            self.obs_im.set_data(self.obs)
 
     def plot_data(self) -> None:
         # language=rst
