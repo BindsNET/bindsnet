@@ -127,6 +127,7 @@ class Connection(AbstractConnection):
 
         :param function update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
+        :param torch.Tensor b: Target population bias.
         :param float wmin: Minimum allowed value on the connection weights.
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
@@ -144,6 +145,8 @@ class Connection(AbstractConnection):
             if self.wmin is not None and self.wmax is not None:
                 self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
+        self.b = kwargs.get('b', torch.zeros(target.n))
+
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
         """
@@ -156,7 +159,7 @@ class Connection(AbstractConnection):
         self.a_pre = self.a_pre * self.decay + s.float().view(-1)
 
         # Compute multiplication of spike activations by connection weights.
-        a_post = self.a_pre @ self.w
+        a_post = self.a_pre @ self.w + self.b
         return a_post.view(*self.target.shape)
 
     def update(self, dt, **kwargs) -> None:
@@ -209,6 +212,7 @@ class Conv2dConnection(AbstractConnection):
 
         :param function update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
+        :param torch.Tensor b: Target population bias.
         :param float wmin: Minimum allowed value on the connection weights.
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
@@ -240,6 +244,8 @@ class Conv2dConnection(AbstractConnection):
         if self.wmin is not None and self.wmax is not None:
             self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
+        self.b = kwargs.get('b', torch.zeros(self.out_channels))
+
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
         """
@@ -248,7 +254,7 @@ class Conv2dConnection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Spikes multiplied by synapse weights.
         """
-        return F.conv2d(s.float(), self.w, stride=self.stride, padding=self.padding, dilation=self.dilation)
+        return F.conv2d(s.float(), self.w, self.b, stride=self.stride, padding=self.padding, dilation=self.dilation)
 
     def update(self, dt, **kwargs) -> None:
         # language=rst
@@ -304,6 +310,7 @@ class LocallyConnectedConnection(AbstractConnection):
 
         :param function update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
+        :param torch.Tensor b: Target population bias.
         :param float wmin: Minimum allowed value on the connection weights.
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
@@ -364,6 +371,8 @@ class LocallyConnectedConnection(AbstractConnection):
 
         self.mask = self.w == 0
 
+        self.b = kwargs.get('b', torch.zeros(target.n))
+
         if self.norm is not None:
             self.norm *= kernel_prod
 
@@ -380,9 +389,9 @@ class LocallyConnectedConnection(AbstractConnection):
 
         # Compute multiplication of pre-activations by connection weights.
         if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
-            return self.a_pre @ self.w
+            return self.a_pre @ self.w + self.b
         else:
-            a_post = self.a_pre @ self.w.view(self.source.n, self.target.n)
+            a_post = self.a_pre @ self.w.view(self.source.n, self.target.n) + self.b
             return a_post.view(*self.target.shape)
 
     def update(self, dt, **kwargs) -> None:
