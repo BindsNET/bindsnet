@@ -151,7 +151,7 @@ class Pipeline:
             a = None
 
         # Run a step of the environment.
-        self.obs, self.reward, _, info = self.env.step(a)
+        self.obs, self.reward, self.done, info = self.env.step(a)
 
         # Store frame of history and encode the inputs.
         if len(self.history) > 0:
@@ -184,9 +184,9 @@ class Pipeline:
             self.obs_ax.set_title('Observation')
             self.obs_ax.set_xticks(())
             self.obs_ax.set_yticks(())
-            self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap='gray')
+            self.obs_im = self.obs_ax.imshow(self.obs, cmap='gray')
         else:
-            self.obs_im.set_data(self.env.reshape())
+            self.obs_im.set_data(self.obs())
 
     def plot_data(self) -> None:
         # language=rst
