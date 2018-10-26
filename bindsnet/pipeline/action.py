@@ -60,6 +60,8 @@ def select_softmax(pipeline: Pipeline, **kwargs) -> int:
     assert pipeline.network.layers[output].n == pipeline.env.action_space.n, \
         'Output layer size not equal to size of action space.'
 
+    assert hasattr(pipeline, 'spike_record'), 'Pipeline has not attribute named: spike_record.'
+
     # Sum of previous iterations' spikes (Not yet implemented)
     spikes = torch.sum(pipeline.spike_record[output], dim=1)
     _sum = torch.sum(torch.exp(spikes.float()))
