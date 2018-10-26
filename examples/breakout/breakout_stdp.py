@@ -53,7 +53,7 @@ for i in range(100):
     print("Episode " + str(i) + " reward:", reward)
 
 # stop MSTDP
-pipeline.network.connections[('Hidden Layer', 'Output Layer')].update_rule = None
+pipeline.network.learning = False
 
 print("Testing: ")
 for i in range(100):
