@@ -2,6 +2,7 @@ import torch
 
 from bindsnet.network import Network
 from bindsnet.pipeline import Pipeline
+from bindsnet.learning import PostPre
 from bindsnet.encoding import bernoulli
 from bindsnet.network.topology import Connection
 from bindsnet.environment import GymEnvironment
@@ -18,7 +19,7 @@ out = LIFNodes(n=4, refrac=0, traces=True)
 
 # Connections between layers.
 inpt_middle = Connection(source=inpt, target=middle, wmin=0, wmax=1e-1)
-middle_out = Connection(source=middle, target=out, wmin=0, wmax=1)
+middle_out = Connection(source=middle, target=out, wmin=0, wmax=1, update_rule=PostPre, nu=1e-1)
 
 # Add all layers and connections to the network.
 network.add_layer(inpt, name='Input Layer')
@@ -37,6 +38,9 @@ pipeline = Pipeline(network, environment, encoding=bernoulli,
                     time=100, history_length=1, delta=1,
                     plot_interval=1, render_interval=1)
 
+
+# save the initial weights
+initial_weights = network.connections[('Hidden Layer', 'Output Layer')].w.clone()
 # Run environment simulation for 100 episodes.
 for i in range(100):
     # initialize episode reward
@@ -44,6 +48,8 @@ for i in range(100):
     pipeline.reset_()
     while True:
         pipeline.step()
+        # reset weights for action 0 = No action, 1 = Fire and 3 = Move left
+        network.connections[('Hidden Layer', 'Output Layer')].w[:, [0, 1, 3]] = initial_weights[:, [0, 1, 3]]
         reward += pipeline.reward
         if pipeline.done:
             break
