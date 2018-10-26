@@ -75,20 +75,16 @@ class Pipeline:
         else:
             self.history = {}
 
-        # monitor spikes for selecting action based on sum of spikes
-        for l in self.network.layers:
-            self.network.add_monitor(Monitor(self.network.layers[l], 's', self.time),
-                                     name=f'{l}_spikes')
-
-        self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
-        self.set_spike_data()
-
         if self.plot_interval is not None:
             for l in self.network.layers:
+                self.network.add_monitor(Monitor(self.network.layers[l], 's', self.time),
+                                         name=f'{l}_spikes')
                 if 'v' in self.network.layers[l].__dict__:
                     self.network.add_monitor(Monitor(self.network.layers[l], 'v', self.plot_interval * self.time),
                                              name=f'{l}_voltages')
 
+            self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
+            self.set_spike_data()
             self.plot_data()
 
         # Set up for multiple layers of input layers.
