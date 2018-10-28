@@ -79,7 +79,6 @@ class Pipeline:
             for l in self.network.layers:
                 self.network.add_monitor(Monitor(self.network.layers[l], 's', self.plot_interval * self.time),
                                          name=f'{l}_spikes')
-
                 if 'v' in self.network.layers[l].__dict__:
                     self.network.add_monitor(Monitor(self.network.layers[l], 'v', self.plot_interval * self.time),
                                              name=f'{l}_voltages')
