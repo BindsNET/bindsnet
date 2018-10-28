@@ -2,6 +2,7 @@ import torch
 
 from bindsnet.network import Network
 from bindsnet.pipeline import Pipeline
+from bindsnet.learning import MSTDP
 from bindsnet.encoding import bernoulli
 from bindsnet.network.topology import Connection
 from bindsnet.environment import GymEnvironment
@@ -18,7 +19,7 @@ out = LIFNodes(n=4, refrac=0, traces=True)
 
 # Connections between layers.
 inpt_middle = Connection(source=inpt, target=middle, wmin=0, wmax=1e-1)
-middle_out = Connection(source=middle, target=out, wmin=0, wmax=1)
+middle_out = Connection(source=middle, target=out, wmin=0, wmax=1, update_rule=MSTDP, nu=1e-1, norm=0.5 * middle.n)
 
 # Add all layers and connections to the network.
 network.add_layer(inpt, name='Input Layer')
@@ -37,11 +38,28 @@ pipeline = Pipeline(network, environment, encoding=bernoulli,
                     time=100, history_length=1, delta=1,
                     plot_interval=1, render_interval=1)
 
-# Run environment simulation for 100 episodes.
+
+# Train agent for 100 episodes.
+print("Training: ")
 for i in range(100):
+    pipeline.reset_()
     # initialize episode reward
     reward = 0
+    while True:
+        pipeline.step()
+        reward += pipeline.reward
+        if pipeline.done:
+            break
+    print("Episode " + str(i) + " reward:", reward)
+
+# stop MSTDP
+pipeline.network.learning = False
+
+print("Testing: ")
+for i in range(100):
     pipeline.reset_()
+    # initialize episode reward
+    reward = 0
     while True:
         pipeline.step()
         reward += pipeline.reward
