@@ -179,6 +179,7 @@ class Network:
                 inpts[c[1]] = torch.zeros(target.shape)
 
             # Add to input: source's spikes multiplied by connection weights.
+            print(self.connections[c].compute(source.s).shape, inpts[c[1]].shape)
             inpts[c[1]] += self.connections[c].compute(source.s)
             
         return inpts

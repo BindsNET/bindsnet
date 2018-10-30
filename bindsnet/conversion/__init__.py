@@ -1,10 +1,13 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
+from torch.nn.modules.utils import _pair
 
 import numpy as np
 
 from time import time as t
-from typing import Union, Sequence, Optional
+from typing import Union, Sequence, Optional, Tuple
 
 import bindsnet.network.nodes as nodes
 import bindsnet.network.topology as topology
@@ -110,6 +113,94 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
 
 
+class MaxPool2dConnection(topology.AbstractConnection):
+    # language=rst
+    """
+    Specifies max-pooling synapses between one or two populations of neurons by keeping online estimates of maximally
+    firing neurons.
+    """
+
+    def __init__(self, source: nodes.Nodes, target: nodes.Nodes, kernel_size: Union[int, Tuple[int, int]],
+                 stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
+                 dilation: Union[int, Tuple[int, int]] = 1, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 weight_decay: float = 0.0, **kwargs) -> None:
+        # language=rst
+        """
+        Instantiates a ``MaxPool2dConnection`` object.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param kernel_size: Horizontal and vertical size of convolutional kernels.
+        :param stride: Horizontal and vertical stride for convolution.
+        :param padding: Horizontal and vertical padding for convolution.
+        :param dilation: Horizontal and vertical dilation for convolution.
+
+        Keyword arguments:
+
+        :param decay: Decay rate of online estimates of average firing activity.
+        """
+        super().__init__(source, target, nu, weight_decay, **kwargs)
+
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
+
+        input_height, input_width = source.shape[2], source.shape[3]
+
+        width = (input_height - self.kernel_size[0] + 2 * self.padding[0]) / self.stride[0] + 1
+        height = (input_width - self.kernel_size[1] + 2 * self.padding[1]) / self.stride[1] + 1
+
+        self.firing_rates = torch.ones(source.shape)
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Compute max-pool pre-activations given spikes using online firing rate estimates.
+
+        :param s: Incoming spikes.
+        :return: Spikes multiplied by synapse weights.
+        """
+        self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
+
+        _, indices = F.max_pool2d(
+            self.firing_rates, kernel_size=self.kernel_size, stride=self.stride,
+            padding=self.padding, dilation=self.dilation, return_indices=True
+        )
+        print(indices)
+        print(s.shape, indices.shape, self.firing_rates.shape)
+        return s.flatten()[indices].float()
+
+    def update(self, dt, **kwargs) -> None:
+        # language=rst
+        """
+        Compute connection's update rule.
+        """
+        super().update(dt=dt, **kwargs)
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Normalize weights along the first axis according to total weight per target neuron.
+        """
+        if self.norm is not None:
+            shape = self.w.size()
+            self.w = self.w.view(self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3))
+
+            for fltr in range(self.w.size(0)):
+                self.w[fltr] *= self.norm / self.w[fltr].sum(0)
+
+            self.w = self.w.view(*shape)
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Contains resetting logic for the connection.
+        """
+        super().reset_()
+
+
 def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, percentile: float = 99.9):
     # language=rst
     """
@@ -207,17 +298,19 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
 
         elif isinstance(module, nn.MaxPool2d):
             input_height, input_width = last[1].shape[2], last[1].shape[3]
-            out_channels, output_height, output_width = module.out_channels, last[1].shape[2], last[1].shape[3]
+            module.kernel_size = _pair(module.kernel_size)
+            module.padding = _pair(module.padding)
+            module.stride = _pair(module.stride)
 
             width = (input_height - module.kernel_size[0] + 2 * module.padding[0]) / module.stride[0] + 1
             height = (input_width - module.kernel_size[1] + 2 * module.padding[1]) / module.stride[1] + 1
-            shape = (1, out_channels, int(width), int(height))
+            shape = (1, last[1].shape[2], int(width), int(height))
             layer = SubtractiveResetIFNodes(
                 shape=shape, reset=0, thresh=1, refrac=0
             )
-            connection = topology.Conv2dConnection(
+            connection = MaxPool2dConnection(
                 source=last[1], target=layer, kernel_size=module.kernel_size, stride=module.stride,
-                padding=module.padding, dilation=module.dilation, w=module.weight, b=module.bias
+                padding=module.padding, dilation=module.dilation
             )
 
         else:
