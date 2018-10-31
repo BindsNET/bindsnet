@@ -219,7 +219,7 @@ class GymEnvironment(Environment):
         # Return converted observations and other information.
         return self.obs, self.reward, done, info
 
-    def reset(self) -> None:
+    def reset(self) -> torch.Tensor:
         # language=rst
         """
         Wrapper around the OpenAI Gym environment :code:`reset()` function.

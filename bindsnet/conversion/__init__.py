@@ -109,6 +109,7 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         Resets relevant state variables.
         """
         super().reset_()
+
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
 
@@ -146,11 +147,6 @@ class MaxPool2dConnection(topology.AbstractConnection):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
 
-        input_height, input_width = source.shape[2], source.shape[3]
-
-        width = (input_height - self.kernel_size[0] + 2 * self.padding[0]) / self.stride[0] + 1
-        height = (input_width - self.kernel_size[1] + 2 * self.padding[1]) / self.stride[1] + 1
-
         self.firing_rates = torch.ones(source.shape)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
@@ -168,9 +164,9 @@ class MaxPool2dConnection(topology.AbstractConnection):
             self.firing_rates, kernel_size=self.kernel_size, stride=self.stride,
             padding=self.padding, dilation=self.dilation, return_indices=True
         )
-        print(indices)
-        print(s.shape, indices.shape, self.firing_rates.shape)
-        return s.flatten()[indices].float()
+
+        print(indices.size(), s.size())
+        return s.gather(0, indices).float()
 
     def update(self, dt, **kwargs) -> None:
         # language=rst
@@ -182,16 +178,9 @@ class MaxPool2dConnection(topology.AbstractConnection):
     def normalize(self) -> None:
         # language=rst
         """
-        Normalize weights along the first axis according to total weight per target neuron.
+        No weights -> no normalization.
         """
-        if self.norm is not None:
-            shape = self.w.size()
-            self.w = self.w.view(self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3))
-
-            for fltr in range(self.w.size(0)):
-                self.w[fltr] *= self.norm / self.w[fltr].sum(0)
-
-            self.w = self.w.view(*shape)
+        pass
 
     def reset_(self) -> None:
         # language=rst
@@ -199,6 +188,8 @@ class MaxPool2dConnection(topology.AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_()
+
+        self.firing_rates = torch.zeros(self.source.shape)
 
 
 def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, percentile: float = 99.9):
@@ -241,6 +232,52 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
     return ann
 
 
+def _ann_to_snn_helper(module, last):
+    if isinstance(module, nn.Linear):
+        layer = SubtractiveResetIFNodes(n=module.out_features, reset=0, thresh=1, refrac=0)
+        connection = topology.Connection(
+            source=last[1], target=layer, w=module.weight.t(), b=module.bias
+        )
+
+    elif isinstance(module, nn.Conv2d):
+        input_height, input_width = last[1].shape[2], last[1].shape[3]
+        out_channels, output_height, output_width = module.out_channels, last[1].shape[2], last[1].shape[3]
+
+        width = (input_height - module.kernel_size[0] + 2 * module.padding[0]) / module.stride[0] + 1
+        height = (input_width - module.kernel_size[1] + 2 * module.padding[1]) / module.stride[1] + 1
+        shape = (1, out_channels, int(width), int(height))
+
+        layer = SubtractiveResetIFNodes(
+            shape=shape, reset=0, thresh=1, refrac=0
+        )
+        connection = topology.Conv2dConnection(
+            source=last[1], target=layer, kernel_size=module.kernel_size, stride=module.stride,
+            padding=module.padding, dilation=module.dilation, w=module.weight, b=module.bias
+        )
+
+    elif isinstance(module, nn.MaxPool2d):
+        input_height, input_width = last[1].shape[2], last[1].shape[3]
+        module.kernel_size = _pair(module.kernel_size)
+        module.padding = _pair(module.padding)
+        module.stride = _pair(module.stride)
+
+        width = (input_height - module.kernel_size[0] + 2 * module.padding[0]) / module.stride[0] + 1
+        height = (input_width - module.kernel_size[1] + 2 * module.padding[1]) / module.stride[1] + 1
+        shape = (1, last[1].shape[1], int(width), int(height))
+        layer = SubtractiveResetIFNodes(
+            shape=shape, reset=0, thresh=1, refrac=0
+        )
+        connection = MaxPool2dConnection(
+            source=last[1], target=layer, kernel_size=module.kernel_size, stride=module.stride,
+            padding=module.padding, dilation=module.dilation, decay=1
+        )
+
+    else:
+        return None, None
+
+    return layer, connection
+
+
 def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Optional[torch.Tensor] = None) -> Network:
     # language=rst
     """
@@ -273,47 +310,23 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     snn.add_layer(layer, name='Input')
     last = ('Input', layer)
 
+    layer, connection = None, None
     for name, module in ann.named_children():
-        if isinstance(module, nn.Linear):
-            layer = SubtractiveResetIFNodes(n=module.out_features, reset=0, thresh=1, refrac=0)
-            connection = topology.Connection(
-                source=last[1], target=layer, w=module.weight.t(), b=module.bias
-            )
+        if isinstance(module, nn.Sequential):
+            for name, module2 in module.named_children():
+                layer, connection = _ann_to_snn_helper(module2, last)
 
-        elif isinstance(module, nn.Conv2d):
-            input_height, input_width = last[1].shape[2], last[1].shape[3]
-            out_channels, output_height, output_width = module.out_channels, last[1].shape[2], last[1].shape[3]
+                if layer is None or connection is None:
+                    continue
 
-            width = (input_height - module.kernel_size[0] + 2 * module.padding[0]) / module.stride[0] + 1
-            height = (input_width - module.kernel_size[1] + 2 * module.padding[1]) / module.stride[1] + 1
-            shape = (1, out_channels, int(width), int(height))
-
-            layer = SubtractiveResetIFNodes(
-                shape=shape, reset=0, thresh=1, refrac=0
-            )
-            connection = topology.Conv2dConnection(
-                source=last[1], target=layer, kernel_size=module.kernel_size, stride=module.stride,
-                padding=module.padding, dilation=module.dilation, w=module.weight, b=module.bias
-            )
-
-        elif isinstance(module, nn.MaxPool2d):
-            input_height, input_width = last[1].shape[2], last[1].shape[3]
-            module.kernel_size = _pair(module.kernel_size)
-            module.padding = _pair(module.padding)
-            module.stride = _pair(module.stride)
-
-            width = (input_height - module.kernel_size[0] + 2 * module.padding[0]) / module.stride[0] + 1
-            height = (input_width - module.kernel_size[1] + 2 * module.padding[1]) / module.stride[1] + 1
-            shape = (1, last[1].shape[2], int(width), int(height))
-            layer = SubtractiveResetIFNodes(
-                shape=shape, reset=0, thresh=1, refrac=0
-            )
-            connection = MaxPool2dConnection(
-                source=last[1], target=layer, kernel_size=module.kernel_size, stride=module.stride,
-                padding=module.padding, dilation=module.dilation
-            )
+                snn.add_layer(layer, name=name)
+                snn.add_connection(connection, source=last[0], target=name)
+                last = (name, layer)
 
         else:
+            layer, connection = _ann_to_snn_helper(module, last)
+
+        if layer is None or connection is None:
             continue
 
         snn.add_layer(layer, name=name)

@@ -179,7 +179,6 @@ class Network:
                 inpts[c[1]] = torch.zeros(target.shape)
 
             # Add to input: source's spikes multiplied by connection weights.
-            print(self.connections[c].compute(source.s).shape, inpts[c[1]].shape)
             inpts[c[1]] += self.connections[c].compute(source.s)
             
         return inpts
@@ -241,7 +240,7 @@ class Network:
 
         # Get input to all layers.
         inpts.update(self.get_inputs())
-        
+
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
             for l in self.layers:
