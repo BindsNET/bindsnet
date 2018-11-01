@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple, Optional, Sequence
 from abc import ABC, abstractmethod
 from torch.nn.modules.utils import _pair
 
@@ -111,7 +111,7 @@ class Connection(AbstractConnection):
     Specifies synapses between one or two populations of neurons.
     """
 
-    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """

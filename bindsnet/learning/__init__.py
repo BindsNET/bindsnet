@@ -37,7 +37,7 @@ class LearningRule(ABC):
             nu = 0.0
 
         if isinstance(nu, float):
-            nu = (nu, nu)
+            nu = [nu, nu]
 
         self.nu = nu
 

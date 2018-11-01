@@ -43,7 +43,7 @@ class TwoLayerNetwork(Network):
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
-                                       nu=(nu_pre, nu_post), wmin=wmin, wmax=wmax, norm=norm),
+                                       nu=[nu_pre, nu_post], wmin=wmin, wmax=wmax, norm=norm),
                             source='X', target='Y')
 
 
@@ -96,7 +96,7 @@ class DiehlAndCook2015(Network):
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Ae'], w=w, update_rule=PostPre,
-                                       nu=(nu_pre, nu_post), wmin=wmin, wmax=wmax, norm=norm, decay=X_Ae_decay),
+                                       nu=[nu_pre, nu_post], wmin=wmin, wmax=wmax, norm=norm, decay=X_Ae_decay),
                             source='X', target='Ae')
 
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
@@ -155,7 +155,7 @@ class DiehlAndCook2015v2(Network):
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         input_connection = Connection(
             source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
-            nu=(nu_pre, nu_post), wmin=wmin, wmax=wmax, norm=norm
+            nu=[nu_pre, nu_post], wmin=wmin, wmax=wmax, norm=norm
         )
         self.add_connection(input_connection, source='X', target='Y')
 
@@ -212,7 +212,7 @@ class IncreasingInhibitionNetwork(Network):
         w = 0.3 * torch.rand(self.n_input, self.n_neurons)
         input_output_conn = Connection(
             source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
-            nu=(nu_pre, nu_post), wmin=wmin, wmax=wmax, norm=norm
+            nu=[nu_pre, nu_post], wmin=wmin, wmax=wmax, norm=norm
         )
         self.add_connection(input_output_conn, source='X', target='Y')
 
@@ -294,7 +294,7 @@ class LocallyConnectedNetwork(Network):
         )
         input_output_conn = LocallyConnectedConnection(
             input_layer, output_layer, kernel_size=kernel_size, stride=stride, n_filters=n_filters,
-            nu=(nu_pre, nu_post), update_rule=PostPre, wmin=wmin, wmax=wmax, norm=norm, input_shape=input_shape
+            nu=[nu_pre, nu_post], update_rule=PostPre, wmin=wmin, wmax=wmax, norm=norm, input_shape=input_shape
         )
 
         w = torch.zeros(n_filters, *conv_size, n_filters, *conv_size)

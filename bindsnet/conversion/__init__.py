@@ -114,6 +114,47 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
 
 
+class PassThroughNodes(nodes.Nodes):
+    # language=rst
+    """
+    Layer of `integrate-and-fire (IF) neurons <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_ with using reset by
+    subtraction.
+    """
+
+    def __init__(self, n: Optional[int] = None, shape: Optional[Sequence[int]] = None, traces: bool = False,
+                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False) -> None:
+        # language=rst
+        """
+        Instantiates a layer of IF neurons.
+
+        :param n: The number of neurons in the layer.
+        :param shape: The dimensionality of the layer.
+        :param traces: Whether to record spike traces.
+        :param trace_tc: Time constant of spike trace decay.
+        :param sum_input: Whether to sum all inputs.
+        """
+        super().__init__(n, shape, traces, trace_tc, sum_input)
+
+        self.v = torch.zeros(self.shape)
+
+    def step(self, inpts: torch.Tensor, dt: float) -> None:
+        # language=rst
+        """
+        Runs a single simulation step.
+
+        :param inpts: Inputs to the layer.
+        :param dt: Simulation time step.
+        """
+        self.s = inpts
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+
+
 class MaxPool2dConnection(topology.AbstractConnection):
     # language=rst
     """
@@ -165,8 +206,7 @@ class MaxPool2dConnection(topology.AbstractConnection):
             padding=self.padding, dilation=self.dilation, return_indices=True
         )
 
-        print(indices.size(), s.size())
-        return s.gather(0, indices).float()
+        return s.flatten()[indices].float()
 
     def update(self, dt, **kwargs) -> None:
         # language=rst
@@ -215,19 +255,40 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
     set_requires_grad(ann, value=False)
     extractor = FeatureExtractor(ann)
 
-    prev_name, prev_layer = None, None
+    prev_module = None
     prev_factor = 1
-    for name, layer in ann._modules.items():
-        activations = extractor.forward(data)[name]
-        if isinstance(layer, nn.ReLU):
-            scale_factor = np.percentile(activations.cpu(), percentile)
+    for name, module in ann._modules.items():
+        if isinstance(module, nn.Sequential):
 
-            prev_layer.weight *= prev_factor / scale_factor
-            prev_layer.bias /= scale_factor
+            extractor2 = FeatureExtractor(module)
+            for name2, module2 in module.named_children():
+                activations = extractor2.forward(data)[name2]
 
-            prev_factor = scale_factor
+                if isinstance(module2, nn.ReLU):
+                    if prev_module is not None:
+                        scale_factor = np.percentile(activations.cpu(), percentile)
 
-        prev_name, prev_layer = name, layer
+                        prev_module.weight *= prev_factor / scale_factor
+                        prev_module.bias /= scale_factor
+
+                        prev_factor = scale_factor
+
+                elif isinstance(module2, nn.Linear) or isinstance(module2, nn.Conv2d):
+                    prev_module = module2
+
+        else:
+            activations = extractor.forward(data)[name]
+            if isinstance(module, nn.ReLU):
+                if prev_module is not None:
+                    scale_factor = np.percentile(activations.cpu(), percentile)
+
+                    prev_module.weight *= prev_factor / scale_factor
+                    prev_module.bias /= scale_factor
+
+                    prev_factor = scale_factor
+
+            elif isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
+                prev_module = module
 
     return ann
 
@@ -264,8 +325,8 @@ def _ann_to_snn_helper(module, last):
         width = (input_height - module.kernel_size[0] + 2 * module.padding[0]) / module.stride[0] + 1
         height = (input_width - module.kernel_size[1] + 2 * module.padding[1]) / module.stride[1] + 1
         shape = (1, last[1].shape[1], int(width), int(height))
-        layer = SubtractiveResetIFNodes(
-            shape=shape, reset=0, thresh=1, refrac=0
+        layer = PassThroughNodes(
+            shape=shape
         )
         connection = MaxPool2dConnection(
             source=last[1], target=layer, kernel_size=module.kernel_size, stride=module.stride,
