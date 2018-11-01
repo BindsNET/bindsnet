@@ -278,7 +278,8 @@ def _ann_to_snn_helper(module, last):
     return layer, connection
 
 
-def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Optional[torch.Tensor] = None) -> Network:
+def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Optional[torch.Tensor] = None,
+               percentile: float = 99.9) -> Network:
     # language=rst
     """
     Converts an artificial neural network (ANN) written as a ``torch.nn.Module`` into a near-equivalent spiking neural
@@ -288,6 +289,7 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
                 saved using ``torch.save()``.
     :param input_shape: Shape of input data.
     :param data: Data to use to perform data-based weight normalization of shape ``[n_examples, ...]``.
+    :param percentile: Percentile (in ``[0, 100]``) of activations to scale by in data-based normalization scheme.
     :return: Spiking neural network implemented in PyTorch.
     """
     if isinstance(ann, str):
@@ -300,7 +302,9 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
         print('Example data provided. Performing data-based normalization...')
 
         t0 = t()
-        ann = data_based_normalization(ann=ann, data=data.detach())
+        ann = data_based_normalization(
+            ann=ann, data=data.detach(), percentile=percentile
+        )
 
         print(f'Elapsed: {t() - t0:.4f}')
 
