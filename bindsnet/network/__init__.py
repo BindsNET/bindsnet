@@ -19,8 +19,7 @@ def load_network(file_name: str) -> 'Network':
     :param file_name: Path to serialized network object on disk.
     """
     try:
-        with open(file_name, 'rb') as f:
-            return torch.load(open(file_name, 'rb'))
+        return torch.load(open(file_name, 'rb'))
     except FileNotFoundError:
         print('Network not found on disk.')
 
@@ -125,12 +124,12 @@ class Network:
         """
         self.monitors[name] = monitor
 
-    def save(self, fname: str) -> None:
+    def save(self, file_name: str) -> None:
         # language=rst
         """
         Serializes the network object to disk.
 
-        :param fname: Path to store serialized network object on disk.
+        :param file_name: Path to store serialized network object on disk.
 
         **Example:**
 
@@ -158,7 +157,7 @@ class Network:
             # Save the network to disk.
             network.save(str(Path.home()) + '/network.pt')
         """
-        torch.save(self, open(fname, 'wb'))
+        torch.save(self, open(file_name, 'wb'))
 
     def get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
@@ -180,7 +179,7 @@ class Network:
 
             # Add to input: source's spikes multiplied by connection weights.
             inpts[c[1]] += self.connections[c].compute(source.s)
-            
+
         return inpts
 
     def run(self, inpts: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
@@ -267,7 +266,7 @@ class Network:
             # Record state variables of interest.
             for m in self.monitors:
                 self.monitors[m].record()
-        
+
         # Re-normalize connections.
         for c in self.connections:
             self.connections[c].normalize()
