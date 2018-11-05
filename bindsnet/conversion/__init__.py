@@ -152,7 +152,7 @@ class PassThroughNodes(nodes.Nodes):
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        self.s = torch.zeros(self.shape)
 
 
 class MaxPool2dConnection(topology.AbstractConnection):
@@ -293,44 +293,50 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
     return ann
 
 
-def _ann_to_snn_helper(module, last):
-    if isinstance(module, nn.Linear):
-        layer = SubtractiveResetIFNodes(n=module.out_features, reset=0, thresh=1, refrac=0)
+def _ann_to_snn_helper(prev, current, nxt):
+    if isinstance(current, nn.Linear):
+        layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
         connection = topology.Connection(
-            source=last[1], target=layer, w=module.weight.t(), b=module.bias
+            source=prev, target=layer, w=current.weight.t(), b=current.bias
         )
 
-    elif isinstance(module, nn.Conv2d):
-        input_height, input_width = last[1].shape[2], last[1].shape[3]
-        out_channels, output_height, output_width = module.out_channels, last[1].shape[2], last[1].shape[3]
+    elif isinstance(current, nn.Conv2d):
+        input_height, input_width = prev.shape[2], prev.shape[3]
+        out_channels, output_height, output_width = current.out_channels, prev.shape[2], prev.shape[3]
 
-        width = (input_height - module.kernel_size[0] + 2 * module.padding[0]) / module.stride[0] + 1
-        height = (input_width - module.kernel_size[1] + 2 * module.padding[1]) / module.stride[1] + 1
+        width = (input_height - current.kernel_size[0] + 2 * current.padding[0]) / current.stride[0] + 1
+        height = (input_width - current.kernel_size[1] + 2 * current.padding[1]) / current.stride[1] + 1
         shape = (1, out_channels, int(width), int(height))
+
+        if isinstance(nxt, nn.MaxPool2d):
+            layer = SubtractiveResetIFNodes(
+                shape=shape, reset=0, thresh=1, refrac=0
+            )
+        else:
+            layer = PassThroughNodes(
+                shape=shape
+            )
+        connection = topology.Conv2dConnection(
+            source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
+            padding=current.padding, dilation=current.dilation, w=current.weight, b=current.bias
+        )
+
+    elif isinstance(current, nn.MaxPool2d):
+        input_height, input_width = prev.shape[2], prev.shape[3]
+        current.kernel_size = _pair(current.kernel_size)
+        current.padding = _pair(current.padding)
+        current.stride = _pair(current.stride)
+
+        width = (input_height - current.kernel_size[0] + 2 * current.padding[0]) / current.stride[0] + 1
+        height = (input_width - current.kernel_size[1] + 2 * current.padding[1]) / current.stride[1] + 1
+        shape = (1, prev.shape[1], int(width), int(height))
 
         layer = SubtractiveResetIFNodes(
             shape=shape, reset=0, thresh=1, refrac=0
         )
-        connection = topology.Conv2dConnection(
-            source=last[1], target=layer, kernel_size=module.kernel_size, stride=module.stride,
-            padding=module.padding, dilation=module.dilation, w=module.weight, b=module.bias
-        )
-
-    elif isinstance(module, nn.MaxPool2d):
-        input_height, input_width = last[1].shape[2], last[1].shape[3]
-        module.kernel_size = _pair(module.kernel_size)
-        module.padding = _pair(module.padding)
-        module.stride = _pair(module.stride)
-
-        width = (input_height - module.kernel_size[0] + 2 * module.padding[0]) / module.stride[0] + 1
-        height = (input_width - module.kernel_size[1] + 2 * module.padding[1]) / module.stride[1] + 1
-        shape = (1, last[1].shape[1], int(width), int(height))
-        layer = PassThroughNodes(
-            shape=shape
-        )
         connection = MaxPool2dConnection(
-            source=last[1], target=layer, kernel_size=module.kernel_size, stride=module.stride,
-            padding=module.padding, dilation=module.dilation, decay=1
+            source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
+            padding=current.padding, dilation=current.dilation, decay=0
         )
 
     else:
@@ -371,30 +377,40 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
 
     snn = Network()
 
-    layer = nodes.RealInput(shape=input_shape)
-    snn.add_layer(layer, name='Input')
-    last = ('Input', layer)
+    input_layer = nodes.RealInput(shape=input_shape)
+    snn.add_layer(input_layer, name='Input')
 
-    for name, module in ann.named_children():
-        if isinstance(module, nn.Sequential):
-            for name, module2 in module.named_children():
-                layer, connection = _ann_to_snn_helper(module2, last)
-
-                if layer is None or connection is None:
-                    continue
-
-                snn.add_layer(layer, name=name)
-                snn.add_connection(connection, source=last[0], target=name)
-                last = (name, layer)
-
+    children = []
+    for c in ann.children():
+        if isinstance(c, nn.Sequential):
+            for c2 in list(c.children()):
+                children.append(c2)
         else:
-            layer, connection = _ann_to_snn_helper(module, last)
+            children.append(c)
 
-            if layer is None or connection is None:
-                continue
+    i = 0
+    prev = input_layer
+    while i < len(children) - 1:
+        current, nxt = children[i:i + 2]
+        layer, connection = _ann_to_snn_helper(prev, current, nxt)
 
-            snn.add_layer(layer, name=name)
-            snn.add_connection(connection, source=last[0], target=name)
-            last = (name, layer)
+        i += 1
+
+        if layer is None or connection is None:
+            continue
+
+        snn.add_layer(layer, name=str(i))
+        snn.add_connection(connection, source=str(i - 1), target=str(i))
+
+        prev = layer
+
+    current = children[-1]
+    layer, connection = _ann_to_snn_helper(prev, current, None)
+
+    i += 1
+
+    if layer is not None or connection is not None:
+        snn.add_layer(layer, name=str(i))
+        snn.add_connection(connection, source=str(i - 1), target=str(i))
 
     return snn
