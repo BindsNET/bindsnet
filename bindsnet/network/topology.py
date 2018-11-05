@@ -16,7 +16,7 @@ class AbstractConnection(ABC):
     """
 
     def __init__(self, source: Nodes, target: Nodes,
-                 nu: Optional[Union[float, Tuple[float, float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for abstract base class for connection objects.
@@ -192,7 +192,7 @@ class Conv2dConnection(AbstractConnection):
 
     def __init__(self, source: Nodes, target: Nodes, kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
-                 dilation: Union[int, Tuple[int, int]] = 1, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 dilation: Union[int, Tuple[int, int]] = 1, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
@@ -289,7 +289,7 @@ class LocallyConnectedConnection(AbstractConnection):
 
     def __init__(self, source: Nodes, target: Nodes, kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int,
-                 nu: Optional[Union[float, Tuple[float, float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Instantiates a ``LocallyConnectedConnection`` object. Source population should be two-dimensional.
@@ -425,7 +425,7 @@ class MeanFieldConnection(AbstractConnection):
     use as weighted input to the post-synaptic population.
     """
 
-    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
@@ -499,7 +499,7 @@ class SparseConnection(AbstractConnection):
     Specifies sparse synapses between one or two populations of neurons.
     """
 
-    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = None, **kwargs) -> None:
         # language=rst
         """

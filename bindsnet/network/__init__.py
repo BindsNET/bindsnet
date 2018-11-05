@@ -234,7 +234,7 @@ class Network:
         clamps = kwargs.get('clamp', {})
         reward = kwargs.get('reward', None)
         masks = kwargs.get('masks', {})
-        
+
         # Effective number of timesteps
         timesteps = int(time / self.dt)
 
