@@ -316,7 +316,7 @@ class MSTDP(LearningRule):
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
-        a_minus = kwargs.get('a_plus', -1)
+        a_minus = kwargs.get('a_minus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
         p_plus = a_plus * source_x
@@ -345,7 +345,7 @@ class MSTDP(LearningRule):
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
-        a_minus = kwargs.get('a_plus', -1)
+        a_minus = kwargs.get('a_minus', -1)
 
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
@@ -435,7 +435,7 @@ class MSTDPET(LearningRule):
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
-        a_minus = kwargs.get('a_plus', -1)
+        a_minus = kwargs.get('a_minus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
         self.p_plus = self.p_plus * np.exp(-dt * self.tc_plus) + a_plus * source_x
@@ -463,7 +463,7 @@ class MSTDPET(LearningRule):
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
-        a_minus = kwargs.get('a_plus', -1)
+        a_minus = kwargs.get('a_minus', -1)
 
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
