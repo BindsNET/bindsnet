@@ -79,10 +79,9 @@ class AbstractConnection(ABC):
         Compute connection's update rule.
         """
         learning = kwargs.get('learning', True)
-        reward = kwargs.get('reward', None)
 
         if learning:
-            self.update_rule.update(dt=dt, reward=reward)
+            self.update_rule.update(dt=dt, **kwargs)
 
         mask = kwargs.get('mask', None)
         if mask is not None:

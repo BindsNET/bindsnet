@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from abc import ABC
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple, Optional, Sequence
 
 from ..utils import im2col_indices
 from ..network.topology import AbstractConnection, Connection, Conv2dConnection, LocallyConnectedConnection
@@ -14,7 +14,7 @@ class LearningRule(ABC):
     Abstract base class for learning rules.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -66,7 +66,7 @@ class NoOp(LearningRule):
     Learning rule with no effect.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -95,7 +95,7 @@ class PostPre(LearningRule):
     the post-synpatic update is positive.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -182,7 +182,7 @@ class Hebbian(LearningRule):
     Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -268,7 +268,7 @@ class MSTDP(LearningRule):
     Reward-modulated STDP. Adapted from `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -382,7 +382,7 @@ class MSTDPET(LearningRule):
     `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
