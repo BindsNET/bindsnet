@@ -206,7 +206,7 @@ class MaxPool2dConnection(topology.AbstractConnection):
             padding=self.padding, dilation=self.dilation, return_indices=True
         )
 
-        return s.flatten()[indices].float()
+        return s.take(indices).float()
 
     def update(self, dt, **kwargs) -> None:
         # language=rst
@@ -375,7 +375,6 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     snn.add_layer(layer, name='Input')
     last = ('Input', layer)
 
-    layer, connection = None, None
     for name, module in ann.named_children():
         if isinstance(module, nn.Sequential):
             for name, module2 in module.named_children():
@@ -391,11 +390,11 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
         else:
             layer, connection = _ann_to_snn_helper(module, last)
 
-        if layer is None or connection is None:
-            continue
+            if layer is None or connection is None:
+                continue
 
-        snn.add_layer(layer, name=name)
-        snn.add_connection(connection, source=last[0], target=name)
-        last = (name, layer)
+            snn.add_layer(layer, name=name)
+            snn.add_connection(connection, source=last[0], target=name)
+            last = (name, layer)
 
     return snn
