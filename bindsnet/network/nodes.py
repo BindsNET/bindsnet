@@ -1,5 +1,5 @@
 import torch
-import numpy as np
+import torch.nn as nn
 
 from operator import mul
 from functools import reduce
@@ -56,23 +56,25 @@ class Nodes(ABC):
         if self.sum_input:
             self.summed = torch.zeros(self.shape)       # Summed inputs.
 
+        self.network = None
+        self.dt = None
+
     @abstractmethod
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Abstract base class method for a single simulation step.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         if self.traces:
             # Decay and set spike traces.
-            self.x -= dt * self.trace_tc * self.x
+            self.x -= self.dt * self.trace_tc * self.x
             self.x.masked_fill_(self.s, 1)
 
         if self.sum_input:
             # Add current input to running sum.
-            self.summed += inpts.float()
+            self.summed += x.float()
 
     @abstractmethod
     def reset_(self) -> None:
@@ -119,18 +121,17 @@ class Input(Nodes, AbstractInput):
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         On each simulation step, set the spikes of the population equal to the inputs.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         # Set spike occurrences to input values.
-        self.s = inpts.byte()
+        self.s = x.byte()
 
-        super().step(inpts, dt)
+        super().forward(x)
 
     def reset_(self) -> None:
         # language=rst
@@ -161,25 +162,24 @@ class RealInput(Nodes, AbstractInput):
 
         self.s = self.s.float()
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         On each simulation step, set the outputs of the population equal to the inputs.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         # Set spike occurrences to input values.
-        self.s = inpts
+        self.s = x
 
         if self.traces:
             # Decay and set spike traces.
-            self.x -= dt * self.trace_tc * self.x
+            self.x -= self.dt * self.trace_tc * self.x
             self.x.masked_fill_(self.s != 0, 1)
 
         if self.sum_input:
             # Add current input to running sum.
-            self.summed += inpts.float()
+            self.summed += x.float()
 
     def reset_(self) -> None:
         # language=rst
@@ -215,18 +215,17 @@ class McCullochPitts(Nodes):
         self.thresh = thresh              # Spike threshold voltage.
         self.v = torch.zeros(self.shape)  # Neuron voltages.
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Runs a single simulation step.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
-        self.v = inpts                  # Voltages are equal to the inputs.
+        self.v = x                  # Voltages are equal to the inputs.
         self.s = self.v >= self.thresh  # Check for spiking neurons.
 
-        super().step(inpts, dt)
+        super().forward(x)
 
     def reset_(self) -> None:
         # language=rst
@@ -282,19 +281,18 @@ class IFNodes(Nodes):
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Runs a single simulation step.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         # Integrate input voltages.
-        self.v += (self.refrac_count == 0).float() * inpts
+        self.v += (self.refrac_count == 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
+        self.refrac_count[self.refrac_count != 0] -= self.dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
@@ -303,7 +301,7 @@ class IFNodes(Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
-        super().step(inpts, dt)
+        super().forward(x)
 
     def reset_(self) -> None:
         # language=rst
@@ -377,22 +375,21 @@ class LIFNodes(Nodes):
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Runs a single simulation step.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         # Decay voltages.
-        self.v -= dt * self.decay * (self.v - self.rest)
+        self.v -= self.dt * self.decay * (self.v - self.rest)
 
         # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * inpts
+        self.v += (self.refrac_count == 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
+        self.refrac_count[self.refrac_count != 0] -= self.dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
@@ -401,7 +398,7 @@ class LIFNodes(Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
-        super().step(inpts, dt)
+        super().forward(x)
 
     def reset_(self) -> None:
         # language=rst
@@ -491,23 +488,22 @@ class AdaptiveLIFNodes(Nodes):
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Runs a single simulation step.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v -= dt * self.decay * (self.v - self.rest)
-        self.theta -= dt * self.theta_decay * self.theta
+        self.v -= self.dt * self.decay * (self.v - self.rest)
+        self.theta -= self.dt * self.theta_decay * self.theta
 
         # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * inpts
+        self.v += (self.refrac_count == 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
+        self.refrac_count[self.refrac_count != 0] -= self.dt
 
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta)
@@ -516,8 +512,6 @@ class AdaptiveLIFNodes(Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
         self.theta += self.theta_plus * self.s.float()
-
-        super().step(inpts, dt)
 
     def reset_(self) -> None:
         # language=rst
@@ -607,23 +601,22 @@ class DiehlAndCookNodes(Nodes):
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Runs a single simulation step.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v -= dt * self.decay * (self.v - self.rest)
-        self.theta -= dt * self.theta_decay * self.theta
+        self.v -= self.dt * self.decay * (self.v - self.rest)
+        self.theta -= self.dt * self.theta_decay * self.theta
 
         # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * inpts
+        self.v += (self.refrac_count == 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
+        self.refrac_count[self.refrac_count != 0] -= self.dt
 
         # Check for spiking neurons.
         self.s = (self.v >= self.thresh + self.theta)
@@ -639,7 +632,7 @@ class DiehlAndCookNodes(Nodes):
             s[torch.multinomial(self.s.float().view(-1), 1)] = 1
             self.s = s.view(self.shape)
 
-        super().step(inpts, dt)
+        super().forward(x)
 
     def reset_(self) -> None:
         # language=rst
@@ -702,7 +695,7 @@ class IzhikevichNodes(Nodes):
 
             ex = int(n * excitatory)
             inh = n - ex
-            
+
             # init
             self.r = torch.zeros(n)
             self.a = torch.zeros(n)
@@ -729,17 +722,16 @@ class IzhikevichNodes(Nodes):
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
         self.u = self.b * self.v            # Neuron recovery.
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Runs a single simulation step.
 
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         # Apply v and u updates.
-        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
-        self.v += dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + inpts)
+        self.v += self.dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + x)
+        self.v += self.dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + x)
         self.u += self.a * (self.b * self.v - self.u)
 
         # Check for spiking neurons.
@@ -749,7 +741,7 @@ class IzhikevichNodes(Nodes):
         self.v = torch.where(self.s, self.c, self.v)
         self.u = torch.where(self.s, self.u + self.d, self.u)
 
-        super().step(inpts, dt)
+        super().forward(x)
 
     def reset_(self) -> None:
         # language=rst

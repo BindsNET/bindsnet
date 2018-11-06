@@ -102,6 +102,8 @@ class Network:
         :param name: Logical name of layer.
         """
         self.layers[name] = layer
+        layer.network = self
+        layer.dt = self.dt
 
     def add_connection(self, connection: AbstractConnection, source: str, target: str) -> None:
         # language=rst
@@ -113,6 +115,8 @@ class Network:
         :param target: Logical name of the connection's target layer.
         """
         self.connections[(source, target)] = connection
+        connection.network = self
+        connection.dt = self.dt
 
     def add_monitor(self, monitor: AbstractMonitor, name: str) -> None:
         # language=rst
@@ -123,6 +127,8 @@ class Network:
         :param name: Logical name of monitor object.
         """
         self.monitors[name] = monitor
+        monitor.network = self
+        monitor.dt = self.dt
 
     def save(self, file_name: str) -> None:
         # language=rst
@@ -233,7 +239,7 @@ class Network:
         clamps = kwargs.get('clamp', {})
         masks = kwargs.get('masks', {})
 
-        # Effective number of timesteps
+        # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
         # Get input to all layers.
@@ -244,9 +250,9 @@ class Network:
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    self.layers[l].step(inpts[l][t], self.dt)
+                    self.layers[l].forward(x=inpts[l][t])
                 else:
-                    self.layers[l].step(inpts[l], self.dt)
+                    self.layers[l].forward(x=inpts[l])
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
@@ -256,7 +262,7 @@ class Network:
             # Run synapse updates.
             for c in self.connections:
                 self.connections[c].update(
-                    dt=self.dt, mask=masks.get(c, None), learning=self.learning, **kwargs
+                    mask=masks.get(c, None), learning=self.learning, **kwargs
                 )
 
             # Get input to all layers.

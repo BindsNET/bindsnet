@@ -120,7 +120,7 @@ class PostPre(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-    def _connection_update(self, dt, **kwargs) -> None:
+    def _connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
@@ -146,7 +146,7 @@ class PostPre(LearningRule):
 
         self.connection.w = self.connection.w.view(*shape)
 
-    def _conv2d_connection_update(self, dt, **kwargs) -> None:
+    def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
@@ -207,7 +207,7 @@ class Hebbian(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-    def _connection_update(self, dt, **kwargs) -> None:
+    def _connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
@@ -233,7 +233,7 @@ class Hebbian(LearningRule):
 
         self.connection.w = self.connection.w.view(*shape)
 
-    def _conv2d_connection_update(self, dt, **kwargs) -> None:
+    def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Hebbian learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
@@ -292,7 +292,7 @@ class MSTDP(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-    def _connection_update(self, dt, **kwargs) -> None:
+    def _connection_update(self, **kwargs) -> None:
         # language=rst
         """
         M-STDP learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
@@ -329,7 +329,7 @@ class MSTDP(LearningRule):
         self.connection.w += self.nu[0] * reward * eligibility
         self.connection.w = self.connection.w.view(*shape)
 
-    def _conv2d_connection_update(self, dt, **kwargs) -> None:
+    def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         M-STDP learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
@@ -414,7 +414,7 @@ class MSTDPET(LearningRule):
         self.p_minus = torch.zeros(self.target.n)
         self.tc_minus = 0.05
 
-    def _connection_update(self, dt, **kwargs) -> None:
+    def _connection_update(self, **kwargs) -> None:
         # language=rst
         """
         M-STDP-ET learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
@@ -438,8 +438,8 @@ class MSTDPET(LearningRule):
         a_minus = kwargs.get('a_minus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = self.p_plus * np.exp(-dt * self.tc_plus) + a_plus * source_x
-        self.p_minus = self.p_minus * np.exp(-dt * self.tc_minus) + a_minus * target_x
+        self.p_plus = self.p_plus * np.exp(-self.connection.dt * self.tc_plus) + a_plus * source_x
+        self.p_minus = self.p_minus * np.exp(-self.connection.dt * self.tc_minus) + a_minus * target_x
 
         # Calculate value of eligibility trace.
         self.e_trace += torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
@@ -447,7 +447,7 @@ class MSTDPET(LearningRule):
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
 
-    def _conv2d_connection_update(self, dt, **kwargs) -> None:
+    def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         M-STDP-ET learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
@@ -479,8 +479,8 @@ class MSTDPET(LearningRule):
         s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = self.p_plus * np.exp(-dt / self.tc_plus) + a_plus * x_source
-        self.p_minus = self.p_minus * np.exp(-dt / self.tc_minus) + a_minus * x_target
+        self.p_plus = self.p_plus * np.exp(-self.network.dt / self.tc_plus) + a_plus * x_source
+        self.p_minus = self.p_minus * np.exp(-self.network.dt / self.tc_minus) + a_minus * x_target
 
         # Post-synaptic and pre-synaptic updates.
         post = (self.p_plus @ s_target.t()).view(self.connection.w.size())

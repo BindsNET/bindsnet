@@ -73,7 +73,7 @@ class AbstractConnection(ABC):
         pass
 
     @abstractmethod
-    def update(self, dt, **kwargs) -> None:
+    def update(self, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
@@ -81,7 +81,7 @@ class AbstractConnection(ABC):
         learning = kwargs.get('learning', True)
 
         if learning:
-            self.update_rule.update(dt=dt, **kwargs)
+            self.update_rule.update(**kwargs)
 
         mask = kwargs.get('mask', None)
         if mask is not None:
@@ -160,12 +160,12 @@ class Connection(AbstractConnection):
         a_post = self.a_pre @ self.w + self.b
         return a_post.view(*self.target.shape)
 
-    def update(self, dt, **kwargs) -> None:
+    def update(self, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
         """
-        super().update(dt=dt, **kwargs)
+        super().update(**kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -251,12 +251,12 @@ class Conv2dConnection(AbstractConnection):
         """
         return F.conv2d(s.float(), self.w, self.b, stride=self.stride, padding=self.padding, dilation=self.dilation)
 
-    def update(self, dt, **kwargs) -> None:
+    def update(self, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
         """
-        super().update(dt=dt, **kwargs)
+        super().update(**kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -389,7 +389,7 @@ class LocallyConnectedConnection(AbstractConnection):
             a_post = self.a_pre @ self.w.view(self.source.n, self.target.n) + self.b
             return a_post.view(*self.target.shape)
 
-    def update(self, dt, **kwargs) -> None:
+    def update(self, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
@@ -397,7 +397,7 @@ class LocallyConnectedConnection(AbstractConnection):
         if kwargs['mask'] is None:
             kwargs['mask'] = self.mask
 
-        super().update(dt=dt, **kwargs)
+        super().update(**kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -467,12 +467,12 @@ class MeanFieldConnection(AbstractConnection):
         # Compute multiplication of mean-field pre-activation by connection weights.
         return self.a_pre * self.w
 
-    def update(self, dt, **kwargs) -> None:
+    def update(self, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
         """
-        super().update(dt=dt, **kwargs)
+        super().update(**kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -543,9 +543,7 @@ class SparseConnection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Spikes multiplied by synapse weights.
         """
-        s = s.float().view(-1, 1)
-        a = self.w.t().mm(s)
-        return a.view(*self.target.shape)
+        return torch.mm(self.w, s.unsqueeze(-1).float()).squeeze(-1)
 
     def update(self, **kwargs) -> None:
         # language=rst

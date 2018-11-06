@@ -80,7 +80,7 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Runs a single simulation step.
@@ -89,10 +89,10 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         :param dt: Simulation time step.
         """
         # Integrate input voltages.
-        self.v += (self.refrac_count == 0).float() * inpts
+        self.v += (self.refrac_count == 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
+        self.refrac_count[self.refrac_count != 0] -= self.dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
@@ -101,7 +101,7 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v[self.s] = self.v[self.s] - self.thresh
 
-        super().step(inpts, dt)
+        super().forward(x)
 
     def reset_(self) -> None:
         # language=rst
