@@ -231,7 +231,6 @@ class Network:
         """
         # Parse keyword arguments.
         clamps = kwargs.get('clamp', {})
-        reward = kwargs.get('reward', None)
         masks = kwargs.get('masks', {})
 
         # Effective number of timesteps
