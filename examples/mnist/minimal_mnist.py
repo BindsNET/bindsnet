@@ -9,14 +9,14 @@ network = DiehlAndCook2015(n_inpt=784, n_neurons=400, exc=22.5,
                            inh=17.5, dt=1.0, norm=78.4)
 
 # Specify dataset wrapper environment.
-environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST'),
-                                 train=True, download=True, intensity=0.25)
+environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST', download=True),
+                                 train=True, intensity=0.25)
 
 # Build pipeline from components.
 pipeline = Pipeline(network=network, environment=environment,
                     encoding=poisson, time=350, plot_interval=1)
 
 # Train the network.
-for i in range(60000):    
+for i in range(60000):
     pipeline.step()
     network.reset_()

@@ -2,6 +2,7 @@ import time
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+import pdb
 
 from typing import Callable, Optional
 
@@ -27,7 +28,7 @@ class Pipeline:
     """
 
     def __init__(self, network: Network, environment: Environment, encoding: Callable = bernoulli,
-                 action_function: Optional[Callable] = None, obs_function: Optional[Callable] = None,
+                 action_function: Optional[Callable] = None, enable_history: Optional[bool] = False,
                  **kwargs):
         # language=rst
         """
@@ -37,6 +38,7 @@ class Pipeline:
         :param environment: Arbitrary environment.
         :param encoding: Function to encode observations into spike trains.
         :param action_function: Function to convert network outputs into environment inputs.
+        :param enable_history: Enable history functionality.
 
         Keyword arguments:
 
@@ -54,7 +56,7 @@ class Pipeline:
         self.env = environment
         self.encoding = encoding
         self.action_function = action_function
-        self.obs_function = obs_function
+        self.enable_history = enable_history
 
         self.episode = 0
         self.iteration = 0
@@ -159,13 +161,11 @@ class Pipeline:
 
         # Run a step of the environment.
         self.obs, self.reward, self.done, info = self.env.step(a)
+        print('Mean obs : {}'.format(self.obs.mean()))
         self.accumulated_reward += self.reward
-        # Postprocess observation.
-        if self.obs_function is not None:
-            self.obs = self.obs_function(obs)
 
         # Store frame of history and encode the inputs.
-        if len(self.history) > 0:
+        if self.enable_history and len(self.history) > 0:
             self.update_history()
             self.update_index()
 

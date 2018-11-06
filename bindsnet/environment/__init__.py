@@ -1,6 +1,7 @@
 import gym
 import torch
 import numpy as np
+import pdb
 
 from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
@@ -175,6 +176,130 @@ class DatasetEnvironment(Environment):
             return self.obs.view(-1, 40)
 
 
+class MNISTEnvironment(DatasetEnvironment):
+    """
+    Environment for reward-based MNIST classification.
+    """
+
+    def __init__(self, duration_mean: float = 100.0, duration_uc: float = 10.0,
+            delay_mean: float = 100.0, delay_uc: float = 10.0):
+        """
+        Initializes the environment with hyperparameters.
+
+        :param duration_mean: Mean of the duration of each sample.
+        :param duration_uc: Uncertainty of the duration. Uniform distribution is
+            used.
+        :param delay_mean: Mean of the delay of the reward.
+        :param duration_uc: Uncertainty of the delay of the reward. Uniform
+            distribution is used.
+        """
+        self.duration_mean = duration_mean
+        self.duration_uc = duration_uc
+        self.delay_mean = delay_mean
+        self.delay_uc = delay_uc
+
+        # Each step should run a single timestep in order to achieve online
+        # interaction between the agent and the environment. This could be get
+        # better by exploiting the timing structure.
+        # TODO Increase simulation running timestep by exploiting the duration/
+        # delay timing structure. Only if it improves the performance
+        # significantly.
+        self.time = 1
+
+        self.dataset = MNIST(path='../../data/MNIST')
+        self.obs = None
+
+        self.data, self.labels = self.dataset.get_train()
+        self.label_loader = iter(self.labels)
+        self.env = iter(self.data)
+
+        self.delayed_reward_queue = torch.zeros(self.delay_mean+self.delay_uc)
+        self.current_time_step = 0
+
+    def reward_function(self, action: torch.Tensor = None,
+                        label: torch.Tensor = None) -> torch.Tensor:
+        pass
+
+    def step(self, a: torch.Tensor = None) -> Tuple[torch.Tensor, int, bool, Dict[str, int]]:
+        # language=rst
+        """
+        Take action of the network(agent) and provide observation and delayed reward.
+
+        :param a: There is no interaction of the network the dataset.
+        :return: Observation, reward (fixed to 0), done (fixed to False), and information dictionary.
+        """
+        try:
+            # Attempt to fetch the next observation.
+            self.obs = next(self.env)
+        except StopIteration:
+            # If out of samples, reload data and label generators.
+            self.env = iter(self.data)
+            self.label_loader = iter(self.labels)
+            self.obs = next(self.env)
+
+        # Preprocess observation.
+        self.preprocess()
+
+        # Calculate reward of the current timestep.
+        label = next(self.label_loader)
+        self.reward = self.reward_fuction(action, label)
+
+        # Info dictionary contains label of MNIST digit.
+        info = {'label' : label}
+
+        return self.obs, self.reward, False, info
+
+    def reset(self) -> None:
+        # language=rst
+        """
+        Dummy function for OpenAI Gym environment's ``reset()`` function.
+        """
+        # Reload data and label generators.
+        self.env = iter(self.data)
+        self.label_loader = iter(self.labels)
+
+        # Reset delayed_reward_queue and current timestep.
+        self.delayed_reward_queue = [0] * (self.delay_mean + self.delay_uc)
+        self.current_time_step = 0
+
+    def render(self) -> None:
+        # language=rst
+        """
+        Dummy function for OpenAI Gym environment's ``render()`` function.
+        """
+        pass
+
+    def close(self) -> None:
+        # language=rst
+        """
+        Dummy function for OpenAI Gym environment's ``close()`` function.
+        """
+        pass
+
+    def preprocess(self) -> None:
+        # language=rst
+        """
+        Preprocessing step for a state specific to dataset objects.
+        """
+        self.obs = self.obs.view(-1)
+        self.obs *= self.intensity
+
+    def reshape(self) -> torch.Tensor:
+        # language=rst
+        """
+        Get reshaped observation for plotting purposes.
+
+        :return: Reshaped observation to plot in ``plt.imshow()`` call.
+        """
+        if type(self.dataset) == MNIST:
+            return self.obs.view(28, 28)
+        elif type(self.dataset) in [CIFAR10, CIFAR100]:
+            temp = self.obs.view(32, 32, 3).cpu().numpy() / self.intensity
+            return temp / temp.max()
+        elif type(self.dataset) in SpokenMNIST:
+            return self.obs.view(-1, 40)
+
+
 class GymEnvironment(Environment):
     # language=rst
     """
@@ -214,8 +339,8 @@ class GymEnvironment(Environment):
         """
         # Call gym's environment step function.
         self.obs, self.reward, self.done, info = self.env.step(a)
+        print(self.obs)
         self.preprocess()
-
         # Return converted observations and other information.
         return self.obs, self.reward, self.done, info
 
@@ -250,12 +375,12 @@ class GymEnvironment(Environment):
         # language=rst
         X_RANGE = 2.4
         X_DOT_RANGE = 2 * X_RANGE
-        THETA_RANGE = 0.21
-        THETA_DOT_RANGE = 2 * THETA_RANGE
+        THETA_RANGE = 0.25
+        THETA_DOT_RANGE = 15 * THETA_RANGE
         X_LEVEL = 5
         X_DOT_LEVEL = 5
         THETA_LEVEL = 5
-        THETA_DOT_LEVEL = 5
+        THETA_DOT_LEVEL = 10
         N_FEATURE = X_LEVEL * X_DOT_LEVEL * THETA_LEVEL * THETA_DOT_LEVEL
         X_SIG = X_RANGE * 2 / X_LEVEL
         X_DOT_SIG = X_DOT_RANGE * 2 / X_DOT_LEVEL

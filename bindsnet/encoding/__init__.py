@@ -1,8 +1,44 @@
+import pdb
 import torch
 import numpy as np
-
+import math
 from typing import Optional, Union, Iterable, Iterator
 
+
+def timing(datum: torch.Tensor, time: int = None, max_delay: int = 10,
+           threshold: float = 0.3, max_prob:float = None) -> torch.Tensor:
+    # language=rst
+    """
+    Generates timing based single-spike encoding. Spike occurs earlier if the
+    intensity of the input feature is higher. Features whose value is lower than
+    threshold is remain silent.
+
+    :param dataum: Tensor of shape ``[n_1, ..., n_k]``.
+    :param time: Length of the input and output.
+    :param max_delay: Latest possible spike timing.
+    :param threshold: If the intensity of the input is less than threshold, then
+        there is no spike.
+    :param max_prob: Dummy variable. Just for matching with the caller.
+    :return: Tensor of shape ``[time, n_1, ..., n_k]``.
+    """
+
+    assert 0 <= threshold <= 1, 'Threshold should be beteween zero and one'
+
+    datum = np.copy(datum)
+    shape = datum.shape
+    size = datum.size
+    datum.reshape(-1)
+    s = np.zeros([time, size])
+
+    datum /= datum.max()
+    datum = 1 - datum
+
+    for i in range(size):
+        if datum[i] < 1 - threshold:
+            timing = int(max_delay*datum[i]/(1-threshold))
+            s[timing,i] = 1
+
+    return torch.Tensor(s).byte()
 
 def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torch.Tensor:
     # language=rst

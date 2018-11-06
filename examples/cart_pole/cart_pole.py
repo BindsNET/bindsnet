@@ -17,7 +17,8 @@ from bindsnet.pipeline.action import select_multinomial
 network = Network(dt=1.0)
 
 # Layers of neurons.
-inpt = Input(n=625, shape=[625], traces=True)
+# TODO : Check why input neurons fire only at the first time.
+inpt = Input(n=1250, shape=[1250], traces=True)
 middle = LIFNodes(n=225, traces=True, thresh=1.0, rest=0.0, reset=0.0, refrac=0,
                   decay=0.05)
 out = LIFNodes(n=60, refrac=0, traces=True, thresh=1.0, rest=0.0, reset=0.0)
@@ -56,7 +57,6 @@ while True:
     n_step += 1
     print('{}th episode\'s {}th step'.format(n_episode,n_step))
     if pipeline.done:
-        print("DONE!!!!!!!!!!!!!!!!")
         n_episode += 1
         n_step = 0
         pipeline.reset_()
