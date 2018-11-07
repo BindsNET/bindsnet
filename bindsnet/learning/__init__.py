@@ -91,7 +91,7 @@ class NoOp(LearningRule):
 class PostPre(LearningRule):
     # language=rst
     """
-    Simple STDP rule involving both pre- and post-synaptic spiking activity. The pre-synpatic update is negative, while
+    Simple STDP rule involving both pre- and post-synaptic spiking activity. The pre-synaptic update is negative, while
     the post-synpatic update is positive.
     """
 
