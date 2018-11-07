@@ -1,3 +1,4 @@
+import torch
 from torch import Tensor
 from numpy.random import choice
 from bindsnet.datasets import CIFAR10
@@ -27,7 +28,7 @@ for i in range(60000):
     clamp = torch.zeros(pipeline.time, network.n_neurons, dtype=torch.uint8)
     clamp[:, c] = 1
     clamp_v = torch.zeros(pipeline.time, network.n_neurons, dtype=torch.float)
-    clamp_v[:,c] =  network.layers['Ae'].thresh + network.layers['Ae'].theta[c] + 10
+    clamp_v[:,c] = network.layers['Ae'].thresh + network.layers['Ae'].theta[c] + 10
 
     # Run a step of the pipeline with clamped neuron.
     pipeline.step(clamp={'Ae':clamp},clamp_v={'Ae':clamp_v})
