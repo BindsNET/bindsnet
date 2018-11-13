@@ -280,6 +280,83 @@ class Conv2dConnection(AbstractConnection):
         super().reset_()
 
 
+class MaxPool2dConnection(AbstractConnection):
+    # language=rst
+    """
+    Specifies max-pooling synapses between one or two populations of neurons by keeping online estimates of maximally
+    firing neurons.
+    """
+
+    def __init__(self, source: Nodes, target: Nodes, kernel_size: Union[int, Tuple[int, int]],
+                 stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
+                 dilation: Union[int, Tuple[int, int]] = 1, nu: Optional[Union[float, Tuple[float, float]]] = None,
+                 weight_decay: float = 0.0, **kwargs) -> None:
+        # language=rst
+        """
+        Instantiates a ``MaxPool2dConnection`` object.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param kernel_size: Horizontal and vertical size of convolutional kernels.
+        :param stride: Horizontal and vertical stride for convolution.
+        :param padding: Horizontal and vertical padding for convolution.
+        :param dilation: Horizontal and vertical dilation for convolution.
+
+        Keyword arguments:
+
+        :param decay: Decay rate of online estimates of average firing activity.
+        """
+        super().__init__(source, target, nu, weight_decay, **kwargs)
+
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
+
+        self.firing_rates = torch.ones(source.shape)
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Compute max-pool pre-activations given spikes using online firing rate estimates.
+
+        :param s: Incoming spikes.
+        :return: Spikes multiplied by synapse weights.
+        """
+        self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
+
+        _, indices = F.max_pool2d(
+            self.firing_rates, kernel_size=self.kernel_size, stride=self.stride,
+            padding=self.padding, dilation=self.dilation, return_indices=True
+        )
+
+        return s.take(indices).float()
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Compute connection's update rule.
+        """
+        super().update(**kwargs)
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        No weights -> no normalization.
+        """
+        pass
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Contains resetting logic for the connection.
+        """
+        super().reset_()
+
+        self.firing_rates = torch.zeros(self.source.shape)
+
+
 class LocallyConnectedConnection(AbstractConnection):
     # language=rst
     """
