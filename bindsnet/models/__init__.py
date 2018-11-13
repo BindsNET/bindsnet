@@ -242,7 +242,7 @@ class LocallyConnectedNetwork(Network):
     def __init__(self, n_inpt: int, input_shape: List[int], kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int, inh: float = 25.0, dt: float = 1.0,
                  nu_pre: float = 1e-4, nu_post: float = 1e-2, theta_plus: float = 0.05, theta_decay: float = 1e-7,
-                 wmin: float = 0.0, wmax: float = 1.0, norm: float = 0.2, real=False) -> None:
+                 wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2, real=False) -> None:
         # language=rst
         """
         Constructor for class ``LocallyConnectedNetwork``. Uses ``DiehlAndCookNodes`` to avoid multiple spikes per
