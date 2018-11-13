@@ -1,3 +1,4 @@
+import pdb
 import torch
 import warnings
 import numpy as np
@@ -133,7 +134,6 @@ class Connection(AbstractConnection):
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
         self.w = kwargs.get('w', None)
-
         if self.w is None:
             if self.wmin == -np.inf or self.wmax == np.inf:
                 self.w = torch.rand(*source.shape, *target.shape)

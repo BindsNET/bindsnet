@@ -1,6 +1,7 @@
 import bindsnet
 
 import pdb
+import math
 
 from bindsnet.datasets import MNIST
 from bindsnet.network import Network
@@ -12,16 +13,23 @@ from bindsnet.environment import DatasetEnvironment
 from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.pipeline.action import select_multinomial
 
+N_INPUT = 784
+N_HIDDEN = 1000
+N_OUT = 50
+ALPHA = 1.5
+
+W_COEFF = 500
+
 # Build network.
 network = Network(dt=1.0)
 
 # Layers of neurons.
-input = Input(n=784, shape=[784], traces=True)
-hidden = LIFNodes(n=1000, traces=True, thresh=1.0)
-output = LIFNodes(n=50, refrac=0, traces=True, thresh=1.0)
+input = Input(n=N_INPUT, shape=[N_INPUT], traces=True)
+hidden = LIFNodes(n=N_HIDDEN, traces=True, thresh=1.0, decay=0.1)
+output = LIFNodes(n=N_OUT, refrac=0, traces=True, thresh=1.0, decay=0.1)
 
-in_hidden = Connection(source=input, target=hidden, wmax=0.5)
-hidden_out = Connection(source=hidden, target=output, wmax=1.0)
+in_hidden = Connection(source=input, target=hidden, wmin=0.3, wmax=0.5)
+hidden_out = Connection(source=hidden, target=output, wmin=0.3, wmax=0.5)
 
 # Add all layers and connections to the network.
 network.add_layer(input, name='IN')
