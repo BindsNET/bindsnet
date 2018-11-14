@@ -176,6 +176,99 @@ class PostPre(LearningRule):
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
 
+class WeightDependentPostPre(LearningRule):
+    # language=rst
+    """
+    STDP rule involving both pre- and post-synaptic spiking activity. The post-synaptic update is positive and the pre-
+    synaptic update is negative, and both are dependent on the magnitude of the synaptic weights.
+    """
+
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
+                 weight_decay: float = 0.0) -> None:
+        # language=rst
+        """
+        Constructor for ``WeightDependentPostPre`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the ``WeightDependentPostPre`` learning rule will
+                           modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+        """
+        super().__init__(
+            connection=connection, nu=nu, weight_decay=weight_decay
+        )
+
+        assert self.source.traces, 'Pre-synaptic nodes must record spike traces.'
+        assert connection.wmin is not None and connection.wmax is not None, 'Connection must define wmin and wmax.'
+
+        self.wmin = connection.wmin
+        self.wmax = connection.wmax
+
+        if isinstance(connection, (Connection, LocallyConnectedConnection)):
+            self.update = self._connection_update
+        elif isinstance(connection, Conv2dConnection):
+            self.update = self._conv2d_connection_update
+        else:
+            raise NotImplementedError(
+                'This learning rule is not supported for this Connection type.'
+            )
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+        """
+        super().update()
+
+        source_s = self.source.s.view(-1).float()
+        source_x = self.source.x.view(-1)
+        target_s = self.target.s.view(-1).float()
+        target_x = self.target.x.view(-1)
+
+        shape = self.connection.w.shape
+        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
+
+        # Pre-synaptic update.
+        update = -self.nu[0] * torch.ger(source_s, target_x) * (self.connection.w - self.wmin)
+
+        # Post-synaptic update.
+        update += self.nu[1] * torch.ger(source_x, target_s) * (self.wmax - self.connection.w)
+
+        self.connection.w += update
+        self.connection.w = self.connection.w.view(*shape)
+
+    def _conv2d_connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Post-pre learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+        """
+        super().update()
+
+        # Get convolutional layer parameters.
+        out_channels, in_channels, kernel_height, kernel_width = self.connection.w.size()
+        padding, stride = self.connection.padding, self.connection.stride
+
+        # Reshaping spike traces and spike occurrences.
+        x_source = im2col_indices(
+            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
+        )
+        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        s_source = im2col_indices(
+            self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
+        )
+        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+
+        # Pre-synaptic update.
+        pre = x_target @ s_source.t()
+        self.connection.w -= self.nu[0] * pre.view(self.connection.w.size()) \
+                             * (self.connection.w - self.wmin)
+
+        # Post-synaptic update.
+        post = s_target @ x_source.t()
+        self.connection.w += self.nu[1] * post.view(self.connection.w.size()) \
+                             * (self.wmax - self.connection.wmin)
+
+
 class Hebbian(LearningRule):
     # language=rst
     """
