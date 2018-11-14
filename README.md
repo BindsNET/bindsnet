@@ -6,18 +6,15 @@ BindsNET is a spiking neural network simulation library geared towards the devel
 
 This package is used as part of ongoing research on applying SNNs to machine learning (ML) and reinforcement learning (RL) problems in the [Biologically Inspired Neural & Dynamical Systems (BINDS) lab](http://binds.cs.umass.edu/).
 
+Check out the [BindsNET experiments repository](https://github.com/djsaunde/bindsnet_experiments) for a collection of experiments, accompanying bash scripts for dispatching on [CICS](https://www.cics.umass.edu/) clusters, functions for the analysis of results, plots of experiment outcomes, and more.
+
 [![Build Status](https://travis-ci.com/Hananel-Hazan/bindsnet.svg?token=trym5Uzx1rs9Ez2yENEF&branch=master)](https://travis-ci.com/Hananel-Hazan/bindsnet)
 [![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
 
 ## Requirements
 
 - Python 3.6
-- `torch`
-- `numpy`
-- `matplotlib`
-- `scikit_image`
-- `opencv-python`
-- `gym` (optional)
+- `requirements.txt`
 
 ## Setting things up
 
@@ -123,12 +120,10 @@ archivePrefix = "arXiv",
 ## Contributors
 
 - Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu))
-
 - Hananel Hazan ([email](mailto:hananel@hazan.org.il))
-
 - Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu))
-
 - Hassaan Khan ([email](mailto:hqkhan@umass.edu))
+- Devdhar Patel ([email](mailto:devdharpatel@cs.umass.edu))
 
 ## License
 GNU Affero General Public License v3.0

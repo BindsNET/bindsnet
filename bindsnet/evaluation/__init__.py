@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 from itertools import product
 from typing import Optional, Tuple, Dict

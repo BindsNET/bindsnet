@@ -7,7 +7,7 @@ from bindsnet.preprocessing import NumentaPreprocessor
 class TestPreprocessing:
     def test_numenta_preprocessor(self):
         csvfile = './test/preprocessing/test.csv'
-        processedfile = './test/preprocessing/data.p'
+        processedfile = './test/preprocessing/data.pt'
 
         def test1():
             enc = NumentaPreprocessor()

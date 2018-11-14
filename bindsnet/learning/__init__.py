@@ -1,7 +1,8 @@
 import torch
+import numpy as np
 
 from abc import ABC
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple, Optional, Sequence
 
 from ..utils import im2col_indices
 from ..network.topology import AbstractConnection, Connection, Conv2dConnection, LocallyConnectedConnection
@@ -13,7 +14,7 @@ class LearningRule(ABC):
     Abstract base class for learning rules.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -36,7 +37,7 @@ class LearningRule(ABC):
             nu = 0.0
 
         if isinstance(nu, float):
-            nu = (nu, nu)
+            nu = [nu, nu]
 
         self.nu = nu
 
@@ -49,12 +50,14 @@ class LearningRule(ABC):
         Abstract method for a learning rule update.
         """
         # Implement weight decay.
-        self.connection.w -= self.weight_decay * self.connection.w
+        if self.weight_decay:
+            self.connection.w -= self.weight_decay * self.connection.w
 
         # Bound weights.
-        self.connection.w = torch.clamp(
-            self.connection.w, self.connection.wmin, self.connection.wmax
-        )
+        if None not in [self.connection.wmin, self.connection.wmax] and not isinstance(self, NoOp):
+            self.connection.w = torch.clamp(
+                self.connection.w, self.connection.wmin, self.connection.wmax
+            )
 
 
 class NoOp(LearningRule):
@@ -63,7 +66,7 @@ class NoOp(LearningRule):
     Learning rule with no effect.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -88,11 +91,11 @@ class NoOp(LearningRule):
 class PostPre(LearningRule):
     # language=rst
     """
-    Simple STDP rule involving both pre- and post-synaptic spiking activity. The pre-synpatic update is negative, while
+    Simple STDP rule involving both pre- and post-synaptic spiking activity. The pre-synaptic update is negative, while
     the post-synpatic update is positive.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -179,7 +182,7 @@ class Hebbian(LearningRule):
     Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -265,7 +268,7 @@ class MSTDP(LearningRule):
     Reward-modulated STDP. Adapted from `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -313,7 +316,7 @@ class MSTDP(LearningRule):
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
-        a_minus = kwargs.get('a_plus', -1)
+        a_minus = kwargs.get('a_minus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
         p_plus = a_plus * source_x
@@ -342,30 +345,28 @@ class MSTDP(LearningRule):
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
-        a_minus = kwargs.get('a_plus', -1)
+        a_minus = kwargs.get('a_minus', -1)
 
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
 
-        # Get P^+ and P^- values (function of firing traces), and reshape source and target spikes.
-        p_plus = a_plus * im2col_indices(
+        # Reshaping spike traces and spike occurrences.
+        x_source = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        p_minus = a_minus * self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
-        pre_fire = im2col_indices(
+        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        s_source = im2col_indices(
             self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
         )
-        post_fire = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
 
-        # Post-synaptic.
-        post = (p_plus @ post_fire.t()).view(self.connection.w.size())
-        if post.max() > 0:
-            post = post / post.max()
+        # Get P^+ and P^- values (function of firing traces), and reshape source and target spikes.
+        p_plus = a_plus * x_source
+        p_minus = a_minus * x_target
 
-        # Pre-synaptic.
-        pre = (pre_fire @ p_minus.t()).view(self.connection.w.size())
-        if pre.max() > 0:
-            pre = pre / pre.max()
+        # Pre- and post-synaptic updates.
+        pre = (s_source @ p_minus.t()).view(self.connection.w.size())
+        post = (p_plus @ s_target.t()).view(self.connection.w.size())
 
         # Calculate point eligibility value.
         eligibility = post + pre
@@ -381,7 +382,7 @@ class MSTDPET(LearningRule):
     `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
 
-    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Tuple[float, float]]] = None,
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
                  weight_decay: float = 0.0) -> None:
         # language=rst
         """
@@ -406,11 +407,11 @@ class MSTDPET(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-        self.e_trace = 0
+        self.e_trace = torch.zeros(self.source.n, self.target.n)
         self.tc_e_trace = 0.04
-        self.p_plus = 0
+        self.p_plus = torch.zeros(self.source.n)
         self.tc_plus = 0.05
-        self.p_minus = 0
+        self.p_minus = torch.zeros(self.target.n)
         self.tc_minus = 0.05
 
     def _connection_update(self, **kwargs) -> None:
@@ -431,25 +432,20 @@ class MSTDPET(LearningRule):
         target_s = self.target.s.view(-1).float()
         target_x = self.target.x.view(-1)
 
-        shape = self.connection.w.shape
-        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
-
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
-        a_minus = kwargs.get('a_plus', -1)
+        a_minus = kwargs.get('a_minus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = (1 - self.tc_plus) * self.p_plus + a_plus * source_s
-        self.p_minus = (1 - self.tc_minus) * self.p_minus + a_minus * target_s
+        self.p_plus = self.p_plus * np.exp(-self.connection.dt * self.tc_plus) + a_plus * source_x
+        self.p_minus = self.p_minus * np.exp(-self.connection.dt * self.tc_minus) + a_minus * target_x
 
         # Calculate value of eligibility trace.
-        self.e_trace = (1 - self.tc_e_trace) * self.e_trace +   \
-            torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
+        self.e_trace += torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
-        self.connection.w = self.connection.w.view(*shape)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -467,36 +463,31 @@ class MSTDPET(LearningRule):
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
-        a_minus = kwargs.get('a_plus', -1)
+        a_minus = kwargs.get('a_minus', -1)
 
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
 
-        # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = -(self.tc_plus * self.p_plus) + a_plus * im2col_indices(
+        # Reshaping spike traces and spike occurrences.
+        x_source = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        self.p_minus = -(self.tc_minus * self.p_minus) + a_minus * \
-                       self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
-
-        # Get pre- and post-synaptic spiking neurons.
-        pre_fire = im2col_indices(
+        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        s_source = im2col_indices(
             self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
         )
-        post_fire = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
 
-        # Post-synaptic.
-        post = (self.p_plus @ post_fire.t()).view(self.connection.w.size())
-        if post.max() > 0:
-            post = post / post.max()
+        # Get P^+ and P^- values (function of firing traces).
+        self.p_plus = self.p_plus * np.exp(-self.network.dt / self.tc_plus) + a_plus * x_source
+        self.p_minus = self.p_minus * np.exp(-self.network.dt / self.tc_minus) + a_minus * x_target
 
-        # Pre-synaptic.
-        pre = (pre_fire @ self.p_minus.t()).view(self.connection.w.size())
-        if pre.max() > 0:
-            pre = pre / pre.max()
+        # Post-synaptic and pre-synaptic updates.
+        post = (self.p_plus @ s_target.t()).view(self.connection.w.size())
+        pre = (s_source @ self.p_minus.t()).view(self.connection.w.size())
 
-        # Calculate point eligibility value.
-        self.e_trace += -(self.tc_e_trace * self.e_trace) + (post + pre)
+        # Calculate value of eligibility trace.
+        self.e_trace = post + pre
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace

@@ -72,7 +72,7 @@ class Pipeline:
         self.time = kwargs.get('time', 1)
         self.delta = kwargs.get('delta', 1)
         self.output = kwargs.get('output', None)
-        self.save_dir = kwargs.get('save_dir', 'network.p')
+        self.save_dir = kwargs.get('save_dir', 'network.pt')
         self.plot_interval = kwargs.get('plot_interval', None)
         self.save_interval = kwargs.get('save_interval', None)
         self.print_interval = kwargs.get('print_interval', None)
@@ -88,7 +88,6 @@ class Pipeline:
             for l in self.network.layers:
                 self.network.add_monitor(Monitor(self.network.layers[l], 's', self.plot_interval * self.time),
                                          name=f'{l}_spikes')
-
                 if 'v' in self.network.layers[l].__dict__:
                     self.network.add_monitor(Monitor(self.network.layers[l], 'v', self.plot_interval * self.time),
                                              name=f'{l}_voltages')
@@ -161,8 +160,11 @@ class Pipeline:
 
         # Run a step of the environment.
         self.obs, self.reward, self.done, info = self.env.step(a)
+<<<<<<< HEAD
         print('Mean obs : {}'.format(self.obs.mean()))
         self.accumulated_reward += self.reward
+=======
+>>>>>>> upstream/master
 
         # Store frame of history and encode the inputs.
         if self.enable_history and len(self.history) > 0:
@@ -202,9 +204,9 @@ class Pipeline:
             self.obs_ax.set_title('Observation')
             self.obs_ax.set_xticks(())
             self.obs_ax.set_yticks(())
-            self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap='gray')
+            self.obs_im = self.obs_ax.imshow(self.obs, cmap='gray')
         else:
-            self.obs_im.set_data(self.env.reshape())
+            self.obs_im.set_data(self.obs)
 
     def plot_reward(self) -> None:
         """

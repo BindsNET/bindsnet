@@ -19,8 +19,7 @@ def load_network(file_name: str) -> 'Network':
     :param file_name: Path to serialized network object on disk.
     """
     try:
-        with open(file_name, 'rb') as f:
-            return torch.load(open(file_name, 'rb'))
+        return torch.load(open(file_name, 'rb'))
     except FileNotFoundError:
         print('Network not found on disk.')
 
@@ -103,6 +102,8 @@ class Network:
         :param name: Logical name of layer.
         """
         self.layers[name] = layer
+        layer.network = self
+        layer.dt = self.dt
 
     def add_connection(self, connection: AbstractConnection, source: str, target: str) -> None:
         # language=rst
@@ -114,6 +115,8 @@ class Network:
         :param target: Logical name of the connection's target layer.
         """
         self.connections[(source, target)] = connection
+        connection.network = self
+        connection.dt = self.dt
 
     def add_monitor(self, monitor: AbstractMonitor, name: str) -> None:
         # language=rst
@@ -124,13 +127,15 @@ class Network:
         :param name: Logical name of monitor object.
         """
         self.monitors[name] = monitor
+        monitor.network = self
+        monitor.dt = self.dt
 
-    def save(self, fname: str) -> None:
+    def save(self, file_name: str) -> None:
         # language=rst
         """
         Serializes the network object to disk.
 
-        :param fname: Path to store serialized network object on disk.
+        :param file_name: Path to store serialized network object on disk.
 
         **Example:**
 
@@ -156,9 +161,9 @@ class Network:
             network.add_connection(connection=C, source='X', target='Y')
 
             # Save the network to disk.
-            network.save(str(Path.home()) + '/network.p')
+            network.save(str(Path.home()) + '/network.pt')
         """
-        torch.save(self, open(fname, 'wb'))
+        torch.save(self, open(file_name, 'wb'))
 
     def get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
@@ -180,7 +185,7 @@ class Network:
 
             # Add to input: source's spikes multiplied by connection weights.
             inpts[c[1]] += self.connections[c].compute(source.s)
-            
+
         return inpts
 
     def run(self, inpts: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
@@ -232,24 +237,22 @@ class Network:
         """
         # Parse keyword arguments.
         clamps = kwargs.get('clamp', {})
-        clamps_v = kwargs.get('clamp_v', {})
-        reward = kwargs.get('reward', None)
         masks = kwargs.get('masks', {})
-        
-        # Effective number of timesteps
+
+        # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
         # Get input to all layers.
         inpts.update(self.get_inputs())
-        
+
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    self.layers[l].step(inpts[l][t], self.dt)
+                    self.layers[l].forward(x=inpts[l][t])
                 else:
-                    self.layers[l].step(inpts[l], self.dt)
+                    self.layers[l].forward(x=inpts[l])
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
@@ -259,7 +262,7 @@ class Network:
             # Run synapse updates.
             for c in self.connections:
                 self.connections[c].update(
-                    reward=reward, mask=masks.get(c, None), learning=self.learning
+                    mask=masks.get(c, None), learning=self.learning, **kwargs
                 )
 
             # Get input to all layers.
@@ -268,7 +271,7 @@ class Network:
             # Record state variables of interest.
             for m in self.monitors:
                 self.monitors[m].record()
-        
+
         # Re-normalize connections.
         for c in self.connections:
             self.connections[c].normalize()
