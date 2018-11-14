@@ -81,7 +81,7 @@ class Pipeline:
         self.print_interval = kwargs.get('print_interval', None)
         self.history_length = kwargs.get('history_length', None)
         self.render_interval = kwargs.get('render_interval', None)
-        self.plot_length = kwargs.get('plot_length',None)
+        self.plot_length = kwargs.get('plot_length', 1.0)
         self.plot_type = kwargs.get('plot_type','color')
         if self.history_length is not None and self.delta is not None:
             self.history = {i: torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
