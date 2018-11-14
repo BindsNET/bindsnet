@@ -14,11 +14,12 @@ from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.pipeline.action import select_multinomial
 
 N_INPUT = 784
-N_HIDDEN = 1000
-N_OUT = 50
+N_HIDDEN = 20
+N_OUT = 20
 ALPHA = 1.5
 
-W_COEFF = 500
+W_MEAN = 0.8
+W_STD = 0.1
 
 # Build network.
 network = Network(dt=1.0)
@@ -28,21 +29,25 @@ input = Input(n=N_INPUT, shape=[N_INPUT], traces=True)
 hidden = LIFNodes(n=N_HIDDEN, traces=True, thresh=1.0, decay=0.1)
 output = LIFNodes(n=N_OUT, refrac=0, traces=True, thresh=1.0, decay=0.1)
 
-in_hidden = Connection(source=input, target=hidden, wmin=0.3, wmax=0.5)
-hidden_out = Connection(source=hidden, target=output, wmin=0.3, wmax=0.5)
+in_hidden = Connection(source=input, target=hidden, wmin=W_MEAN-W_STD, wmax=W_MEAN+W_STD)
+#hidden_lateral = Connection(source=hidden, target=hidden, wmin=W_MEAN-W_STD, wmax=W_MEAN+W_STD)
+hidden_out = Connection(source=hidden, target=output, wmin=W_MEAN-W_STD, wmax=W_MEAN+W_STD)
+out_lateral = Connection(source=output, target=output, wmin=-0.5, wmax=0)
 
 # Add all layers and connections to the network.
 network.add_layer(input, name='IN')
 network.add_layer(hidden, name='HIDDEN')
 network.add_layer(output, name='OUT')
 network.add_connection(in_hidden, source='IN', target='HIDDEN')
+#network.add_connection(hidden_lateral, source='HIDDEN', target='HIDDEN')
 network.add_connection(hidden_out, source='HIDDEN', target='OUT')
+network.add_connection(out_lateral, source='OUT', target='OUT')
 
 environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST',
                                  download=True), train=True)
 
 pipeline = Pipeline(network, environment, encoding=timing,
-                    time=100, plot_interval=1)
+                    time=100, plot_interval=1, plot_length=1, plot_type='line')
 
 # Run environment simulation and network training.
 n_episode = 0

@@ -343,6 +343,8 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
                   axes: Optional[List[Axes]] = None, time: Tuple[int, int] = None,
                   n_neurons: Optional[Dict[str, Tuple[int, int]]] = None,
                   cmap: Optional[str] = 'jet',
+                  plot_type: str = 'color',
+                  threshold: Dict[str,float] = None,
                   figsize: Tuple[float, float] = (8.0, 4.5),) -> Tuple[List[Axes], List[AxesImage]]:
     # language=rst
     """
@@ -354,6 +356,8 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
     :param time: Plot voltages of neurons in given time range. Default is entire simulation time.
     :param n_neurons: Plot voltages of neurons in given range of neurons. Default is all neurons.
     :param figsize: Horizontal, vertical figure size in inches.
+    :param plot_type: The way how to draw graph. 'color' for pcolormesh, 'line' for curved lines.
+    :param threshold: Threshold of each layer.
     :return: ``ims, axes``: Used for re-drawing the plots.
     """
     n_subplots = len(voltages.keys())
@@ -368,14 +372,16 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
     for key, val in voltages.items():
         if key not in n_neurons.keys():
             n_neurons[key] = (0, val.shape[0])
-
     if not ims:
         fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
         ims = []
-
         if n_subplots == 1:  # Plotting only one image
             for v in voltages.items():
-                ims.append(axes.pcolormesh(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
+                if plot_type == 'line':
+                    ims.append(axes.plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].numpy().T))
+                    ims.append(axes.axhline(y=threshold[v[0]], c='r', linestyle='--'))
+                else:
+                    ims.append(axes.pcolormesh(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
 
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 plt.title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
@@ -384,7 +390,11 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
 
         else:  # Plot each layer at a time
             for i, v in enumerate(voltages.items()):
-                ims.append(axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
+                if plot_type == 'line':
+                    ims.append(axes[i].plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].numpy().T))
+                    ims.append(axes[i].axhline(y=threshold[v[0]], c='r', linestyle='--'))
+                else:
+                    ims.append(axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 
@@ -398,7 +408,11 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         if n_subplots == 1:  # Plotting only one image
             for v in voltages.items():
                 axes.clear()
-                axes.matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
+                if plot_type == 'line':
+                    axes.plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].numpy().T)
+                    axes.axhline(y=threshold[v[0]], c='r', linestyle='--')
+                else:
+                    axes.matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
                 axes.set_aspect('auto')
@@ -406,7 +420,11 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         else: # Plot each layer at a time
             for i, v in enumerate(voltages.items()):
                 axes[i].clear()
-                axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
+                if plot_type == 'line':
+                    axes[i].plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].numpy().T)
+                    axes[i].axhline(y=threshold[v[0]], c='r', linestyle='--')
+                else:
+                    axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 

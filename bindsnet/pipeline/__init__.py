@@ -51,6 +51,9 @@ class Pipeline:
         :param bool render_interval: Interval to render the environment.
         :param int save_interval: How often to save the network to disk.
         :param str output: String name of the layer from which to take output from.
+        :param float plot_length: Relative time length of the plotted record data.
+            Relative to parameter time.
+        :param str plot_type: Type of plotting. 'color' or 'line'
         """
         self.network = network
         self.env = environment
@@ -78,7 +81,8 @@ class Pipeline:
         self.print_interval = kwargs.get('print_interval', None)
         self.history_length = kwargs.get('history_length', None)
         self.render_interval = kwargs.get('render_interval', None)
-
+        self.plot_length = kwargs.get('plot_length',None)
+        self.plot_type = kwargs.get('plot_type','color')
         if self.history_length is not None and self.delta is not None:
             self.history = {i: torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
         else:
@@ -86,10 +90,10 @@ class Pipeline:
 
         if self.plot_interval is not None:
             for l in self.network.layers:
-                self.network.add_monitor(Monitor(self.network.layers[l], 's', self.plot_interval * self.time),
+                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length * self.plot_interval * self.time)),
                                          name=f'{l}_spikes')
                 if 'v' in self.network.layers[l].__dict__:
-                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', self.plot_interval * self.time),
+                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length * self.plot_interval * self.time)),
                                              name=f'{l}_voltages')
 
             self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
@@ -118,12 +122,16 @@ class Pipeline:
     def set_voltage_data(self) -> None:
         # language=rst
         """
-        Get the voltage data from all applicable layers in the pipeline's network.
+        Get the voltage data and threshold value from all applicable layers in the pipeline's network.
         """
         self.voltage_record = {}
+        self.threshold_value = {}
         for l in self.network.layers:
             if 'v' in self.network.layers[l].__dict__:
                 self.voltage_record[l] = self.network.monitors[f'{l}_voltages'].get('v')
+            if 'thresh' in self.network.layers[l].__dict__:
+                self.threshold_value[l] = self.network.layers[l].thresh
+
 
     def step(self, **kwargs) -> None:
         # language=rst
@@ -232,11 +240,13 @@ class Pipeline:
         # Initialize plots
         if self.s_ims is None and self.s_axes is None and self.v_ims is None and self.v_axes is None:
             self.s_ims, self.s_axes = plot_spikes(self.spike_record)
-            self.v_ims, self.v_axes = plot_voltages(self.voltage_record)
+            self.v_ims, self.v_axes = plot_voltages(self.voltage_record,
+                    plot_type=self.plot_type, threshold=self.threshold_value)
         else:
             # Update the plots dynamically
             self.s_ims, self.s_axes = plot_spikes(self.spike_record, ims=self.s_ims, axes=self.s_axes)
-            self.v_ims, self.v_axes = plot_voltages(self.voltage_record, ims=self.v_ims, axes=self.v_axes)
+            self.v_ims, self.v_axes = plot_voltages(self.voltage_record, ims=self.v_ims,
+                    axes=self.v_axes, plot_type=self.plot_type, threshold=self.threshold_value)
 
         plt.pause(1e-8)
         plt.show()
