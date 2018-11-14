@@ -7,7 +7,7 @@ from bindsnet.datasets import MNIST
 from bindsnet.network import Network
 from bindsnet.pipeline import Pipeline
 from bindsnet.learning import MSTDPET
-from bindsnet.encoding import timing
+from bindsnet.encoding import timing, single
 from bindsnet.network.topology import Connection
 from bindsnet.environment import DatasetEnvironment
 from bindsnet.network.nodes import Input, LIFNodes
@@ -16,18 +16,17 @@ from bindsnet.pipeline.action import select_multinomial
 N_INPUT = 784
 N_HIDDEN = 20
 N_OUT = 20
-ALPHA = 1.5
 
-W_MEAN = 0.8
-W_STD = 0.1
+W_MEAN = 0.0
+W_STD = 0.5
 
 # Build network.
 network = Network(dt=1.0)
 
 # Layers of neurons.
 input = Input(n=N_INPUT, shape=[N_INPUT], traces=True)
-hidden = LIFNodes(n=N_HIDDEN, traces=True, thresh=1.0, decay=0.1)
-output = LIFNodes(n=N_OUT, refrac=0, traces=True, thresh=1.0, decay=0.1)
+hidden = LIFNodes(n=N_HIDDEN, traces=True, reset=0.0, rest=0.0, thresh=1.0, decay=0.01)
+output = LIFNodes(n=N_OUT, refrac=0, traces=True, reset=0.0, rest=0.0, thresh=1.0, decay=0.01)
 
 in_hidden = Connection(source=input, target=hidden, wmin=W_MEAN-W_STD, wmax=W_MEAN+W_STD)
 #hidden_lateral = Connection(source=hidden, target=hidden, wmin=W_MEAN-W_STD, wmax=W_MEAN+W_STD)
@@ -46,7 +45,7 @@ network.add_connection(out_lateral, source='OUT', target='OUT')
 environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST',
                                  download=True), train=True)
 
-pipeline = Pipeline(network, environment, encoding=timing,
+pipeline = Pipeline(network, environment, encoding=single,
                     time=100, plot_interval=1, plot_length=1, plot_type='line')
 
 # Run environment simulation and network training.

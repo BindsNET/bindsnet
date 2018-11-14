@@ -6,7 +6,7 @@ from typing import Optional, Union, Iterable, Iterator
 
 
 def timing(datum: torch.Tensor, time: int = None, max_delay: int = 10,
-           threshold: float = 0.3, max_prob:float = None) -> torch.Tensor:
+           threshold: float = 0.5, max_prob:float = None) -> torch.Tensor:
     # language=rst
     """
     Generates timing based single-spike encoding. Spike occurs earlier if the
@@ -39,6 +39,34 @@ def timing(datum: torch.Tensor, time: int = None, max_delay: int = 10,
             s[timing,i] = 1
 
     return torch.Tensor(s).byte()
+
+
+def single(datum: torch.Tensor, time: int = None,
+           threshold: float = 0.3, max_prob:float = None) -> torch.Tensor:
+    # language=rst
+    """
+    Generates timing based single-spike encoding. Spike occurs earlier if the
+    intensity of the input feature is higher. Features whose value is lower than
+    threshold is remain silent.
+
+    :param dataum: Tensor of shape ``[n_1, ..., n_k]``.
+    :param time: Length of the input and output.
+    :param quantile: quantile of spiking inputs. between 0 and 1. No spike for 1, all spike for 0.
+    :param max_prob: Dummy variable. Just for matching with the caller.
+    :return: Tensor of shape ``[time, n_1, ..., n_k]``.
+    """
+
+    shape = datum.shape[0]
+    np_datum = datum.numpy()
+    q_threshold = np.quantile(np_datum,threshold)
+    s = np.zeros([time, shape])
+    s[0] = np.where(np_datum > q_threshold, np.ones([shape]), np.zeros([shape]))
+    return torch.Tensor(s).byte()
+
+
+
+
+
 
 def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torch.Tensor:
     # language=rst
