@@ -121,3 +121,6 @@ results/
 
 # macOS
 .DS_Store
+
+# myprogram
+myprogram/

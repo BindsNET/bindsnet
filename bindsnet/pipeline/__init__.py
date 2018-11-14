@@ -160,11 +160,6 @@ class Pipeline:
 
         # Run a step of the environment.
         self.obs, self.reward, self.done, info = self.env.step(a)
-<<<<<<< HEAD
-        print('Mean obs : {}'.format(self.obs.mean()))
-        self.accumulated_reward += self.reward
-=======
->>>>>>> upstream/master
 
         # Store frame of history and encode the inputs.
         if self.enable_history and len(self.history) > 0:
