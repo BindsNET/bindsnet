@@ -199,9 +199,9 @@ class Pipeline:
             self.obs_ax.set_title('Observation')
             self.obs_ax.set_xticks(())
             self.obs_ax.set_yticks(())
-            self.obs_im = self.obs_ax.imshow(self.obs, cmap='gray')
+            self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap='gray')
         else:
-            self.obs_im.set_data(self.obs)
+            self.obs_im.set_data(self.env.reshape())
 
     def plot_reward(self) -> None:
         """
