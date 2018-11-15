@@ -401,7 +401,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
             for ax in axes:
                 ax.set_aspect('auto')
 
-        plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
+        plt.setp(axes, xlabel='Simulation time', ylabel='Neuron index')
         plt.tight_layout()
 
     else:  # Plotting figure given
@@ -431,7 +431,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
             for ax in axes:
                 ax.set_aspect('auto')
 
-        plt.setp(axes, xticks=[], yticks=[], xlabel='Simulation time', ylabel='Neuron index')
+        plt.setp(axes, xlabel='Simulation time', ylabel='Neuron index')
         plt.tight_layout()
 
     return ims, axes
