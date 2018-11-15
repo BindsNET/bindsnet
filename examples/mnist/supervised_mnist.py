@@ -80,7 +80,7 @@ images = images.view(-1, 784)
 images *= intensity
 
 # Lazily encode data as Poisson spike trains.
-data_loader = poisson_loader(data=images, time=time)
+data_loader = poisson_loader(data=images, time=time, dt=dt)
 
 # Record spikes during the simulation.
 spike_record = torch.zeros(update_interval, time, n_neurons)
