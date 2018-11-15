@@ -132,19 +132,13 @@ class PostPre(LearningRule):
         target_s = self.target.s.view(-1).float()
         target_x = self.target.x.view(-1)
 
-        shape = self.connection.w.shape
-        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
-
         # Pre-synaptic update.
-        self.connection.w -= self.nu[0] * torch.ger(
-            source_s, target_x
-        )
-        # Post-synaptic update.
-        self.connection.w += self.nu[1] * torch.ger(
-            source_x, target_s
-        )
+        if self.nu[0]:
+            self.connection.w -= self.nu[0] * torch.ger(source_s, target_x)
 
-        self.connection.w = self.connection.w.view(*shape)
+        # Post-synaptic update.
+        if self.nu[1]:
+            self.connection.w += self.nu[1] * torch.ger(source_x, target_s)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -161,19 +155,21 @@ class PostPre(LearningRule):
         x_source = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        x_target = self.target.x.permute(1, 2, 3, 0).view(out_channels, -1)
         s_source = im2col_indices(
             self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
         )
-        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        s_target = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
 
         # Pre-synaptic update.
-        pre = x_target @ s_source.t()
-        self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
+        if self.nu[0]:
+            pre = x_target @ s_source.t()
+            self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = s_target @ x_source.t()
-        self.connection.w += self.nu[1] * post.view(self.connection.w.size())
+        if self.nu[1]:
+            post = s_target @ x_source.t()
+            self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
 
 class WeightDependentPostPre(LearningRule):
@@ -225,17 +221,17 @@ class WeightDependentPostPre(LearningRule):
         target_s = self.target.s.view(-1).float()
         target_x = self.target.x.view(-1)
 
-        shape = self.connection.w.shape
-        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
+        update = 0
 
         # Pre-synaptic update.
-        update = -self.nu[0] * torch.ger(source_s, target_x) * (self.connection.w - self.wmin)
+        if self.nu[0]:
+            update -= self.nu[0] * torch.ger(source_s, target_x) * (self.connection.w - self.wmin)
 
         # Post-synaptic update.
-        update += self.nu[1] * torch.ger(source_x, target_s) * (self.wmax - self.connection.w)
+        if self.nu[1]:
+            update += self.nu[1] * torch.ger(source_x, target_s) * (self.wmax - self.connection.w)
 
         self.connection.w += update
-        self.connection.w = self.connection.w.view(*shape)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -252,21 +248,25 @@ class WeightDependentPostPre(LearningRule):
         x_source = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        x_target = self.target.x.permute(1, 2, 3, 0).view(out_channels, -1)
         s_source = im2col_indices(
             self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
         )
-        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        s_target = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
+
+        update = 0
 
         # Pre-synaptic update.
-        pre = x_target @ s_source.t()
-        self.connection.w -= self.nu[0] * pre.view(self.connection.w.size()) \
-                             * (self.connection.w - self.wmin)
+        if self.nu[0]:
+            pre = x_target @ s_source.t()
+            update -= self.nu[0] * pre.view(self.connection.w.size()) (self.connection.w - self.wmin)
 
         # Post-synaptic update.
-        post = s_target @ x_source.t()
-        self.connection.w += self.nu[1] * post.view(self.connection.w.size()) \
-                             * (self.wmax - self.connection.wmin)
+        if self.nu[1]:
+            post = s_target @ x_source.t()
+            update += self.nu[1] * post.view(self.connection.w.size()) * (self.wmax - self.connection.wmin)
+
+        self.connection.w += update
 
 
 class Hebbian(LearningRule):
@@ -312,9 +312,6 @@ class Hebbian(LearningRule):
         target_s = self.target.s.view(-1).float()
         target_x = self.target.x.view(-1)
 
-        shape = self.connection.w.shape
-        self.connection.w = self.connection.w.view(self.source.n, self.target.n)
-
         # Pre-synaptic update.
         self.connection.w += self.nu[0] * torch.ger(
             source_s, target_x
@@ -323,8 +320,6 @@ class Hebbian(LearningRule):
         self.connection.w += self.nu[1] * torch.ger(
             source_x, target_s
         )
-
-        self.connection.w = self.connection.w.view(*shape)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -340,11 +335,11 @@ class Hebbian(LearningRule):
         x_source = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        x_target = self.target.x.permute(1, 2, 3, 0).view(out_channels, -1)
         s_source = im2col_indices(
             self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
         )
-        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        s_target = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
 
         # Pre-synaptic update.
         pre = x_target @ s_source.t()
@@ -403,7 +398,6 @@ class MSTDP(LearningRule):
         target_s = self.target.s.view(-1).float()
         target_x = self.target.x.view(-1)
 
-        shape = self.connection.w.shape
         self.connection.w = self.connection.w.view(self.source.n, self.target.n)
 
         # Parse keyword arguments.
@@ -420,7 +414,6 @@ class MSTDP(LearningRule):
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * eligibility
-        self.connection.w = self.connection.w.view(*shape)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -447,11 +440,11 @@ class MSTDP(LearningRule):
         x_source = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        x_target = self.target.x.permute(1, 2, 3, 0).view(out_channels, -1)
         s_source = im2col_indices(
             self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
         )
-        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        s_target = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
 
         # Get P^+ and P^- values (function of firing traces), and reshape source and target spikes.
         p_plus = a_plus * x_source
@@ -507,6 +500,8 @@ class MSTDPET(LearningRule):
         self.p_minus = torch.zeros(self.target.n)
         self.tc_minus = 0.05
 
+        self.dt = self.connection.dt
+
     def _connection_update(self, **kwargs) -> None:
         # language=rst
         """
@@ -531,8 +526,8 @@ class MSTDPET(LearningRule):
         a_minus = kwargs.get('a_minus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = self.p_plus * np.exp(-self.connection.dt * self.tc_plus) + a_plus * source_x
-        self.p_minus = self.p_minus * np.exp(-self.connection.dt * self.tc_minus) + a_minus * target_x
+        self.p_plus = self.p_plus * np.exp(-self.dt * self.tc_plus) + a_plus * source_x
+        self.p_minus = self.p_minus * np.exp(-self.dt * self.tc_minus) + a_minus * target_x
 
         # Calculate value of eligibility trace.
         self.e_trace += torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
@@ -565,15 +560,15 @@ class MSTDPET(LearningRule):
         x_source = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        x_target = self.target.x.permute(1, 2, 3, 0).reshape(out_channels, -1)
+        x_target = self.target.x.permute(1, 2, 3, 0).view(out_channels, -1)
         s_source = im2col_indices(
             self.source.s.float(), kernel_height, kernel_width, padding=padding, stride=stride
         )
-        s_target = self.target.s.permute(1, 2, 3, 0).reshape(out_channels, -1).float()
+        s_target = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = self.p_plus * np.exp(-self.network.dt / self.tc_plus) + a_plus * x_source
-        self.p_minus = self.p_minus * np.exp(-self.network.dt / self.tc_minus) + a_minus * x_target
+        self.p_plus = self.p_plus * np.exp(-self.dt / self.tc_plus) + a_plus * x_source
+        self.p_minus = self.p_minus * np.exp(-self.dt / self.tc_minus) + a_minus * x_target
 
         # Post-synaptic and pre-synaptic updates.
         post = (self.p_plus @ s_target.t()).view(self.connection.w.size())

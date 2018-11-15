@@ -97,10 +97,10 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
 
     # Create tensor of spikes.
     spikes = torch.zeros(time, size).byte()
-    for i in range(time):
-        spikes[times[i], torch.arange(size)] = 1
+    spikes[times, torch.arange(size)] = 1
+    spikes[0] = 0
 
-    return spikes.reshape(time, *shape)
+    return spikes.view(time, *shape)
 
 
 def poisson_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: int, dt: float = 1.0,
