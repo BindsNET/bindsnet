@@ -120,7 +120,7 @@ images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST'), download=
 images *= intensity
 
 # Lazily encode data as Poisson spike trains.
-data_loader = poisson_loader(data=images, time=time)
+data_loader = poisson_loader(data=images, time=time, dt=dt)
 
 spikes = {}
 for layer in set(network.layers):
