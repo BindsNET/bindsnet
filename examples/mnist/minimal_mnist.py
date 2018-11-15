@@ -13,7 +13,7 @@ environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST', download
                                  train=True, intensity=0.25)
 
 # Build pipeline from components.
-pipeline = Pipeline(network=network, environment=environment,
+pipeline = Pipeline(network=network, environment=environment, plot_type='line',
                     encoding=poisson, time=350, plot_interval=1)
 
 # Train the network.

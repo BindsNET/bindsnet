@@ -324,6 +324,7 @@ class LIFNodes(Nodes):
                  trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
+                 lbound: Union[float, torch.Tensor] = float('-inf'),
                  decay: Union[float, torch.Tensor] = 1e-2) -> None:
         # language=rst
         """
@@ -338,6 +339,7 @@ class LIFNodes(Nodes):
         :param rest: Resting membrane voltage.
         :param reset: Post-spike reset voltage.
         :param refrac: Refractory (non-firing) period of the neuron.
+        :param lbound: Lower bound of the membrane potential.
         :param decay: Time constant of neuron voltage decay.
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
@@ -372,6 +374,11 @@ class LIFNodes(Nodes):
         else:
             self.decay = decay
 
+        if isinstance(lbound, float):
+            self.lbound = torch.tensor(lbound)
+        else:
+            self.lbound = lbound
+
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
@@ -397,6 +404,13 @@ class LIFNodes(Nodes):
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
+
+        # Check for lower boundself.
+        lb_check = self.v < self.lbound
+
+        # voltage clipping to lowerbound
+        self.v.masked_fill_(lb_check, self.lbound)
+
 
         super().forward(x)
 
@@ -751,5 +765,3 @@ class IzhikevichNodes(Nodes):
         super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.u = self.b * self.v                     # Neuron recovery.
-
-
