@@ -339,7 +339,7 @@ class LIFNodes(Nodes):
         :param rest: Resting membrane voltage.
         :param reset: Post-spike reset voltage.
         :param refrac: Refractory (non-firing) period of the neuron.
-        :param lbound: Lower bound of the membrane potential.
+        :param lbound: Lower bound of the voltage.
         :param decay: Time constant of neuron voltage decay.
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
@@ -373,7 +373,7 @@ class LIFNodes(Nodes):
             self.decay = torch.tensor(decay)
         else:
             self.decay = decay
-
+        # Lower bound of voltage.
         if isinstance(lbound, float):
             self.lbound = torch.tensor(lbound)
         else:
@@ -405,11 +405,8 @@ class LIFNodes(Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
-        # Check for lower boundself.
-        lb_check = self.v < self.lbound
-
         # voltage clipping to lowerbound
-        self.v.masked_fill_(lb_check, self.lbound)
+        self.v.masked_fill_(self.v < self.lbound, self.lbound)
 
 
         super().forward(x)
@@ -436,6 +433,7 @@ class AdaptiveLIFNodes(Nodes):
                  rest: Union[float, torch.Tensor] = -65.0, reset: Union[float, torch.Tensor] = -65.0,
                  thresh: Union[float, torch.Tensor] = -52.0, refrac: Union[int, torch.Tensor] = 5,
                  decay: Union[float, torch.Tensor] = 1e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
+                 lbound: Union[float, torch.Tensor] = float('-inf'),
                  theta_decay: Union[float, torch.Tensor] = 1e-7) -> None:
         # language=rst
         """
@@ -453,6 +451,7 @@ class AdaptiveLIFNodes(Nodes):
         :param decay: Time constant of neuron voltage decay.
         :param theta_plus: Voltage increase of threshold after spiking.
         :param theta_decay: Time constant of adaptive threshold decay.
+        :param lbound: Lower bound of the voltage.
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
@@ -498,6 +497,12 @@ class AdaptiveLIFNodes(Nodes):
         else:
             self.theta_decay = theta_decay
 
+        # Lower bound of voltage.
+        if isinstance(lbound, float):
+            self.lbound = torch.tensor(lbound)
+        else:
+            self.lbound = lbound
+
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -527,6 +532,9 @@ class AdaptiveLIFNodes(Nodes):
         self.v.masked_fill_(self.s, self.reset)
         self.theta += self.theta_plus * self.s.float()
 
+        # voltage clipping to lowerbound
+        self.v.masked_fill_(self.v < self.lbound, self.lbound)
+
     def reset_(self) -> None:
         # language=rst
         """
@@ -549,6 +557,7 @@ class DiehlAndCookNodes(Nodes):
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
                  decay: Union[float, torch.Tensor] = 1e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
+                 lbound: Union[float, torch.Tensor] = float('-inf'),
                  theta_decay: Union[float, torch.Tensor] = 1e-7) -> None:
         # language=rst
         """
@@ -611,6 +620,13 @@ class DiehlAndCookNodes(Nodes):
         else:
             self.theta_decay = theta_decay
 
+        # Lower bound of voltage.
+        if isinstance(lbound, float):
+            self.lbound = torch.tensor(lbound)
+        else:
+            self.lbound = lbound
+
+
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -646,6 +662,8 @@ class DiehlAndCookNodes(Nodes):
             s[torch.multinomial(self.s.float().view(-1), 1)] = 1
             self.s = s.view(self.shape)
 
+        # voltage clipping to lowerbound
+        self.v.masked_fill_(self.v < self.lbound, self.lbound)
         super().forward(x)
 
     def reset_(self) -> None:
@@ -666,7 +684,8 @@ class IzhikevichNodes(Nodes):
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
                  trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False, excitatory: float = 1,
-                 thresh: Union[float, torch.Tensor] = 45.0, rest: Union[float, torch.Tensor] = -65.0) -> None:
+                 thresh: Union[float, torch.Tensor] = 45.0, rest: Union[float, torch.Tensor] = -65.0,
+                 lbound: Union[float, torch.Tensor] = float('-inf')) -> None:
         # language=rst
         """
         Instantiates a layer of Izhikevich neurons.
@@ -679,6 +698,7 @@ class IzhikevichNodes(Nodes):
         :param excitatory: Percent of excitatory (vs. inhibitory) neurons in the layer; in range ``[0, 1]``.
         :param thresh: Spike threshold voltage.
         :param rest: Resting membrane voltage.
+        :param lbound: Lower bound of the voltage.
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
@@ -754,6 +774,9 @@ class IzhikevichNodes(Nodes):
         # Refractoriness and voltage reset.
         self.v = torch.where(self.s, self.c, self.v)
         self.u = torch.where(self.s, self.u + self.d, self.u)
+
+        # voltage clipping to lowerbound
+        self.v.masked_fill_(self.v < self.lbound, self.lbound)
 
         super().forward(x)
 

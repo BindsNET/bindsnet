@@ -1,5 +1,4 @@
 import torch
-import pdb
 
 from bindsnet.network import Network
 from bindsnet.pipeline import Pipeline
@@ -42,13 +41,7 @@ pipeline = Pipeline(network, environment, encoding=bernoulli,
                     plot_interval=100, render_interval=5)
 
 # Run environment simulation and network training.
-n_episode = 0
-n_step = 0
 while True:
     pipeline.step()
-    n_step += 1
-    print('{}th episode\'s {}th step'.format(n_episode,n_step))
     if pipeline.done:
-        n_episode += 1
-        n_step = 0
         pipeline.reset_()

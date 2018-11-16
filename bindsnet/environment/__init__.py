@@ -213,7 +213,6 @@ class GymEnvironment(Environment):
         """
         # Call gym's environment step function.
         self.obs, self.reward, self.done, info = self.env.step(a)
-        print(self.obs)
         self.preprocess()
         # Return converted observations and other information.
         return self.obs, self.reward, self.done, info

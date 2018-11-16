@@ -5,44 +5,8 @@ import math
 from typing import Optional, Union, Iterable, Iterator
 
 
-def timing(datum: torch.Tensor, time: int = None, max_delay: int = 10,
-           threshold: float = 0.5, max_prob:float = None) -> torch.Tensor:
-    # language=rst
-    """
-    Generates timing based single-spike encoding. Spike occurs earlier if the
-    intensity of the input feature is higher. Features whose value is lower than
-    threshold is remain silent.
-
-    :param dataum: Tensor of shape ``[n_1, ..., n_k]``.
-    :param time: Length of the input and output.
-    :param max_delay: Latest possible spike timing.
-    :param threshold: If the intensity of the input is less than threshold, then
-        there is no spike.
-    :param max_prob: Dummy variable. Just for matching with the caller.
-    :return: Tensor of shape ``[time, n_1, ..., n_k]``.
-    """
-
-    assert 0 <= threshold <= 1, 'Threshold should be beteween zero and one'
-
-    datum = np.copy(datum)
-    shape = datum.shape
-    size = datum.size
-    datum.reshape(-1)
-    s = np.zeros([time, size])
-
-    datum /= datum.max()
-    datum = 1 - datum
-
-    for i in range(size):
-        if datum[i] < 1 - threshold:
-            timing = int(max_delay*datum[i]/(1-threshold))
-            s[timing,i] = 1
-
-    return torch.Tensor(s).byte()
-
-
 def single(datum: torch.Tensor, time: int = None,
-           threshold: float = 0.3, max_prob:float = None) -> torch.Tensor:
+           sparsity: float = 0.3, max_prob:float = None) -> torch.Tensor:
     # language=rst
     """
     Generates timing based single-spike encoding. Spike occurs earlier if the
@@ -51,21 +15,17 @@ def single(datum: torch.Tensor, time: int = None,
 
     :param dataum: Tensor of shape ``[n_1, ..., n_k]``.
     :param time: Length of the input and output.
-    :param quantile: quantile of spiking inputs. between 0 and 1. No spike for 1, all spike for 0.
+    :param sparsity: Sparsity of the input representation. 0 for no spike and 1 for all spike.
     :param max_prob: Dummy variable. Just for matching with the caller.
     :return: Tensor of shape ``[time, n_1, ..., n_k]``.
     """
 
-    shape = datum.shape[0]
-    np_datum = datum.numpy()
-    q_threshold = np.quantile(np_datum,threshold)
-    s = np.zeros([time, shape])
-    s[0] = np.where(np_datum > q_threshold, np.ones([shape]), np.zeros([shape]))
+    shape = list(datum.shape)
+    datum = np.copy(datum)
+    quantile = np.quantile(datum,1-sparsity)
+    s = np.zeros([time, *shape])
+    s[0] = np.where(datum > quantile, np.ones(shape), np.zeros(shape))
     return torch.Tensor(s).byte()
-
-
-
-
 
 
 def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torch.Tensor:
