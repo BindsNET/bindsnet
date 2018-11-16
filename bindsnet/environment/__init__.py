@@ -214,6 +214,7 @@ class GymEnvironment(Environment):
         """
         # Call gym's environment step function.
         self.obs, self.reward, done, info = self.env.step(a)
+        self.reward = np.sign(self.reward)
         self.preprocess()
 
         # Return converted observations and other information.
