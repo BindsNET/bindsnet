@@ -54,9 +54,6 @@ class AbstractConnection(ABC):
         if self.update_rule is None:
             self.update_rule = NoOp
 
-        if self.decay is None:
-            self.decay = 0.0  # No memory of previous spikes.
-
         self.a_pre = 0.0
 
         self.update_rule = self.update_rule(
@@ -153,12 +150,9 @@ class Connection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
-        # Decaying spike activations by decay constant.
-        self.a_pre = self.a_pre * self.decay + s.float().view(-1)
-
-        # Compute multiplication of spike activations by connection weights.
-        a_post = self.a_pre @ self.w + self.b
-        return a_post.view(*self.target.shape)
+        # Compute multiplication of spike activations by connection weights and add bias.
+        post = s.float().view(-1) @ self.w + self.b
+        return post.view(*self.target.shape)
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -173,7 +167,7 @@ class Connection(AbstractConnection):
         Normalize weights so each target neuron has sum of connection weights equal to ``self.norm``.
         """
         if self.norm is not None:
-            self.w *= self.norm / self.w.abs().sum(0).view(1, -1)
+            self.w *= self.norm / self.w.abs().sum(0).unsqueeze(0)
 
     def reset_(self) -> None:
         # language=rst
