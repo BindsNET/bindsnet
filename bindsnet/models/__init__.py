@@ -3,7 +3,7 @@ import numpy as np
 
 from torch.nn.modules.utils import _pair
 from scipy.spatial.distance import euclidean
-from typing import Optional, Union, Tuple, List
+from typing import Optional, Union, Tuple, List, Sequence
 
 from ..network import Network
 from ..learning import PostPre
@@ -16,7 +16,7 @@ class TwoLayerNetwork(Network):
     """
     Implements an ``Input`` instance connected to a ``LIFNodes`` instance with a fully-connected ``Connection``.
     """
-    def __init__(self, n_inpt: int, n_neurons: int = 100, dt: float = 1.0, nu_pre: float = 1e-4, nu_post: float = 1e-2,
+    def __init__(self, n_inpt: int, n_neurons: int = 100, dt: float = 1.0, nu: Optional[Union[float, Sequence[float]]] = None,
                  wmin: float = 0.0, wmax: float = 1.0, norm: float = 78.4) -> None:
         # language=rst
         """
@@ -25,8 +25,7 @@ class TwoLayerNetwork(Network):
         :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of neurons in the ``LIFNodes`` population.
         :param dt: Simulation time step.
-        :param nu_pre: Pre-synaptic learning rate.
-        :param nu_post: Post-synaptic learning rate.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         :param wmin: Minimum allowed weight on ``Input`` to ``LIFNodes`` synapses.
         :param wmax: Maximum allowed weight on ``Input`` to ``LIFNodes`` synapses.
         :param norm: ``Input`` to ``LIFNodes`` layer connection weights normalization constant.
@@ -43,7 +42,7 @@ class TwoLayerNetwork(Network):
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
-                                       nu=[nu_pre, nu_post], wmin=wmin, wmax=wmax, norm=norm),
+                                       nu=nu, wmin=wmin, wmax=wmax, norm=norm),
                             source='X', target='Y')
 
 
@@ -54,7 +53,7 @@ class DiehlAndCook2015(Network):
     <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
     """
     def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
-                 nu_pre: float = 1e-4, nu_post: float = 1e-2, wmin: float = 0.0, wmax: float = 1.0, norm: float = 78.4,
+                 nu: Optional[Union[float, Sequence[float]]] = None, wmin: float = 0.0, wmax: float = 1.0, norm: float = 78.4,
                  theta_plus: float = 0.05, theta_decay: float = 1e-7, X_Ae_decay: Optional[float] = None,
                  Ae_Ai_decay: Optional[float] = None, Ai_Ae_decay: Optional[float] = None) -> None:
         # language=rst
@@ -66,8 +65,7 @@ class DiehlAndCook2015(Network):
         :param exc: Strength of synapse weights from excitatory to inhibitory layer.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
-        :param nu_pre: Pre-synaptic learning rate.
-        :param nu_post: Post-synaptic learning rate.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
@@ -96,7 +94,7 @@ class DiehlAndCook2015(Network):
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Ae'], w=w, update_rule=PostPre,
-                                       nu=[nu_pre, nu_post], wmin=wmin, wmax=wmax, norm=norm, decay=X_Ae_decay),
+                                       nu=nu, wmin=wmin, wmax=wmax, norm=norm, decay=X_Ae_decay),
                             source='X', target='Ae')
 
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
@@ -117,9 +115,9 @@ class DiehlAndCook2015v2(Network):
     <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_ by removing the inhibitory layer and
     replacing it with a recurrent inhibitory connection in the output layer (what used to be the excitatory layer).
     """
-    def __init__(self, n_inpt: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0, nu_pre: float = 1e-4,
-                 nu_post: float = 1e-2, wmin: Optional[float] = None, wmax: Optional[float] = None, norm: float = 78.4,
-                 theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
+    def __init__(self, n_inpt: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0,
+                 nu: Optional[Union[float, Sequence[float]]] = None, wmin: Optional[float] = None, wmax: Optional[float] = None,
+                 norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015v2``.
@@ -128,8 +126,7 @@ class DiehlAndCook2015v2(Network):
         :param n_neurons: Number of excitatory, inhibitory neurons.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
-        :param nu_pre: Pre-synaptic learning rate.
-        :param nu_post: Post-synaptic learning rate.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
@@ -155,7 +152,7 @@ class DiehlAndCook2015v2(Network):
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         input_connection = Connection(
             source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
-            nu=[nu_pre, nu_post], wmin=wmin, wmax=wmax, norm=norm
+            nu=nu, wmin=wmin, wmax=wmax, norm=norm
         )
         self.add_connection(input_connection, source='X', target='Y')
 
@@ -173,7 +170,7 @@ class IncreasingInhibitionNetwork(Network):
     <https://arxiv.org/abs/1807.09374>`_
     """
     def __init__(self, n_input: int, n_neurons: int = 100, start_inhib: float = 1.0, max_inhib: float = 100.0,
-                 dt: float = 1.0, nu_pre: float = 1e-4, nu_post: float = 1e-2, wmin: float = 0.0, wmax: float = 1.0,
+                 dt: float = 1.0, nu: Optional[Union[float, Sequence[float]]] = None, wmin: float = 0.0, wmax: float = 1.0,
                  norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
         # language=rst
         """
@@ -183,8 +180,7 @@ class IncreasingInhibitionNetwork(Network):
         :param n_neurons: Number of excitatory, inhibitory neurons.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
-        :param nu_pre: Pre-synaptic learning rate.
-        :param nu_post: Post-synaptic learning rate.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
@@ -212,7 +208,7 @@ class IncreasingInhibitionNetwork(Network):
         w = 0.3 * torch.rand(self.n_input, self.n_neurons)
         input_output_conn = Connection(
             source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
-            nu=[nu_pre, nu_post], wmin=wmin, wmax=wmax, norm=norm
+            nu=nu, wmin=wmin, wmax=wmax, norm=norm
         )
         self.add_connection(input_output_conn, source='X', target='Y')
 
@@ -241,7 +237,7 @@ class LocallyConnectedNetwork(Network):
 
     def __init__(self, n_inpt: int, input_shape: List[int], kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int, inh: float = 25.0, dt: float = 1.0,
-                 nu_pre: float = 1e-4, nu_post: float = 1e-2, theta_plus: float = 0.05, theta_decay: float = 1e-7,
+                 nu: Optional[Union[float, Sequence[float]]] = None, theta_plus: float = 0.05, theta_decay: float = 1e-7,
                  wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2, real=False) -> None:
         # language=rst
         """
@@ -255,8 +251,7 @@ class LocallyConnectedNetwork(Network):
         :param n_filters: Number of locally connected filters per input region. Integer or two-tuple of integers.
         :param inh: Strength of synapse weights from output layer back onto itself.
         :param dt: Simulation time step.
-        :param nu_pre: Pre-synaptic learning rate.
-        :param nu_post: Post-synaptic learning rate.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         :param wmin: Minimum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
         :param wmax: Maximum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
@@ -299,7 +294,7 @@ class LocallyConnectedNetwork(Network):
         )
         input_output_conn = LocallyConnectedConnection(
             input_layer, output_layer, kernel_size=kernel_size, stride=stride, n_filters=n_filters,
-            nu=[nu_pre, nu_post], update_rule=PostPre, wmin=wmin, wmax=wmax, norm=norm, input_shape=input_shape
+            nu=nu, update_rule=PostPre, wmin=wmin, wmax=wmax, norm=norm, input_shape=input_shape
         )
 
         w = torch.zeros(n_filters, *conv_size, n_filters, *conv_size)
