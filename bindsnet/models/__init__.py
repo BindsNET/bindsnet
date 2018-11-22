@@ -16,8 +16,9 @@ class TwoLayerNetwork(Network):
     """
     Implements an ``Input`` instance connected to a ``LIFNodes`` instance with a fully-connected ``Connection``.
     """
-    def __init__(self, n_inpt: int, n_neurons: int = 100, dt: float = 1.0, nu: Optional[Union[float, Sequence[float]]] = None,
-                 wmin: float = 0.0, wmax: float = 1.0, norm: float = 78.4) -> None:
+
+    def __init__(self, n_inpt: int, n_neurons: int = 100, dt: float = 1.0, wmin: float = 0.0, wmax: float = 1.0,
+                 nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), norm: float = 78.4) -> None:
         # language=rst
         """
         Constructor for class ``TwoLayerNetwork``.
@@ -31,11 +32,11 @@ class TwoLayerNetwork(Network):
         :param norm: ``Input`` to ``LIFNodes`` layer connection weights normalization constant.
         """
         super().__init__(dt=dt)
-        
+
         self.n_inpt = n_inpt
         self.n_neurons = n_neurons
         self.dt = dt
-        
+
         self.add_layer(Input(n=self.n_inpt, traces=True, trace_tc=5e-2), name='X')
         self.add_layer(LIFNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-65.0, thresh=-52.0, refrac=5,
                                 decay=1e-2, trace_tc=5e-2), name='Y')
@@ -52,10 +53,12 @@ class DiehlAndCook2015(Network):
     Implements the spiking neural network architecture from `(Diehl & Cook 2015)
     <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
     """
+
     def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
-                 nu: Optional[Union[float, Sequence[float]]] = None, wmin: float = 0.0, wmax: float = 1.0, norm: float = 78.4,
-                 theta_plus: float = 0.05, theta_decay: float = 1e-7, X_Ae_decay: Optional[float] = None,
-                 Ae_Ai_decay: Optional[float] = None, Ai_Ae_decay: Optional[float] = None) -> None:
+                 nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0, wmax: float = 1.0,
+                 norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7,
+                 X_Ae_decay: Optional[float] = None, Ae_Ai_decay: Optional[float] = None,
+                 Ai_Ae_decay: Optional[float] = None) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015``.
@@ -115,9 +118,11 @@ class DiehlAndCook2015v2(Network):
     <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_ by removing the inhibitory layer and
     replacing it with a recurrent inhibitory connection in the output layer (what used to be the excitatory layer).
     """
+
     def __init__(self, n_inpt: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0,
-                 nu: Optional[Union[float, Sequence[float]]] = None, wmin: Optional[float] = None, wmax: Optional[float] = None,
-                 norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
+                 nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: Optional[float] = None,
+                 wmax: Optional[float] = None, norm: float = 78.4, theta_plus: float = 0.05,
+                 theta_decay: float = 1e-7) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015v2``.
@@ -169,9 +174,10 @@ class IncreasingInhibitionNetwork(Network):
     Implements the inhibitory layer structure of the spiking neural network architecture from `(Hazan et al. 2018)
     <https://arxiv.org/abs/1807.09374>`_
     """
+
     def __init__(self, n_input: int, n_neurons: int = 100, start_inhib: float = 1.0, max_inhib: float = 100.0,
-                 dt: float = 1.0, nu: Optional[Union[float, Sequence[float]]] = None, wmin: float = 0.0, wmax: float = 1.0,
-                 norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
+                 dt: float = 1.0, nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0,
+                 wmax: float = 1.0, norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
         # language=rst
         """
         Constructor for class ``IncreasingInhibitionNetwork``.
@@ -237,8 +243,9 @@ class LocallyConnectedNetwork(Network):
 
     def __init__(self, n_inpt: int, input_shape: List[int], kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int, inh: float = 25.0, dt: float = 1.0,
-                 nu: Optional[Union[float, Sequence[float]]] = None, theta_plus: float = 0.05, theta_decay: float = 1e-7,
-                 wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2, real=False) -> None:
+                 nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), theta_plus: float = 0.05,
+                 theta_decay: float = 1e-7, wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2,
+                 real=False) -> None:
         # language=rst
         """
         Constructor for class ``LocallyConnectedNetwork``. Uses ``DiehlAndCookNodes`` to avoid multiple spikes per

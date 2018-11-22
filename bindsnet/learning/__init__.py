@@ -34,9 +34,8 @@ class LearningRule(ABC):
 
         # Learning rate(s).
         if nu is None:
-            nu = 0.0
-
-        if isinstance(nu, float):
+            nu = [0.0, 0.0]
+        elif isinstance(nu, float):
             nu = [nu, nu]
 
         self.nu = nu
@@ -259,7 +258,7 @@ class WeightDependentPostPre(LearningRule):
         # Pre-synaptic update.
         if self.nu[0]:
             pre = x_target @ s_source.t()
-            update -= self.nu[0] * pre.view(self.connection.w.size()) (self.connection.w - self.wmin)
+            update -= self.nu[0] * pre.view(self.connection.w.size())(self.connection.w - self.wmin)
 
         # Post-synaptic update.
         if self.nu[1]:
