@@ -4,7 +4,7 @@ import numpy as np
 import math
 from typing import Optional, Union, Iterable, Iterator
 
-
+#TODO remove np uses and replace them with pytorch functions.
 def single(datum: torch.Tensor, time: int = None,
            sparsity: float = 0.3, max_prob:float = None) -> torch.Tensor:
     # language=rst
@@ -45,6 +45,7 @@ def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torc
     """
     # Setting kwargs.
     max_prob = kwargs.get('max_prob', 1.0)
+    dt = kwargs.get('dt', 1.0)
     assert 0 <= max_prob <= 1, 'Maximum firing probability must be in range [0, 1]'
 
     shape, size = datum.shape, datum.numel()
@@ -82,7 +83,7 @@ def bernoulli_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: Op
     :param float max_prob: Maximum probability of spike per Bernoulli trial.
     """
     # Setting kwargs.
-    max_prob = kwargs.get('max_prob', 1.0)
+    max_prob = kwargs.get('dt', 1.0)
 
     for i in range(len(data)):
         yield bernoulli(datum=data[i], time=time, dt=dt, max_prob=max_prob)  # Encode datum as Bernoulli spike trains.
@@ -170,7 +171,7 @@ def rank_order(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> tor
     # Create spike times tensor.
     spikes = torch.zeros(time, size).byte()
     for i in range(size):
-        if times[i] != 0:
+        if 0 < times[i] < time:
             spikes[times[i] - 1, i] = 1
 
     return spikes.reshape(time, *shape)
@@ -188,4 +189,4 @@ def rank_order_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: i
     :return: Tensors of shape ``[time, n_1, ..., n_k]`` of rank order-encoded spikes.
     """
     for i in range(len(data)):
-        yield rank_order(datum=data[i], time=time, dt=dt)  # Encode datum as rank order-encoded spike trains.
+        yield rank_order(datm=data[i], time=time, dt=dt)  # Encode datum as rank order-encoded spike trains.

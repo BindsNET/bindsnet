@@ -82,6 +82,10 @@ class Pipeline:
         self.render_interval = kwargs.get('render_interval', None)
         self.plot_length = kwargs.get('plot_length', 1.0)
         self.plot_type = kwargs.get('plot_type','color')
+
+        self.dt = network.dt
+        self.timestep = int(self.time / self.dt)
+
         if self.history_length is not None and self.delta is not None:
             self.history = {i: torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
         else:
@@ -89,10 +93,10 @@ class Pipeline:
 
         if self.plot_interval is not None:
             for l in self.network.layers:
-                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length * self.plot_interval * self.time)),
+                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length * self.plot_interval * self.timestep)),
                                          name=f'{l}_spikes')
                 if 'v' in self.network.layers[l].__dict__:
-                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length * self.plot_interval * self.time)),
+                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length * self.plot_interval * self.timestep)),
                                              name=f'{l}_voltages')
 
             self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
@@ -175,7 +179,7 @@ class Pipeline:
 
         # Encode the observation using given encoding function.
         for inpt in self.encoded:
-            self.encoded[inpt] = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
+            self.encoded[inpt] = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob, dt=self.network.dt)
 
         # Run the network on the spike train-encoded inputs.
         self.network.run(inpts=self.encoded, time=self.time, reward=self.reward, clamp=clamp, clamp_v=clamp_v)

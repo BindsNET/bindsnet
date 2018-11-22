@@ -174,6 +174,70 @@ class DatasetEnvironment(Environment):
         elif type(self.dataset) in SpokenMNIST:
             return self.obs.view(-1, 40)
 
+class MNISTEnvironment(DatasetEnvironment):
+    # language=rst
+    """
+    A wrapper around any object from the ``datasets`` module to pass to the ``Pipeline`` object.
+    """
+
+    def __init__(self, dataset: Dataset, train: bool = True, time: int = 350, **kwargs):
+        # language=rst
+        """
+        Initializes the environment wrapper around the dataset.
+
+        :param dataset: Object from datasets module.
+        :param train: Whether to use train or test dataset.
+        :param time: Length of spike train per example.
+        :param kwargs: Raw data is multiplied by this value.
+        """
+        self.dataset = dataset
+        self.train = train
+        self.time = time
+        self.n_action = 10
+
+        # Keyword arguments.
+        self.intensity = kwargs.get('intensity', 1)
+        self.max_prob = kwargs.get('max_prob', 1)
+
+        assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
+
+        self.obs = None
+
+        if train:
+            self.data, self.labels = self.dataset.get_train()
+            self.label_loader = iter(self.labels)
+        else:
+            self.data, self.labels = self.dataset.get_test()
+            self.label_loader = iter(self.labels)
+
+        self.env = iter(self.data)
+
+    def step(self, a: int = None) -> Tuple[torch.Tensor, int, bool, Dict[str, int]]:
+        # language=rst
+        """
+        Dummy function for OpenAI Gym environment's ``step()`` function.
+
+        :param a: There is no interaction of the network the dataset.
+        :return: Observation, reward (fixed to 0), done (fixed to False), and information dictionary.
+        """
+        try:
+            # Attempt to fetch the next observation.
+            self.obs = next(self.env)
+        except StopIteration:
+            # If out of samples, reload data and label generators.
+            self.env = iter(self.data)
+            self.label_loader = iter(self.labels)
+            self.obs = next(self.env)
+
+        # Preprocess observation.
+        self.preprocess()
+
+        # Info dictionary contains label of MNIST digit.
+        info = {'label' : next(self.label_loader)}
+
+        return self.obs, 0, False, info
+
+
 class GymEnvironment(Environment):
     # language=rst
     """

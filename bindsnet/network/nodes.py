@@ -324,7 +324,7 @@ class LIFNodes(Nodes):
                  trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 lbound: Union[float, torch.Tensor] = float('-inf'),
+                 lbound: Union[float, torch.Tensor] = float('-inf'), noise_std: Union[float, torch.Tensor] = 0.0,
                  decay: Union[float, torch.Tensor] = 1e-2) -> None:
         # language=rst
         """
@@ -341,6 +341,7 @@ class LIFNodes(Nodes):
         :param refrac: Refractory (non-firing) period of the neuron.
         :param lbound: Lower bound of the voltage.
         :param decay: Time constant of neuron voltage decay.
+        :param noise_std: Standard deviation of Gaussian noise to membrane potential. This helps exploration.
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
@@ -373,11 +374,18 @@ class LIFNodes(Nodes):
             self.decay = torch.tensor(decay)
         else:
             self.decay = decay
+
         # Lower bound of voltage.
         if isinstance(lbound, float):
             self.lbound = torch.tensor(lbound)
         else:
             self.lbound = lbound
+
+        # Noise of the membrane potential.
+        if isinstance(noise_std, float):
+            self.noise_std = torch.tensor(noise_std)
+        else:
+            self.noise_std = noise_std
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -399,7 +407,12 @@ class LIFNodes(Nodes):
         self.refrac_count[self.refrac_count != 0] -= self.dt
 
         # Check for spiking neurons.
-        self.s = self.v >= self.thresh
+        if self.noise_std > 0:
+            noise = torch.randn(self.s.shape)*self.noise_std
+            self.s = self.v + noise >= self.thresh
+        else:
+            self.s = self.v >= self.thresh
+
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
