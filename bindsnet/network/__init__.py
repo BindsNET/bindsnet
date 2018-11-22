@@ -84,18 +84,19 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0) -> None:
+    def __init__(self, dt: float = 1.0, learning: bool = True) -> None:
         # language=rst
         """
         Initializes network object.
 
         :param dt: Simulation timestep. All other objects' time constants are relative to this value.
+        :param learning: Whether to allow connection updates. True by default.
         """
         self.dt = dt
         self.layers = {}
         self.connections = {}
         self.monitors = {}
-        self.learning = True
+        self.learning = learning
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
