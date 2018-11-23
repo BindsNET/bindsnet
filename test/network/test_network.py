@@ -21,11 +21,23 @@ class TestNetwork:
             network.save('net.pt')
             _network = load_network('net.pt')
             assert _network.dt == dt
+            assert _network.learning
+            del _network
+
+            _network = load_network('net.pt', learning=True)
+            assert _network.dt == dt
+            assert _network.learning
+            del _network
+
+            _network = load_network('net.pt', learning=False)
+            assert _network.dt == dt
+            assert not _network.learning
+            del _network
 
             os.remove('net.pt')
 
     def test_add_objects(self):
-        network = Network(dt=1.0)
+        network = Network(dt=1.0, learning=False)
 
         inpt = Input(100)
         network.add_layer(inpt, name='X')
@@ -44,3 +56,14 @@ class TestNetwork:
         network.add_monitor(monitor, 'Y')
 
         assert monitor == network.monitors['Y']
+
+        network.save('net.pt')
+        _network = load_network('net.pt', learning=True)
+        assert _network.learning
+        assert 'X' in _network.layers
+        assert 'Y' in _network.layers
+        assert ('X', 'Y') in _network.connections
+        assert 'Y' in _network.monitors
+        del _network
+
+        os.remove('net.pt')

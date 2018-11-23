@@ -11,15 +11,19 @@ __all__ = [
 ]
 
 
-def load_network(file_name: str) -> 'Network':
+def load_network(file_name: str, learning: bool = None) -> 'Network':
     # language=rst
     """
     Loads serialized network object from disk.
 
     :param file_name: Path to serialized network object on disk.
+    :param learning: Whether to load with learning enabled. Default loads value from disk.
     """
     try:
-        return torch.load(open(file_name, 'rb'))
+        net = torch.load(open(file_name, 'rb'))
+        if learning is not None and 'learning' in vars(net):
+            net.learning = learning
+        return net
     except FileNotFoundError:
         print('Network not found on disk.')
 
@@ -80,18 +84,19 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0) -> None:
+    def __init__(self, dt: float = 1.0, learning: bool = True) -> None:
         # language=rst
         """
         Initializes network object.
 
         :param dt: Simulation timestep. All other objects' time constants are relative to this value.
+        :param learning: Whether to allow connection updates. True by default.
         """
         self.dt = dt
         self.layers = {}
         self.connections = {}
         self.monitors = {}
-        self.learning = True
+        self.learning = learning
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
