@@ -66,9 +66,11 @@ def bernoulli_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: Op
 def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.Tensor:
     # language=rst
     """
-    Generates Poisson-distributed spike trains based on input intensity. Inputs must be non-negative. Inter-spike
-    intervals (ISIs) for non-negative data incremented by one to avoid zero intervals while maintaining ISI
-    distributions.
+    Generates Poisson-distributed spike trains based on input intensity. Inputs must be non-negative, and give the
+    firing rate in Hz. Inter-spike intervals (ISIs) for non-negative data incremented by one to avoid zero intervals
+    while maintaining ISI distributions.
+
+    For example, an input of intensity :code:`x` will have an average firing rate of :code:`x`Hz.
 
     :param datum: Tensor of shape ``[n_1, ..., n_k]``.
     :param time: Length of Bernoulli spike train per input variable.
