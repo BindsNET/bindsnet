@@ -80,14 +80,13 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0, noise_decay: float = 0.0) -> None:
+    def __init__(self, dt: float = 1.0) -> None:
         # language=rst
         """
         Initializes network object.
 
         :param dt: Simulation timestep. All other objects' time constants are relative to this value.
         """
-        self.noise_decay = noise_decay
         self.dt = dt
         self.layers = {}
         self.connections = {}
@@ -276,11 +275,6 @@ class Network:
         # Re-normalize connections.
         for c in self.connections:
             self.connections[c].normalize()
-
-        # Decay noise_std for noisy layer.
-        for l in self.layers    :
-            if 'noise_std' in self.layers[l].__dict__:
-                self.layers[l].noise_std *= self.noise_decay
 
 
     def reset_(self) -> None:
