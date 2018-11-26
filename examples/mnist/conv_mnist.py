@@ -26,7 +26,7 @@ parser.add_argument('--n_filters', type=int, default=25)
 parser.add_argument('--padding', type=int, default=0)
 parser.add_argument('--time', type=int, default=50)
 parser.add_argument('--dt', type=int, default=1.0)
-parser.add_argument('--intensity', type=float, default=1)
+parser.add_argument('--intensity', type=float, default=5)
 parser.add_argument('--progress_interval', type=int, default=10)
 parser.add_argument('--update_interval', type=int, default=250)
 parser.add_argument('--train', dest='train', action='store_true')
@@ -74,7 +74,7 @@ conv_layer = DiehlAndCookNodes(n=n_filters * conv_size * conv_size,
                                traces=True)
 
 conv_conn = Conv2dConnection(input_layer, conv_layer, kernel_size=kernel_size, stride=stride, update_rule=PostPre,
-                             norm=0.4 * kernel_size ** 2, nu_pre=1e-4, nu_post=1e-2, wmax=1.0)
+                             norm=0.4 * kernel_size ** 2, nu=[1e-4, 1e-2], wmax=1.0)
 
 # indices, values = [], []
 # # w = torch.zeros(1, n_filters, conv_size, conv_size, 1, n_filters, conv_size, conv_size)

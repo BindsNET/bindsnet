@@ -66,7 +66,7 @@ start_intensity = intensity
 per_class = int(n_neurons / 10)
 
 # Build network.
-network = DiehlAndCook2015(n_inpt=784, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt, nu_pre=0, nu_post=1e-2, norm=78.4)
+network = DiehlAndCook2015(n_inpt=784, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt, nu=[0, 1e-2], norm=78.4)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -160,10 +160,12 @@ for i in range(n_train):
             voltage_ims, voltage_axes = plot_voltages(voltages)
 
         else:
-            inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes,
-                                             ims=inpt_ims)
-            spike_ims, spike_axes = plot_spikes({layer: spikes[layer].get('s') for layer in spikes},
-                                                ims=spike_ims, axes=spike_axes)
+            inpt_axes, inpt_ims = plot_input(
+                images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims
+            )
+            spike_ims, spike_axes = plot_spikes(
+                {layer: spikes[layer].get('s') for layer in spikes}, ims=spike_ims, axes=spike_axes
+            )
             weights_im = plot_weights(square_weights, im=weights_im)
             assigns_im = plot_assignments(square_assignments, im=assigns_im)
             perf_ax = plot_performance(accuracy, ax=perf_ax)
