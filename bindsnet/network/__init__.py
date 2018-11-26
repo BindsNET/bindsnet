@@ -11,15 +11,19 @@ __all__ = [
 ]
 
 
-def load_network(file_name: str) -> 'Network':
+def load_network(file_name: str, learning: bool = None) -> 'Network':
     # language=rst
     """
     Loads serialized network object from disk.
 
     :param file_name: Path to serialized network object on disk.
+    :param learning: Whether to load with learning enabled. Default loads value from disk.
     """
     try:
-        return torch.load(open(file_name, 'rb'))
+        net = torch.load(open(file_name, 'rb'))
+        if learning is not None and 'learning' in vars(net):
+            net.learning = learning
+        return net
     except FileNotFoundError:
         print('Network not found on disk.')
 
@@ -80,18 +84,19 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0) -> None:
+    def __init__(self, dt: float = 1.0, learning: bool = True) -> None:
         # language=rst
         """
         Initializes network object.
 
         :param dt: Simulation timestep. All other objects' time constants are relative to this value.
+        :param learning: Whether to allow connection updates. True by default.
         """
         self.dt = dt
         self.layers = {}
         self.connections = {}
         self.monitors = {}
-        self.learning = True
+        self.learning = learning
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
@@ -199,8 +204,9 @@ class Network:
         Keyword arguments:
 
         :param Dict[str, torch.Tensor] clamp: Mapping of layer names to boolean masks if neurons should be clamped to
-                                              values specified in the ``clamp_v`` argument. The ``Tensor``s have shape
-                                              ``[time, n_input]``.
+                                              spiking. The ``Tensor``s have shape ``[n_neurons]``.
+        :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks if neurons should be clamped
+                                                to not spiking. The ``Tensor``s should have shape ``[n_neurons]``.
         :param float reward: Scalar value used in reward-modulated learning.
         :param Dict[str, torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
                                               clamp to zero.
@@ -237,6 +243,7 @@ class Network:
         """
         # Parse keyword arguments.
         clamps = kwargs.get('clamp', {})
+        unclamps = kwargs.get('unclamp', {})
         masks = kwargs.get('masks', {})
 
         # Effective number of timesteps.
@@ -258,6 +265,11 @@ class Network:
                 clamp = clamps.get(l, None)
                 if clamp is not None:
                     self.layers[l].s[clamp] = 1
+
+                # Clamp neurons not to spike.
+                unclamp = unclamps.get(l, None)
+                if unclamp is not None:
+                    self.layers[l].s[unclamp] = 0
 
             # Run synapse updates.
             for c in self.connections:

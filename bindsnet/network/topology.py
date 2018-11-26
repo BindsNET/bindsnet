@@ -450,14 +450,11 @@ class LocallyConnectedConnection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
         """
-        # Decaying spike activation from previous iteration.
-        self.a_pre = self.a_pre * self.decay + s.float().view(-1)
-
         # Compute multiplication of pre-activations by connection weights.
         if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
-            return self.a_pre @ self.w + self.b
+            return s.float().view(-1) @ self.w + self.b
         else:
-            a_post = self.a_pre @ self.w.view(self.source.n, self.target.n) + self.b
+            a_post = s.float().view(-1) @ self.w.view(self.source.n, self.target.n) + self.b
             return a_post.view(*self.target.shape)
 
     def update(self, **kwargs) -> None:
@@ -532,11 +529,8 @@ class MeanFieldConnection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
         """
-        # Decaying spike activation from previous iteration.
-        self.a_pre = self.a_pre * self.decay + s.float().mean()
-
         # Compute multiplication of mean-field pre-activation by connection weights.
-        return self.a_pre * self.w
+        return s.float().mean() * self.w
 
     def update(self, **kwargs) -> None:
         # language=rst

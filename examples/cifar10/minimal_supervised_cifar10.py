@@ -9,7 +9,7 @@ from bindsnet.environment import DatasetEnvironment
 
 # Build network.
 network = DiehlAndCook2015(n_inpt=32*32*3, n_neurons=100, dt=1.0, exc=22.5,
-                           inh=17.5, nu_pre=0, nu_post=1e-2, norm=78.4)
+                           inh=17.5, nu=[0, 1e-2], norm=78.4)
 
 # Specify dataset wrapper environment.
 environment = DatasetEnvironment(dataset=CIFAR10(path='../../data/CIFAR10'),
