@@ -34,8 +34,8 @@ def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
     if _sum == 0:
         action = np.random.choice(pipeline.env.action_space.n)
     else:
-        pop_spikes = torch.Tensor([spikes[(i * pop_size):(i * pop_size) + pop_size].sum() for i in range(output.n)])
-        action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0]
+        pop_spikes = torch.Tensor([spikes[(i * pop_size):(i * pop_size) + pop_size].sum() for i in range(action_space.n)]) #FIXED : range(output.n) is replaced to range(action_space.n)
+        action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0].numpy() # For some environments in Gym, tensor cannot be action. Maybe all other non-atari environments?
 
     return action
 
@@ -84,3 +84,28 @@ def select_random(pipeline: Pipeline, **kwargs) -> int:
     """
     # Choose action randomly from the action space.
     return np.random.choice(pipeline.env.action_space.n)
+
+def num_spike(pipeline: Pipeline, **kwargs) -> torch.Tensor:
+    """
+    Returns accumulated spike count. It assumes that action is a vector rather than scalar.
+
+    :param pipeline Pipeline with environment that has an integer action space.
+    :return: accumulated spike count for each action element.
+    """
+    try:
+        output = kwargs['output']
+    except KeyError:
+        raise KeyError('num_spike() requires an "output" layer argument.')
+
+    output = pipeline.network.layers[output]
+    # n_action is temporal variable that only exists in MNSITEnvironment. This code sould be generalized.
+    n_action = pipeline.env.n_action
+
+    assert output.n % n_action == 0, 'Output layer size not equal to size of action space.'
+
+    pop_size = int(output.n / n_action)
+    spikes = output.s
+
+    action = torch.Tensor([spikes[(i * pop_size):(i * pop_size) + pop_size].sum() for i in range(n_action)]) #FIXED : range(output.n) is replaced to range(action_space.n)
+
+    return action

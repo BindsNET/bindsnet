@@ -1,3 +1,4 @@
+import pdb
 import torch
 import numpy as np
 import torch.nn.functional as F
@@ -130,7 +131,6 @@ class Connection(AbstractConnection):
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
         self.w = kwargs.get('w', None)
-
         if self.w is None:
             if self.wmin is None or self.wmax is None:
                 self.w = torch.rand(source.n, target.n)

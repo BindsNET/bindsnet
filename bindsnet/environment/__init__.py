@@ -85,7 +85,7 @@ class DatasetEnvironment(Environment):
         self.dataset = dataset
         self.train = train
         self.time = time
-        
+
         # Keyword arguments.
         self.intensity = kwargs.get('intensity', 1)
         self.max_prob = kwargs.get('max_prob', 1)
@@ -100,7 +100,7 @@ class DatasetEnvironment(Environment):
         else:
             self.data, self.labels = self.dataset.get_test()
             self.label_loader = iter(self.labels)
-        
+
         self.env = iter(self.data)
 
     def step(self, a: int = None) -> Tuple[torch.Tensor, int, bool, Dict[str, int]]:
@@ -119,13 +119,13 @@ class DatasetEnvironment(Environment):
             self.env = iter(self.data)
             self.label_loader = iter(self.labels)
             self.obs = next(self.env)
-        
+
         # Preprocess observation.
         self.preprocess()
-        
+
         # Info dictionary contains label of MNIST digit.
         info = {'label' : next(self.label_loader)}
-        
+
         return self.obs, 0, False, info
 
     def reset(self) -> None:
@@ -174,7 +174,6 @@ class DatasetEnvironment(Environment):
         elif type(self.dataset) in SpokenMNIST:
             return self.obs.view(-1, 40)
 
-
 class GymEnvironment(Environment):
     # language=rst
     """
@@ -195,7 +194,7 @@ class GymEnvironment(Environment):
         self.name = name
         self.env = gym.make(name)
         self.action_space = self.env.action_space
-        
+
         # Keyword arguments.
         self.max_prob = kwargs.get('max_prob', 1)
 
@@ -213,12 +212,12 @@ class GymEnvironment(Environment):
         :return: Observation, reward, done flag, and information dictionary.
         """
         # Call gym's environment step function.
-        self.obs, self.reward, done, info = self.env.step(a)
+        self.obs, self.reward, self.done, info = self.env.step(a)
         self.reward = np.sign(self.reward)
         self.preprocess()
 
         # Return converted observations and other information.
-        return self.obs, self.reward, done, info
+        return self.obs, self.reward, self.done, info
 
     def reset(self) -> torch.Tensor:
         # language=rst
@@ -230,7 +229,7 @@ class GymEnvironment(Environment):
         # Call gym's environment reset function.
         self.obs = self.env.reset()
         self.preprocess()
-        
+
         return self.obs
 
     def render(self) -> None:
@@ -252,10 +251,7 @@ class GymEnvironment(Environment):
         """
         Pre-processing step for an observation from a Gym environment.
         """
-        if self.name == 'CartPole-v0':
-            self.obs = np.array([self.obs[0] + 2.4, -min(self.obs[1], 0), max(self.obs[1], 0),
-                                 self.obs[2] + 41.8, -min(self.obs[3], 0), max(self.obs[3], 0)])
-        elif self.name == 'SpaceInvaders-v0':
+        if self.name == 'SpaceInvaders-v0':
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = self.obs[26:104, :]
             self.obs = binary_image(self.obs)
@@ -265,7 +261,7 @@ class GymEnvironment(Environment):
         else: # Default pre-processing step
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = binary_image(self.obs)
-            
+
         self.obs = torch.from_numpy(self.obs).float()
 
     def reshape(self) -> torch.Tensor:

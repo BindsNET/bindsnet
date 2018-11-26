@@ -1,6 +1,7 @@
 import time
 import torch
 import matplotlib.pyplot as plt
+import numpy as np
 
 from typing import Callable, Optional
 
@@ -26,18 +27,20 @@ class Pipeline:
     """
 
     def __init__(self, network: Network, environment: Environment, encoding: Callable = bernoulli,
-                 action_function: Optional[Callable] = None, **kwargs):
+                 action_function: Optional[Callable] = None, enable_history: Optional[bool] = False,
+                 **kwargs):
         # language=rst
         """
         Initializes the pipeline.
-        
+
         :param network: Arbitrary network object.
         :param environment: Arbitrary environment.
         :param encoding: Function to encode observations into spike trains.
         :param action_function: Function to convert network outputs into environment inputs.
+        :param enable_history: Enable history functionality.
 
         Keyword arguments:
-            
+
         :param int plot_interval: Interval to update plots.
         :param str save_dir: Directory to save network object to.
         :param int print_interval: Interval to print text output.
@@ -47,17 +50,25 @@ class Pipeline:
         :param bool render_interval: Interval to render the environment.
         :param int save_interval: How often to save the network to disk.
         :param str output: String name of the layer from which to take output from.
+        :param float plot_length: Relative time length of the plotted record data.
+            Relative to parameter time.
+        :param str plot_type: Type of plotting. 'color' or 'line'
         """
         self.network = network
         self.env = environment
         self.encoding = encoding
         self.action_function = action_function
+        self.enable_history = enable_history
 
+        self.episode = 0
         self.iteration = 0
         self.history_index = 1
         self.s_ims, self.s_axes = None, None
         self.v_ims, self.v_axes = None, None
         self.obs_im, self.obs_ax = None, None
+        self.reward_im, self.reward_ax = None, None
+        self.accumulated_reward = 0
+        self.reward_list = []
 
         # Setting kwargs.
         self.time = kwargs.get('time', 1)
@@ -69,6 +80,11 @@ class Pipeline:
         self.print_interval = kwargs.get('print_interval', None)
         self.history_length = kwargs.get('history_length', None)
         self.render_interval = kwargs.get('render_interval', None)
+        self.plot_length = kwargs.get('plot_length', 1.0)
+        self.plot_type = kwargs.get('plot_type','color')
+
+        self.dt = network.dt
+        self.timestep = int(self.time / self.dt)
 
         if self.history_length is not None and self.delta is not None:
             self.history = {i: torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
@@ -77,10 +93,10 @@ class Pipeline:
 
         if self.plot_interval is not None:
             for l in self.network.layers:
-                self.network.add_monitor(Monitor(self.network.layers[l], 's', self.plot_interval * self.time),
+                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length * self.plot_interval * self.timestep)),
                                          name=f'{l}_spikes')
                 if 'v' in self.network.layers[l].__dict__:
-                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', self.plot_interval * self.time),
+                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length * self.plot_interval * self.timestep)),
                                              name=f'{l}_voltages')
 
             self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
@@ -109,12 +125,16 @@ class Pipeline:
     def set_voltage_data(self) -> None:
         # language=rst
         """
-        Get the voltage data from all applicable layers in the pipeline's network.
+        Get the voltage data and threshold value from all applicable layers in the pipeline's network.
         """
         self.voltage_record = {}
+        self.threshold_value = {}
         for l in self.network.layers:
             if 'v' in self.network.layers[l].__dict__:
                 self.voltage_record[l] = self.network.monitors[f'{l}_voltages'].get('v')
+            if 'thresh' in self.network.layers[l].__dict__:
+                self.threshold_value[l] = self.network.layers[l].thresh
+
 
     def step(self, **kwargs) -> None:
         # language=rst
@@ -153,13 +173,13 @@ class Pipeline:
         self.obs, self.reward, self.done, info = self.env.step(a)
 
         # Store frame of history and encode the inputs.
-        if len(self.history) > 0:
+        if self.enable_history and len(self.history) > 0:
             self.update_history()
             self.update_index()
 
         # Encode the observation using given encoding function.
         for inpt in self.encoded:
-            self.encoded[inpt] = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob)
+            self.encoded[inpt] = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob, dt=self.network.dt)
 
         # Run the network on the spike train-encoded inputs.
         self.network.run(inpts=self.encoded, time=self.time, reward=self.reward, clamp=clamp, clamp_v=clamp_v)
@@ -173,6 +193,13 @@ class Pipeline:
 
         self.iteration += 1
 
+        if self.done:
+            self.iteration = 0
+            self.episode += 1
+            self.reward_list.append(self.accumulated_reward)
+            self.accumulated_reward = 0
+            self.plot_reward()
+
     def plot_obs(self) -> None:
         # language=rst
         """
@@ -183,9 +210,26 @@ class Pipeline:
             self.obs_ax.set_title('Observation')
             self.obs_ax.set_xticks(())
             self.obs_ax.set_yticks(())
-            self.obs_im = self.obs_ax.imshow(self.obs, cmap='gray')
+            self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap='gray')
         else:
-            self.obs_im.set_data(self.obs)
+            self.obs_im.set_data(self.env.reshape())
+
+    def plot_reward(self) -> None:
+        """
+        Plot the change of accumulated reward for each episodes
+        """
+        if self.reward_im is None and self.reward_ax is None:
+            fig, self.reward_ax = plt.subplots()
+            self.reward_ax.set_title('Reward')
+            self.reward_plot, = self.reward_ax.plot(self.reward_list)
+        else:
+            reward_array = np.array(self.reward_list)
+            y_min = reward_array.min()
+            y_max = reward_array.max()
+            self.reward_ax.set_xlim(left=0, right=self.episode)
+            self.reward_ax.set_ylim(bottom=y_min, top=y_max)
+            self.reward_plot.set_data(range(self.episode), self.reward_list)
+
 
     def plot_data(self) -> None:
         # language=rst
@@ -199,11 +243,13 @@ class Pipeline:
         # Initialize plots
         if self.s_ims is None and self.s_axes is None and self.v_ims is None and self.v_axes is None:
             self.s_ims, self.s_axes = plot_spikes(self.spike_record)
-            self.v_ims, self.v_axes = plot_voltages(self.voltage_record)
+            self.v_ims, self.v_axes = plot_voltages(self.voltage_record,
+                    plot_type=self.plot_type, threshold=self.threshold_value)
         else:
             # Update the plots dynamically
             self.s_ims, self.s_axes = plot_spikes(self.spike_record, ims=self.s_ims, axes=self.s_axes)
-            self.v_ims, self.v_axes = plot_voltages(self.voltage_record, ims=self.v_ims, axes=self.v_axes)
+            self.v_ims, self.v_axes = plot_voltages(self.voltage_record, ims=self.v_ims,
+                    axes=self.v_axes, plot_type=self.plot_type, threshold=self.threshold_value)
 
         plt.pause(1e-8)
         plt.show()

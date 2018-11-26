@@ -178,13 +178,13 @@ class Network:
         :return: Inputs to all layers for the current iteration.
         """
         inpts = {}
-        
+
         # Loop over network connections.
         for c in self.connections:
             # Fetch source and target populations.
             source = self.connections[c].source
             target = self.connections[c].target
-            
+
             if not c[1] in inpts:
                 inpts[c[1]] = torch.zeros(target.shape)
 
@@ -287,6 +287,7 @@ class Network:
         # Re-normalize connections.
         for c in self.connections:
             self.connections[c].normalize()
+
 
     def reset_(self) -> None:
         # language=rst
