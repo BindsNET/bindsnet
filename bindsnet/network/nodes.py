@@ -402,7 +402,6 @@ class LIFNodes(Nodes):
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
 
-
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
@@ -435,7 +434,7 @@ class AdaptiveLIFNodes(Nodes):
                  rest: Union[float, torch.Tensor] = -65.0, reset: Union[float, torch.Tensor] = -65.0,
                  thresh: Union[float, torch.Tensor] = -52.0, refrac: Union[int, torch.Tensor] = 5,
                  decay: Union[float, torch.Tensor] = 1e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
-                 lbound: Union[float, torch.Tensor] = float('-inf'),
+                 lbound: float = float('-inf'),
                  theta_decay: Union[float, torch.Tensor] = 1e-7) -> None:
         # language=rst
         """
@@ -500,10 +499,7 @@ class AdaptiveLIFNodes(Nodes):
             self.theta_decay = theta_decay
 
         # Lower bound of voltage.
-        if isinstance(lbound, float):
-            self.lbound = torch.tensor(lbound)
-        else:
-            self.lbound = lbound
+        self.lbound = lbound
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
