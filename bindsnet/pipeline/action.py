@@ -34,8 +34,8 @@ def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
     if _sum == 0:
         action = np.random.choice(pipeline.env.action_space.n)
     else:
-        pop_spikes = torch.Tensor([spikes[(i * pop_size):(i * pop_size) + pop_size].sum() for i in range(output.n)])
-        action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0]
+        pop_spikes = torch.Tensor([spikes[(i * pop_size):(i * pop_size) + pop_size].sum() for i in range(action_space.n)]) #FIXED : range(output.n) is replaced to range(action_space.n)
+        action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0].numpy() # For some environments in Gym, tensor cannot be action. Maybe all other non-atari environments?
 
     return action
 
