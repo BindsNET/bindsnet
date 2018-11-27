@@ -190,6 +190,7 @@ class GymEnvironment(Environment):
         Keyword arguments:
 
         :param max_prob: Maximum spiking probability.
+        :param clip_rewards: Whether or not to use :code:`np.sign` of rewards.
         """
         self.name = name
         self.env = gym.make(name)
@@ -197,6 +198,7 @@ class GymEnvironment(Environment):
 
         # Keyword arguments.
         self.max_prob = kwargs.get('max_prob', 1)
+        self.clip_rewards = kwargs.get('clip_rewards', True)
 
         self.obs = None
         self.reward = None
@@ -213,7 +215,10 @@ class GymEnvironment(Environment):
         """
         # Call gym's environment step function.
         self.obs, self.reward, self.done, info = self.env.step(a)
-        self.reward = np.sign(self.reward)
+
+        if self.clip_rewards:
+            self.reward = np.sign(self.reward)
+
         self.preprocess()
 
         # Return converted observations and other information.

@@ -571,8 +571,6 @@ class SparseConnection(AbstractConnection):
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param nu: Learning rate for both pre- and post-synaptic events.
-        :param nu_pre: Learning rate for pre-synaptic events.
-        :param nu_post: Learning rate for post-synpatic events.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:

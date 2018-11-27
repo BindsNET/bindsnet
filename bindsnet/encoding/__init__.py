@@ -116,7 +116,7 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
     # (incrementing by 1 to avoid zero intervals).
     dist = torch.distributions.Poisson(rate=rate)
     intervals = dist.sample(sample_shape=torch.Size([time]))
-    intervals[:, datum != 0] += 1
+    intervals[:, datum != 0][intervals == 0] += 1
 
     # Calculate spike times by cumulatively summing over time dimension.
     times = torch.cumsum(intervals, dim=0).long()
