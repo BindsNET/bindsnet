@@ -15,8 +15,8 @@ class AbstractConnection(ABC):
     Abstract base method for connections between ``Nodes``.
     """
 
-    def __init__(self, source: Nodes, target: Nodes,
-                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+    def __init__(self, source: Nodes, target: Nodes, nu: Optional[Union[float, Sequence[float]]] = None,
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for abstract base class for connection objects.
@@ -56,7 +56,7 @@ class AbstractConnection(ABC):
         self.a_pre = 0.0
 
         self.update_rule = self.update_rule(
-            connection=self, nu=self.nu, weight_decay=weight_decay
+            connection=self, nu=self.nu, weight_decay=weight_decay, **kwargs
         )
 
     @abstractmethod

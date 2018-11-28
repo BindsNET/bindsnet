@@ -170,7 +170,7 @@ class RealInput(Nodes, AbstractInput):
         :param x: Inputs to the layer.
         """
         # Set spike occurrences to input values.
-        self.s = x
+        self.s = self.dt * x
 
         if self.traces:
             # Decay and set spike traces.
@@ -712,14 +712,19 @@ class IzhikevichNodes(Nodes):
             self.b = 0.2 * torch.ones(n)
             self.c = -65.0 + 15 * (self.r ** 2)
             self.d = 8 - 6 * (self.r ** 2)
+            self.S = 0.5 * torch.rand(n, n)
             self.excitatory = torch.ones(n).byte()
+
         elif excitatory == 0:
             self.r = torch.rand(n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
             self.c = -65.0 * torch.ones(n)
             self.d = 2 * torch.ones(n)
+            self.S = -torch.rand(n, n)
+
             self.excitatory = torch.zeros(n).byte()
+
         else:
             self.excitatory = torch.zeros(n).byte()
 
@@ -732,13 +737,15 @@ class IzhikevichNodes(Nodes):
             self.b = torch.zeros(n)
             self.c = torch.zeros(n)
             self.d = torch.zeros(n)
+            self.S = torch.zeros(n, n)
 
             # excitatory
             self.r[:ex] = torch.rand(ex)
             self.a[:ex] = 0.02 * torch.ones(ex)
             self.b[:ex] = 0.2 * torch.ones(ex)
-            self.c[:ex] = -65.0 + 15 * (self.r[:ex] ** 2)
-            self.d[:ex] = 8 - 6 * (self.r[:ex] ** 2)
+            self.c[:ex] = -65.0 + 15 * self.r[:ex] ** 2
+            self.d[:ex] = 8 - 6 * self.r[:ex] ** 2
+            self.S[:, :ex] = 0.5 * torch.rand(n, ex)
             self.excitatory[:ex] = 1
 
             # inhibitory
@@ -747,6 +754,7 @@ class IzhikevichNodes(Nodes):
             self.b[ex:] = 0.25 - 0.05 * self.r[ex:]
             self.c[ex:] = -65.0 * torch.ones(inh)
             self.d[ex:] = 2 * torch.ones(inh)
+            self.S[:, ex:] = -torch.rand(n, inh)
             self.excitatory[ex:] = 0
 
         self.v = self.rest * torch.ones(n)  # Neuron voltages.
@@ -759,19 +767,23 @@ class IzhikevichNodes(Nodes):
 
         :param x: Inputs to the layer.
         """
-        # Apply v and u updates.
-        self.v += self.dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + x)
-        self.v += self.dt * 0.5 * (0.04 * (self.v ** 2) + 5 * self.v + 140 - self.u + x)
-        self.u += self.a * (self.b * self.v - self.u)
-
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
 
-        # Refractoriness and voltage reset.
+        # Voltage and recovery reset.
         self.v = torch.where(self.s, self.c, self.v)
         self.u = torch.where(self.s, self.u + self.d, self.u)
 
-        # voltage clipping to lowerbound
+        # Add inter-columnar input.
+        if self.s.any():
+            x += self.S[:, self.s].sum(dim=1)
+
+        # Apply v and u updates.
+        self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
+        self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
+        self.u += self.dt * self.a * (self.b * self.v - self.u)
+
+        # Voltage clipping to lower bound.
         if self.lbound is not None:
             self.v.masked_fill_(self.v < self.lbound, self.lbound)
 

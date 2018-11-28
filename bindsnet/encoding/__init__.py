@@ -1,24 +1,22 @@
 import torch
 import numpy as np
-import math
 from typing import Optional, Union, Iterable, Iterator
 
-#TODO remove np uses and replace them with pytorch functions.
-def single(datum: torch.Tensor, time: int = None,
-           sparsity: float = 0.3, max_prob:float = None) -> torch.Tensor:
+
+def single(datum: torch.Tensor, time: int, dt: float = 1.0, sparsity: float = 0.3, **kwargs) -> torch.Tensor:
     # language=rst
     """
     Generates timing based single-spike encoding. Spike occurs earlier if the
     intensity of the input feature is higher. Features whose value is lower than
     threshold is remain silent.
 
-    :param dataum: Tensor of shape ``[n_1, ..., n_k]``.
+    :param datum: Tensor of shape ``[n_1, ..., n_k]``.
     :param time: Length of the input and output.
+    :param dt: Simulation time step.
     :param sparsity: Sparsity of the input representation. 0 for no spike and 1 for all spike.
-    :param max_prob: Dummy variable. Just for matching with the caller.
     :return: Tensor of shape ``[time, n_1, ..., n_k]``.
     """
-
+    time = int(time / dt)
     shape = list(datum.shape)
     datum = np.copy(datum)
     quantile = np.quantile(datum,1-sparsity)
@@ -27,10 +25,21 @@ def single(datum: torch.Tensor, time: int = None,
     return torch.Tensor(s).byte()
 
 
-def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torch.Tensor:
+def repeat(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.Tensor:
     # language=rst
     """
+    :param datum: Repeats a tensor along a new dimension in the 0th position for ``int(time / dt)`` timesteps.
+    :param time: Tensor of shape ``[n_1, ..., n_k]``.
+    :param dt: Simulation time step.
+    :return: Tensor of shape ``[time, n_1, ..., n_k]`` of repeated data along the 0th dimension.
+    """
+    time = int(time / dt)
+    return datum.repeat([time, *torch.ones(len(datum.shape))])
 
+
+def bernoulli(datum: torch.Tensor, time: Optional[int] = None, dt: float = 1.0, **kwargs) -> torch.Tensor:
+    # language=rst
+    """
     :param datum: Generates Bernoulli-distributed spike trains based on input intensity. Inputs must be non-negative.
                   Spikes correspond to successful Bernoulli trials, with success probability equal to (normalized in
                   [0, 1]) input value.
@@ -44,12 +53,15 @@ def bernoulli(datum: torch.Tensor, time: Optional[int] = None, **kwargs) -> torc
     """
     # Setting kwargs.
     max_prob = kwargs.get('max_prob', 1.0)
-    dt = kwargs.get('dt', 1.0)
+
     assert 0 <= max_prob <= 1, 'Maximum firing probability must be in range [0, 1]'
+    assert datum >= 0, 'Inputs must be non-negative'
 
     shape, size = datum.shape, datum.numel()
     datum = datum.view(-1)
-    time = int(time / dt)
+
+    if time is not None:
+        time = int(time / dt)
 
     # Normalize inputs and rescale (spike probability proportional to normalized intensity).
     if datum.max() > 1.0:
@@ -102,6 +114,8 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
     :param dt: Simulation time step.
     :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
     """
+    assert datum >= 0, 'Inputs must be non-negative'
+
     # Get shape and size of data.
     shape, size = datum.shape, datum.numel()
     datum = datum.view(-1)
@@ -156,6 +170,8 @@ def rank_order(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> tor
     :param dt: Simulation time step.
     :return: Tensor of shape ``[time, n_1, ..., n_k]`` of rank order-encoded spikes.
     """
+    assert datum >= 0, 'Inputs must be non-negative'
+
     shape, size = datum.shape, datum.numel()
     datum = datum.view(-1)
     time = int(time / dt)
@@ -166,8 +182,6 @@ def rank_order(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> tor
     times[datum != 0] = 1 / datum[datum != 0]
     times *= time / times.max()  # Extended through simulation time.
     times = torch.ceil(times).long()
-
-    print(times.min(), times.max())
 
     # Create spike times tensor.
     spikes = torch.zeros(time, size).byte()
@@ -190,4 +204,4 @@ def rank_order_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: i
     :return: Tensors of shape ``[time, n_1, ..., n_k]`` of rank order-encoded spikes.
     """
     for i in range(len(data)):
-        yield rank_order(datm=data[i], time=time, dt=dt)  # Encode datum as rank order-encoded spike trains.
+        yield rank_order(datum=data[i], time=time, dt=dt)  # Encode datum as rank order-encoded spike trains.

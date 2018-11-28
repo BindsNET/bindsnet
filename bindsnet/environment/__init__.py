@@ -174,6 +174,7 @@ class DatasetEnvironment(Environment):
         elif type(self.dataset) in SpokenMNIST:
             return self.obs.view(-1, 40)
 
+
 class GymEnvironment(Environment):
     # language=rst
     """
