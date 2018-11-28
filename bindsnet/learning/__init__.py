@@ -15,7 +15,7 @@ class LearningRule(ABC):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
@@ -66,7 +66,7 @@ class NoOp(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
@@ -76,7 +76,7 @@ class NoOp(LearningRule):
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
     def update(self, **kwargs) -> None:
@@ -95,7 +95,7 @@ class PostPre(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``PostPre`` learning rule.
@@ -105,7 +105,7 @@ class PostPre(LearningRule):
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
@@ -179,7 +179,7 @@ class WeightDependentPostPre(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``WeightDependentPostPre`` learning rule.
@@ -190,7 +190,7 @@ class WeightDependentPostPre(LearningRule):
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces, 'Pre-synaptic nodes must record spike traces.'
@@ -275,7 +275,7 @@ class Hebbian(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``Hebbian`` learning rule.
@@ -285,7 +285,7 @@ class Hebbian(LearningRule):
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
@@ -356,7 +356,7 @@ class MSTDP(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``MSTDP`` learning rule.
@@ -365,7 +365,7 @@ class MSTDP(LearningRule):
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
@@ -482,7 +482,7 @@ class MSTDPET(LearningRule):
         :param float tc_e_trace: Time constant of the eligibility trace.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'

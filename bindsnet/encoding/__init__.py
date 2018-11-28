@@ -55,7 +55,7 @@ def bernoulli(datum: torch.Tensor, time: Optional[int] = None, dt: float = 1.0, 
     max_prob = kwargs.get('max_prob', 1.0)
 
     assert 0 <= max_prob <= 1, 'Maximum firing probability must be in range [0, 1]'
-    assert datum >= 0, 'Inputs must be non-negative'
+    assert (datum >= 0).all(), 'Inputs must be non-negative'
 
     shape, size = datum.shape, datum.numel()
     datum = datum.view(-1)
@@ -114,7 +114,7 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
     :param dt: Simulation time step.
     :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
     """
-    assert datum >= 0, 'Inputs must be non-negative'
+    assert (datum >= 0).all(), 'Inputs must be non-negative'
 
     # Get shape and size of data.
     shape, size = datum.shape, datum.numel()

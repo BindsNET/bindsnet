@@ -82,7 +82,7 @@ class Pipeline:
         self.render_interval = kwargs.get('render_interval', None)
         self.plot_length = kwargs.get('plot_length', 1.0)
         self.plot_type = kwargs.get('plot_type', 'color')
-        self.reward_delay = kwargs.get('reward_delay', 0)
+        self.reward_delay = kwargs.get('reward_delay', None)
 
         self.dt = network.dt
         self.timestep = int(self.time / self.dt)
@@ -103,6 +103,10 @@ class Pipeline:
             self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
             self.set_spike_data()
             self.plot_data()
+
+        if self.reward_delay is not None:
+            assert self.reward_delay > 0
+            self.rewards = torch.zeros(self.reward_delay)
 
         # Set up for multiple layers of input layers.
         self.encoded = {
@@ -152,7 +156,13 @@ class Pipeline:
             a = None
 
         # Run a step of the environment.
-        self.obs, self.reward, self.done, info = self.env.step(a)
+        self.obs, reward, self.done, info = self.env.step(a)
+
+        if self.reward_delay is not None:
+            self.rewards = torch.tensor([reward, *self.rewards[1:]]).float()
+            self.reward = self.rewards[-1]
+        else:
+            self.reward = reward
 
         # Store frame of history and encode the inputs.
         if self.enable_history and len(self.history) > 0:
