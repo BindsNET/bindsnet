@@ -24,7 +24,7 @@ def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
     output = pipeline.network.layers[output]
     action_space = pipeline.env.action_space
 
-    assert output.n % action_space.n == 0, 'Output layer size not equal to size of action space.'
+    assert output.n % action_space.n == 0, 'Output layer size not divisible by size of action space.'
 
     pop_size = int(output.n / action_space.n)
     spikes = output.s
@@ -34,8 +34,10 @@ def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
     if _sum == 0:
         action = np.random.choice(pipeline.env.action_space.n)
     else:
-        pop_spikes = torch.Tensor([spikes[(i * pop_size):(i * pop_size) + pop_size].sum() for i in range(action_space.n)]) #FIXED : range(output.n) is replaced to range(action_space.n)
-        action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0].numpy() # For some environments in Gym, tensor cannot be action. Maybe all other non-atari environments?
+        pop_spikes = torch.Tensor(
+            [spikes[(i * pop_size):(i * pop_size) + pop_size].sum() for i in range(action_space.n)]
+        )
+        action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0].item()
 
     return action
 

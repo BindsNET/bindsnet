@@ -7,7 +7,7 @@ from typing import Callable, Optional
 
 from ..network import Network
 from ..encoding import bernoulli
-from ..network.nodes import Input
+from ..network.nodes import Input, AbstractInput
 from ..environment import Environment
 from ..network.monitors import Monitor
 from ..analysis.plotting import plot_spikes, plot_voltages
@@ -50,9 +50,9 @@ class Pipeline:
         :param bool render_interval: Interval to render the environment.
         :param int save_interval: How often to save the network to disk.
         :param str output: String name of the layer from which to take output from.
-        :param float plot_length: Relative time length of the plotted record data.
-            Relative to parameter time.
-        :param str plot_type: Type of plotting. 'color' or 'line'
+        :param float plot_length: Relative time length of the plotted record data. Relative to parameter time.
+        :param str plot_type: Type of plotting ('color' or 'line').
+        :param int reward_delay: How many iterations to delay delivery of reward.
         """
         self.network = network
         self.env = environment
@@ -81,7 +81,8 @@ class Pipeline:
         self.history_length = kwargs.get('history_length', None)
         self.render_interval = kwargs.get('render_interval', None)
         self.plot_length = kwargs.get('plot_length', 1.0)
-        self.plot_type = kwargs.get('plot_type','color')
+        self.plot_type = kwargs.get('plot_type', 'color')
+        self.reward_delay = kwargs.get('reward_delay', None)
 
         self.dt = network.dt
         self.timestep = int(self.time / self.dt)
@@ -103,8 +104,14 @@ class Pipeline:
             self.set_spike_data()
             self.plot_data()
 
+        if self.reward_delay is not None:
+            assert self.reward_delay > 0
+            self.rewards = torch.zeros(self.reward_delay)
+
         # Set up for multiple layers of input layers.
-        self.encoded = {key: torch.Tensor() for key, val in network.layers.items() if type(val) == Input}
+        self.encoded = {
+            name: torch.Tensor() for name, layer in network.layers.items() if isinstance(layer, AbstractInput)
+        }
 
         self.obs = None
         self.reward = None
@@ -115,27 +122,6 @@ class Pipeline:
         self.first = True
         self.clock = time.time()
 
-    def set_spike_data(self) -> None:
-        # language=rst
-        """
-        Get the spike data from all layers in the pipeline's network.
-        """
-        self.spike_record = {l: self.network.monitors[f'{l}_spikes'].get('s') for l in self.network.layers}
-
-    def set_voltage_data(self) -> None:
-        # language=rst
-        """
-        Get the voltage data and threshold value from all applicable layers in the pipeline's network.
-        """
-        self.voltage_record = {}
-        self.threshold_value = {}
-        for l in self.network.layers:
-            if 'v' in self.network.layers[l].__dict__:
-                self.voltage_record[l] = self.network.monitors[f'{l}_voltages'].get('v')
-            if 'thresh' in self.network.layers[l].__dict__:
-                self.threshold_value[l] = self.network.layers[l].thresh
-
-
     def step(self, **kwargs) -> None:
         # language=rst
         """
@@ -143,14 +129,14 @@ class Pipeline:
 
         Keyword arguments:
 
-        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to T/F if neuron at time t should be "clamp" to a
-                                              certain value specify in clamp_v. The ``Tensor``s of shape ``[time, n_input]``
-        :param Dict[str, torch.Tensor] clamp_v: Mapping of layer names to certain value to clamps the True node specify
-                                                by clamp. ``Tensor``s of shape ``[time, n_input]``
+        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to boolean masks if neurons should be clamped to
+                                              spiking. The ``Tensor``s have shape ``[n_neurons]``.
+        :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks if neurons should be clamped
+                                                to not spiking. The ``Tensor``s should have shape ``[n_neurons]``.
+        :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
+                                                     weights to clamp to zero.
+        :param float max_prob: Maximum probability of firing for ``bernoulli`` spike train encoder.
         """
-        clamp = kwargs.get('clamp', {})
-        clamp_v = kwargs.get('clamp_v', {})
-
         if self.print_interval is not None and self.iteration % self.print_interval == 0:
             print(f'Iteration: {self.iteration} (Time: {time.time() - self.clock:.4f})')
             self.clock = time.time()
@@ -170,7 +156,13 @@ class Pipeline:
             a = None
 
         # Run a step of the environment.
-        self.obs, self.reward, self.done, info = self.env.step(a)
+        self.obs, reward, self.done, info = self.env.step(a)
+
+        if self.reward_delay is not None:
+            self.rewards = torch.tensor([reward, *self.rewards[1:]]).float()
+            self.reward = self.rewards[-1]
+        else:
+            self.reward = reward
 
         # Store frame of history and encode the inputs.
         if self.enable_history and len(self.history) > 0:
@@ -179,10 +171,10 @@ class Pipeline:
 
         # Encode the observation using given encoding function.
         for inpt in self.encoded:
-            self.encoded[inpt] = self.encoding(self.obs, time=self.time, max_prob=self.env.max_prob, dt=self.network.dt)
+            self.encoded[inpt] = self.encoding(self.obs, time=self.time, dt=self.network.dt, **kwargs)
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(inpts=self.encoded, time=self.time, reward=self.reward, clamp=clamp, clamp_v=clamp_v)
+        self.network.run(inpts=self.encoded, time=self.time, reward=self.reward, **kwargs)
 
         # Plot relevant data.
         if self.plot_interval is not None and self.iteration % self.plot_interval == 0:
@@ -230,7 +222,6 @@ class Pipeline:
             self.reward_ax.set_ylim(bottom=y_min, top=y_max)
             self.reward_plot.set_data(range(self.episode), self.reward_list)
 
-
     def plot_data(self) -> None:
         # language=rst
         """
@@ -253,6 +244,26 @@ class Pipeline:
 
         plt.pause(1e-8)
         plt.show()
+
+    def set_spike_data(self) -> None:
+        # language=rst
+        """
+        Get the spike data from all layers in the pipeline's network.
+        """
+        self.spike_record = {l: self.network.monitors[f'{l}_spikes'].get('s') for l in self.network.layers}
+
+    def set_voltage_data(self) -> None:
+        # language=rst
+        """
+        Get the voltage data and threshold value from all applicable layers in the pipeline's network.
+        """
+        self.voltage_record = {}
+        self.threshold_value = {}
+        for l in self.network.layers:
+            if 'v' in self.network.layers[l].__dict__:
+                self.voltage_record[l] = self.network.monitors[f'{l}_voltages'].get('v')
+            if 'thresh' in self.network.layers[l].__dict__:
+                self.threshold_value[l] = self.network.layers[l].thresh
 
     def update_history(self) -> None:
         # language=rst
@@ -287,8 +298,8 @@ class Pipeline:
         if self.iteration % self.delta == 0:
             if self.history_index != max(self.history.keys()):
                 self.history_index += self.delta
-            # Wrap around the history
             else:
+                # Wrap around the history.
                 self.history_index = (self.history_index % max(self.history.keys())) + 1
 
     def reset_(self) -> None:

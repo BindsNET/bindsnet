@@ -15,7 +15,7 @@ class LearningRule(ABC):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
@@ -66,7 +66,7 @@ class NoOp(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
@@ -76,7 +76,7 @@ class NoOp(LearningRule):
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
     def update(self, **kwargs) -> None:
@@ -95,7 +95,7 @@ class PostPre(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``PostPre`` learning rule.
@@ -105,7 +105,7 @@ class PostPre(LearningRule):
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
@@ -179,7 +179,7 @@ class WeightDependentPostPre(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``WeightDependentPostPre`` learning rule.
@@ -190,7 +190,7 @@ class WeightDependentPostPre(LearningRule):
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces, 'Pre-synaptic nodes must record spike traces.'
@@ -275,7 +275,7 @@ class Hebbian(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``Hebbian`` learning rule.
@@ -285,7 +285,7 @@ class Hebbian(LearningRule):
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
@@ -356,7 +356,7 @@ class MSTDP(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``MSTDP`` learning rule.
@@ -365,7 +365,7 @@ class MSTDP(LearningRule):
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
@@ -468,7 +468,7 @@ class MSTDPET(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0) -> None:
+                 weight_decay: float = 0.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``MSTDPET`` learning rule.
@@ -476,9 +476,13 @@ class MSTDPET(LearningRule):
         :param connection: An ``AbstractConnection`` object whose weights the ``MSTDPET`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+
+        Keyword arguments:
+
+        :param float tc_e_trace: Time constant of the eligibility trace.
         """
         super().__init__(
-            connection=connection, nu=nu, weight_decay=weight_decay
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
         assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
@@ -493,13 +497,7 @@ class MSTDPET(LearningRule):
             )
 
         self.e_trace = torch.zeros(self.source.n, self.target.n)
-        self.tc_e_trace = 0.04
-        self.p_plus = torch.zeros(self.source.n)
-        self.tc_plus = 0.05
-        self.p_minus = torch.zeros(self.target.n)
-        self.tc_minus = 0.05
-
-        self.dt = self.connection.dt
+        self.tc_e_trace = kwargs.get('tc_e_trace', 5e-2)
 
     def _connection_update(self, **kwargs) -> None:
         # language=rst
@@ -525,11 +523,13 @@ class MSTDPET(LearningRule):
         a_minus = kwargs.get('a_minus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = self.p_plus * np.exp(-self.dt * self.tc_plus) + a_plus * source_x
-        self.p_minus = self.p_minus * np.exp(-self.dt * self.tc_minus) + a_minus * target_x
+        self.p_plus = a_plus * source_x
+        self.p_minus = a_minus * target_x
 
         # Calculate value of eligibility trace.
-        self.e_trace += torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
+        self.e_trace -= self.tc_e_trace * self.e_trace
+        update = torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
+        self.e_trace[update != 0] = update[update != 0]
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
@@ -566,15 +566,16 @@ class MSTDPET(LearningRule):
         s_target = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
 
         # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = self.p_plus * np.exp(-self.dt / self.tc_plus) + a_plus * x_source
-        self.p_minus = self.p_minus * np.exp(-self.dt / self.tc_minus) + a_minus * x_target
+        self.p_plus = a_plus * x_source
+        self.p_minus = a_minus * x_target
 
         # Post-synaptic and pre-synaptic updates.
         post = (self.p_plus @ s_target.t()).view(self.connection.w.size())
         pre = (s_source @ self.p_minus.t()).view(self.connection.w.size())
+        update = post + pre
 
         # Calculate value of eligibility trace.
-        self.e_trace = post + pre
+        self.e_trace[update != 0] = update[update != 0]
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace

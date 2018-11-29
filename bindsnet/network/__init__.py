@@ -208,8 +208,8 @@ class Network:
         :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks if neurons should be clamped
                                                 to not spiking. The ``Tensor``s should have shape ``[n_neurons]``.
         :param float reward: Scalar value used in reward-modulated learning.
-        :param Dict[str, torch.Tensor] masks: Mapping of connection names to boolean masks determining which weights to
-                                              clamp to zero.
+        :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
+                                                     weights to clamp to zero.
 
         **Example:**
 
@@ -287,7 +287,6 @@ class Network:
         # Re-normalize connections.
         for c in self.connections:
             self.connections[c].normalize()
-
 
     def reset_(self) -> None:
         # language=rst
