@@ -19,13 +19,10 @@ def load_network(file_name: str, learning: bool = None) -> 'Network':
     :param file_name: Path to serialized network object on disk.
     :param learning: Whether to load with learning enabled. Default loads value from disk.
     """
-    try:
-        net = torch.load(open(file_name, 'rb'))
-        if learning is not None and 'learning' in vars(net):
-            net.learning = learning
-        return net
-    except FileNotFoundError:
-        print('Network not found on disk.')
+    network = torch.load(open(file_name, 'rb'))
+    if learning is not None and 'learning' in vars(network):
+        network.learning = learning
+    return network
 
 
 class Network:
