@@ -73,11 +73,15 @@ class Monitor(AbstractMonitor):
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
-            self.recording = {var: torch.Tensor() for var in self.state_vars}
+            self.recording = {v: torch.tensor([], dtype=self.obj.__dict__[v].dtype) for v in self.state_vars}
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = {var: torch.zeros(*self.obj.__dict__[var].size(), self.time) for var in self.state_vars}
+            self.recording = self.recording = {
+                v: torch.zeros(
+                    *self.obj.__dict__[v].size(), self.time, dtype=self.obj.__dict__[v].dtype
+                ) for v in self.state_vars
+            }
 
     def get(self, var: str) -> torch.Tensor:
         # language=rst
@@ -97,15 +101,15 @@ class Monitor(AbstractMonitor):
         """
         if self.time is None or self.record_length == self.time:
             for v in self.state_vars:
-                data = self.obj.__dict__[v].unsqueeze(-1).float()
+                data = self.obj.__dict__[v].unsqueeze(-1)
                 self.recording[v] = torch.cat([self.recording[v], data], -1)
 
             self.record_length += 1
         else:
             for v in self.state_vars:
                 # Remove the oldest data and concatenate new data
-                data = self.obj.__dict__[v].unsqueeze(-1).float()
-                self.recording[v] = torch.cat([self.recording[v][...,1:], data], -1)
+                data = self.obj.__dict__[v].unsqueeze(-1)
+                self.recording[v] = torch.cat([self.recording[v][..., 1:], data], -1)
 
     def reset_(self) -> None:
         # language=rst
@@ -113,13 +117,18 @@ class Monitor(AbstractMonitor):
         Resets recordings to empty ``torch.Tensor``s.
         """
         self.record_length = 0
+
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
-            self.recording = {v: torch.Tensor() for v in self.state_vars}
+            self.recording = {v: torch.tensor([], dtype=self.obj.__dict__[v].dtype) for v in self.state_vars}
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = {v: torch.zeros(*self.obj.__dict__[v].size(), self.time) for v in self.state_vars}
+            self.recording = self.recording = {
+                v: torch.zeros(
+                    *self.obj.__dict__[v].size(), self.time, dtype=self.obj.__dict__[v].dtype
+                ) for v in self.state_vars
+            }
 
 
 class NetworkMonitor(AbstractMonitor):

@@ -324,8 +324,7 @@ class LIFNodes(Nodes):
                  trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 lbound: float = None,
-                 decay: Union[float, torch.Tensor] = 1e-2) -> None:
+                 decay: Union[float, torch.Tensor] = 1e-2, lbound: float = None) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons.
@@ -339,8 +338,8 @@ class LIFNodes(Nodes):
         :param rest: Resting membrane voltage.
         :param reset: Post-spike reset voltage.
         :param refrac: Refractory (non-firing) period of the neuron.
-        :param lbound: Lower bound of the voltage.
         :param decay: Time constant of neuron voltage decay.
+        :param lbound: Lower bound of the voltage.
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
@@ -431,8 +430,7 @@ class AdaptiveLIFNodes(Nodes):
                  rest: Union[float, torch.Tensor] = -65.0, reset: Union[float, torch.Tensor] = -65.0,
                  thresh: Union[float, torch.Tensor] = -52.0, refrac: Union[int, torch.Tensor] = 5,
                  decay: Union[float, torch.Tensor] = 1e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
-                 lbound: float = None,
-                 theta_decay: Union[float, torch.Tensor] = 1e-7) -> None:
+                 theta_decay: Union[float, torch.Tensor] = 1e-7, lbound: float = None) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons with adaptive firing thresholds.
@@ -553,8 +551,7 @@ class DiehlAndCookNodes(Nodes):
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
                  decay: Union[float, torch.Tensor] = 1e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
-                 lbound: float = None,
-                 theta_decay: Union[float, torch.Tensor] = 1e-7) -> None:
+                 theta_decay: Union[float, torch.Tensor] = 1e-7, lbound: float = None, one_spike: bool = True) -> None:
         # language=rst
         """
         Instantiates a layer of Diehl & Cook 2015 neurons.
@@ -571,6 +568,8 @@ class DiehlAndCookNodes(Nodes):
         :param decay: Time constant of neuron voltage decay.
         :param theta_plus: Voltage increase of threshold after spiking.
         :param theta_decay: Time constant of adaptive threshold decay.
+        :param lbound: Lower bound of the voltage.
+        :param one_spike: Whether to allow only one spike per timestep.
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
@@ -619,6 +618,8 @@ class DiehlAndCookNodes(Nodes):
         # Lower bound of voltage.
         self.lbound = lbound
 
+        # One spike per timestep.
+        self.one_spike = one_spike
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.theta = torch.zeros(self.shape)         # Adaptive thresholds.
@@ -650,10 +651,11 @@ class DiehlAndCookNodes(Nodes):
         self.theta += self.theta_plus * self.s.float()
 
         # Choose only a single neuron to spike.
-        if self.s.any():
-            s = torch.zeros(self.n).byte()
-            s[torch.multinomial(self.s.float().view(-1), 1)] = 1
-            self.s = s.view(self.shape)
+        if self.one_spike:
+            if self.s.any():
+                s = torch.zeros(self.n).byte()
+                s[torch.multinomial(self.s.float().view(-1), 1)] = 1
+                self.s = s.view(self.shape)
 
         # voltage clipping to lowerbound
         if self.lbound is not None:
