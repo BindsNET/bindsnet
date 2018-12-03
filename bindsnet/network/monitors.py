@@ -102,14 +102,14 @@ class Monitor(AbstractMonitor):
         if self.time is None or self.record_length == self.time:
             for v in self.state_vars:
                 data = self.obj.__dict__[v].unsqueeze(-1)
-                self.recording[v] = torch.cat([self.recording[v], data], -1)
+                self.recording[v] = torch.cat([self.recording[v].type(data.type()), data], -1)
 
             self.record_length += 1
         else:
             for v in self.state_vars:
                 # Remove the oldest data and concatenate new data
                 data = self.obj.__dict__[v].unsqueeze(-1)
-                self.recording[v] = torch.cat([self.recording[v][..., 1:], data], -1)
+                self.recording[v] = torch.cat([self.recording[v][..., 1:].type(data.type()), data], -1)
 
     def reset_(self) -> None:
         # language=rst

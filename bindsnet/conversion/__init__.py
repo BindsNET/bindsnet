@@ -1,17 +1,27 @@
 import torch
+import numpy as np
 import torch.nn as nn
+import torch.nn.functional as F
 
 from torch.nn.modules.utils import _pair
 
-import numpy as np
-
 from time import time as t
-from typing import Union, Sequence, Optional
+from typing import Union, Sequence, Optional, Tuple
 
 import bindsnet.network.nodes as nodes
 import bindsnet.network.topology as topology
 
 from bindsnet.network import Network
+
+
+class Permute(nn.Module):
+    def __init__(self, dims):
+        super(Permute, self).__init__()
+
+        self.dims = dims
+
+    def forward(self, x):
+        return x.permute(*self.dims).contiguous()
 
 
 class FeatureExtractor(nn.Module):
@@ -154,6 +164,50 @@ class PassThroughNodes(nodes.Nodes):
         self.s = torch.zeros(self.shape)
 
 
+class PermuteConnection(topology.AbstractConnection):
+
+    def __init__(self, source: nodes.Nodes, target: nodes.Nodes, dims: Sequence,
+                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+
+        super().__init__(source, target, nu, weight_decay, **kwargs)
+
+        self.dims = dims
+
+    def compute(self, s: torch.Tensor):
+        return s.permute(self.dims).float()
+
+    def update(self, **kwargs):
+        pass
+
+    def normalize(self):
+        pass
+
+    def reset_(self):
+        pass
+
+
+class ConstantPad2dConnection(topology.AbstractConnection):
+
+    def __init__(self, source: nodes.Nodes, target: nodes.Nodes, padding: Tuple,
+                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+
+        super().__init__(source, target, nu, weight_decay, **kwargs)
+
+        self.padding = padding
+
+    def compute(self, s: torch.Tensor):
+        return F.pad(s, self.padding).float()
+
+    def update(self, **kwargs):
+        pass
+
+    def normalize(self):
+        pass
+
+    def reset_(self):
+        pass
+
+
 def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, percentile: float = 99.9):
     # language=rst
     """
@@ -200,6 +254,7 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
 
         else:
             activations = extractor.forward(data)[name]
+
             if isinstance(module, nn.ReLU):
                 if prev_module is not None:
                     scale_factor = np.percentile(activations.cpu(), percentile)
@@ -215,7 +270,7 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
     return ann
 
 
-def _ann_to_snn_helper(prev, current, nxt):
+def _ann_to_snn_helper(prev, current):
     if isinstance(current, nn.Linear):
         layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
         connection = topology.Connection(
@@ -254,6 +309,31 @@ def _ann_to_snn_helper(prev, current, nxt):
         connection = topology.MaxPool2dConnection(
             source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
             padding=current.padding, dilation=current.dilation, decay=1
+        )
+
+    elif isinstance(current, Permute):
+        layer = PassThroughNodes(
+            shape=[
+                prev.shape[current.dims[0]], prev.shape[current.dims[1]],
+                prev.shape[current.dims[2]], prev.shape[current.dims[3]]
+            ]
+        )
+
+        connection = PermuteConnection(
+            source=prev, target=layer, dims=current.dims
+        )
+
+    elif isinstance(current, nn.ConstantPad2d):
+        layer = PassThroughNodes(
+            shape=[
+                prev.shape[0], prev.shape[1],
+                current.padding[0] + current.padding[1] + prev.shape[2],
+                current.padding[2] + current.padding[3] + prev.shape[3]
+            ]
+        )
+
+        connection = ConstantPad2dConnection(
+            source=prev, target=layer, padding=current.padding
         )
 
     else:
@@ -309,7 +389,7 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     prev = input_layer
     while i < len(children) - 1:
         current, nxt = children[i:i + 2]
-        layer, connection = _ann_to_snn_helper(prev, current, nxt)
+        layer, connection = _ann_to_snn_helper(prev, current)
 
         i += 1
 
@@ -322,7 +402,7 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
         prev = layer
 
     current = children[-1]
-    layer, connection = _ann_to_snn_helper(prev, current, None)
+    layer, connection = _ann_to_snn_helper(prev, current)
 
     i += 1
 
