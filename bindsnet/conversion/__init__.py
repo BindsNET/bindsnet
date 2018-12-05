@@ -230,6 +230,7 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
 
     set_requires_grad(ann, value=False)
     extractor = FeatureExtractor(ann)
+    all_activations = extractor.forward(data)
 
     prev_module = None
     prev_factor = 1
@@ -237,8 +238,9 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
         if isinstance(module, nn.Sequential):
 
             extractor2 = FeatureExtractor(module)
+            all_activations2 = extractor2.forward(data)
             for name2, module2 in module.named_children():
-                activations = extractor2.forward(data)[name2]
+                activations = all_activations2[name2]
 
                 if isinstance(module2, nn.ReLU):
                     if prev_module is not None:
@@ -253,8 +255,7 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
                     prev_module = module2
 
         else:
-            activations = extractor.forward(data)[name]
-
+            activations = all_activations[name]
             if isinstance(module, nn.ReLU):
                 if prev_module is not None:
                     scale_factor = np.percentile(activations.cpu(), percentile)
