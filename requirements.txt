@@ -1,6 +1,7 @@
+foolbox
 scipy>=1.1.0
 numpy>=1.14.2
-torch>=0.4.0
+torch>=1.0.0
 tqdm>=4.19.9
 setuptools>=39.0.1
 matplotlib>=2.1.0
