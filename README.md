@@ -99,22 +99,21 @@ We have provided some simple starter scripts for doing unsupervised learning (le
 
 ## Citation
 
-If you use BindsNET in your research, please cite the following [article](https://arxiv.org/abs/1806.01423):
+If you use BindsNET in your research, please cite the following [article](https://www.frontiersin.org/article/10.3389/fninf.2018.00089):
 
 ```
-@ARTICLE{2018arXiv180601423H,
-   author = {{Hazan}, H. and {Saunders}, D.~J. and {Khan}, H. and {Sanghavi}, D.~T. and 
-	{Siegelmann}, H.~T. and {Kozma}, R.},
-    title = "{BindsNET: A machine learning-oriented spiking neural networks library in Python}",
-  journal = {ArXiv e-prints},
-archivePrefix = "arXiv",
-   eprint = {1806.01423},
- keywords = {Computer Science - Neural and Evolutionary Computing, Quantitative Biology - Neurons and Cognition},
-     year = 2018,
-    month = jun,
-   adsurl = {http://adsabs.harvard.edu/abs/2018arXiv180601423H},
-  adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+@ARTICLE{10.3389/fninf.2018.00089,
+	AUTHOR={Hazan, Hananel and Saunders, Daniel J. and Khan, Hassaan and Patel, Devdhar and Sanghavi, Darpan T. and Siegelmann, Hava T. and Kozma, Robert},   
+	TITLE={BindsNET: A Machine Learning-Oriented Spiking Neural Networks Library in Python},      
+	JOURNAL={Frontiers in Neuroinformatics},      
+	VOLUME={12},      
+	PAGES={89},     
+	YEAR={2018}, 
+	URL={https://www.frontiersin.org/article/10.3389/fninf.2018.00089},       
+	DOI={10.3389/fninf.2018.00089},      
+	ISSN={1662-5196},
 }
+
 ```
 
 ## Contributors
