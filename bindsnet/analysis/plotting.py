@@ -127,7 +127,7 @@ def plot_spikes(spikes: Dict[str, torch.Tensor], time: Optional[Tuple[int, int]]
 
 
 def plot_weights(weights: torch.Tensor, wmin: Optional[float] = 0, wmax: Optional[float] = 1,
-                 im: Optional[AxesImage] = None, figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
+                 im: Optional[AxesImage] = None, figsize: Tuple[int, int] = (5, 5), cmap: str = 'hot_r') -> AxesImage:
     # language=rst
     """
     Plot a connection weight matrix.
@@ -137,12 +137,13 @@ def plot_weights(weights: torch.Tensor, wmin: Optional[float] = 0, wmax: Optiona
     :param wmax: Maximum allowed weight value.
     :param im: Used for re-drawing the weights plot.
     :param figsize: Horizontal, vertical figure size in inches.
+    :param cmap: Matplotlib colormap.
     :return: ``AxesImage`` for re-drawing the weights plot.
     """
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
 
-        im = ax.imshow(weights, cmap='hot_r', vmin=wmin, vmax=wmax)
+        im = ax.imshow(weights, cmap=cmap, vmin=wmin, vmax=wmax)
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
@@ -158,7 +159,7 @@ def plot_weights(weights: torch.Tensor, wmin: Optional[float] = 0, wmax: Optiona
 
 
 def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 1.0, im: Optional[AxesImage] = None,
-                        figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
+                        figsize: Tuple[int, int] = (5, 5), cmap: str = 'hot_r') -> AxesImage:
     # language=rst
     """
     Plot a connection weight matrix of a Conv2dConnection.
@@ -168,6 +169,7 @@ def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 
     :param wmax: Maximum allowed weight value.
     :param im: Used for re-drawing the weights plot.
     :param figsize: Horizontal, vertical figure size in inches.
+    :param cmap: Matplotlib colormap.
     :return: Used for re-drawing the weights plot.
     """
     sqrt1 = int(np.ceil(np.sqrt(weights.size(0))))
@@ -188,7 +190,7 @@ def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 
 
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
-        im = ax.imshow(reshaped, cmap='hot_r', vmin=wmin, vmax=wmax)
+        im = ax.imshow(reshaped, cmap=cmap, vmin=wmin, vmax=wmax)
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
@@ -217,7 +219,7 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
                                    conv_size: Union[int, Tuple[int, int]], locations: torch.Tensor,
                                    input_sqrt: Union[int, Tuple[int, int]], wmin: float = 0.0, wmax: float = 1.0,
                                    im: Optional[AxesImage] = None, lines: bool = True,
-                                   figsize: Tuple[int, int] = (5, 5)) -> AxesImage:
+                                   figsize: Tuple[int, int] = (5, 5), cmap: str = 'hot_r') -> AxesImage:
     # language=rst
     """
     Plot a connection weight matrix of a :code:`Connection` with `locally connected structure
@@ -234,6 +236,7 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
     :param im: Used for re-drawing the weights plot.
     :param lines: Whether or not to draw horizontal and vertical lines separating input regions.
     :param figsize: Horizontal, vertical figure size in inches.
+    :param cmap: Matplotlib colormap.
     :return: Used for re-drawing the weights plot.
     """
     kernel_size = _pair(kernel_size)
@@ -246,7 +249,7 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
 
-        im = ax.imshow(reshaped, cmap='hot_r', vmin=wmin, vmax=wmax)
+        im = ax.imshow(reshaped.cpu(), cmap=cmap, vmin=wmin, vmax=wmax)
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
@@ -376,7 +379,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         if n_subplots == 1:  # Plotting only one image
             for v in voltages.items():
                 if plot_type == 'line':
-                    ims.append(axes.plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].numpy().T))
+                    ims.append(axes.plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T))
 
                     if threshold is not None:
                         ims.append(axes.axhline(y=threshold[v[0]], c='r', linestyle='--'))
@@ -391,7 +394,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         else:  # Plot each layer at a time
             for i, v in enumerate(voltages.items()):
                 if plot_type == 'line':
-                    ims.append(axes[i].plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].numpy().T))
+                    ims.append(axes[i].plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T))
                     if threshold is not None:
                         ims.append(axes[i].axhline(y=threshold[v[0]], c='r', linestyle='--'))
                 else:
@@ -405,12 +408,13 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         plt.setp(axes, xlabel='Simulation time', ylabel='Neuron index')
         plt.tight_layout()
 
-    else:  # Plotting figure given
+    else:
+        # Plotting figure given
         if n_subplots == 1:  # Plotting only one image
             for v in voltages.items():
                 axes.clear()
                 if plot_type == 'line':
-                    axes.plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].numpy().T)
+                    axes.plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T)
                     if threshold is not None:
                         axes.axhline(y=threshold[v[0]], c='r', linestyle='--')
                 else:
@@ -419,11 +423,12 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
                 axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
                 axes.set_aspect('auto')
 
-        else: # Plot each layer at a time
+        else:
+            # Plot each layer at a time
             for i, v in enumerate(voltages.items()):
                 axes[i].clear()
                 if plot_type == 'line':
-                    axes[i].plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].numpy().T)
+                    axes[i].plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T)
                     if threshold is not None:
                         axes[i].axhline(y=threshold[v[0]], c='r', linestyle='--')
                 else:

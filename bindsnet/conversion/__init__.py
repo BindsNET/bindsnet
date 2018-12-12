@@ -1,12 +1,12 @@
 import torch
+import numpy as np
 import torch.nn as nn
+import torch.nn.functional as F
 
 from torch.nn.modules.utils import _pair
 
-import numpy as np
-
 from time import time as t
-from typing import Union, Sequence, Optional
+from typing import Union, Sequence, Optional, Tuple, Dict
 
 import bindsnet.network.nodes as nodes
 import bindsnet.network.topology as topology
@@ -14,13 +14,60 @@ import bindsnet.network.topology as topology
 from bindsnet.network import Network
 
 
+class Permute(nn.Module):
+    # language=rst
+    """
+    PyTorch module for the explicit permutation of a tensor's dimensions in a parent
+    module's ``forward`` pass (as opposed to ``torch.permute``).
+    """
+
+    def __init__(self, dims):
+        # language=rst
+        """
+        Constructor for ``Permute`` module.
+
+        :param dims: Ordering of dimensions for permutation.
+        """
+        super(Permute, self).__init__()
+
+        self.dims = dims
+
+    def forward(self, x):
+        # language=rst
+        """
+        Forward pass of permutation module.
+
+        :param x: Input tensor to permute.
+        :return: Permuted input tensor.
+        """
+        return x.permute(*self.dims).contiguous()
+
+
 class FeatureExtractor(nn.Module):
+    # language=rst
+    """
+    Special-purpose PyTorch module for the extraction of child module's activations.
+    """
+
     def __init__(self, submodule):
+        # language=rst
+        """
+        Constructor for ``FeatureExtractor`` module.
+
+        :param submodule: The module who's children modules are to be extracted.
+        """
         super(FeatureExtractor, self).__init__()
 
         self.submodule = submodule
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> Dict[nn.Module, torch.Tensor]:
+        # language=rst
+        """
+        Forward pass of the feature extractor.
+
+        :param x: Input data for the ``submodule''.
+        :return: A dictionary mapping
+        """
         activations = {'input': x}
         for name, module in self.submodule._modules.items():
             if isinstance(module, nn.Linear):
@@ -154,6 +201,130 @@ class PassThroughNodes(nodes.Nodes):
         self.s = torch.zeros(self.shape)
 
 
+class PermuteConnection(topology.AbstractConnection):
+    # language=rst
+    """
+    Special-purpose connection for emulating the custom ``Permute`` module in spiking neural networks.
+    """
+
+    def __init__(self, source: nodes.Nodes, target: nodes.Nodes, dims: Sequence,
+                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+
+        # language=rst
+        """
+        Constructor for ``PermuteConnection``.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param dims: Order of dimensions to permute.
+        :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+
+        Keyword arguments:
+
+        :param function update_rule: Modifies connection parameters according to some rule.
+        :param float wmin: The minimum value on the connection weights.
+        :param float wmax: The maximum value on the connection weights.
+        :param float norm: Total weight per target neuron normalization.
+        """
+        super().__init__(source, target, nu, weight_decay, **kwargs)
+
+        self.dims = dims
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Permute input.
+
+        :param s: Input.
+        :return: Permuted input.
+        """
+        return s.permute(self.dims).float()
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``update``.
+        """
+        pass
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``normalize``.
+        """
+        pass
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``reset_``.
+        """
+        pass
+
+
+class ConstantPad2dConnection(topology.AbstractConnection):
+    # language=rst
+    """
+    Special-purpose connection for emulating the ``ConstantPad2d`` PyTorch module in spiking neural networks.
+    """
+
+    def __init__(self, source: nodes.Nodes, target: nodes.Nodes, padding: Tuple,
+                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+        # language=rst
+        """
+        Constructor for ``ConstantPad2dConnection``.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param padding: Padding of input tensors; passed to ``torch.nn.functional.pad``.
+        :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+
+        Keyword arguments:
+
+        :param function update_rule: Modifies connection parameters according to some rule.
+        :param float wmin: The minimum value on the connection weights.
+        :param float wmax: The maximum value on the connection weights.
+        :param float norm: Total weight per target neuron normalization.
+        """
+
+        super().__init__(source, target, nu, weight_decay, **kwargs)
+
+        self.padding = padding
+
+    def compute(self, s: torch.Tensor):
+        # language=rst
+        """
+        Pad input.
+
+        :param s: Input.
+        :return: Padding input.
+        """
+        return F.pad(s, self.padding).float()
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``update``.
+        """
+        pass
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``normalize``.
+        """
+        pass
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``reset_``.
+        """
+        pass
+
+
 def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, percentile: float = 99.9):
     # language=rst
     """
@@ -176,6 +347,7 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
 
     set_requires_grad(ann, value=False)
     extractor = FeatureExtractor(ann)
+    all_activations = extractor.forward(data)
 
     prev_module = None
     prev_factor = 1
@@ -183,8 +355,9 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
         if isinstance(module, nn.Sequential):
 
             extractor2 = FeatureExtractor(module)
+            all_activations2 = extractor2.forward(data)
             for name2, module2 in module.named_children():
-                activations = extractor2.forward(data)[name2]
+                activations = all_activations2[name2]
 
                 if isinstance(module2, nn.ReLU):
                     if prev_module is not None:
@@ -199,7 +372,7 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
                     prev_module = module2
 
         else:
-            activations = extractor.forward(data)[name]
+            activations = all_activations[name]
             if isinstance(module, nn.ReLU):
                 if prev_module is not None:
                     scale_factor = np.percentile(activations.cpu(), percentile)
@@ -215,7 +388,15 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
     return ann
 
 
-def _ann_to_snn_helper(prev, current, nxt):
+def _ann_to_snn_helper(prev, current):
+    # language=rst
+    """
+    Helper function for main ``ann_to_snn`` method.
+
+    :param prev: Previous PyTorch module in artificial neural network.
+    :param current: Current PyTorch module in artificial neural network.
+    :return: Spiking neural network layer and connection corresponding to ``prev`` and ``current`` PyTorch modules.
+    """
     if isinstance(current, nn.Linear):
         layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
         connection = topology.Connection(
@@ -254,6 +435,31 @@ def _ann_to_snn_helper(prev, current, nxt):
         connection = topology.MaxPool2dConnection(
             source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
             padding=current.padding, dilation=current.dilation, decay=1
+        )
+
+    elif isinstance(current, Permute):
+        layer = PassThroughNodes(
+            shape=[
+                prev.shape[current.dims[0]], prev.shape[current.dims[1]],
+                prev.shape[current.dims[2]], prev.shape[current.dims[3]]
+            ]
+        )
+
+        connection = PermuteConnection(
+            source=prev, target=layer, dims=current.dims
+        )
+
+    elif isinstance(current, nn.ConstantPad2d):
+        layer = PassThroughNodes(
+            shape=[
+                prev.shape[0], prev.shape[1],
+                current.padding[0] + current.padding[1] + prev.shape[2],
+                current.padding[2] + current.padding[3] + prev.shape[3]
+            ]
+        )
+
+        connection = ConstantPad2dConnection(
+            source=prev, target=layer, padding=current.padding
         )
 
     else:
@@ -309,7 +515,7 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     prev = input_layer
     while i < len(children) - 1:
         current, nxt = children[i:i + 2]
-        layer, connection = _ann_to_snn_helper(prev, current, nxt)
+        layer, connection = _ann_to_snn_helper(prev, current)
 
         i += 1
 
@@ -322,7 +528,7 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
         prev = layer
 
     current = children[-1]
-    layer, connection = _ann_to_snn_helper(prev, current, None)
+    layer, connection = _ann_to_snn_helper(prev, current)
 
     i += 1
 

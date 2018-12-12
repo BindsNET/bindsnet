@@ -55,8 +55,6 @@ class AbstractConnection(ABC):
 
         self.a_pre = 0.0
 
-        print(kwargs)
-
         self.update_rule = self.update_rule(
             connection=self, nu=self.nu, weight_decay=weight_decay, **kwargs
         )
