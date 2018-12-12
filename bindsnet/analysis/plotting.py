@@ -249,7 +249,7 @@ def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
 
-        im = ax.imshow(reshaped, cmap=cmap, vmin=wmin, vmax=wmax)
+        im = ax.imshow(reshaped.cpu(), cmap=cmap, vmin=wmin, vmax=wmax)
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 

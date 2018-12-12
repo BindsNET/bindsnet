@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 
 from time import time as t
-from typing import Union, Sequence, Optional, Tuple
+from typing import Union, Sequence, Optional, Tuple, Dict
 
 import bindsnet.network.nodes as nodes
 import bindsnet.network.topology as topology
@@ -15,22 +15,59 @@ from bindsnet.network import Network
 
 
 class Permute(nn.Module):
+    # language=rst
+    """
+    PyTorch module for the explicit permutation of a tensor's dimensions in a parent
+    module's ``forward`` pass (as opposed to ``torch.permute``).
+    """
+
     def __init__(self, dims):
+        # language=rst
+        """
+        Constructor for ``Permute`` module.
+
+        :param dims: Ordering of dimensions for permutation.
+        """
         super(Permute, self).__init__()
 
         self.dims = dims
 
     def forward(self, x):
+        # language=rst
+        """
+        Forward pass of permutation module.
+
+        :param x: Input tensor to permute.
+        :return: Permuted input tensor.
+        """
         return x.permute(*self.dims).contiguous()
 
 
 class FeatureExtractor(nn.Module):
+    # language=rst
+    """
+    Special-purpose PyTorch module for the extraction of child module's activations.
+    """
+
     def __init__(self, submodule):
+        # language=rst
+        """
+        Constructor for ``FeatureExtractor`` module.
+
+        :param submodule: The module who's children modules are to be extracted.
+        """
         super(FeatureExtractor, self).__init__()
 
         self.submodule = submodule
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> Dict[nn.Module, torch.Tensor]:
+        # language=rst
+        """
+        Forward pass of the feature extractor.
+
+        :param x: Input data for the ``submodule''.
+        :return: A dictionary mapping
+        """
         activations = {'input': x}
         for name, module in self.submodule._modules.items():
             if isinstance(module, nn.Linear):
@@ -165,46 +202,126 @@ class PassThroughNodes(nodes.Nodes):
 
 
 class PermuteConnection(topology.AbstractConnection):
+    # language=rst
+    """
+    Special-purpose connection for emulating the custom ``Permute`` module in spiking neural networks.
+    """
 
     def __init__(self, source: nodes.Nodes, target: nodes.Nodes, dims: Sequence,
                  nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
 
+        # language=rst
+        """
+        Constructor for ``PermuteConnection``.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param dims: Order of dimensions to permute.
+        :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+
+        Keyword arguments:
+
+        :param function update_rule: Modifies connection parameters according to some rule.
+        :param float wmin: The minimum value on the connection weights.
+        :param float wmax: The maximum value on the connection weights.
+        :param float norm: Total weight per target neuron normalization.
+        """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
         self.dims = dims
 
-    def compute(self, s: torch.Tensor):
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Permute input.
+
+        :param s: Input.
+        :return: Permuted input.
+        """
         return s.permute(self.dims).float()
 
-    def update(self, **kwargs):
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``update``.
+        """
         pass
 
-    def normalize(self):
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``normalize``.
+        """
         pass
 
-    def reset_(self):
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``reset_``.
+        """
         pass
 
 
 class ConstantPad2dConnection(topology.AbstractConnection):
+    # language=rst
+    """
+    Special-purpose connection for emulating the ``ConstantPad2d`` PyTorch module in spiking neural networks.
+    """
 
     def __init__(self, source: nodes.Nodes, target: nodes.Nodes, padding: Tuple,
                  nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+        # language=rst
+        """
+        Constructor for ``ConstantPad2dConnection``.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param padding: Padding of input tensors; passed to ``torch.nn.functional.pad``.
+        :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+
+        Keyword arguments:
+
+        :param function update_rule: Modifies connection parameters according to some rule.
+        :param float wmin: The minimum value on the connection weights.
+        :param float wmax: The maximum value on the connection weights.
+        :param float norm: Total weight per target neuron normalization.
+        """
 
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
         self.padding = padding
 
     def compute(self, s: torch.Tensor):
+        # language=rst
+        """
+        Pad input.
+
+        :param s: Input.
+        :return: Padding input.
+        """
         return F.pad(s, self.padding).float()
 
-    def update(self, **kwargs):
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``update``.
+        """
         pass
 
-    def normalize(self):
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``normalize``.
+        """
         pass
 
-    def reset_(self):
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Dummy definition of abstract method ``reset_``.
+        """
         pass
 
 
@@ -272,6 +389,14 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
 
 
 def _ann_to_snn_helper(prev, current):
+    # language=rst
+    """
+    Helper function for main ``ann_to_snn`` method.
+
+    :param prev: Previous PyTorch module in artificial neural network.
+    :param current: Current PyTorch module in artificial neural network.
+    :return: Spiking neural network layer and connection corresponding to ``prev`` and ``current`` PyTorch modules.
+    """
     if isinstance(current, nn.Linear):
         layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
         connection = topology.Connection(
