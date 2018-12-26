@@ -69,8 +69,6 @@ class Monitor(AbstractMonitor):
         self.state_vars = state_vars
         self.time = time
 
-        self.record_length = 0
-
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
             self.recording = {v: torch.tensor([], dtype=self.obj.__dict__[v].dtype) for v in self.state_vars}
@@ -99,12 +97,10 @@ class Monitor(AbstractMonitor):
         """
         Appends the current value of the recorded state variables to the recording.
         """
-        if self.time is None or self.record_length == self.time:
+        if self.time is None:
             for v in self.state_vars:
                 data = self.obj.__dict__[v].unsqueeze(-1)
                 self.recording[v] = torch.cat([self.recording[v].type(data.type()), data], -1)
-
-            self.record_length += 1
         else:
             for v in self.state_vars:
                 # Remove the oldest data and concatenate new data
@@ -116,7 +112,6 @@ class Monitor(AbstractMonitor):
         """
         Resets recordings to empty ``torch.Tensor``s.
         """
-        self.record_length = 0
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
