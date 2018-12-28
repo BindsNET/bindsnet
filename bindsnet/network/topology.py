@@ -166,9 +166,9 @@ class Connection(AbstractConnection):
         Normalize weights so each target neuron has sum of connection weights equal to ``self.norm``.
         """
         if self.norm is not None:
-	        w_abs_sum = self.w.abs().sum(0).unsqueeze(0)
-	        if w_abs_sum > 0:
-		        self.w *= self.norm / w_abs_sum
+          w_abs_sum = self.w.abs().sum(0).unsqueeze(0)
+          if w_abs_sum > 0:
+            self.w *= self.norm / w_abs_sum
 
     def reset_(self) -> None:
         # language=rst
