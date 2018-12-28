@@ -167,7 +167,7 @@ class Connection(AbstractConnection):
         """
         if self.norm is not None:
           w_abs_sum = self.w.abs().sum(0).unsqueeze(0)
-          if w_abs_sum > 0:
+          if (w_abs_sum == 0).sum() > 0:
             self.w *= self.norm / w_abs_sum
 
     def reset_(self) -> None:
