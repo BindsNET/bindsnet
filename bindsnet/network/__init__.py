@@ -1,10 +1,11 @@
+import torch
 from typing import Dict
 
 import torch
 
-from .monitors import AbstractMonitor
 from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
+from .monitors import AbstractMonitor
 
 __all__ = [
     'load_network', 'Network', 'nodes', 'monitors', 'topology'
@@ -262,7 +263,6 @@ class Network:
                 clamp = clamps.get(l, None)
                 if clamp is not None:
                     self.layers[l].s[clamp] = 1
-                    # self.layers[l].v[clamp] = float("Inf")
 
                 # Clamp neurons not to spike.
                 unclamp = unclamps.get(l, None)
