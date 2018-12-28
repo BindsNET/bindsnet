@@ -1,8 +1,6 @@
 import torch
 from typing import Dict
 
-import torch
-
 from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
 from .monitors import AbstractMonitor
