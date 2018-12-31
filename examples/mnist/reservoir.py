@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 from bindsnet.analysis.plotting import plot_input, plot_spikes, plot_voltages, plot_weights
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import poisson_loader
-from bindsnet.network import Network, Input
+from bindsnet.network import Network
+from bindsnet.network.nodes import Input
 
 # Build a simple two-layer, input-output network.
 from bindsnet.network.monitors import Monitor
