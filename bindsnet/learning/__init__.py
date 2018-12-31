@@ -35,7 +35,7 @@ class LearningRule(ABC):
         # Learning rate(s).
         if nu is None:
             nu = [0.0, 0.0]
-        elif isinstance(nu, float):
+        elif isinstance(nu, float) or isinstance(nu, int):
             nu = [nu, nu]
 
         self.nu = nu
