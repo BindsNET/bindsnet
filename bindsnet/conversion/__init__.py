@@ -398,10 +398,7 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
     :return: Spiking neural network layer and connection corresponding to ``prev`` and ``current`` PyTorch modules.
     """
     if isinstance(current, nn.Linear):
-        if node_type:
-            layer = node_type(n=current.out_features, reset=0, thresh=1, refrac=0, **kwargs)
-        else:
-            layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
+        layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
         connection = topology.Connection(
             source=prev, target=layer, w=current.weight.t(), b=current.bias
         )
@@ -413,9 +410,13 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
         width = (input_height - current.kernel_size[0] + 2 * current.padding[0]) / current.stride[0] + 1
         height = (input_width - current.kernel_size[1] + 2 * current.padding[1]) / current.stride[1] + 1
         shape = (1, out_channels, int(width), int(height))
-        layer = SubtractiveResetIFNodes(
-            shape=shape, reset=0, thresh=1, refrac=0
-        )
+
+        if node_type:
+            layer = node_type(shape=shape, reset=0, thresh=1, refrac=0, **kwargs)
+        else:
+            layer = SubtractiveResetIFNodes(
+                shape=shape, reset=0, thresh=1, refrac=0
+            )
         connection = topology.Conv2dConnection(
             source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
             padding=current.padding, dilation=current.dilation, w=current.weight, b=current.bias
