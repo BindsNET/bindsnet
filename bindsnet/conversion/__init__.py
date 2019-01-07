@@ -398,7 +398,10 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
     :return: Spiking neural network layer and connection corresponding to ``prev`` and ``current`` PyTorch modules.
     """
     if isinstance(current, nn.Linear):
-        layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
+        if node_type:
+            layer = node_type(n=current.out_features, reset=0, thresh=1, refrac=0, **kwargs)
+        else:
+            layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
         connection = topology.Connection(
             source=prev, target=layer, w=current.weight.t(), b=current.bias
         )
