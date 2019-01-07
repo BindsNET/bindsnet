@@ -32,6 +32,7 @@ class AbstractConnection(ABC):
         :param float wmin: The minimum value on the connection weights.
         :param float wmax: The maximum value on the connection weights.
         :param float norm: Total weight per target neuron normalization.
+        :param float norm_by_max: Normalize the weight of a neuron by its max weight.
         """
         self.w = None
         self.source = source
@@ -49,6 +50,7 @@ class AbstractConnection(ABC):
         self.wmax = kwargs.get('wmax', None)
         self.norm = kwargs.get('norm', None)
         self.decay = kwargs.get('decay', None)
+        self.norm_by_max = kwargs.get('norm_by_max', None)
 
         if self.update_rule is None:
             self.update_rule = NoOp
@@ -166,9 +168,19 @@ class Connection(AbstractConnection):
         Normalize weights so each target neuron has sum of connection weights equal to ``self.norm``.
         """
         if self.norm is not None:
-          w_abs_sum = self.w.abs().sum(0).unsqueeze(0)
-          if (w_abs_sum == 0).sum() == 0:
+            w_abs_sum = self.w.abs().sum(0).unsqueeze(0)
+            w_abs_sum[w_abs_sum == 0] = 1.0
             self.w *= self.norm / w_abs_sum
+
+    def normalize_by_max(self) -> None:
+        # language=rst
+        """
+        Normalize weights by the max weight of the target neuron.
+        """
+        if self.norm_by_max:
+            w_max = self.w.max(0)[0]
+            w_max[w_max == 0] = 1
+            self.w /= w_max
 
     def reset_(self) -> None:
         # language=rst
