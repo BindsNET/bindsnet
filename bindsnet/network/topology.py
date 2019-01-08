@@ -180,7 +180,7 @@ class Connection(AbstractConnection):
         """
         if self.norm_by_max:
             w_max = self.w.max(0)[0]
-            w_max[w_max == 0] = 1
+            w_max[w_max == 0] = 1.0
             self.w /= w_max
 
     def reset_(self) -> None:
