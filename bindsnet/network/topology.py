@@ -32,7 +32,7 @@ class AbstractConnection(ABC):
         :param float wmin: The minimum value on the connection weights.
         :param float wmax: The maximum value on the connection weights.
         :param float norm: Total weight per target neuron normalization.
-        :param float norm_by_max: Normalize the weight of a neuron by its max weight.
+        :param ByteTensor norm_by_max: Normalize the weight of a neuron by its max weight.
         """
         self.w = None
         self.source = source
@@ -128,6 +128,7 @@ class Connection(AbstractConnection):
         :param float wmin: Minimum allowed value on the connection weights.
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
+        :param ByteTensor norm_by_max: Normalize the weight of a neuron by its max weight.
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
