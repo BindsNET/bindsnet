@@ -261,10 +261,12 @@ class Network:
                 clamp = clamps.get(l, None)
                 if clamp is not None:
                     self.layers[l].s[clamp] = 1
+                    self.layers[l].x[clamp] = 1
 
                 # Clamp neurons not to spike.
                 unclamp = unclamps.get(l, None)
                 if unclamp is not None:
+                    self.layers[l].x[unclamp] = 0
                     self.layers[l].s[unclamp] = 0
 
             # Run synapse updates.
