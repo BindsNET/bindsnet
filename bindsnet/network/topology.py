@@ -150,7 +150,7 @@ class Connection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
         # Compute multiplication of spike activations by connection weights and add bias.
-        post = s.float().view(-1) @ self.w + self.b
+        post = s.float().view(-1) @ self.w.view(self.source.n, self.target.n) + self.b.view(self.target.n)
         return post.view(*self.target.shape)
 
     def update(self, **kwargs) -> None:
