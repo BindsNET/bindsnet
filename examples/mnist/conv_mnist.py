@@ -12,7 +12,7 @@ from bindsnet.encoding import poisson_loader
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import DiehlAndCookNodes, Input
 from bindsnet.network.topology import Conv2dConnection, Connection
-from bindsnet.analysis.plotting import plot_input, plot_spikes, plot_conv2d_weights, plot_voltages
+from bindsnet.analysis.plotting import plot_input, plot_spikes, plot_conv2d_weights, plot_conv2d_local_weights, plot_voltages
 
 print()
 
@@ -29,6 +29,7 @@ parser.add_argument('--dt', type=int, default=1.0)
 parser.add_argument('--intensity', type=float, default=0.5)
 parser.add_argument('--progress_interval', type=int, default=10)
 parser.add_argument('--update_interval', type=int, default=250)
+parser.add_argument('--unshared', dest='unshared', action='store_true')
 parser.add_argument('--train', dest='train', action='store_true')
 parser.add_argument('--test', dest='train', action='store_false')
 parser.add_argument('--plot', dest='plot', action='store_true')
@@ -49,6 +50,7 @@ dt = args.dt
 intensity = args.intensity
 progress_interval = args.progress_interval
 update_interval = args.update_interval
+unshared = args.unshared
 train = args.train
 plot = args.plot
 gpu = args.gpu
@@ -74,7 +76,7 @@ conv_layer = DiehlAndCookNodes(n=n_filters * conv_size * conv_size,
                                traces=True)
 
 conv_conn = Conv2dConnection(input_layer, conv_layer, kernel_size=kernel_size, stride=stride, update_rule=PostPre,
-                             norm=0.4 * kernel_size ** 2, nu=[1e-4, 1e-2], wmax=1.0)
+                             norm=0.4 * kernel_size ** 2, nu=[1e-4, 1e-2], wmax=1.0, unshared=unshared)
 
 # indices, values = [], []
 # # w = torch.zeros(1, n_filters, conv_size, conv_size, 1, n_filters, conv_size, conv_size)
@@ -158,18 +160,25 @@ for i in range(n_train):
                    'Y': spikes['Y'].get('s').view(n_filters * conv_size ** 2, time)}
         _voltages = {'Y': voltages['Y'].get('v').view(n_filters * conv_size ** 2, time)}
 
-        if i == 0:
-            inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
-            spike_ims, spike_axes = plot_spikes(_spikes)
-            weights1_im = plot_conv2d_weights(weights1, wmax=conv_conn.wmax)
-            voltage_ims, voltage_axes = plot_voltages(_voltages)
+        if unshared:
+            if i == 0:
+                weights1_im = plot_conv2d_local_weights(weights1, wmax=conv_conn.wmax)
 
+            else:
+                weights1_im = plot_conv2d_local_weights(weights1, im=weights1_im)
         else:
-            inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes,
-                                             ims=inpt_ims)
-            spike_ims, spike_axes = plot_spikes(_spikes, ims=spike_ims, axes=spike_axes)
-            weights1_im = plot_conv2d_weights(weights1, im=weights1_im)
-            voltage_ims, voltage_axes = plot_voltages(_voltages, ims=voltage_ims, axes=voltage_axes)
+            if i == 0:
+                inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
+                spike_ims, spike_axes = plot_spikes(_spikes)
+                weights1_im = plot_conv2d_weights(weights1, wmax=conv_conn.wmax)
+                voltage_ims, voltage_axes = plot_voltages(_voltages)
+
+            else:
+                inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes,
+                                                 ims=inpt_ims)
+                spike_ims, spike_axes = plot_spikes(_spikes, ims=spike_ims, axes=spike_axes)
+                weights1_im = plot_conv2d_weights(weights1, im=weights1_im)
+                voltage_ims, voltage_axes = plot_voltages(_voltages, ims=voltage_ims, axes=voltage_axes)
 
         plt.pause(1e-8)
 

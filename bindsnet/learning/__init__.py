@@ -147,7 +147,11 @@ class PostPre(LearningRule):
         super().update()
 
         # Get convolutional layer parameters.
-        out_channels, _, kernel_height, kernel_width = self.connection.w.size()
+        if self.connection.unshared:
+            out_height, out_width, out_channels, in_channels, kernel_height, \
+                    kernel_width = self.connection.w.size()
+        else:
+            out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
 
         # Reshaping spike traces and spike occurrences.
@@ -160,15 +164,38 @@ class PostPre(LearningRule):
         )
         s_target = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
 
-        # Pre-synaptic update.
-        if self.nu[0]:
-            pre = x_target @ s_source.t()
-            self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
-        # Post-synaptic update.
-        if self.nu[1]:
-            post = s_target @ x_source.t()
-            self.connection.w += self.nu[1] * post.view(self.connection.w.size())
+        if self.connection.unshared:
+            # pre-synaptic update.
+            if self.nu[0]:
+                #for k in range(out_channels):
+                for i in range(out_height):
+                    for j in range(out_width):
+                        # Reshaping spike traces and spike occurrences.
+                        #pre = x_target[:,i*out_height+j] @ s_source.t()[i*out_height+j]
+                        pre = torch.ger(x_target[:,i*out_height+j], s_source.t()[i*out_height+j])
+                        self.connection.w[i,j] -= self.nu[0] * pre.view(self.connection.w[i,j].size())
+
+            # Post-synaptic update.
+            if self.nu[1]:
+                #for k in range(out_channels):
+                for i in range(out_height):
+                    for j in range(out_width):
+                        #post = s_target[:,i*out_height+j]*x_source.t()[i*out_height+j]
+                        post = torch.ger(s_target[:,i*out_height+j], x_source.t()[i*out_height+j])
+                        self.connection.w[i,j,] += self.nu[1] * post.view(self.connection.w[i,j].size())
+
+        else:
+
+            # pre-synaptic update.
+            if self.nu[0]:
+                pre = x_target @ s_source.t()
+                self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
+
+            # Post-synaptic update.
+            if self.nu[1]:
+                post = s_target @ x_source.t()
+                self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
 
 class WeightDependentPostPre(LearningRule):

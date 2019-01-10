@@ -214,6 +214,58 @@ def plot_conv2d_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 
 
     return im
 
+def plot_conv2d_local_weights(weights: torch.Tensor, wmin: float = 0.0, wmax: float = 1.0, im: Optional[AxesImage] = None,
+                        figsize: Tuple[int, int] = (5, 5), cmap: str = 'hot_r') -> AxesImage:
+    # language=rst
+    """
+    Plot a connection weight matrix of a Conv2dConnection.
+
+    :param weights: Weight matrix of Conv2dConnection object.
+    :param wmin: Minimum allowed weight value.
+    :param wmax: Maximum allowed weight value.
+    :param im: Used for re-drawing the weights plot.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :param cmap: Matplotlib colormap.
+    :return: Used for re-drawing the weights plot.
+    """
+    sqrt1 = int(np.ceil(np.sqrt(weights.size(2))))
+    sqrt2 = int(np.ceil(np.sqrt(weights.size(3))))
+    height, width = weights.size(4), weights.size(5)
+    conv_h = weights.size(0)
+    conv_w = weights.size(1)
+
+    reshaped = torch.zeros(sqrt1 * sqrt2 * height * conv_h, sqrt1 * sqrt2 * width * conv_w)
+
+    for i in range(sqrt1):
+        for j in range(sqrt1):
+            for k in range(sqrt2):
+                for l in range(sqrt2):
+                    #if i * sqrt1 + j < weights.size(0) and k * sqrt2 + l < weights.size(1):
+                    for m in range(conv_h):
+                        for n in range(conv_w):
+                            fltr = weights[m, n, i * sqrt1 + j, k * sqrt2 + l].view(height, width)
+                            reshaped[i * conv_h* height + k * height * sqrt1 + m*height:
+                                     (i) * conv_h* height + k * height * sqrt1 + (m+1)*height,
+                                     (j) *conv_w* width + (l % sqrt2) * width * sqrt1 + n*width:
+                                     ((j)) * conv_w*width + (l % sqrt2) * width * sqrt1 + (n+1)*width] = fltr
+
+
+    if not im:
+        fig, ax = plt.subplots(figsize=figsize)
+        im = ax.imshow(reshaped, cmap=cmap, vmin=wmin, vmax=wmax)
+        div = make_axes_locatable(ax)
+        cax = div.append_axes("right", size="5%", pad=0.05)
+        ax.set_xticks(()); ax.set_yticks(())
+        ax.set_aspect('auto')
+
+        plt.colorbar(im, cax=cax)
+        fig.tight_layout()
+    else:
+        im.set_data(reshaped)
+
+    return im
+
+
 
 def plot_locally_connected_weights(weights: torch.Tensor, n_filters: int, kernel_size: Union[int, Tuple[int, int]],
                                    conv_size: Union[int, Tuple[int, int]], locations: torch.Tensor,

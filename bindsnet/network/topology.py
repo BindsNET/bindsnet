@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from typing import Union, Tuple, Optional, Sequence
 from abc import ABC, abstractmethod
 from torch.nn.modules.utils import _pair
+from .torch_utils import Conv2dLocal
 
 from .nodes import Nodes
 
@@ -185,7 +186,7 @@ class Conv2dConnection(AbstractConnection):
     def __init__(self, source: Nodes, target: Nodes, kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
                  dilation: Union[int, Tuple[int, int]] = 1, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0, **kwargs) -> None:
+                 weight_decay: float = 0.0, unshared = None, **kwargs) -> None:
         # language=rst
         """
         Instantiates a ``Conv2dConnection`` object.
@@ -214,6 +215,7 @@ class Conv2dConnection(AbstractConnection):
         self.stride = _pair(stride)
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
+        self.unshared = unshared
 
         self.in_channels, input_height, input_width = source.shape[1], source.shape[2], source.shape[3]
         self.out_channels, output_height, output_width = target.shape[1], target.shape[2], target.shape[3]
@@ -228,11 +230,22 @@ class Conv2dConnection(AbstractConnection):
 
         assert target.shape[1] == shape[1] and target.shape[2] == shape[2] and target.shape[3] == shape[3], error
 
-        self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, *self.kernel_size))
+        if unshared:
+            self.w = kwargs.get('w', torch.rand(output_height, output_width, self.out_channels, \
+                    self.in_channels, *self.kernel_size))
+            self.b = kwargs.get('b', torch.zeros(self.out_channels, output_height, output_width))
+        else:
+            self.w = kwargs.get('w', torch.rand(self.out_channels, self.in_channels, *self.kernel_size))
+            self.b = kwargs.get('b', torch.zeros(self.out_channels))
+
         if self.wmin is not None and self.wmax is not None:
             self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
-        self.b = kwargs.get('b', torch.zeros(self.out_channels))
+        if self.unshared:
+            self.conv2d_local = Conv2dLocal(in_channels=self.in_channels, out_channels=self.out_channels, \
+                    in_height=input_height, in_width=input_width, kernel_size=kernel_size, \
+                    weight=self.w, bias=self.b, stride=stride, padding=padding)
+
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -242,7 +255,10 @@ class Conv2dConnection(AbstractConnection):
         :param s: Incoming spikes.
         :return: Spikes multiplied by synapse weights.
         """
-        return F.conv2d(s.float(), self.w, self.b, stride=self.stride, padding=self.padding, dilation=self.dilation)
+        if self.unshared:
+            return self.conv2d_local(s.float())
+        else:
+            return F.conv2d(s.float(), self.w, self.b, stride=self.stride, padding=self.padding, dilation=self.dilation)
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -258,10 +274,20 @@ class Conv2dConnection(AbstractConnection):
         """
         if self.norm is not None:
             shape = self.w.size()
-            self.w = self.w.view(self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3))
+            if self.unshared:
+                self.w = self.w.view(self.w.size(0), self.w.size(1), self.w.size(2),  \
+                        self.w.size(3) * self.w.size(4) * self.w.size(5))
 
-            for fltr in range(self.w.size(0)):
-                self.w[fltr] *= self.norm / self.w[fltr].sum(0)
+                for fltr in range(self.w.size(2)):
+                    for m in range(self.w.size(0)):
+                        for n in range(self.w.size(1)):
+                            self.w[m,n,fltr] *= self.norm / self.w[m,n,fltr].sum(0)
+
+            else:
+                self.w = self.w.view(self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3))
+
+                for fltr in range(self.w.size(0)):
+                    self.w[fltr] *= self.norm / self.w[fltr].sum(0)
 
             self.w = self.w.view(*shape)
 
