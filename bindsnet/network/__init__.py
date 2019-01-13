@@ -1,5 +1,6 @@
 import torch
 from typing import Dict
+import tempfile
 
 from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
@@ -165,6 +166,16 @@ class Network:
             network.save(str(Path.home()) + '/network.pt')
         """
         torch.save(self, open(file_name, 'wb'))
+
+    def load(file_name: str) -> None:
+        torch.load(open(file_name, 'r'))
+
+    def clone(self) -> None:
+        virtualFile = tempfile.SpooledTemporaryFile()
+        torch.save(self, virtualFile)
+        virtualFile.seek(0)
+        return torch.load(virtualFile)
+
 
     def get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
