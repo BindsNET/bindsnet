@@ -168,14 +168,26 @@ class Network:
         torch.save(self, open(file_name, 'wb'))
 
     def load(file_name: str) -> None:
+        # language=rst
+        """
+        Lead a serialized network object from disk.
+
+        :param file_name: Path to load the serialized network object.
+        """
         torch.load(open(file_name, 'r'))
 
     def clone(self) -> None:
+        # language=rst
+        """
+        Returning a clone network object
+
+        """
         virtualFile = tempfile.SpooledTemporaryFile()
         torch.save(self, virtualFile)
-        virtualFile.seek(0)
-        return torch.load(virtualFile)
 
+        virtualFile.seek(0)
+
+        return torch.load(virtualFile)
 
     def get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
