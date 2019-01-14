@@ -33,6 +33,12 @@ class AbstractConnection(ABC):
         :param float wmax: The maximum value on the connection weights.
         :param float norm: Total weight per target neuron normalization.
         :param ByteTensor norm_by_max: Normalize the weight of a neuron by its max weight.
+        :param ByteTensor normalize_by_max_with_shadow_weights: Normalize the weight of a neuron by its max weight by
+                                                                original weights
+        :param ByteTensor sign: True: to keep the connection positive.
+                                False: keep the connection negative.
+                                None: Ignore, connection can change signs on the fly
+                                ----NOT IMPLEMENT YET ----
         """
         self.w = None
         self.source = source
@@ -51,6 +57,8 @@ class AbstractConnection(ABC):
         self.norm = kwargs.get('norm', None)
         self.decay = kwargs.get('decay', None)
         self.norm_by_max = kwargs.get('norm_by_max', None)
+        self.normalize_by_max_with_shadow_weights = kwargs.get('normalize_by_max_with_shadow_weights', None)
+        self.sign = kwargs.get('sign', None)
 
         if self.update_rule is None:
             self.update_rule = NoOp
@@ -129,9 +137,12 @@ class Connection(AbstractConnection):
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
         :param ByteTensor norm_by_max: Normalize the weight of a neuron by its max weight.
+        :param ByteTensor normalize_by_max_with_shadow_weights: Normalize the weight of a neuron by its max weight by
+                                                                original weights
         :param ByteTensor sign: True: to keep the connection positive.
                                 False: keep the connection negative.
                                 None: Ignore, connection can change signs on the fly
+                                ----NOT IMPLEMENT YET ----
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
@@ -146,6 +157,10 @@ class Connection(AbstractConnection):
                 self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
         self.b = kwargs.get('b', torch.zeros(target.n))
+
+        if self.normalize_by_max_with_shadow_weights is not None:
+            self.shadow_w = self.w.clone().detach()
+            self.prev_w = self.w.clone().detach()
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -182,9 +197,21 @@ class Connection(AbstractConnection):
         Normalize weights by the max weight of the target neuron.
         """
         if self.norm_by_max:
-            w_max = self.w.max(0)[0]
+            w_max = self.w.abs().max(0)[0]
             w_max[w_max == 0] = 1.0
             self.w /= w_max
+
+    def normalize_by_max_with_shadow_weights(self) -> None:
+        # language=rst
+        """
+        Normalize weights by the max weight of the target neuron.
+        """
+        if self.normalize_by_max_with_shadow_weights:
+            self.shadow_w += self.w - self.prev_w
+            self.prev_w = self.w.clone().detach()
+            w_max = self.shadow_w.abs().max(0)[0]
+            w_max[w_max == 0] = 1.0
+            self.w = self.shadow_w / w_max
 
     def reset_(self) -> None:
         # language=rst
