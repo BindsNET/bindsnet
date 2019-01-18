@@ -226,6 +226,8 @@ class Network:
                                               spiking. The ``Tensor``s have shape ``[n_neurons]``.
         :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks if neurons should be clamped
                                                 to not spiking. The ``Tensor``s should have shape ``[n_neurons]``.
+        :param Dict[str, torch.Tensor] injectV: Mapping of layer names to boolean masks if neurons should be added
+                                                voltage. The ``Tensor``s should have shape ``[n_neurons]``.
         :param float reward: Scalar value used in reward-modulated learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
                                                      weights to clamp to zero.
@@ -264,6 +266,7 @@ class Network:
         clamps = kwargs.get('clamp', {})
         unclamps = kwargs.get('unclamp', {})
         masks = kwargs.get('masks', {})
+        injectsV = kwargs.get('injectV', {})
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
@@ -291,6 +294,11 @@ class Network:
                 if unclamp is not None:
                     self.layers[l].x[unclamp] = 0
                     self.layers[l].s[unclamp] = 0
+
+                # Inject voltage to neurons
+                injectV = injectsV.get(l, None)
+                if injectV is not None:
+                    self.layers[l].v += injectV
 
             # Run synapse updates.
             for c in self.connections:
