@@ -27,9 +27,13 @@ def plot_input(image: torch.Tensor, inpt: torch.Tensor, label: Optional[int] = N
     :param figsize: Horizontal, vertical figure size in inches.
     :return: Tuple of ``(axes, ims)`` used for re-drawing the input plots.
     """
+    local_image = image.detach().clone().cpu().numpy()
+    local_inpy = inpt.detach().clone().cpu().numpy()
+
     if axes is None:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
-        ims = axes[0].imshow(image, cmap='binary'), axes[1].imshow(inpt, cmap='binary')
+        ims = axes[0].imshow(local_image, cmap='binary'), \
+              axes[1].imshow(local_inpy, cmap='binary')
 
         if label is None:
             axes[0].set_title('Current image')
@@ -47,8 +51,8 @@ def plot_input(image: torch.Tensor, inpt: torch.Tensor, label: Optional[int] = N
         if label is not None:
             axes[0].set_title('Current image (label = %d)' % label)
 
-        ims[0].set_data(image)
-        ims[1].set_data(inpt)
+        ims[0].set_data(local_image)
+        ims[1].set_data(local_inpy)
 
     return axes, ims
 
@@ -98,7 +102,8 @@ def plot_spikes(spikes: Dict[str, torch.Tensor], time: Optional[Tuple[int, int]]
                 axes.set_aspect('auto')
         else:
             for i, datum in enumerate(spikes.items()):
-                ims.append(axes[i].imshow(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
+                ims.append(axes[i].imshow(datum[1].detach().clone().cpu().numpy()
+                                          [n_neurons[datum[0]][0]:n_neurons[datum[0]][1],
                                           time[0]:time[1]], cmap='binary'))
                 args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
                 axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
@@ -110,13 +115,15 @@ def plot_spikes(spikes: Dict[str, torch.Tensor], time: Optional[Tuple[int, int]]
     else:
         if n_subplots == 1:
             for datum in spikes.items():
-                ims[0].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+                ims[0].set_data(datum[1].detach().clone().cpu().numpy()
+                                [n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
                 ims[0].autoscale()
                 args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
                 axes.set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
         else:
             for i, datum in enumerate(spikes.items()):
-                ims[i].set_data(datum[1][n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
+                ims[i].set_data(datum[1].detach().clone().cpu().numpy()
+                                [n_neurons[datum[0]][0]:n_neurons[datum[0]][1], time[0]:time[1]])
                 ims[i].autoscale()
                 args = (datum[0], n_neurons[datum[0]][0], n_neurons[datum[0]][1], time[0], time[1])
                 axes[i].set_title('%s spikes for neurons (%d - %d) from t = %d to %d ' % args)
@@ -140,10 +147,11 @@ def plot_weights(weights: torch.Tensor, wmin: Optional[float] = 0, wmax: Optiona
     :param cmap: Matplotlib colormap.
     :return: ``AxesImage`` for re-drawing the weights plot.
     """
+    local_weights = weights.detach().clone().cpu().numpy()
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
 
-        im = ax.imshow(weights, cmap=cmap, vmin=wmin, vmax=wmax)
+        im = ax.imshow(local_weights, cmap=cmap, vmin=wmin, vmax=wmax)
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
@@ -153,7 +161,7 @@ def plot_weights(weights: torch.Tensor, wmin: Optional[float] = 0, wmax: Optiona
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
     else:
-        im.set_data(weights)
+        im.set_data(local_weights)
 
     return im
 
@@ -284,16 +292,17 @@ def plot_assignments(assignments: torch.Tensor, im: Optional[AxesImage] = None, 
     :param classes: Iterable of labels for colorbar ticks corresponding to data labels.
     :return: Used for re-drawing the assigments plot.
     """
+    locals_assignments = assignments.detach().clone().cpu().numpy()
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title('Categorical assignments')
 
         if classes is None:
             color = plt.get_cmap('RdBu', 11)
-            im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=9.5)
+            im = ax.matshow(locals_assignments, cmap=color, vmin=-1.5, vmax=9.5)
         else:
             color = plt.get_cmap('RdBu', len(classes) + 1)
-            im = ax.matshow(assignments, cmap=color, vmin=-1.5, vmax=len(classes) - 0.5)
+            im = ax.matshow(locals_assignments, cmap=color, vmin=-1.5, vmax=len(classes) - 0.5)
 
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
@@ -308,7 +317,7 @@ def plot_assignments(assignments: torch.Tensor, im: Optional[AxesImage] = None, 
         ax.set_xticks(()); ax.set_yticks(())
         fig.tight_layout()
     else:
-        im.set_data(assignments)
+        im.set_data(locals_assignments)
 
     return im
 
@@ -379,7 +388,8 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         if n_subplots == 1:  # Plotting only one image
             for v in voltages.items():
                 if plot_type == 'line':
-                    ims.append(axes.plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T))
+                    ims.append(axes.plot(v[1].detach().clone().cpu().numpy()
+                                         [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T))
 
                     if threshold is not None:
                         ims.append(axes.axhline(y=threshold[v[0]], c='r', linestyle='--'))
@@ -394,11 +404,13 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         else:  # Plot each layer at a time
             for i, v in enumerate(voltages.items()):
                 if plot_type == 'line':
-                    ims.append(axes[i].plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T))
+                    ims.append(axes[i].plot(v[1].detach().clone().cpu().numpy()
+                                            [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T))
                     if threshold is not None:
                         ims.append(axes[i].axhline(y=threshold[v[0]], c='r', linestyle='--'))
                 else:
-                    ims.append(axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
+                    ims.append(axes[i].matshow(v[1].detach().clone().cpu().numpy()
+                                               [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 
@@ -414,11 +426,13 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
             for v in voltages.items():
                 axes.clear()
                 if plot_type == 'line':
-                    axes.plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T)
+                    axes.plot(v[1].detach().clone().cpu().numpy()
+                              [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T)
                     if threshold is not None:
                         axes.axhline(y=threshold[v[0]], c='r', linestyle='--')
                 else:
-                    axes.matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
+                    axes.matshow(v[1].detach().clone().cpu().numpy()
+                                 [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
                 axes.set_aspect('auto')
@@ -428,11 +442,13 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
             for i, v in enumerate(voltages.items()):
                 axes[i].clear()
                 if plot_type == 'line':
-                    axes[i].plot(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T)
+                    axes[i].plot(v[1].detach().clone().cpu().numpy()
+                                 [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T)
                     if threshold is not None:
                         axes[i].axhline(y=threshold[v[0]], c='r', linestyle='--')
                 else:
-                    axes[i].matshow(v[1][n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
+                    axes[i].matshow(v[1].detach().clone().cpu().numpy()
+                                    [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 
