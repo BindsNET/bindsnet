@@ -286,14 +286,28 @@ class Network:
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
                 if clamp is not None:
+<<<<<<< HEAD
                     self.layers[l].s[clamp] = 1
                     self.layers[l].x[clamp] = 1
+=======
+                    if clamp.ndimension() == 1:
+                        self.layers[l].s[clamp] = 1
+                    else:
+                        self.layers[l].s[clamp[t]] = 1
+>>>>>>> origin
 
                 # Clamp neurons not to spike.
                 unclamp = unclamps.get(l, None)
                 if unclamp is not None:
+<<<<<<< HEAD
                     self.layers[l].x[unclamp] = 0
                     self.layers[l].s[unclamp] = 0
+=======
+                    if unclamp.ndimension() == 1:
+                        self.layers[l].s[unclamp] = 0
+                    else:
+                        self.layers[l].s[unclamp[t]] = 0
+>>>>>>> origin
 
                 # Inject voltage to neurons
                 injectV = injectsV.get(l, None)

@@ -463,3 +463,4 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         plt.tight_layout()
 
     return ims, axes
+
