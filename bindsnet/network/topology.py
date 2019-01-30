@@ -56,8 +56,8 @@ class AbstractConnection(ABC):
         self.wmax = kwargs.get('wmax', None)
         self.norm = kwargs.get('norm', None)
         self.decay = kwargs.get('decay', None)
-        self.norm_by_max = kwargs.get('norm_by_max', None)
-        self.norm_by_max_from_shadow_weights = kwargs.get('norm_by_max_from_shadow_weights', None)
+        self.norm_by_max = kwargs.get('norm_by_max', False)
+        self.norm_by_max_from_shadow_weights = kwargs.get('norm_by_max_from_shadow_weights', False)
         self.sign = kwargs.get('sign', None)
 
         if self.update_rule is None:
@@ -158,7 +158,7 @@ class Connection(AbstractConnection):
 
         self.b = kwargs.get('b', torch.zeros(target.n))
 
-        if self.norm_by_max_from_shadow_weights is not None:
+        if self.norm_by_max_from_shadow_weights:
             self.shadow_w = self.w.clone().detach()
             self.prev_w = self.w.clone().detach()
 

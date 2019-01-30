@@ -1,17 +1,17 @@
 import torch
-from typing import Dict
 import tempfile
+from typing import Dict
 
 from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
 from .monitors import AbstractMonitor
 
 __all__ = [
-    'load_network', 'Network', 'nodes', 'monitors', 'topology'
+    'load', 'Network', 'nodes', 'monitors', 'topology'
 ]
 
 
-def load_network(file_name: str, learning: bool = None) -> 'Network':
+def load(file_name: str, learning: bool = None) -> 'Network':
     # language=rst
     """
     Loads serialized network object from disk.
@@ -167,15 +167,6 @@ class Network:
         """
         torch.save(self, open(file_name, 'wb'))
 
-    def load(file_name: str) -> None:
-        # language=rst
-        """
-        Lead a serialized network object from disk.
-
-        :param file_name: Path to load the serialized network object.
-        """
-        torch.load(open(file_name, 'r'))
-
     def clone(self) -> None:
         # language=rst
         """
@@ -290,7 +281,6 @@ class Network:
                         self.layers[l].s[clamp] = 1
                     else:
                         self.layers[l].s[clamp[t]] = 1
-
 
                 # Clamp neurons not to spike.
                 unclamp = unclamps.get(l, None)
