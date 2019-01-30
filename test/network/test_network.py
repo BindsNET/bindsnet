@@ -3,7 +3,7 @@ import os
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.topology import Connection
 from bindsnet.network.nodes import Input, LIFNodes
-from bindsnet.network import Network, load_network
+from bindsnet.network import Network, load
 
 
 class TestNetwork:
@@ -19,17 +19,17 @@ class TestNetwork:
             network.run(inpts={}, time=1000)
 
             network.save('net.pt')
-            _network = load_network('net.pt')
+            _network = load('net.pt')
             assert _network.dt == dt
             assert _network.learning
             del _network
 
-            _network = load_network('net.pt', learning=True)
+            _network = load('net.pt', learning=True)
             assert _network.dt == dt
             assert _network.learning
             del _network
 
-            _network = load_network('net.pt', learning=False)
+            _network = load('net.pt', learning=False)
             assert _network.dt == dt
             assert not _network.learning
             del _network
@@ -58,7 +58,7 @@ class TestNetwork:
         assert monitor == network.monitors['Y']
 
         network.save('net.pt')
-        _network = load_network('net.pt', learning=True)
+        _network = load('net.pt', learning=True)
         assert _network.learning
         assert 'X' in _network.layers
         assert 'Y' in _network.layers
