@@ -398,10 +398,7 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
     :return: Spiking neural network layer and connection corresponding to ``prev`` and ``current`` PyTorch modules.
     """
     if isinstance(current, nn.Linear):
-        if node_type:
-            layer = node_type(n=current.out_features, reset=0, thresh=1, refrac=0, **kwargs)
-        else:
-            layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0)
+        layer = SubtractiveResetIFNodes(n=current.out_features, reset=0, thresh=1, refrac=0, **kwargs)
         connection = topology.Connection(
             source=prev, target=layer, w=current.weight.t(), b=current.bias
         )
@@ -414,12 +411,8 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
         height = (input_width - current.kernel_size[1] + 2 * current.padding[1]) / current.stride[1] + 1
         shape = (1, out_channels, int(width), int(height))
 
-        if node_type:
-            layer = node_type(shape=shape, reset=0, thresh=1, refrac=0, **kwargs)
-        else:
-            layer = SubtractiveResetIFNodes(
-                shape=shape, reset=0, thresh=1, refrac=0
-            )
+        
+        layer = node_type(shape=shape, reset=0, thresh=1, refrac=0, **kwargs)
         connection = topology.Conv2dConnection(
             source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
             padding=current.padding, dilation=current.dilation, w=current.weight, b=current.bias
@@ -475,7 +468,7 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
 
 
 def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Optional[torch.Tensor] = None,
-               percentile: float = 99.9, node_type: Optional[nodes.Nodes] = None, **kwargs) -> Network:
+               percentile: float = 99.9, node_type: Optional[nodes.Nodes] = SubtractiveResetIFNodes, **kwargs) -> Network:
     # language=rst
     """
     Converts an artificial neural network (ANN) written as a ``torch.nn.Module`` into a near-equivalent spiking neural
