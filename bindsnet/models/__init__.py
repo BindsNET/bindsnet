@@ -225,8 +225,8 @@ class IncreasingInhibitionNetwork(Network):
                     x1, y1 = i // self.n_sqrt, i % self.n_sqrt
                     x2, y2 = j // self.n_sqrt, j % self.n_sqrt
 
-                    inhib = -self.start_inhib * np.sqrt(euclidean([x1, y1], [x2, y2]))
-                    w[i, j] = min(self.max_inhib, inhib)
+                    inhib = self.start_inhib * np.sqrt(euclidean([x1, y1], [x2, y2]))
+                    w[i, j] = -min(self.max_inhib, inhib)
 
         recurrent_output_conn = Connection(
             source=self.layers['Y'], target=self.layers['Y'], w=w, wmin=-self.max_inhib, wmax=0

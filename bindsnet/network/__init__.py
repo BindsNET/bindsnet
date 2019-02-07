@@ -1,5 +1,5 @@
 import torch
-
+import tempfile
 from typing import Dict
 
 from .nodes import AbstractInput, Nodes
@@ -7,11 +7,11 @@ from .topology import AbstractConnection
 from .monitors import AbstractMonitor
 
 __all__ = [
-    'load_network', 'Network', 'nodes', 'monitors', 'topology'
+    'load', 'Network', 'nodes', 'monitors', 'topology'
 ]
 
 
-def load_network(file_name: str, learning: bool = None) -> 'Network':
+def load(file_name: str, learning: bool = None) -> 'Network':
     # language=rst
     """
     Loads serialized network object from disk.
@@ -167,6 +167,19 @@ class Network:
         """
         torch.save(self, open(file_name, 'wb'))
 
+    def clone(self) -> None:
+        # language=rst
+        """
+        Returning a clone network object
+
+        """
+        virtualFile = tempfile.SpooledTemporaryFile()
+        torch.save(self, virtualFile)
+
+        virtualFile.seek(0)
+
+        return torch.load(virtualFile)
+
     def get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
         """
@@ -204,6 +217,8 @@ class Network:
                                               spiking. The ``Tensor``s have shape ``[n_neurons]``.
         :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks if neurons should be clamped
                                                 to not spiking. The ``Tensor``s should have shape ``[n_neurons]``.
+        :param Dict[str, torch.Tensor] injectV: Mapping of layer names to boolean masks if neurons should be added
+                                                voltage. The ``Tensor``s should have shape ``[n_neurons]``.
         :param float reward: Scalar value used in reward-modulated learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
                                                      weights to clamp to zero.
@@ -242,6 +257,7 @@ class Network:
         clamps = kwargs.get('clamp', {})
         unclamps = kwargs.get('unclamp', {})
         masks = kwargs.get('masks', {})
+        injectsV = kwargs.get('injectV', {})
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
@@ -274,6 +290,11 @@ class Network:
                     else:
                         self.layers[l].s[unclamp[t]] = 0
 
+                # Inject voltage to neurons
+                injectV = injectsV.get(l, None)
+                if injectV is not None:
+                    self.layers[l].v += injectV
+
             # Run synapse updates.
             for c in self.connections:
                 self.connections[c].update(
@@ -290,6 +311,8 @@ class Network:
         # Re-normalize connections.
         for c in self.connections:
             self.connections[c].normalize()
+            self.connections[c].normalize_by_max()
+            self.connections[c].normalize_by_max_from_shadow_weights()
 
     def reset_(self) -> None:
         # language=rst
