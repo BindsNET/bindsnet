@@ -138,7 +138,7 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         self.v += (self.refrac_count == 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= self.dt
+        self.refrac_count[self.refrac_count > 0] -= self.dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
