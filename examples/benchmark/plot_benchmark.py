@@ -48,9 +48,9 @@ def main(start=100, stop=1000, step=100, time=1000, interval=100, plot=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--start', type=int, default=100)
-    parser.add_argument('--stop', type=int, default=1000)
-    parser.add_argument('--step', type=int, default=100)
+    parser.add_argument('--start', type=int, default=250)
+    parser.add_argument('--stop', type=int, default=10000)
+    parser.add_argument('--step', type=int, default=250)
     parser.add_argument('--time', type=int, default=1000)
     parser.add_argument('--interval', type=int, default=1000)
     parser.add_argument('--plot', dest='plot', action='store_true')

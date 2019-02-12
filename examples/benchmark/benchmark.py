@@ -1,6 +1,7 @@
 import os
 import nengo
 import torch
+import shutil
 import argparse
 import numpy as np
 import pandas as pd
@@ -9,10 +10,10 @@ import matplotlib.pyplot as plt
 from brian2 import *
 from nest import *
 from time import time as t
-from experiments import ROOT_DIR
 
 import brian2genn
 
+from bindsnet import ROOT_DIR
 from bindsnet.network import Network
 from bindsnet.network.topology import Connection
 from bindsnet.network.nodes import Input, LIFNodes
@@ -48,7 +49,8 @@ def BindsNET_cpu(n_neurons, time):
         Connection(source=network.layers['X'], target=network.layers['Y']), source='X', target='Y'
     )
 
-    data = {'X': poisson(datum=torch.rand(n_neurons), time=time)}
+    # Poisson spike trains in 0-60Hz.
+    data = {'X': poisson(datum=60.0 * torch.rand(n_neurons), time=time)}
     network.run(inpts=data, time=time)
 
     return t() - t0, t() - t1
@@ -69,7 +71,8 @@ def BindsNET_gpu(n_neurons, time):
             Connection(source=network.layers['X'], target=network.layers['Y']), source='X', target='Y'
         )
 
-        data = {'X': poisson(datum=torch.rand(n_neurons), time=time)}
+        # Poisson spike trains in 0-60Hz.
+        data = {'X': poisson(datum=60.0 * torch.rand(n_neurons), time=time)}
         network.run(inpts=data, time=time)
 
         return t() - t0, t() - t1
@@ -78,49 +81,21 @@ def BindsNET_gpu(n_neurons, time):
 def BRIAN2(n_neurons, time):
     t0 = t()
 
-    set_device('runtime', build_on_run=False)
+    set_device('cpp_standalone')
     defaultclock = 1.0 * ms
-    device.build()
-
-    t1 = t()
 
     eqs_neurons = '''
         dv/dt = (ge * (-60 * mV) + (-74 * mV) - v) / (10 * ms) : volt
         dge/dt = -ge / (5 * ms) : 1
     '''
 
-    input = PoissonGroup(n_neurons, rates=15 * Hz)
+    input = PoissonGroup(n_neurons, rates=60.0 * np.random.rand(n_neurons) * Hz)
     neurons = NeuronGroup(
         n_neurons, eqs_neurons, threshold='v > (-54 * mV)', reset='v = -60 * mV', method='exact'
     )
-    S = Synapses(input, neurons, '''w: 1''')
-    S.connect()
-    S.w = 'rand() * 0.01'
-
-    run(time * ms)
-
-    return t() - t0, t() - t1
-
-
-def BRIAN2GENN(n_neurons, time):
-    t0 = t()
-
-    set_device('genn', build_on_run=False)
-    defaultclock = 1.0 * ms
-    device.build()
-    
-    t1 = t()
-
-    eqs_neurons = '''
-        dv/dt = (ge * (-60 * mV) + (-74 * mV) - v) / (10 * ms) : volt
-        dge/dt = -ge / (5 * ms) : 1
-    '''
-
-    input = PoissonGroup(n_neurons, rates=15 * Hz)
-    neurons = NeuronGroup(
-        n_neurons, eqs_neurons, threshold='v > (-54 * mV)', reset='v = -60 * mV', method='exact'
+    S = Synapses(
+        input, neurons, '''w: 1''', on_pre='v += w * mV'
     )
-    S = Synapses(input, neurons, '''w: 1''')
     S.connect()
     S.w = 'rand() * 0.01'
 
@@ -129,7 +104,42 @@ def BRIAN2GENN(n_neurons, time):
     device.reinit()
     device.activate()
 
-    return t() - t0, t() - t1
+    return t() - t0, device._last_run_time
+
+
+def BRIAN2GENN(n_neurons, time):
+    # if os.path.isdir('output'):
+    #     shutil.rmtree('output')
+
+    # if os.path.isdir('GeNNworkspace'):
+    #     shutil.rmtree('GeNNworkspace')
+
+    set_device('genn')
+    defaultclock = 1.0 * ms
+    
+    t0 = t()
+
+    eqs_neurons = '''
+        dv/dt = (ge * (-60 * mV) + (-74 * mV) - v) / (10 * ms) : volt
+        dge/dt = -ge / (5 * ms) : 1
+    '''
+
+    input = PoissonGroup(n_neurons, rates=60.0 * np.random.rand(n_neurons) * Hz)
+    neurons = NeuronGroup(
+        n_neurons, eqs_neurons, threshold='v > (-54 * mV)', reset='v = -60 * mV', method='exact'
+    )
+    S = Synapses(
+        input, neurons, '''w: 1''', on_pre='v += w * mV'
+    )
+    S.connect()
+    S.w = 'rand() * 0.01'
+
+    run(time * ms)
+
+    device.reinit()
+    device.activate()
+
+    return t() - t0, device._last_run_time
 
 
 def PyNEST(n_neurons, time):
@@ -169,7 +179,7 @@ def Nengo(n_neurons, time):
     return t() - t0, t() - t1
 
 
-def main(start=100, stop=1000, step=100, time=1000, interval=100, plot=False):
+def main(start=250, stop=10000, step=250, time=1000, interval=1000, plot=False):
     f = os.path.join(benchmark_path, f'benchmark_{start}_{stop}_{step}_{time}.csv')
     if os.path.isfile(f):
         os.remove(f)
@@ -210,16 +220,17 @@ def main(start=100, stop=1000, step=100, time=1000, interval=100, plot=False):
 
     df.to_csv(f)
 
-    plot_benchmark.main(start=start, stop=stop, step=step, time=time, interval=interval, plot=plot)
+    if plot:
+        plot_benchmark.main(start=start, stop=stop, step=step, time=time, interval=interval, plot=plot)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--start', type=int, default=100)
-    parser.add_argument('--stop', type=int, default=1000)
-    parser.add_argument('--step', type=int, default=100)
+    parser.add_argument('--start', type=int, default=250)
+    parser.add_argument('--stop', type=int, default=10000)
+    parser.add_argument('--step', type=int, default=250)
     parser.add_argument('--time', type=int, default=1000)
-    parser.add_argument('--interval', type=int, default=100)
+    parser.add_argument('--interval', type=int, default=1000)
     parser.add_argument('--plot', dest='plot', action='store_true')
     parser.set_defaults(plot=False)
     args = parser.parse_args()
