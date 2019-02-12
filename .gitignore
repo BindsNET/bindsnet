@@ -124,3 +124,6 @@ benchmark/
 
 # macOS
 .DS_Store
+
+# Figures folder.
+figures/

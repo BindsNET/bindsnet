@@ -3,13 +3,14 @@ import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from experiments import ROOT_DIR
+from bindsnet import ROOT_DIR
 
 benchmark_path = os.path.join(ROOT_DIR, 'benchmark')
 figure_path = os.path.join(ROOT_DIR, 'figures')
 
-if not os.path.isdir(benchmark_path):
-    os.makedirs(benchmark_path)
+for p in [benchmark_path, figure_path]:
+    if not os.path.isdir(p):
+        os.makedirs(p)
 
 
 def main(start=100, stop=1000, step=100, time=1000, interval=100, plot=False):
@@ -25,7 +26,7 @@ def main(start=100, stop=1000, step=100, time=1000, interval=100, plot=False):
     plt.plot(df['PyNEST'], label='PyNEST', linestyle='--', color='y')
     plt.plot(df['ANNarchy_cpu'], label='ANNarchy (CPU)', linestyle='--', color='m')
     plt.plot(df['ANNarchy_gpu'], label='ANNarchy (GPU)', linestyle='--', color='k')
-    plt.plot(df['ANNarchy_gpu comp.'], label='ANNarchy (GPU) comp.', linestyle=':', color='k')
+    plt.plot(df['ANNarchy_gpu (w/ comp.)'], label='ANNarchy (GPU) comp.', linestyle=':', color='k')
 
     # for c in df.columns:
     #     if 'BindsNET' in c:

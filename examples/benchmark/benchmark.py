@@ -108,12 +108,6 @@ def BRIAN2(n_neurons, time):
 
 
 def BRIAN2GENN(n_neurons, time):
-    # if os.path.isdir('output'):
-    #     shutil.rmtree('output')
-
-    # if os.path.isdir('GeNNworkspace'):
-    #     shutil.rmtree('GeNNworkspace')
-
     set_device('genn')
     defaultclock = 1.0 * ms
     
