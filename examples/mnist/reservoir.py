@@ -81,7 +81,7 @@ class LogisticRegression(nn.Module):
         self.linear = nn.Linear(input_size, num_classes)
     
     def forward(self, x):
-        out = self.linear(x)
+        out = self.linear(x.float())
         return out
 
 
