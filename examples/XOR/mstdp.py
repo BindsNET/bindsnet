@@ -96,8 +96,6 @@ def main(seed = 0):
     # torch.save(network, open('trained_network_' + str(seed), 'wb'))
     np.savetxt('rewards_' + str(seed) + '.txt', rewards)
 
-main()
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed', type=int, default=0)
