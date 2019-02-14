@@ -26,9 +26,9 @@ def main(seed = 0):
     ZERO = torch.zeros(30)
 
 
-    Inp = Input(n=60)
-    Hidden = LIFNodes(n=60, thresh=-54.0, rest=-70.0, reset=-70.0, refrac=0, decay=1 - np.exp(-1 / tau))
-    Output = LIFNodes(n=1, thresh=-54.0, rest=-70.0, reset=-70.0, refrac=0, decay=1 - np.exp(-1 / tau))
+    Inp = Input(n=60, traces=True)
+    Hidden = LIFNodes(n=60, thresh=-54.0, rest=-70.0, reset=-70.0, refrac=0, decay=1 - np.exp(-1 / tau), traces=True)
+    Output = LIFNodes(n=1, thresh=-54.0, rest=-70.0, reset=-70.0, refrac=0, decay=1 - np.exp(-1 / tau), traces=True)
 
     layers = {'Input': Inp, 'Hidden': Hidden, 'Output': Output}
 
@@ -42,7 +42,7 @@ def main(seed = 0):
         source=layers['Input'], target=layers['Hidden'],
         wmax=wmax @ torch.ones(1, 60),
         wmin=wmin @ torch.ones(1, 60),
-        update_rule=MSTDP,
+        update_rule=PostPre,
         nu=0.1
     )
 
