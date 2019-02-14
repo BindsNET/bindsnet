@@ -104,6 +104,7 @@ for fltr1 in range(n_filters):
                 for j in range(conv_size):
                     w[0, fltr1, i, j, 0, fltr2, i, j] = -100.0
 
+w = w.view(n_filters * conv_size * conv_size, n_filters * conv_size * conv_size)
 recurrent_conn = Connection(conv_layer, conv_layer, w=w)
 
 network.add_layer(input_layer, name='X')
