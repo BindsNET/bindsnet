@@ -258,6 +258,7 @@ class Network:
         unclamps = kwargs.get('unclamp', {})
         masks = kwargs.get('masks', {})
         injectsV = kwargs.get('injectV', {})
+        output = kwargs.get('output', 0)
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
@@ -295,10 +296,22 @@ class Network:
                 if injectV is not None:
                     self.layers[l].v += injectV
 
+
+            if self.layers['Output'].s[0] == 1 and output == 1:
+                reward = 1
+            elif self.layers['Output'].s[0] == 0 and output == 1:
+                reward = 0
+            elif self.layers['Output'].s[0] == 1 and output == 0:
+                reward = -1
+            elif self.layers['Output'].s[0] == 0 and output == 0:
+                reward = 0
+            else:
+                reward = 0
+
             # Run synapse updates.
             for c in self.connections:
                 self.connections[c].update(
-                    mask=masks.get(c, None), learning=self.learning, **kwargs
+                    mask=masks.get(c, None), learning=self.learning, reward=reward
                 )
 
             # Get input to all layers.

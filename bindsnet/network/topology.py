@@ -156,6 +156,10 @@ class Connection(AbstractConnection):
             if self.wmin is not None and self.wmax is not None:
                 self.w = torch.clamp(self.w, self.wmin, self.wmax)
 
+        if self.wmin is not None and self.wmax is not None:
+            self.wmin = self.wmin * torch.ones_like(self.w)
+            self.wmax = self.wmax * torch.ones_like(self.w)
+
         self.b = kwargs.get('b', torch.zeros(target.n))
 
         if self.norm_by_max_from_shadow_weights:

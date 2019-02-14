@@ -53,10 +53,11 @@ class LearningRule(ABC):
             self.connection.w -= self.weight_decay * self.connection.w
 
         # Bound weights.
-        if None not in [self.connection.wmin, self.connection.wmax] and not isinstance(self, NoOp):
-            self.connection.w = torch.clamp(
-                self.connection.w, self.connection.wmin, self.connection.wmax
-            )
+        if self.connection.wmin is not None and self.connection.wmax is not None and not isinstance(self, NoOp):
+            self.connection.w = torch.where(self.connection.w < self.connection.wmin, self.connection.wmin,
+                                            self.connection.w)
+            self.connection.w = torch.where(self.connection.w > self.connection.wmax, self.connection.wmax,
+                                            self.connection.w)
 
 
 class NoOp(LearningRule):
@@ -356,7 +357,7 @@ class MSTDP(LearningRule):
     """
 
     def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
-                 weight_decay: float = 0.0, **kwargs) -> None:
+                 weight_decay: float = 0.0, tau_plus:float = 20.0, tau_minus:float = 20.0, **kwargs) -> None:
         # language=rst
         """
         Constructor for ``MSTDP`` learning rule.
@@ -368,7 +369,12 @@ class MSTDP(LearningRule):
             connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
-        assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
+        self.p_plus = 0
+        self.p_minus = 0
+        self.tau_plus = tau_plus
+        self.tau_minus = tau_minus
+        self.p_plus_decay = np.exp(-1/self.tau_plus)
+        self.p_minus_decay = np.exp(-1/self.tau_minus)
 
         if isinstance(connection, (Connection, LocallyConnectedConnection)):
             self.update = self._connection_update
@@ -393,9 +399,7 @@ class MSTDP(LearningRule):
         super().update()
 
         source_s = self.source.s.view(-1).float()
-        source_x = self.source.x.view(-1)
         target_s = self.target.s.view(-1).float()
-        target_x = self.target.x.view(-1)
 
         self.connection.w = self.connection.w.view(self.source.n, self.target.n)
 
@@ -405,11 +409,11 @@ class MSTDP(LearningRule):
         a_minus = kwargs.get('a_minus', -1)
 
         # Get P^+ and P^- values (function of firing traces).
-        p_plus = a_plus * source_x
-        p_minus = a_minus * target_x
+        self.p_plus = self.p_plus * self.p_plus_decay + a_plus * source_s
+        self.p_minus = self.p_minus * self.p_minus_decay + a_minus * target_s
 
         # Calculate point eligibility value.
-        eligibility = torch.ger(p_plus, target_s) + torch.ger(source_s, p_minus)
+        eligibility = torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * eligibility
