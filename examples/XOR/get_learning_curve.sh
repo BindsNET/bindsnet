@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name=mstdp
 #SBATCH --partition=defq
-#SBATCH --time=00-01:00:00
+#SBATCH --time=00-00:10:00
 #SBATCH --mem=1000
 #SBATCH --account=rkozma
 #SBATCH --output=../../../output/mstdp_%j.out
