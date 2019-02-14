@@ -6,7 +6,7 @@ from bindsnet.network.topology import Connection
 from bindsnet.network.monitors import Monitor
 from bindsnet.network import Network
 from bindsnet.encoding import poisson
-from bindsnet.learning import MSTDP
+from bindsnet.learning import MSTDP, PostPre
 
 
 
@@ -47,7 +47,7 @@ def main(seed = 0):
     )
 
     hidden_output_conn = Connection(
-        source=layers['Hidden'], target=layers['Output'], wmax=5.0, wmin=0.0, update_rule=MSTDP, nu=0.1
+        source=layers['Hidden'], target=layers['Output'], wmax=5.0, wmin=0.0, update_rule=PostPre, nu=0.1
     )
 
 
@@ -90,12 +90,13 @@ def main(seed = 0):
                 rewards[epoch] += torch.sum(spikes['Output'].get('s'))
             elif data_y[i] == 0:
                 rewards[epoch] -= torch.sum(spikes['Output'].get('s'))
-
+            network.reset_()
         print("Epoch: ", epoch, 'Reward: ', int(rewards[epoch]))
 
     # torch.save(network, open('trained_network_' + str(seed), 'wb'))
     np.savetxt('rewards_' + str(seed) + '.txt', rewards)
 
+main()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
