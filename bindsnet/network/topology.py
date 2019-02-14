@@ -408,6 +408,10 @@ class LocallyConnectedConnection(AbstractConnection):
         """
         Instantiates a ``LocallyConnectedConnection`` object. Source population should be two-dimensional.
 
+        Neurons in the post-synaptic population are ordered by receptive field; that is, if there are ``n_conv`` neurons
+        in each post-synaptic patch, then the first ``n_conv`` neurons in the post-synaptic population correspond to the
+        first receptive field, the second ``n_conv`` to the second receptive field, and so on.
+
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param kernel_size: Horizontal and vertical size of convolutional kernels.
