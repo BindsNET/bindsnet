@@ -529,6 +529,8 @@ class AdaptiveLIFNodes(Nodes):
         if self.lbound is not None:
             self.v.masked_fill_(self.v < self.lbound, self.lbound)
 
+        super().forward(x)
+
     def reset_(self) -> None:
         # language=rst
         """
