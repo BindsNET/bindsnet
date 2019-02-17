@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 
 from operator import mul
 from functools import reduce
@@ -285,6 +284,10 @@ class IFNodes(Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
+        # Voltage clipping to lower bound.
+        if self.lbound is not None:
+            self.v.masked_fill_(self.v < self.lbound, self.lbound)
+
         super().forward(x)
 
     def reset_(self) -> None:
@@ -360,7 +363,7 @@ class LIFNodes(Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
-        # voltage clipping to lowerbound
+        # Voltage clipping to lower bound.
         if self.lbound is not None:
             self.v.masked_fill_(self.v < self.lbound, self.lbound)
 
@@ -543,7 +546,7 @@ class DiehlAndCookNodes(Nodes):
                 s[torch.multinomial(self.s.float().view(-1), 1)] = 1
                 self.s = s.view(self.shape)
 
-        # voltage clipping to lowerbound
+        # Voltage clipping to lower bound.
         if self.lbound is not None:
             self.v.masked_fill_(self.v < self.lbound, self.lbound)
 
@@ -587,7 +590,7 @@ class IzhikevichNodes(Nodes):
 
         self.rest = rest       # Rest voltage.
         self.thresh = thresh   # Spike threshold voltage.
-        self.lbound = lbound
+        self.lbound = lbound   # Lower bound of voltage.
 
         if excitatory > 1:
             excitatory = 1
