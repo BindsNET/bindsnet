@@ -138,11 +138,11 @@ class Connection(AbstractConnection):
         :param float norm: Total weight per target neuron normalization constant.
         :param ByteTensor norm_by_max: Normalize the weight of a neuron by its max weight.
         :param ByteTensor norm_by_max_with_shadow_weights: Normalize the weight of a neuron by its max weight by
-                                                                original weights
+                                                           original weights.
         :param ByteTensor sign: True: to keep the connection positive.
                                 False: keep the connection negative.
-                                None: Ignore, connection can change signs on the fly
-                                ----NOT IMPLEMENT YET ----
+                                None: Ignore, connection can change signs on the fly.
+                                ----NOT IMPLEMENTED YET ----
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
