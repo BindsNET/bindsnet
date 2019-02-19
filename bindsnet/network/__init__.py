@@ -311,8 +311,6 @@ class Network:
         # Re-normalize connections.
         for c in self.connections:
             self.connections[c].normalize()
-            self.connections[c].normalize_by_max()
-            self.connections[c].normalize_by_max_from_shadow_weights()
 
     def reset_(self) -> None:
         # language=rst
