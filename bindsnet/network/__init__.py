@@ -270,9 +270,9 @@ class Network:
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    self.layers[l].forward(x=inpts[l][t].view(self.layers[l].size()))
+                    self.layers[l].forward(x=inpts[l][t])
                 else:
-                    self.layers[l].forward(x=inpts[l].view(self.layers[l].shape))
+                    self.layers[l].forward(x=inpts[l])
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
