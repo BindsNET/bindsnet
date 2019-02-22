@@ -110,10 +110,12 @@ for i in range(n_train):
         proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
 
         # Compute network accuracy according to available classification strategies.
-        accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long() \
-                                               == all_activity_pred) / update_interval)
-        accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long() \
-                                                      == proportion_pred) / update_interval)
+        accuracy['all'].append(
+            100 * torch.sum(labels[i - update_interval:i].long() == all_activity_pred).item() / update_interval
+        )
+        accuracy['proportion'].append(
+            100 * torch.sum(labels[i - update_interval:i].long() == proportion_pred).item() / update_interval
+        )
 
         print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)' \
               % (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))
