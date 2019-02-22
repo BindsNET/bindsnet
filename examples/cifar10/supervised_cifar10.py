@@ -66,8 +66,10 @@ start_intensity = intensity
 per_class = int(n_neurons / 10)
 
 # Build network.
-network = DiehlAndCook2015(n_inpt=32 * 32 * 3, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt,
-                           nu=[0, 0.25], wmin=0, wmax=10, norm=3500)
+network = DiehlAndCook2015(
+    n_inpt=32 * 32 * 3, n_neurons=n_neurons, exc=exc,
+    inh=inh, dt=dt, nu=[0, 0.25], wmin=0, wmax=10, norm=3500
+)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)
@@ -76,10 +78,14 @@ network.add_monitor(exc_voltage_monitor, name='exc_voltage')
 network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 
 # Load MNIST data.
-images, labels = CIFAR10(path=os.path.join('..', '..', 'data', 'CIFAR10'),
-                         download=True).get_train()
+images, labels = CIFAR10(
+    path=os.path.join('..', '..', 'data', 'CIFAR10'), download=True
+).get_train()
 images = images.view(-1, 32 * 32 * 3)
 images *= intensity
+if gpu:
+    images = images.to('cuda')
+    labels = labels.to('cuda')
 
 # Lazily encode data as Poisson spike trains.
 data_loader = poisson_loader(data=images, time=time, dt=dt)
@@ -118,10 +124,12 @@ for i in range(n_train):
         proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
 
         # Compute network accuracy according to available classification strategies.
-        accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long()
-                                               == all_activity_pred) / update_interval)
-        accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long()
-                                                      == proportion_pred) / update_interval)
+        accuracy['all'].append(
+            100 * torch.sum(labels[i - update_interval:i].long() == all_activity_pred).item() / update_interval
+        )
+        accuracy['proportion'].append(
+            100 * torch.sum(labels[i - update_interval:i].long() == proportion_pred).item() / update_interval
+        )
 
         print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)'
               % (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))

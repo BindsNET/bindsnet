@@ -78,6 +78,9 @@ network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST'), download=True).get_train()
 images = images.view(-1, 784)
 images *= intensity
+if gpu:
+    images = images.to('cuda')
+    labels = labels.to('cuda')
 
 # Lazily encode data as Poisson spike trains.
 data_loader = poisson_loader(data=images, time=time, dt=dt)
