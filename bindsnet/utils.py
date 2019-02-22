@@ -43,8 +43,8 @@ def get_im2col_indices(x_shape: Tuple[int, int, int, int], kernel_height: int,
     return k, i, j
 
 
-def im2col_indices(x: Tensor, kernel_height: int, kernel_width: int, padding: Tuple[int, int]=(0, 0),
-                   stride: Tuple[int, int]=(1, 1)) -> Tensor:
+def im2col_indices(x: Tensor, kernel_height: int, kernel_width: int, padding: Tuple[int, int] = (0, 0),
+                   stride: Tuple[int, int] = (1, 1)) -> Tensor:
     # language=rst
     """
     An implementation of im2col based on some fancy indexing. Taken from `this repository

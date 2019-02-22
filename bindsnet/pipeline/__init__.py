@@ -94,11 +94,19 @@ class Pipeline:
 
         if self.plot_interval is not None:
             for l in self.network.layers:
-                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length * self.plot_interval * self.timestep)),
-                                         name=f'{l}_spikes')
+                self.network.add_monitor(
+                    Monitor(
+                        self.network.layers[l], 's', int(self.plot_length * self.plot_interval * self.timestep)
+                    ),
+                    name=f'{l}_spikes'
+                )
                 if 'v' in self.network.layers[l].__dict__:
-                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length * self.plot_interval * self.timestep)),
-                                             name=f'{l}_voltages')
+                    self.network.add_monitor(
+                        Monitor(
+                            self.network.layers[l], 'v', int(self.plot_length * self.plot_interval * self.timestep)
+                        ),
+                        name=f'{l}_voltages'
+                    )
 
             self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
             self.set_spike_data()
@@ -118,6 +126,8 @@ class Pipeline:
         self.done = None
 
         self.voltage_record = None
+        self.threshold_value = None
+        self.reward_plot = None
 
         self.first = True
         self.clock = time.time()
@@ -207,6 +217,7 @@ class Pipeline:
             self.obs_im.set_data(self.env.reshape())
 
     def plot_reward(self) -> None:
+        # language=rst
         """
         Plot the change of accumulated reward for each episodes
         """
@@ -234,13 +245,16 @@ class Pipeline:
         # Initialize plots
         if self.s_ims is None and self.s_axes is None and self.v_ims is None and self.v_axes is None:
             self.s_ims, self.s_axes = plot_spikes(self.spike_record)
-            self.v_ims, self.v_axes = plot_voltages(self.voltage_record,
-                    plot_type=self.plot_type, threshold=self.threshold_value)
+            self.v_ims, self.v_axes = plot_voltages(
+                self.voltage_record, plot_type=self.plot_type, threshold=self.threshold_value
+            )
         else:
             # Update the plots dynamically
             self.s_ims, self.s_axes = plot_spikes(self.spike_record, ims=self.s_ims, axes=self.s_axes)
-            self.v_ims, self.v_axes = plot_voltages(self.voltage_record, ims=self.v_ims,
-                    axes=self.v_axes, plot_type=self.plot_type, threshold=self.threshold_value)
+            self.v_ims, self.v_axes = plot_voltages(
+                self.voltage_record, ims=self.v_ims, axes=self.v_axes,
+                plot_type=self.plot_type, threshold=self.threshold_value
+            )
 
         plt.pause(1e-8)
         plt.show()

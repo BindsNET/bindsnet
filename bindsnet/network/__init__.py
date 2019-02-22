@@ -217,8 +217,8 @@ class Network:
                                               spiking. The ``Tensor``s have shape ``[n_neurons]``.
         :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks if neurons should be clamped
                                                 to not spiking. The ``Tensor``s should have shape ``[n_neurons]``.
-        :param Dict[str, torch.Tensor] injectV: Mapping of layer names to boolean masks if neurons should be added
-                                                voltage. The ``Tensor``s should have shape ``[n_neurons]``.
+        :param Dict[str, torch.Tensor] injects_v: Mapping of layer names to boolean masks if neurons should be added
+                                                  voltage. The ``Tensor``s should have shape ``[n_neurons]``.
         :param float reward: Scalar value used in reward-modulated learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
                                                      weights to clamp to zero.
@@ -257,7 +257,7 @@ class Network:
         clamps = kwargs.get('clamp', {})
         unclamps = kwargs.get('unclamp', {})
         masks = kwargs.get('masks', {})
-        injectsV = kwargs.get('injectV', {})
+        injects_v = kwargs.get('injects_v', {})
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
@@ -270,9 +270,9 @@ class Network:
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    self.layers[l].forward(x=inpts[l][t])
+                    self.layers[l].forward(x=inpts[l][t].view(self.layers[l].size()))
                 else:
-                    self.layers[l].forward(x=inpts[l])
+                    self.layers[l].forward(x=inpts[l].view(self.layers[l].shape))
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
@@ -291,9 +291,9 @@ class Network:
                         self.layers[l].s[unclamp[t]] = 0
 
                 # Inject voltage to neurons
-                injectV = injectsV.get(l, None)
-                if injectV is not None:
-                    self.layers[l].v += injectV
+                inject_v = injects_v.get(l, None)
+                if inject_v is not None:
+                    self.layers[l].v += inject_v
 
             # Run synapse updates.
             for c in self.connections:
