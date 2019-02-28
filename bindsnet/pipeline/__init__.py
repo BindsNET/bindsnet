@@ -168,11 +168,15 @@ class Pipeline:
         # Run a step of the environment.
         self.obs, reward, self.done, info = self.env.step(a)
 
+        # Set reward in case of delay
         if self.reward_delay is not None:
             self.rewards = torch.tensor([reward, *self.rewards[1:]]).float()
             self.reward = self.rewards[-1]
         else:
             self.reward = reward
+
+        # Accumulate reward
+        self.accumulated_reward += self.reward
 
         # Store frame of history and encode the inputs.
         if self.enable_history and len(self.history) > 0:
