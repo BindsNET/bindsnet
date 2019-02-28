@@ -115,9 +115,9 @@ for i in range(iters):
     
     a = i % change_interval
     if a == 0:
-        avg_rates = spikes['Y']
+        avg_rates = spikes['Y'].float()
     else:
-        avg_rates = ((a - 1) / a) * avg_rates + (1 / a) * spikes['Y']
+        avg_rates = ((a - 1) / a) * avg_rates + (1 / a) * spikes['Y'].float()
     
     reward = target_rates - avg_rates
     reward[reward < 0] = 0
