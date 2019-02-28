@@ -371,9 +371,13 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
     :return: ``ims, axes``: Used for re-drawing the plots.
     """
     n_subplots = len(voltages.keys())
+
+    for key in voltages.keys():
+        voltages[key] = voltages[key].view(-1, voltages[key].size(-1))
+
     if time is None:
         for key in voltages.keys():
-            time = (0, voltages[key].shape[1])
+            time = (0, voltages[key].size(-1))
             break
 
     if n_neurons is None:
@@ -381,7 +385,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
 
     for key, val in voltages.items():
         if key not in n_neurons.keys():
-            n_neurons[key] = (0, val.shape[0])
+            n_neurons[key] = (0, val.size(0))
     if not ims:
         fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
         ims = []
@@ -404,13 +408,19 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
         else:  # Plot each layer at a time
             for i, v in enumerate(voltages.items()):
                 if plot_type == 'line':
-                    ims.append(axes[i].plot(v[1].detach().clone().cpu().numpy()
-                                            [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T))
+                    ims.append(
+                        axes[i].plot(
+                            v[1].cpu().numpy()[n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T
+                        )
+                    )
                     if threshold is not None:
                         ims.append(axes[i].axhline(y=threshold[v[0]], c='r', linestyle='--'))
                 else:
-                    ims.append(axes[i].matshow(v[1].detach().clone().cpu().numpy()
-                                               [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap))
+                    ims.append(
+                        axes[i].matshow(
+                            v[1].cpu().numpy()[n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap
+                        )
+                    )
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 
@@ -426,13 +436,15 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
             for v in voltages.items():
                 axes.clear()
                 if plot_type == 'line':
-                    axes.plot(v[1].detach().clone().cpu().numpy()
-                              [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T)
+                    axes.plot(
+                        v[1].cpu().numpy()[n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T
+                    )
                     if threshold is not None:
                         axes.axhline(y=threshold[v[0]], c='r', linestyle='--')
                 else:
-                    axes.matshow(v[1].detach().clone().cpu().numpy()
-                                 [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
+                    axes.matshow(
+                        v[1].cpu().numpy()[n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap
+                    )
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes.set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
                 axes.set_aspect('auto')
@@ -442,13 +454,15 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
             for i, v in enumerate(voltages.items()):
                 axes[i].clear()
                 if plot_type == 'line':
-                    axes[i].plot(v[1].detach().clone().cpu().numpy()
-                                 [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T)
+                    axes[i].plot(
+                        v[1].cpu().numpy()[n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T
+                    )
                     if threshold is not None:
                         axes[i].axhline(y=threshold[v[0]], c='r', linestyle='--')
                 else:
-                    axes[i].matshow(v[1].detach().clone().cpu().numpy()
-                                    [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap)
+                    axes[i].matshow(
+                        v[1].cpu().numpy()[n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]], cmap=cmap
+                    )
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 axes[i].set_title('%s voltages for neurons (%d - %d) from t = %d to %d ' % args)
 
