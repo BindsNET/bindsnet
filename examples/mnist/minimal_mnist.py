@@ -5,7 +5,7 @@ from bindsnet.models import DiehlAndCook2015
 from bindsnet.environment import DatasetEnvironment
 
 # Build Diehl & Cook 2015 network.
-network = DiehlAndCook2015(n_inpt=784, n_neurons=400, exc=22.5,
+network = DiehlAndCook2015(n_input=784, n_neurons=400, exc=22.5,
                            inh=17.5, dt=1.0, norm=78.4)
 
 # Specify dataset wrapper environment.
