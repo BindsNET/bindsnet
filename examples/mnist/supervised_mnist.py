@@ -78,6 +78,9 @@ network.add_monitor(inh_voltage_monitor, name='inh_voltage')
 images, labels = MNIST(path=os.path.join('..', '..', 'data', 'MNIST'), download=True).get_train()
 images = images.view(-1, 784)
 images *= intensity
+if gpu:
+    images = images.to('cuda')
+    labels = labels.to('cuda')
 
 # Lazily encode data as Poisson spike trains.
 data_loader = poisson_loader(data=images, time=time, dt=dt)
@@ -113,10 +116,12 @@ for i in range(n_train):
         proportion_pred = proportion_weighting(spike_record, assignments, proportions, 10)
 
         # Compute network accuracy according to available classification strategies.
-        accuracy['all'].append(100 * torch.sum(labels[i - update_interval:i].long()
-                                               == all_activity_pred) / update_interval)
-        accuracy['proportion'].append(100 * torch.sum(labels[i - update_interval:i].long()
-                                                      == proportion_pred) / update_interval)
+        accuracy['all'].append(
+            100 * torch.sum(labels[i - update_interval:i].long() == all_activity_pred).item() / update_interval
+        )
+        accuracy['proportion'].append(
+            100 * torch.sum(labels[i - update_interval:i].long() == proportion_pred).item() / update_interval
+        )
 
         print('\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)'
               % (accuracy['all'][-1], np.mean(accuracy['all']), np.max(accuracy['all'])))
