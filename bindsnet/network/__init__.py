@@ -11,13 +11,13 @@ __all__ = [
 ]
 
 
-def load(file_name: str, map_location: str, learning: bool = None) -> 'Network':
+def load(file_name: str, map_location: str = 'cpu', learning: bool = None) -> 'Network':
     # language=rst
     """
     Loads serialized network object from disk.
 
     :param file_name: Path to serialized network object on disk.
-    :param map_location: One of ``'cpu'`` or ``'cuda'``.
+    :param map_location: One of ``'cpu'`` or ``'cuda'``. Defaults to ``'cpu'``.
     :param learning: Whether to load with learning enabled. Default loads value from disk.
     """
     network = torch.load(open(file_name, 'rb'), map_location=map_location)
