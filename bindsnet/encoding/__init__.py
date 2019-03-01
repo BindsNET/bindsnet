@@ -170,7 +170,7 @@ def rank_order(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> tor
     :param dt: Simulation time step.
     :return: Tensor of shape ``[time, n_1, ..., n_k]`` of rank order-encoded spikes.
     """
-    assert datum >= 0, 'Inputs must be non-negative'
+    assert (datum >= 0).all(), 'Inputs must be non-negative'
 
     shape, size = datum.shape, datum.numel()
     datum = datum.view(-1)

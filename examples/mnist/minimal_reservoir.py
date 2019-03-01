@@ -48,7 +48,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 # Train the logistic regression model on (spikes, label) pairs.
 for epoch in range(10):
     for i, (s, label) in enumerate(training_pairs):
-        optimizer.zero_grad(); output = model(s)
+        optimizer.zero_grad(); output = model(s.float())
         loss = criterion(output.unsqueeze(0), label.unsqueeze(0).long())
         loss.backward(); optimizer.step()
 
@@ -69,7 +69,7 @@ for i, (datum, label) in enumerate(loader):
 # Test the logistic regression model on (spikes, label) pairs.
 correct, total = 0, 0
 for s, label in test_pairs:
-    output = model(s); _, predicted = torch.max(output.data.unsqueeze(0), 1)
+    output = model(s.float()); _, predicted = torch.max(output.data.unsqueeze(0), 1)
     total += 1; correct += int(predicted == label.long())
 
 print('Accuracy of logistic regression on 500 test examples: %.2f %%\n' % (100 * correct / total))
