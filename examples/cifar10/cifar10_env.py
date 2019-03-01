@@ -64,7 +64,7 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 path = os.path.join('..', '..', 'data', 'CIFAR10')
     
 # Build network.
-network = DiehlAndCook2015(n_inpt=32*32*3, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt, nu=[2e-5, 2e-3],
+network = DiehlAndCook2015(n_input=32*32*3, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt, nu=[2e-5, 2e-3],
                            norm=10.0)
 
 # Initialize data "environment".
