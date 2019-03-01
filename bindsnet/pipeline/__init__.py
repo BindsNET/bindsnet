@@ -328,4 +328,5 @@ class Pipeline:
         self.env.reset()
         self.network.reset_()
         self.iteration = 0
+        self.accumulated_reward = 0
         self.history = {i: torch.Tensor() for i in self.history}
