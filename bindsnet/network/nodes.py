@@ -421,18 +421,18 @@ class CurrentLIFNodes(Nodes):
         self.i = torch.zeros(self.shape)             # Synaptic input currents.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-    def forward(self, x: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
         Runs a single simulation step.
         :param x: Inputs to the layer.
         """
         # Decay voltages and current.
-        self.v -= dt * self.decay * (self.v - self.rest)
-        self.i -= dt * self.i_decay * self.i
+        self.v -= self.dt * self.decay * (self.v - self.rest)
+        self.i -= self.dt * self.i_decay * self.i
 
         # Decrement refractory counters.
-        self.refrac_count[self.refrac_count != 0] -= dt
+        self.refrac_count[self.refrac_count != 0] -= self.dt
 
         # Integrate inputs.
         self.i += x
