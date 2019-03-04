@@ -378,6 +378,7 @@ class LIFNodes(Nodes):
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
+
 class CurrentLIFNodes(Nodes):
     # language=rst
     """
@@ -388,7 +389,7 @@ class CurrentLIFNodes(Nodes):
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
                  thresh: float = -52.0, rest: float = -65.0, reset: float = -65.0, refrac: int = 5, decay: float = 1e-2,
-                 i_decay: float = 5e-1, trace_tc: float = 5e-2) -> None:
+                 i_decay: float = 5e-1, trace_tc: float = 5e-2, sum_input: bool = False, lbound: float = None) -> None:
         # language=rst
         """
         Instantiates a layer of synaptic input current-based LIF neurons.
@@ -402,8 +403,10 @@ class CurrentLIFNodes(Nodes):
         :param decay: Time constant of neuron voltage decay.
         :param i_decay: Time constant of synaptic input current decay.
         :param trace_tc: Time constant of spike trace decay.
+        :param sum_input: Whether to sum all inputs.
+        :param lbound: Lower bound of the voltage.
         """
-        super().__init__(n, shape, traces, trace_tc)
+        super().__init__(n, shape, traces, trace_tc, sum_input)
 
         self.rest = rest       # Rest voltage.
         self.reset = reset     # Post-spike reset voltage.
@@ -411,17 +414,18 @@ class CurrentLIFNodes(Nodes):
         self.refrac = refrac   # Post-spike refractory period.
         self.decay = decay     # Rate of decay of neuron voltage.
         self.i_decay = i_decay # Rate of decay of synaptic input current.
+        self.lbound = lbound                # Lower bound of voltage.
+
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.i = torch.zeros(self.shape)             # Synaptic input currents.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-    def step(self, inpts: torch.Tensor, dt: float) -> None:
+    def forward(self, x: torch.Tensor, dt: float) -> None:
         # language=rst
         """
         Runs a single simulation step.
-        :param inpts: Inputs to the layer.
-        :param dt: Simulation time step.
+        :param x: Inputs to the layer.
         """
         # Decay voltages and current.
         self.v -= dt * self.decay * (self.v - self.rest)
@@ -431,7 +435,7 @@ class CurrentLIFNodes(Nodes):
         self.refrac_count[self.refrac_count != 0] -= dt
 
         # Integrate inputs.
-        self.i += inpts
+        self.i += x
         self.v += (self.refrac_count == 0).float() * self.i
 
         # Check for spiking neurons.
@@ -441,7 +445,11 @@ class CurrentLIFNodes(Nodes):
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
 
-        super().step(inpts, dt)
+        # Voltage clipping to lower bound.
+        if self.lbound is not None:
+            self.v.masked_fill_(self.v < self.lbound, self.lbound)
+
+        super().forward(x)
 
     def reset_(self) -> None:
         # language=rst
