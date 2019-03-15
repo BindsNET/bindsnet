@@ -67,7 +67,7 @@ per_class = int(n_neurons / 10)
 
 # Build network.
 network = DiehlAndCook2015(
-    n_input=32 * 32 * 3, n_neurons=n_neurons, exc=exc,
+    n_inpt=32 * 32 * 3, n_neurons=n_neurons, exc=exc,
     inh=inh, dt=dt, nu=[0, 0.25], wmin=0, wmax=10, norm=3500
 )
 
