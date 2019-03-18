@@ -17,13 +17,13 @@ class TwoLayerNetwork(Network):
     Implements an ``Input`` instance connected to a ``LIFNodes`` instance with a fully-connected ``Connection``.
     """
 
-    def __init__(self, n_input: int, n_neurons: int = 100, dt: float = 1.0, wmin: float = 0.0, wmax: float = 1.0,
+    def __init__(self, n_inpt: int, n_neurons: int = 100, dt: float = 1.0, wmin: float = 0.0, wmax: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), norm: float = 78.4) -> None:
         # language=rst
         """
         Constructor for class ``TwoLayerNetwork``.
 
-        :param n_input: Number of input neurons. Matches the 1D size of the input data.
+        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of neurons in the ``LIFNodes`` population.
         :param dt: Simulation time step.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
@@ -33,15 +33,15 @@ class TwoLayerNetwork(Network):
         """
         super().__init__(dt=dt)
 
-        self.n_input = n_input
+        self.n_inpt = n_inpt
         self.n_neurons = n_neurons
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_input, traces=True, trace_tc=5e-2), name='X')
+        self.add_layer(Input(n=self.n_inpt, traces=True, trace_tc=5e-2), name='X')
         self.add_layer(LIFNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-65.0, thresh=-52.0, refrac=5,
                                 decay=1e-2, trace_tc=5e-2), name='Y')
 
-        w = 0.3 * torch.rand(self.n_input, self.n_neurons)
+        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
                                        nu=nu, wmin=wmin, wmax=wmax, norm=norm),
                             source='X', target='Y')
@@ -54,7 +54,7 @@ class DiehlAndCook2015(Network):
     <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
     """
 
-    def __init__(self, n_input: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
+    def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0, wmax: float = 1.0,
                  norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7,
                  X_Ae_decay: Optional[float] = None, Ae_Ai_decay: Optional[float] = None,
@@ -63,7 +63,7 @@ class DiehlAndCook2015(Network):
         """
         Constructor for class ``DiehlAndCook2015``.
 
-        :param n_input: Number of input neurons. Matches the 1D size of the input data.
+        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of excitatory, inhibitory neurons.
         :param exc: Strength of synapse weights from excitatory to inhibitory layer.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
@@ -80,13 +80,13 @@ class DiehlAndCook2015(Network):
         """
         super().__init__(dt=dt)
 
-        self.n_input = n_input
+        self.n_inpt = n_inpt
         self.n_neurons = n_neurons
         self.exc = exc
         self.inh = inh
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_input, traces=True, trace_tc=5e-2), name='X')
+        self.add_layer(Input(n=self.n_inpt, traces=True, trace_tc=5e-2), name='X')
         self.add_layer(DiehlAndCookNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
                                          decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay),
                        name='Ae')
@@ -95,7 +95,7 @@ class DiehlAndCook2015(Network):
                                 refrac=2, trace_tc=5e-2),
                        name='Ai')
 
-        w = 0.3 * torch.rand(self.n_input, self.n_neurons)
+        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Ae'], w=w, update_rule=PostPre,
                                        nu=nu, wmin=wmin, wmax=wmax, norm=norm, decay=X_Ae_decay),
                             source='X', target='Ae')
@@ -119,7 +119,7 @@ class DiehlAndCook2015v2(Network):
     replacing it with a recurrent inhibitory connection in the output layer (what used to be the excitatory layer).
     """
 
-    def __init__(self, n_input: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0,
+    def __init__(self, n_inpt: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: Optional[float] = None,
                  wmax: Optional[float] = None, norm: float = 78.4, theta_plus: float = 0.05,
                  theta_decay: float = 1e-7) -> None:
@@ -127,7 +127,7 @@ class DiehlAndCook2015v2(Network):
         """
         Constructor for class ``DiehlAndCook2015v2``.
 
-        :param n_input: Number of input neurons. Matches the 1D size of the input data.
+        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of excitatory, inhibitory neurons.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
@@ -140,12 +140,12 @@ class DiehlAndCook2015v2(Network):
         """
         super().__init__(dt=dt)
 
-        self.n_input = n_input
+        self.n_inpt = n_inpt
         self.n_neurons = n_neurons
         self.inh = inh
         self.dt = dt
 
-        input_layer = Input(n=self.n_input, traces=True, trace_tc=5e-2)
+        input_layer = Input(n=self.n_inpt, traces=True, trace_tc=5e-2)
         self.add_layer(input_layer, name='X')
 
         output_layer = DiehlAndCookNodes(
@@ -154,7 +154,7 @@ class DiehlAndCook2015v2(Network):
         )
         self.add_layer(output_layer, name='Y')
 
-        w = 0.3 * torch.rand(self.n_input, self.n_neurons)
+        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         input_connection = Connection(
             source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
             nu=nu, wmin=wmin, wmax=wmax, norm=norm
@@ -182,7 +182,7 @@ class IncreasingInhibitionNetwork(Network):
         """
         Constructor for class ``IncreasingInhibitionNetwork``.
 
-        :param n_input: Number of input neurons. Matches the 1D size of the input data.
+        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of excitatory, inhibitory neurons.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
@@ -241,7 +241,7 @@ class LocallyConnectedNetwork(Network):
     layer is recurrently inhibited connected such that neurons with the same input receptive field inhibit each other.
     """
 
-    def __init__(self, n_input: int, input_shape: List[int], kernel_size: Union[int, Tuple[int, int]],
+    def __init__(self, n_inpt: int, input_shape: List[int], kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int, inh: float = 25.0, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), theta_plus: float = 0.05,
                  theta_decay: float = 1e-7, wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2,
@@ -251,7 +251,7 @@ class LocallyConnectedNetwork(Network):
         Constructor for class ``LocallyConnectedNetwork``. Uses ``DiehlAndCookNodes`` to avoid multiple spikes per
         timestep in the output layer population.
 
-        :param n_input: Number of input neurons. Matches the 1D size of the input data.
+        :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param input_shape: Two-dimensional shape of input population.
         :param kernel_size: Size of input windows. Integer or two-tuple of integers.
         :param stride: Length of horizontal, vertical stride across input space. Integer or two-tuple of integers.
@@ -271,7 +271,7 @@ class LocallyConnectedNetwork(Network):
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
 
-        self.n_input = n_input
+        self.n_inpt = n_inpt
         self.input_shape = input_shape
         self.kernel_size = kernel_size
         self.stride = stride
@@ -291,9 +291,9 @@ class LocallyConnectedNetwork(Network):
                          int((input_shape[1] - kernel_size[1]) / stride[1]) + 1)
 
         if real:
-            input_layer = RealInput(n=self.n_input, traces=True, trace_tc=5e-2)
+            input_layer = RealInput(n=self.n_inpt, traces=True, trace_tc=5e-2)
         else:
-            input_layer = Input(n=self.n_input, traces=True, trace_tc=5e-2)
+            input_layer = Input(n=self.n_inpt, traces=True, trace_tc=5e-2)
 
         output_layer = DiehlAndCookNodes(
             n=self.n_filters * conv_size[0] * conv_size[1], traces=True, rest=-65.0, reset=-60.0,
