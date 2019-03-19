@@ -393,7 +393,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
             for v in voltages.items():
                 if plot_type == 'line':
                     ims.append(axes.plot(v[1].detach().clone().cpu().numpy()
-                                         [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T))
+                                         [n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].T))
 
                     if threshold is not None:
                         ims.append(axes.axhline(y=threshold[v[0]], c='r', linestyle='--'))
@@ -437,7 +437,7 @@ def plot_voltages(voltages: Dict[str, torch.Tensor], ims: Optional[List[AxesImag
                 axes.clear()
                 if plot_type == 'line':
                     axes.plot(
-                        v[1].cpu().numpy()[n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].cpu().numpy().T
+                        v[1].cpu().numpy()[n_neurons[v[0]][0]:n_neurons[v[0]][1], time[0]:time[1]].T
                     )
                     if threshold is not None:
                         axes.axhline(y=threshold[v[0]], c='r', linestyle='--')
