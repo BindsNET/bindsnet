@@ -53,7 +53,7 @@ class LearningRule(ABC):
             self.connection.w -= self.weight_decay * self.connection.w
 
         # Bound weights.
-        if None not in [self.connection.wmin, self.connection.wmax] and not isinstance(self, NoOp):
+        if self.connection.wmin != -np.inf and self.connection.wmax != np.inf and not isinstance(self, NoOp):
             self.connection.w = torch.clamp(
                 self.connection.w, self.connection.wmin, self.connection.wmax
             )
@@ -196,7 +196,7 @@ class WeightDependentPostPre(LearningRule):
         )
 
         assert self.source.traces, 'Pre-synaptic nodes must record spike traces.'
-        assert connection.wmin is not None and connection.wmax is not None, 'Connection must define wmin and wmax.'
+        assert connection.wmin != -np.inf and connection.wmax != np.inf, 'Connection must define finite wmin and wmax.'
 
         self.wmin = connection.wmin
         self.wmax = connection.wmax

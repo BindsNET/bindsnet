@@ -201,8 +201,8 @@ class Network:
                 inpts[c[1]] = torch.zeros(target.shape)
 
             # Ensure weights are correctly clamped
-            assert all(self.connections[c].w <= self.connections[c].wmax) and \
-                   all(self.connections[c].w >= self.connections[c].wmin)
+            assert (all(self.connections[c].w <= self.connections[c].wmax) and
+                    all(self.connections[c].w >= self.connections[c].wmin))
 
             # Add to input: source's spikes multiplied by connection weights.
             inpts[c[1]] += self.connections[c].compute(source.s)
