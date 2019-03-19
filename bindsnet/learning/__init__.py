@@ -53,7 +53,7 @@ class LearningRule(ABC):
             self.connection.w -= self.weight_decay * self.connection.w
 
         # Bound weights.
-        if (self.connection.wmin != -np.inf or self.connection.wmax != np.inf) and not isinstance(self, NoOp):
+        if None not in [self.connection.wmin, self.connection.wmax] and not isinstance(self, NoOp):
             self.connection.w = torch.clamp(
                 self.connection.w, self.connection.wmin, self.connection.wmax
             )
@@ -124,6 +124,7 @@ class PostPre(LearningRule):
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
 
         source_s = self.source.s.view(-1).float()
         source_x = self.source.x.view(-1)
@@ -138,13 +139,12 @@ class PostPre(LearningRule):
         if self.nu[1]:
             self.connection.w += self.nu[1] * torch.ger(source_x, target_s)
 
-        super().update()
-
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
 
         # Get convolutional layer parameters.
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
@@ -170,8 +170,6 @@ class PostPre(LearningRule):
             post = s_target @ x_source.t()
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
-        super().update()
-
 
 class WeightDependentPostPre(LearningRule):
     # language=rst
@@ -196,7 +194,7 @@ class WeightDependentPostPre(LearningRule):
         )
 
         assert self.source.traces, 'Pre-synaptic nodes must record spike traces.'
-        assert connection.wmin != -np.inf and connection.wmax != np.inf, 'Connection must define finite wmin and wmax.'
+        assert connection.wmin is not None and connection.wmax is not None, 'Connection must define wmin and wmax.'
 
         self.wmin = connection.wmin
         self.wmax = connection.wmax
@@ -215,6 +213,7 @@ class WeightDependentPostPre(LearningRule):
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
 
         source_s = self.source.s.view(-1).float()
         source_x = self.source.x.view(-1)
@@ -233,13 +232,12 @@ class WeightDependentPostPre(LearningRule):
 
         self.connection.w += update
 
-        super().update()
-
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
 
         # Get convolutional layer parameters.
         out_channels, in_channels, kernel_height, kernel_width = self.connection.w.size()
@@ -268,8 +266,6 @@ class WeightDependentPostPre(LearningRule):
             update += self.nu[1] * post.view(self.connection.w.size()) * (self.wmax - self.connection.wmin)
 
         self.connection.w += update
-
-        super().update()
 
 
 class Hebbian(LearningRule):
@@ -308,6 +304,7 @@ class Hebbian(LearningRule):
         """
         Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
 
         source_s = self.source.s.view(-1).float()
         source_x = self.source.x.view(-1)
@@ -323,13 +320,12 @@ class Hebbian(LearningRule):
             source_x, target_s
         )
 
-        super().update()
-
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         Hebbian learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
         """
+        super().update()
 
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
@@ -351,8 +347,6 @@ class Hebbian(LearningRule):
         # Post-synaptic update.
         post = s_target @ x_source.t()
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
-
-        super().update()
 
 
 class MSTDP(LearningRule):
@@ -396,6 +390,7 @@ class MSTDP(LearningRule):
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
+        super().update()
 
         source_s = self.source.s.view(-1).float()
         source_x = self.source.x.view(-1)
@@ -419,8 +414,6 @@ class MSTDP(LearningRule):
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * eligibility
 
-        super().update()
-
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
@@ -432,6 +425,7 @@ class MSTDP(LearningRule):
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
+        super().update()
 
         # Parse keyword arguments.
         reward = kwargs['reward']
@@ -464,8 +458,6 @@ class MSTDP(LearningRule):
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * eligibility
-
-        super().update()
 
 
 class MSTDPET(LearningRule):
@@ -518,6 +510,7 @@ class MSTDPET(LearningRule):
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
+        super().update()
 
         source_s = self.source.s.view(-1).float()
         source_x = self.source.x.view(-1)
@@ -541,8 +534,6 @@ class MSTDPET(LearningRule):
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
 
-        super().update()
-
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
@@ -554,6 +545,7 @@ class MSTDPET(LearningRule):
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
+        super().update()
 
         # Parse keyword arguments.
         reward = kwargs['reward']
@@ -587,5 +579,3 @@ class MSTDPET(LearningRule):
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.e_trace
-
-        super().update()
