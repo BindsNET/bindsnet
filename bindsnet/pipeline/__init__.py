@@ -223,19 +223,16 @@ class Pipeline:
     def plot_reward(self) -> None:
         # language=rst
         """
-        Plot the change of accumulated reward for each episodes
+        Plot the accumulated reward for each episode.
         """
         if self.reward_im is None and self.reward_ax is None:
-            fig, self.reward_ax = plt.subplots()
+            self.reward_im, self.reward_ax = plt.subplots()
             self.reward_ax.set_title('Reward')
             self.reward_plot, = self.reward_ax.plot(self.reward_list)
         else:
-            reward_array = np.array(self.reward_list)
-            y_min = reward_array.min()
-            y_max = reward_array.max()
-            self.reward_ax.set_xlim(left=0, right=self.episode)
-            self.reward_ax.set_ylim(bottom=y_min, top=y_max)
             self.reward_plot.set_data(range(self.episode), self.reward_list)
+            self.reward_ax.relim()
+            self.reward_ax.autoscale_view()
 
     def plot_data(self) -> None:
         # language=rst
