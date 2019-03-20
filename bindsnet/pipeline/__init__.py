@@ -2,6 +2,7 @@ import time
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from typing import Callable, Optional
 
@@ -52,6 +53,7 @@ class Pipeline:
         :param str output: String name of the layer from which to take output from.
         :param float plot_length: Relative time length of the plotted record data. Relative to parameter time.
         :param str plot_type: Type of plotting ('color' or 'line').
+        :param int reward_window: Moving average window for the reward plot.
         :param int reward_delay: How many iterations to delay delivery of reward.
         """
         self.network = network
@@ -82,6 +84,7 @@ class Pipeline:
         self.render_interval = kwargs.get('render_interval', None)
         self.plot_length = kwargs.get('plot_length', 1.0)
         self.plot_type = kwargs.get('plot_type', 'color')
+        self.reward_window = kwargs.get('reward_window', None)
         self.reward_delay = kwargs.get('reward_delay', None)
 
         self.dt = network.dt
@@ -225,14 +228,24 @@ class Pipeline:
         """
         Plot the accumulated reward for each episode.
         """
+        # Compute moving average
+        if self.reward_window is not None:
+            # Ensure window size > 0 and < size of reward list
+            window = max(min(len(self.reward_list), self.reward_window), 0)
+
+            # Fastest implementation of moving average
+            reward_list_ = pd.Series(self.reward_list).rolling(window=window, min_periods=1).mean().values
+        else:
+            reward_list_ = self.reward_list[:]
+
         if self.reward_im is None and self.reward_ax is None:
             self.reward_im, self.reward_ax = plt.subplots()
             self.reward_ax.set_title('Accumulated reward')
             self.reward_ax.set_xlabel('Episode')
             self.reward_ax.set_ylabel('Reward')
-            self.reward_plot, = self.reward_ax.plot(self.reward_list)
+            self.reward_plot, = self.reward_ax.plot(reward_list_)
         else:
-            self.reward_plot.set_data(range(self.episode), self.reward_list)
+            self.reward_plot.set_data(range(self.episode), reward_list_)
             self.reward_ax.relim()
             self.reward_ax.autoscale_view()
 
