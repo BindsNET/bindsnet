@@ -227,7 +227,9 @@ class Pipeline:
         """
         if self.reward_im is None and self.reward_ax is None:
             self.reward_im, self.reward_ax = plt.subplots()
-            self.reward_ax.set_title('Reward')
+            self.reward_ax.set_title('Accumulated reward')
+            self.reward_ax.set_xlabel('Episode')
+            self.reward_ax.set_ylabel('Reward')
             self.reward_plot, = self.reward_ax.plot(self.reward_list)
         else:
             self.reward_plot.set_data(range(self.episode), self.reward_list)
