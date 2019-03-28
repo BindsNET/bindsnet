@@ -28,7 +28,7 @@ class AbstractConnection(ABC):
 
         Keyword arguments:
 
-        :param function update_rule: Modifies connection parameters according to some rule.
+        :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param float wmin: The minimum value on the connection weights.
         :param float wmax: The maximum value on the connection weights.
         :param float norm: Total weight per target neuron normalization.
@@ -137,7 +137,7 @@ class Connection(AbstractConnection):
 
         Keyword arguments:
 
-        :param function update_rule: Modifies connection parameters according to some rule.
+        :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
         :param float wmin: Minimum allowed value on the connection weights.
@@ -255,7 +255,7 @@ class Conv2dConnection(AbstractConnection):
 
         Keyword arguments:
 
-        :param function update_rule: Modifies connection parameters according to some rule.
+        :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
         :param float wmin: Minimum allowed value on the connection weights.
@@ -443,7 +443,7 @@ class LocallyConnectedConnection(AbstractConnection):
 
         Keyword arguments:
 
-        :param function update_rule: Modifies connection parameters according to some rule.
+        :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
         :param float wmin: Minimum allowed value on the connection weights.
@@ -581,7 +581,7 @@ class MeanFieldConnection(AbstractConnection):
 
         Keyword arguments:
 
-        :param function update_rule: Modifies connection parameters according to some rule.
+        :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param float wmin: Minimum allowed value on the connection weights.
         :param float wmax: Maximum allowed value on the connection weights.
@@ -658,7 +658,7 @@ class SparseConnection(AbstractConnection):
 
         :param torch.Tensor w: Strengths of synapses.
         :param float sparsity: Fraction of sparse connections to use.
-        :param function update_rule: Modifies connection parameters according to some rule.
+        :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param float wmin: Minimum allowed value on the connection weights.
         :param float wmax: Maximum allowed value on the connection weights.
         :param float norm: Total weight per target neuron normalization constant.
