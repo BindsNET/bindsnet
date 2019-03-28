@@ -303,9 +303,7 @@ class Network:
 
             # Run synapse updates.
             for c in self.connections:
-                self.connections[c].update(
-                    mask=masks.get(c, None), learning=self.learning, **kwargs
-                )
+                self.connections[c].update(dt=self.dt, mask=masks.get(c, None), learning=self.learning, **kwargs)
 
             # Get input to all layers.
             inpts.update(self.get_inputs())

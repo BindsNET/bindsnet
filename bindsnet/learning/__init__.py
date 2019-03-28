@@ -1,11 +1,11 @@
-import torch
-import numpy as np
-
 from abc import ABC
-from typing import Union, Tuple, Optional, Sequence
+from typing import Union, Optional, Sequence
 
-from ..utils import im2col_indices
+import numpy as np
+import torch
+
 from ..network.topology import AbstractConnection, Connection, Conv2dConnection, LocallyConnectedConnection
+from ..utils import im2col_indices
 
 
 class LearningRule(ABC):
@@ -119,10 +119,12 @@ class PostPre(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-    def _connection_update(self, **kwargs) -> None:
+    def _connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
         """
 
         source_s = self.source.s.view(-1).float()
@@ -140,10 +142,12 @@ class PostPre(LearningRule):
 
         super().update()
 
-    def _conv2d_connection_update(self, **kwargs) -> None:
+    def _conv2d_connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
         """
 
         # Get convolutional layer parameters.
@@ -210,10 +214,12 @@ class WeightDependentPostPre(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-    def _connection_update(self, **kwargs) -> None:
+    def _connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
         """
 
         source_s = self.source.s.view(-1).float()
@@ -235,10 +241,12 @@ class WeightDependentPostPre(LearningRule):
 
         super().update()
 
-    def _conv2d_connection_update(self, **kwargs) -> None:
+    def _conv2d_connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Post-pre learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
         """
 
         # Get convolutional layer parameters.
@@ -303,10 +311,12 @@ class Hebbian(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-    def _connection_update(self, **kwargs) -> None:
+    def _connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
         """
 
         source_s = self.source.s.view(-1).float()
@@ -325,10 +335,12 @@ class Hebbian(LearningRule):
 
         super().update()
 
-    def _conv2d_connection_update(self, **kwargs) -> None:
+    def _conv2d_connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Hebbian learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
         """
 
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
@@ -374,7 +386,8 @@ class MSTDP(LearningRule):
             connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
-        assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
+        assert not self.source.traces and not self.target.traces, \
+            'Spike traces are dealt with within the learning rule.'
 
         if isinstance(connection, (Connection, LocallyConnectedConnection)):
             self.update = self._connection_update
@@ -385,46 +398,58 @@ class MSTDP(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-    def _connection_update(self, **kwargs) -> None:
+        self.p_plus = torch.zeros(self.source.n)
+        self.p_minus = torch.zeros(self.target.n)
+        self.eligibility = torch.zeros(self.source.n, self.target.n)
+
+    def _connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
-        M-STDP learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+        MSTDP learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
 
         Keyword arguments:
 
         :param float reward: Reward signal from reinforcement learning task.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
+        :param tc_plus: Time constant for pre-synaptic firing trace.
+        :param tc_minus: Time constant for post-synaptic firing trace.
         """
 
+        # Reshape pre- and post-synaptic spikes.
         source_s = self.source.s.view(-1).float()
-        source_x = self.source.x.view(-1)
         target_s = self.target.s.view(-1).float()
-        target_x = self.target.x.view(-1)
 
+        # TODO: check this if necessary
         self.connection.w = self.connection.w.view(self.source.n, self.target.n)
 
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
         a_minus = kwargs.get('a_minus', -1)
+        tc_plus = kwargs.get('tc_plus', 20.0)
+        tc_minus = kwargs.get('tc_minus', 20.0)
+
+        # Compute weight update based on the point eligibility value of the past timestep.
+        self.connection.w += self.nu[0] * reward * self.eligibility
 
         # Get P^+ and P^- values (function of firing traces).
-        p_plus = a_plus * source_x
-        p_minus = a_minus * target_x
+        self.p_plus = self.p_plus * np.exp(-dt / tc_plus) + a_plus * source_s
+        self.p_minus = self.p_minus * np.exp(-dt / tc_minus) + a_minus * target_s
 
         # Calculate point eligibility value.
-        eligibility = torch.ger(p_plus, target_s) + torch.ger(source_s, p_minus)
-
-        # Compute weight update.
-        self.connection.w += self.nu[0] * reward * eligibility
+        self.eligibility = torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
 
         super().update()
 
-    def _conv2d_connection_update(self, **kwargs) -> None:
+    def _conv2d_connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
-        M-STDP learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+        MSTDP learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
 
         Keyword arguments:
 
@@ -493,7 +518,8 @@ class MSTDPET(LearningRule):
             connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
         )
 
-        assert self.source.traces and self.target.traces, 'Both pre- and post-synaptic nodes must record spike traces.'
+        assert not self.source.traces and not self.target.traces, \
+            'Spike traces are dealt with within the learning rule.'
 
         if isinstance(connection, (Connection, LocallyConnectedConnection)):
             self.update = self._connection_update
@@ -505,48 +531,60 @@ class MSTDPET(LearningRule):
             )
 
         self.e_trace = torch.zeros(self.source.n, self.target.n)
-        self.tc_e_trace = kwargs.get('tc_e_trace', 5e-2)
+        self.p_plus = torch.zeros(self.source.n)
+        self.p_minus = torch.zeros(self.target.n)
+        self.eligibility = torch.zeros(self.source.n, self.target.n)
 
-    def _connection_update(self, **kwargs) -> None:
+    def _connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
-        M-STDP-ET learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+        MSTDPET learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
 
         Keyword arguments:
 
         :param float reward: Reward signal from reinforcement learning task.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
+        :param tc_plus: Time constant for pre-synaptic firing trace.
+        :param tc_minus: Time constant for post-synaptic firing trace.
+        :param tc_e_trace: Time constant for the eligibility trace.
         """
 
+        # Reshape pre- and post-synaptic spikes.
         source_s = self.source.s.view(-1).float()
-        source_x = self.source.x.view(-1)
         target_s = self.target.s.view(-1).float()
-        target_x = self.target.x.view(-1)
 
         # Parse keyword arguments.
         reward = kwargs['reward']
         a_plus = kwargs.get('a_plus', 1)
         a_minus = kwargs.get('a_minus', -1)
+        tc_plus = kwargs.get('tc_plus', 20.0)
+        tc_minus = kwargs.get('tc_minus', 20.0)
+        tc_e_trace = kwargs.get('tc_e_trace', 25.0)
 
-        # Get P^+ and P^- values (function of firing traces).
-        self.p_plus = a_plus * source_x
-        self.p_minus = a_minus * target_x
-
-        # Calculate value of eligibility trace.
-        self.e_trace -= self.tc_e_trace * self.e_trace
-        update = torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
-        self.e_trace[update != 0] = update[update != 0]
+        # Calculate value of eligibility trace based on the value of the point eligibility value of the past timestep.
+        self.e_trace = np.exp(-dt / tc_e_trace) * self.e_trace + self.eligibility / tc_e_trace
 
         # Compute weight update.
-        self.connection.w += self.nu[0] * reward * self.e_trace
+        self.connection.w += self.nu[0] * dt * reward * self.e_trace
+
+        # Get P^+ and P^- values (function of firing traces).
+        self.p_plus = self.p_plus * np.exp(-dt / tc_plus) + a_plus * source_s
+        self.p_minus = self.p_minus * np.exp(-dt / tc_minus) + a_minus * target_s
+
+        # Calculate point eligibility value.
+        self.eligibility = torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
 
         super().update()
 
-    def _conv2d_connection_update(self, **kwargs) -> None:
+    def _conv2d_connection_update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
-        M-STDP-ET learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+        MSTDPET learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection`` class.
+
+        :param dt: Simulation timestep.
 
         Keyword arguments:
 

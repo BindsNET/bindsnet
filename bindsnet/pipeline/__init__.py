@@ -1,17 +1,16 @@
 import time
-import torch
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-
 from typing import Callable, Optional
 
-from ..network import Network
-from ..encoding import bernoulli
-from ..network.nodes import Input, AbstractInput
-from ..environment import Environment
-from ..network.monitors import Monitor
+import matplotlib.pyplot as plt
+import pandas as pd
+import torch
+
 from ..analysis.plotting import plot_spikes, plot_voltages
+from ..encoding import bernoulli
+from ..environment import Environment
+from ..network import Network
+from ..network.monitors import Monitor
+from ..network.nodes import AbstractInput
 
 __all__ = [
     'Pipeline', 'action'
@@ -48,7 +47,7 @@ class Pipeline:
         :param int time: Time input is presented for to the network.
         :param int history: Number of observations to keep track of.
         :param int delta: Step size to save observations in history.
-        :param bool render_interval: Interval to render the environment.
+        :param int render_interval: Interval to render the environment.
         :param int save_interval: How often to save the network to disk.
         :param str output: String name of the layer from which to take output from.
         :param float plot_length: Relative time length of the plotted record data. Relative to parameter time.
@@ -97,19 +96,11 @@ class Pipeline:
 
         if self.plot_interval is not None:
             for l in self.network.layers:
-                self.network.add_monitor(
-                    Monitor(
-                        self.network.layers[l], 's', int(self.plot_length * self.plot_interval * self.timestep)
-                    ),
-                    name=f'{l}_spikes'
-                )
+                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length)),
+                                         name=f'{l}_spikes')
                 if 'v' in self.network.layers[l].__dict__:
-                    self.network.add_monitor(
-                        Monitor(
-                            self.network.layers[l], 'v', int(self.plot_length * self.plot_interval * self.timestep)
-                        ),
-                        name=f'{l}_voltages'
-                    )
+                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length)),
+                                             name=f'{l}_voltages')
 
             self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
             self.set_spike_data()

@@ -1,9 +1,9 @@
-import torch
-import numpy as np
-import torch.nn.functional as F
-
-from typing import Union, Tuple, Optional, Sequence
 from abc import ABC, abstractmethod
+from typing import Union, Tuple, Optional, Sequence
+
+import numpy as np
+import torch
+import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 
 from .nodes import Nodes
@@ -38,7 +38,7 @@ class AbstractConnection(ABC):
         :param ByteTensor sign: True: to keep the connection positive.
                                 False: keep the connection negative.
                                 None: Ignore, connection can change signs on the fly
-                                ----NOT IMPLEMENT YET ----
+                                ----NOT IMPLEMENTED YET ----
         """
         self.w = None
         self.source = source
@@ -80,15 +80,22 @@ class AbstractConnection(ABC):
         pass
 
     @abstractmethod
-    def update(self, **kwargs) -> None:
+    def update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
+
+        :param dt: Simulation timestep.
+
+        Keyword arguments:
+
+        :param bool learning: Whether to allow connection updates.
+        :param ByteTensor mask: Boolean mask determining which weights to clamp to zero.
         """
         learning = kwargs.get('learning', True)
 
         if learning:
-            self.update_rule.update(**kwargs)
+            self.update_rule.update(dt=dt, **kwargs)
 
         mask = kwargs.get('mask', None)
         if mask is not None:
@@ -174,12 +181,14 @@ class Connection(AbstractConnection):
         post = s.float().view(-1) @ self.w + self.b
         return post.view(*self.target.shape)
 
-    def update(self, **kwargs) -> None:
+    def update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
+
+        :param dt: Simulation timestep.
         """
-        super().update(**kwargs)
+        super().update(dt=dt, **kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -297,12 +306,14 @@ class Conv2dConnection(AbstractConnection):
         """
         return F.conv2d(s.float(), self.w, self.b, stride=self.stride, padding=self.padding, dilation=self.dilation)
 
-    def update(self, **kwargs) -> None:
+    def update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
+
+        :param dt: Simulation timestep.
         """
-        super().update(**kwargs)
+        super().update(dt=dt, **kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -379,12 +390,14 @@ class MaxPool2dConnection(AbstractConnection):
 
         return s.take(indices).float()
 
-    def update(self, **kwargs) -> None:
+    def update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
+
+        :param dt: Simulation timestep.
         """
-        super().update(**kwargs)
+        super().update(dt=dt, **kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -514,15 +527,21 @@ class LocallyConnectedConnection(AbstractConnection):
             a_post = s.float().view(-1) @ self.w.view(self.source.n, self.target.n) + self.b
             return a_post.view(*self.target.shape)
 
-    def update(self, **kwargs) -> None:
+    def update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
+
+        :param dt: Simulation timestep.
+
+        Keyword arguments:
+
+        :param ByteTensor mask: Boolean mask determining which weights to clamp to zero.
         """
         if kwargs['mask'] is None:
             kwargs['mask'] = self.mask
 
-        super().update(**kwargs)
+        super().update(dt=dt, **kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -591,12 +610,14 @@ class MeanFieldConnection(AbstractConnection):
         # Compute multiplication of mean-field pre-activation by connection weights.
         return s.float().mean() * self.w
 
-    def update(self, **kwargs) -> None:
+    def update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
+
+        :param dt: Simulation timestep.
         """
-        super().update(**kwargs)
+        super().update(dt=dt, **kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -672,10 +693,12 @@ class SparseConnection(AbstractConnection):
         """
         return torch.mm(self.w, s.unsqueeze(-1).float()).squeeze(-1)
 
-    def update(self, **kwargs) -> None:
+    def update(self, dt: float, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
+
+        :param dt: Simulation timestep.
         """
         pass
 
