@@ -108,7 +108,7 @@ Several packages, including BRIAN and PyNEST, allow the setting of certain globa
 <img src="https://github.com/Hananel-Hazan/bindsnet/blob/hananel/docs/BindsNET%20benchmark.png" alt="BindsNET%20Benchmark"  width="503" height="403">
 </p>
 
-All simulations run on Ubuntu 16.04 LTS with Intel(R) Xeon(R) CPU E5-2687W v3 @ 3.10GHz, 128Gb RAM @ 2133MHz, and two GeForce GTX TITAN X (GM200) GPUs. Python 3.6 is used in all cases except for simulation with ANNarchy, which requires Python 2.7. Clock time was recorded for each simulation run. The results are depicted in Figure 11.
+All simulations run on Ubuntu 16.04 LTS with Intel(R) Xeon(R) CPU E5-2687W v3 @ 3.10GHz, 128Gb RAM @ 2133MHz, and two GeForce GTX TITAN X (GM200) GPUs. Python 3.6 is used in all cases. Clock time was recorded for each simulation run. 
 
 ## Citation
 
