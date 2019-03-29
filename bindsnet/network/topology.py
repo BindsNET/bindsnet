@@ -41,6 +41,7 @@ class AbstractConnection(ABC):
                                 ----NOT IMPLEMENTED YET ----
         """
         self.w = None
+        self.dt = None
         self.source = source
         self.target = target
         self.nu = nu
@@ -80,12 +81,10 @@ class AbstractConnection(ABC):
         pass
 
     @abstractmethod
-    def update(self, dt: float, **kwargs) -> None:
+    def update(self, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
-
-        :param dt: Simulation timestep.
 
         Keyword arguments:
 
@@ -95,7 +94,7 @@ class AbstractConnection(ABC):
         learning = kwargs.get('learning', True)
 
         if learning:
-            self.update_rule.update(dt=dt, **kwargs)
+            self.update_rule.update(**kwargs)
 
         mask = kwargs.get('mask', None)
         if mask is not None:
@@ -181,14 +180,12 @@ class Connection(AbstractConnection):
         post = s.float().view(-1) @ self.w + self.b
         return post.view(*self.target.shape)
 
-    def update(self, dt: float, **kwargs) -> None:
+    def update(self, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
-
-        :param dt: Simulation timestep.
         """
-        super().update(dt=dt, **kwargs)
+        super().update(**kwargs)
 
     def normalize(self) -> None:
         # language=rst
