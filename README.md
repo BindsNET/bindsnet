@@ -105,7 +105,7 @@ We simulated a network with a population of n Poisson input neurons with firing 
 Several packages, including BRIAN and PyNEST, allow the setting of certain global preferences; e.g., the number of CPU threads, the number of OpenMP processes, etc. We chose these settings for our benchmark study in an attempt to maximize each library's speed, but note that BindsNET requires no setting of such options. Our approach, inheriting the computational model of PyTorch, appears to make the best use of the available hardware, and therefore makes it simple for practicioners to get the best performance from their system with the least effort.
 
 <p align="middle">
-<img src="https://github.com/Hananel-Hazan/bindsnet/blob/hananel/docs/BindsNET%20benchmark.png" alt="BindsNET%20Benchmark"  width="503" height="403">
+<img src="https://github.com/Hananel-Hazan/bindsnet/blob/master/docs/BindsNET%20benchmark.png" alt="BindsNET%20Benchmark"  width="503" height="403">
 </p>
 
 All simulations run on Ubuntu 16.04 LTS with Intel(R) Xeon(R) CPU E5-2687W v3 @ 3.10GHz, 128Gb RAM @ 2133MHz, and two GeForce GTX TITAN X (GM200) GPUs. Python 3.6 is used in all cases. Clock time was recorded for each simulation run. 
