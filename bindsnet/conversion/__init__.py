@@ -490,7 +490,7 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
 
     if data is None:
         import warnings
-        warnings.warn('Data is None. ANN weights will not be scaled.', RuntimeWarning)
+        warnings.warn('Data is None. Weights will not be scaled.', RuntimeWarning)
     else:
         ann = data_based_normalization(
             ann=ann, data=data.detach(), percentile=percentile
