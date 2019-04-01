@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 from torch.nn.modules.utils import _pair
 
+from copy import deepcopy
 from time import time as t
 from typing import Union, Sequence, Optional, Tuple, Dict
 
@@ -483,6 +484,8 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     """
     if isinstance(ann, str):
         ann = torch.load(ann)
+    else:
+        ann = deepcopy(ann)
 
     assert isinstance(ann, nn.Module)
 
