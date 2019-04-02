@@ -37,9 +37,9 @@ class TwoLayerNetwork(Network):
         self.n_neurons = n_neurons
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_inpt, traces=True, trace_tc=5e-2), name='X')
+        self.add_layer(Input(n=self.n_inpt, traces=True, tc_trace=20.0), name='X')
         self.add_layer(LIFNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-65.0, thresh=-52.0, refrac=5,
-                                decay=1e-2, trace_tc=5e-2), name='Y')
+                                tc_decay=100.0, tc_trace=20.0), name='Y')
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
@@ -56,9 +56,9 @@ class DiehlAndCook2015(Network):
 
     def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0, wmax: float = 1.0,
-                 norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7,
-                 X_Ae_decay: Optional[float] = None, Ae_Ai_decay: Optional[float] = None,
-                 Ai_Ae_decay: Optional[float] = None) -> None:
+                 norm: float = 78.4, theta_plus: float = 0.05, tc_theta_decay: float = 1e7,
+                 tc_X_Ae_decay: Optional[float] = None, tc_Ae_Ai_decay: Optional[float] = None,
+                 tc_Ai_Ae_decay: Optional[float] = None) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015``.
@@ -73,10 +73,10 @@ class DiehlAndCook2015(Network):
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
-        :param theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
-        :param X_Ae_decay: Decay of activation of connection from input to excitatory neurons.
-        :param Ae_Ai_decay: Decay of activation of connection from excitatory to inhibitory neurons.
-        :param Ai_Ae_decay: Decay of activation of connection from inhibitory to excitatory neurons.
+        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        :param tc_X_Ae_decay: Time constant of connection activation decay from input to excitatory neurons.
+        :param tc_Ae_Ai_decay: Time constant of connection activation decay from excitatory to inhibitory neurons.
+        :param tc_Ai_Ae_decay: Time constant of connection activation decay from inhibitory to excitatory neurons.
         """
         super().__init__(dt=dt)
 
@@ -86,28 +86,29 @@ class DiehlAndCook2015(Network):
         self.inh = inh
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_inpt, traces=True, trace_tc=5e-2), name='X')
+        self.add_layer(Input(n=self.n_inpt, traces=True, tc_trace=20.0), name='X')
         self.add_layer(DiehlAndCookNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-                                         decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay),
+                                         tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus,
+                                         tc_theta_decay=tc_theta_decay),
                        name='Ae')
 
-        self.add_layer(LIFNodes(n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0, decay=1e-1,
-                                refrac=2, trace_tc=5e-2),
+        self.add_layer(LIFNodes(n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0, tc_decay=100.0,
+                                refrac=2, tc_trace=20.0),
                        name='Ai')
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Ae'], w=w, update_rule=PostPre,
-                                       nu=nu, wmin=wmin, wmax=wmax, norm=norm, decay=X_Ae_decay),
+                                       nu=nu, wmin=wmin, wmax=wmax, norm=norm, decay=tc_X_Ae_decay),
                             source='X', target='Ae')
 
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
         self.add_connection(Connection(source=self.layers['Ae'], target=self.layers['Ai'], w=w, wmin=0, wmax=self.exc,
-                                       decay=Ae_Ai_decay),
+                                       decay=tc_Ae_Ai_decay),
                             source='Ae', target='Ai')
 
         w = -self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons)))
         self.add_connection(Connection(source=self.layers['Ai'], target=self.layers['Ae'], w=w, wmin=-self.inh, wmax=0,
-                                       decay=Ai_Ae_decay),
+                                       decay=tc_Ai_Ae_decay),
                             source='Ai', target='Ae')
 
 
@@ -122,7 +123,7 @@ class DiehlAndCook2015v2(Network):
     def __init__(self, n_inpt: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: Optional[float] = None,
                  wmax: Optional[float] = None, norm: float = 78.4, theta_plus: float = 0.05,
-                 theta_decay: float = 1e-7) -> None:
+                 tc_theta_decay: float = 1e7) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015v2``.
@@ -136,7 +137,7 @@ class DiehlAndCook2015v2(Network):
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
-        :param theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
         """
         super().__init__(dt=dt)
 
@@ -145,12 +146,12 @@ class DiehlAndCook2015v2(Network):
         self.inh = inh
         self.dt = dt
 
-        input_layer = Input(n=self.n_inpt, traces=True, trace_tc=5e-2)
+        input_layer = Input(n=self.n_inpt, traces=True, tc_trace=20.0)
         self.add_layer(input_layer, name='X')
 
         output_layer = DiehlAndCookNodes(
             n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-            decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
+            tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
         )
         self.add_layer(output_layer, name='Y')
 
@@ -177,7 +178,7 @@ class IncreasingInhibitionNetwork(Network):
 
     def __init__(self, n_input: int, n_neurons: int = 100, start_inhib: float = 1.0, max_inhib: float = 100.0,
                  dt: float = 1.0, nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0,
-                 wmax: float = 1.0, norm: float = 78.4, theta_plus: float = 0.05, theta_decay: float = 1e-7) -> None:
+                 wmax: float = 1.0, norm: float = 78.4, theta_plus: float = 0.05, tc_theta_decay: float = 1e7) -> None:
         # language=rst
         """
         Constructor for class ``IncreasingInhibitionNetwork``.
@@ -191,7 +192,7 @@ class IncreasingInhibitionNetwork(Network):
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
-        :param theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
         """
         super().__init__(dt=dt)
 
@@ -202,12 +203,12 @@ class IncreasingInhibitionNetwork(Network):
         self.max_inhib = max_inhib
         self.dt = dt
 
-        input_layer = Input(n=self.n_input, traces=True, trace_tc=5e-2)
+        input_layer = Input(n=self.n_input, traces=True, tc_trace=20.0)
         self.add_layer(input_layer, name='X')
 
         output_layer = DiehlAndCookNodes(
             n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-            decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
+            tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
         )
         self.add_layer(output_layer, name='Y')
 
@@ -244,7 +245,7 @@ class LocallyConnectedNetwork(Network):
     def __init__(self, n_inpt: int, input_shape: List[int], kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int, inh: float = 25.0, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), theta_plus: float = 0.05,
-                 theta_decay: float = 1e-7, wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2,
+                 tc_theta_decay: float = 1e7, wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2,
                  real=False) -> None:
         # language=rst
         """
@@ -262,7 +263,7 @@ class LocallyConnectedNetwork(Network):
         :param wmin: Minimum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
         :param wmax: Maximum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
-        :param theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
         :param norm: ``Input`` to ``DiehlAndCookNodes`` layer connection weights normalization constant.
         :param real: Whether to use real-valued (non-spiking) input (implemented as a "clamp").
         """
@@ -279,7 +280,7 @@ class LocallyConnectedNetwork(Network):
         self.inh = inh
         self.dt = dt
         self.theta_plus = theta_plus
-        self.theta_decay = theta_decay
+        self.tc_theta_decay = tc_theta_decay
         self.wmin = wmin
         self.wmax = wmax
         self.norm = norm
@@ -291,13 +292,13 @@ class LocallyConnectedNetwork(Network):
                          int((input_shape[1] - kernel_size[1]) / stride[1]) + 1)
 
         if real:
-            input_layer = RealInput(n=self.n_inpt, traces=True, trace_tc=5e-2)
+            input_layer = RealInput(n=self.n_inpt, traces=True, tc_trace=20.0)
         else:
-            input_layer = Input(n=self.n_inpt, traces=True, trace_tc=5e-2)
+            input_layer = Input(n=self.n_inpt, traces=True, tc_trace=20.0)
 
         output_layer = DiehlAndCookNodes(
             n=self.n_filters * conv_size[0] * conv_size[1], traces=True, rest=-65.0, reset=-60.0,
-            thresh=-52.0, refrac=5, decay=1e-2, trace_tc=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
+            thresh=-52.0, refrac=5, tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
         )
         input_output_conn = LocallyConnectedConnection(
             input_layer, output_layer, kernel_size=kernel_size, stride=stride, n_filters=n_filters,
