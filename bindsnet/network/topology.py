@@ -282,11 +282,14 @@ class Conv2dConnection(AbstractConnection):
         self.w = kwargs.get('w', None)
         if self.w is None:
             if self.wmin == -np.inf or self.wmax == np.inf:
-                self.w = torch.clamp(torch.rand(self.out_channels, self.in_channels, *self.kernel_size), self.wmin,
-                                     self.wmax)
+                self.w = torch.clamp(
+                    torch.rand(self.out_channels, self.in_channels, *self.kernel_size), self.wmin, self.wmax
+                )
             else:
-                self.w = self.wmin + torch.rand(self.out_channels, self.in_channels, *self.kernel_size) * (
-                        self.wmax - self.wmin)
+                self.w = (self.wmax - self.wmin) * torch.rand(
+                    self.out_channels, self.in_channels, *self.kernel_size
+                )
+                self.w += self.wmin
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
                 self.w = torch.clamp(self.w, self.wmin, self.wmax)
@@ -489,8 +492,8 @@ class LocallyConnectedConnection(AbstractConnection):
                 for c in range(conv_prod):
                     for k in range(kernel_prod):
                         if self.wmin == -np.inf or self.wmax == np.inf:
-                            self.w[self.locations[k, c], f * conv_prod + c] = np.clip(np.random.rand(), self.wmin,
-                                                                                      self.wmax)
+                            self.w[self.locations[k, c], f * conv_prod + c] = \
+                                np.clip(np.random.rand(), self.wmin, self.wmax)
                         else:
                             self.w[self.locations[k, c], f * conv_prod + c] = \
                                 self.wmin + np.random.rand() * (self.wmax - self.wmin)
