@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from torch.nn.modules.utils import _pair
 
-from time import time as t
+from copy import deepcopy
 from typing import Union, Sequence, Optional, Tuple, Dict
 
 import bindsnet.network.nodes as nodes
@@ -483,19 +483,18 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     """
     if isinstance(ann, str):
         ann = torch.load(ann)
+    else:
+        ann = deepcopy(ann)
 
     assert isinstance(ann, nn.Module)
 
-    if data is not None:
-        print()
-        print('Example data provided. Performing data-based normalization...')
-
-        t0 = t()
+    if data is None:
+        import warnings
+        warnings.warn('Data is None. Weights will not be scaled.', RuntimeWarning)
+    else:
         ann = data_based_normalization(
             ann=ann, data=data.detach(), percentile=percentile
         )
-
-        print(f'Elapsed: {t() - t0:.4f}')
 
     snn = Network()
 
