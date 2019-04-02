@@ -424,7 +424,8 @@ class MSTDP(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.ger(self.p_plus, target_s) + torch.ger(source_s, self.p_minus)
+        self.eligibility = torch.ger(self.p_plus, target_s) + \
+                           torch.ger(source_s, self.p_minus)
 
         super().update()
 
