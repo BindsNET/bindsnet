@@ -88,7 +88,7 @@ class Network:
         """
         Initializes network object.
 
-        :param dt: Simulation timestep. All other objects' time constants are relative to this value.
+        :param dt: Simulation timestep.
         :param learning: Whether to allow connection updates. True by default.
         """
         self.dt = dt
@@ -169,18 +169,15 @@ class Network:
         """
         torch.save(self, open(file_name, 'wb'))
 
-    def clone(self) -> None:
+    def clone(self) -> 'Network':
         # language=rst
         """
-        Returning a clone network object
-
+        Returns a cloned network object.
         """
-        virtualFile = tempfile.SpooledTemporaryFile()
-        torch.save(self, virtualFile)
-
-        virtualFile.seek(0)
-
-        return torch.load(virtualFile)
+        virtual_file = tempfile.SpooledTemporaryFile()
+        torch.save(self, virtual_file)
+        virtual_file.seek(0)
+        return torch.load(virtual_file)
 
     def get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
@@ -199,10 +196,6 @@ class Network:
 
             if not c[1] in inpts:
                 inpts[c[1]] = torch.zeros(target.shape)
-
-            # Ensure weights are correctly clamped
-            assert ((self.connections[c].w <= self.connections[c].wmax).all() and
-                    (self.connections[c].w >= self.connections[c].wmin).all())
 
             # Add to input: source's spikes multiplied by connection weights.
             inpts[c[1]] += self.connections[c].compute(source.s)
@@ -296,7 +289,7 @@ class Network:
                     else:
                         self.layers[l].s[unclamp[t]] = 0
 
-                # Inject voltage to neurons
+                # Inject voltage to neurons.
                 inject_v = injects_v.get(l, None)
                 if inject_v is not None:
                     self.layers[l].v += inject_v
