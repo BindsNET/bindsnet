@@ -3,7 +3,6 @@ from functools import reduce
 from operator import mul
 from typing import Iterable, Optional, Union
 
-import numpy as np
 import torch
 
 
@@ -65,7 +64,7 @@ class Nodes(ABC):
         """
         if self.traces:
             # Decay and set spike traces.
-            self.x -= torch.exp(-self.dt / self.tc_trace) * self.x
+            self.x *= torch.exp(-self.dt / self.tc_trace)
             self.x.masked_fill_(self.s, 1)
 
         if self.sum_input:
@@ -170,7 +169,7 @@ class RealInput(Nodes, AbstractInput):
 
         if self.traces:
             # Decay and set spike traces.
-            self.x -= torch.exp(-self.dt / self.tc_trace) * self.x
+            self.x *= torch.exp(-self.dt / self.tc_trace)
             self.x.masked_fill_(self.s != 0, 1)
 
         if self.sum_input:
@@ -349,7 +348,7 @@ class LIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages.
-        self.v -= torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
+        self.v = self.rest + torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -432,8 +431,8 @@ class CurrentLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and current.
-        self.v -= torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
-        self.i -= torch.exp(-self.dt / self.tc_i_decay) * self.i
+        self.v = self.rest + torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
+        self.i *= torch.exp(-self.dt / self.tc_i_decay)
 
         # Decrement refractory counters.
         self.refrac_count = (self.refrac_count > 0).float() * (self.refrac_count - self.dt)
@@ -520,8 +519,8 @@ class AdaptiveLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v -= torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
-        self.theta -= torch.exp(-self.dt / self.tc_theta_decay) * self.theta
+        self.v = self.rest + torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
+        self.theta *= torch.exp(-self.dt / self.tc_theta_decay)
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -610,8 +609,8 @@ class DiehlAndCookNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v -= torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
-        self.theta -= torch.exp(-self.dt / self.theta_decay) * self.theta
+        self.v = self.rest + torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
+        self.theta *= torch.exp(-self.dt / self.theta_decay)
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x

@@ -1,14 +1,14 @@
-import torch
-import numpy as np
-
-from torch.nn.modules.utils import _pair
-from scipy.spatial.distance import euclidean
 from typing import Optional, Union, Tuple, List, Sequence
 
-from ..network import Network
+import numpy as np
+import torch
+from scipy.spatial.distance import euclidean
+from torch.nn.modules.utils import _pair
+
 from ..learning import PostPre
-from ..network.topology import Connection, LocallyConnectedConnection
+from ..network import Network
 from ..network.nodes import Input, RealInput, LIFNodes, DiehlAndCookNodes
+from ..network.topology import Connection, LocallyConnectedConnection
 
 
 class TwoLayerNetwork(Network):
@@ -56,9 +56,7 @@ class DiehlAndCook2015(Network):
 
     def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0, wmax: float = 1.0,
-                 norm: float = 78.4, theta_plus: float = 0.05, tc_theta_decay: float = 1e7,
-                 tc_X_Ae_decay: Optional[float] = None, tc_Ae_Ai_decay: Optional[float] = None,
-                 tc_Ai_Ae_decay: Optional[float] = None) -> None:
+                 norm: float = 78.4, theta_plus: float = 0.05, tc_theta_decay: float = 1e7) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015``.
@@ -74,9 +72,6 @@ class DiehlAndCook2015(Network):
         :param norm: Input to excitatory layer connection weights normalization constant.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
         :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
-        :param tc_X_Ae_decay: Time constant of connection activation decay from input to excitatory neurons.
-        :param tc_Ae_Ai_decay: Time constant of connection activation decay from excitatory to inhibitory neurons.
-        :param tc_Ai_Ae_decay: Time constant of connection activation decay from inhibitory to excitatory neurons.
         """
         super().__init__(dt=dt)
 
@@ -92,23 +87,21 @@ class DiehlAndCook2015(Network):
                                          tc_theta_decay=tc_theta_decay),
                        name='Ae')
 
-        self.add_layer(LIFNodes(n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0, tc_decay=100.0,
+        self.add_layer(LIFNodes(n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0, tc_decay=10.0,
                                 refrac=2, tc_trace=20.0),
                        name='Ai')
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Ae'], w=w, update_rule=PostPre,
-                                       nu=nu, wmin=wmin, wmax=wmax, norm=norm, decay=tc_X_Ae_decay),
+                                       nu=nu, wmin=wmin, wmax=wmax, norm=norm),
                             source='X', target='Ae')
 
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
-        self.add_connection(Connection(source=self.layers['Ae'], target=self.layers['Ai'], w=w, wmin=0, wmax=self.exc,
-                                       decay=tc_Ae_Ai_decay),
+        self.add_connection(Connection(source=self.layers['Ae'], target=self.layers['Ai'], w=w, wmin=0, wmax=self.exc),
                             source='Ae', target='Ai')
 
         w = -self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons)))
-        self.add_connection(Connection(source=self.layers['Ai'], target=self.layers['Ae'], w=w, wmin=-self.inh, wmax=0,
-                                       decay=tc_Ai_Ae_decay),
+        self.add_connection(Connection(source=self.layers['Ai'], target=self.layers['Ae'], w=w, wmin=-self.inh, wmax=0),
                             source='Ai', target='Ae')
 
 
