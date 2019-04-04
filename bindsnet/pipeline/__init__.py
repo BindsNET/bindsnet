@@ -68,7 +68,7 @@ class Pipeline:
         self.v_ims, self.v_axes = None, None
         self.obs_im, self.obs_ax = None, None
         self.reward_im, self.reward_ax = None, None
-        self.accumulated_reward = 0
+        self.accumulated_reward = 0.0
         self.reward_list = []
 
         # Setting kwargs.
@@ -162,7 +162,7 @@ class Pipeline:
         # Run a step of the environment.
         self.obs, reward, self.done, info = self.env.step(a)
 
-        # Set reward in case of delay
+        # Set reward in case of delay.
         if self.reward_delay is not None:
             self.rewards = torch.tensor([reward, *self.rewards[1:]]).float()
             self.reward = self.rewards[-1]
@@ -194,10 +194,12 @@ class Pipeline:
         self.iteration += 1
 
         if self.done:
+            if self.network.reward is not None:
+                self.network.reward.update(self.accumulated_reward, self.iteration, **kwargs)
             self.iteration = 0
             self.episode += 1
             self.reward_list.append(self.accumulated_reward)
-            self.accumulated_reward = 0
+            self.accumulated_reward = 0.0
             self.plot_reward()
 
     def plot_obs(self) -> None:
@@ -235,8 +237,12 @@ class Pipeline:
             self.reward_ax.set_xlabel('Episode')
             self.reward_ax.set_ylabel('Reward')
             self.reward_plot, = self.reward_ax.plot(reward_list_)
+            if self.network.reward is not None:
+                self.rpe_plot, = self.reward_ax.plot(self.network.reward.rewards_predict_episode)
         else:
             self.reward_plot.set_data(range(self.episode), reward_list_)
+            if self.network.reward is not None:
+                self.rpe_plot.set_data(range(self.episode), self.network.reward.rewards_predict_episode)
             self.reward_ax.relim()
             self.reward_ax.autoscale_view()
 
@@ -331,5 +337,5 @@ class Pipeline:
         self.env.reset()
         self.network.reset_()
         self.iteration = 0
-        self.accumulated_reward = 0
+        self.accumulated_reward = 0.0
         self.history = {i: torch.Tensor() for i in self.history}

@@ -1,10 +1,12 @@
-import torch
 import tempfile
 from typing import Dict
 
+import torch
+
+from .monitors import AbstractMonitor
 from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
-from .monitors import AbstractMonitor
+from ..learning.reward import AbstractPredictedReward
 
 __all__ = [
     'load', 'Network', 'nodes', 'monitors', 'topology'
@@ -83,19 +85,21 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0, learning: bool = True) -> None:
+    def __init__(self, dt: float = 1.0, learning: bool = True, reward: AbstractPredictedReward = None) -> None:
         # language=rst
         """
         Initializes network object.
 
         :param dt: Simulation timestep.
         :param learning: Whether to allow connection updates. True by default.
+        :param reward: Class allowing for modification of reward in case of reward-modulated learning.
         """
         self.dt = dt
         self.layers = {}
         self.connections = {}
         self.monitors = {}
         self.learning = learning
+        self.reward = reward
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
@@ -218,7 +222,7 @@ class Network:
                                                 to not spiking. The ``Tensor``s should have shape ``[n_neurons]``.
         :param Dict[str, torch.Tensor] injects_v: Mapping of layer names to boolean masks if neurons should be added
                                                   voltage. The ``Tensor``s should have shape ``[n_neurons]``.
-        :param float reward: Scalar value used in reward-modulated learning.
+        :param Union[float, torch.Tensor] reward: Scalar value used in reward-modulated learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
                                                      weights to clamp to zero.
 
@@ -257,6 +261,13 @@ class Network:
         unclamps = kwargs.get('unclamp', {})
         masks = kwargs.get('masks', {})
         injects_v = kwargs.get('injects_v', {})
+
+        # Compute reward prediction error.
+        if self.reward is not None:
+            try:
+                kwargs['reward'] = self.reward.compute(kwargs['reward'], **kwargs)
+            except KeyError:
+                raise KeyError('Reward should be specified!')
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)

@@ -393,7 +393,7 @@ class MSTDP(LearningRule):
 
         Keyword arguments:
 
-        :param float reward: Reward signal from reinforcement learning task.
+        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement learning task.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -436,7 +436,7 @@ class MSTDP(LearningRule):
 
         Keyword arguments:
 
-        :param float reward: Reward signal from reinforcement learning task.
+        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement learning task.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -531,7 +531,7 @@ class MSTDPET(LearningRule):
 
         Keyword arguments:
 
-        :param float reward: Reward signal from reinforcement learning task.
+        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement learning task.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -580,7 +580,7 @@ class MSTDPET(LearningRule):
 
         Keyword arguments:
 
-        :param float reward: Reward signal from reinforcement learning task.
+        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement learning task.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
