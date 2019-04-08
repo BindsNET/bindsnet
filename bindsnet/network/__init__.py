@@ -205,7 +205,7 @@ class Network:
     def run(self, inpts: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
         # language=rst
         """
-        Simulation network for given inputs and time.
+        Simulate network for given inputs and time.
 
         :param inpts: Dictionary of ``Tensor``s of shape ``[time, n_input]``.
         :param time: Simulation time.
