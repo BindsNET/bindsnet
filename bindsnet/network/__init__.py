@@ -1,12 +1,12 @@
 import tempfile
-from typing import Dict
+from typing import Dict, Optional
 
 import torch
 
 from .monitors import AbstractMonitor
 from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
-from ..learning.reward import AbstractPredictedReward
+from ..learning.reward import AbstractRPE
 
 __all__ = [
     'load', 'Network', 'nodes', 'monitors', 'topology'
@@ -85,21 +85,25 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0, learning: bool = True, reward: AbstractPredictedReward = None) -> None:
+    def __init__(self, dt: float = 1.0, learning: bool = True,
+                 reward_fn: Optional[AbstractRPE] = None) -> None:
         # language=rst
         """
         Initializes network object.
 
         :param dt: Simulation timestep.
         :param learning: Whether to allow connection updates. True by default.
-        :param reward: Class allowing for modification of reward in case of reward-modulated learning.
+        :param reward_fn: Optional class allowing for modification of reward in case of reward-modulated learning.
         """
         self.dt = dt
         self.layers = {}
         self.connections = {}
         self.monitors = {}
         self.learning = learning
-        self.reward = reward
+        if reward_fn is not None:
+            self.reward_fn = reward_fn()
+        else:
+            self.reward_fn = None
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         # language=rst
@@ -263,9 +267,11 @@ class Network:
         injects_v = kwargs.get('injects_v', {})
 
         # Compute reward prediction error.
-        if self.reward is not None:
+        if self.reward_fn is not None:
             try:
-                kwargs['reward'] = self.reward.compute(kwargs['reward'], **kwargs)
+                reward = kwargs['reward']
+                del kwargs['reward']
+                kwargs['reward'] = self.reward_fn.compute(reward, **kwargs)
             except KeyError:
                 raise KeyError('Reward should be specified!')
 

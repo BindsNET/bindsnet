@@ -115,6 +115,7 @@ class Pipeline:
             name: torch.Tensor() for name, layer in network.layers.items() if isinstance(layer, AbstractInput)
         }
 
+        self.action = None
         self.obs = None
         self.reward = None
         self.done = None
@@ -155,12 +156,10 @@ class Pipeline:
 
         # Choose action based on output neuron spiking.
         if self.action_function is not None:
-            a = self.action_function(self, output=self.output)
-        else:
-            a = None
+            self.action = self.action_function(self, output=self.output)
 
         # Run a step of the environment.
-        self.obs, reward, self.done, info = self.env.step(a)
+        self.obs, reward, self.done, info = self.env.step(self.action)
 
         # Set reward in case of delay.
         if self.reward_delay is not None:
@@ -194,8 +193,8 @@ class Pipeline:
         self.iteration += 1
 
         if self.done:
-            if self.network.reward is not None:
-                self.network.reward.update(self.accumulated_reward, self.iteration, **kwargs)
+            if self.network.reward_fn is not None:
+                self.network.reward_fn.update(self.accumulated_reward, self.iteration, **kwargs)
             self.iteration = 0
             self.episode += 1
             self.reward_list.append(self.accumulated_reward)

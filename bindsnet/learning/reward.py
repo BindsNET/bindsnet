@@ -4,16 +4,16 @@ from typing import Union
 import torch
 
 
-class AbstractPredictedReward(ABC):
+class AbstractRPE(ABC):
     # language=rst
     """
-    Abstract base class for predicted reward.
+    Abstract base class for reward prediction error (RPE).
     """
 
     def __init__(self):
         # language=rst
         """
-        Constructor for abstract predicted reward class.
+        Constructor for abstract RPE class.
         """
         self.reward_predict = torch.tensor(0.0)  # Predicted reward (per step).
         self.reward_predict_episode = torch.tensor(0.0)  # Predicted reward per episode.
@@ -23,7 +23,7 @@ class AbstractPredictedReward(ABC):
     def compute(self, reward: Union[float, torch.Tensor], **kwargs) -> torch.Tensor:
         # language=rst
         """
-        Computes the reward prediction error.
+        Computes the RPE.
 
         :param reward: Current reward.
         :return: Reward prediction error.
@@ -42,10 +42,10 @@ class AbstractPredictedReward(ABC):
         pass
 
 
-class MovingAvgRPE(AbstractPredictedReward):
+class MovingAvgRPE(AbstractRPE):
     # language=rst
     """
-    Calculates reward prediction error based on an exponential moving average (EMA) of past rewards.
+    Calculates reward prediction error (RPE) based on an exponential moving average (EMA) of past rewards.
     """
 
     def __init__(self) -> None:
@@ -55,15 +55,15 @@ class MovingAvgRPE(AbstractPredictedReward):
         """
         super().__init__()
 
-    # def compute(self, reward: Union[float, torch.Tensor], **kwargs) -> torch.Tensor:
-    #     # language=rst
-    #     """
-    #     Computes the reward prediction error using EMA.
-    #
-    #     :param reward: Current reward.
-    #     :return: Reward prediction error.
-    #     """
-    #     return super().compute(reward, **kwargs)
+    def compute(self, reward: Union[float, torch.Tensor], **kwargs) -> torch.Tensor:
+        # language=rst
+        """
+        Computes the reward prediction error using EMA.
+
+        :param reward: Current reward.
+        :return: Reward prediction error.
+        """
+        return super().compute(reward, **kwargs)
 
     def update(self, accumulated_reward: Union[float, torch.Tensor], steps: int, **kwargs) -> None:
         # language=rst
