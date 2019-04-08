@@ -391,7 +391,7 @@ class CurrentLIFNodes(Nodes):
                  trace_tc: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 decay: Union[float, torch.Tensor] = 100.0, tc_i_decay: Union[float, torch.Tensor] = 2.0,
+                 decay: Union[float, torch.Tensor] = 5e-2, tc_i_decay: Union[float, torch.Tensor] = 2.0,
                  lbound: float = None) -> None:
         # language=rst
         """
@@ -476,7 +476,7 @@ class AdaptiveLIFNodes(Nodes):
                  trace_tc: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  rest: Union[float, torch.Tensor] = -65.0, reset: Union[float, torch.Tensor] = -65.0,
                  thresh: Union[float, torch.Tensor] = -52.0, refrac: Union[int, torch.Tensor] = 5,
-                 decay: Union[float, torch.Tensor] = 100.0, theta_plus: Union[float, torch.Tensor] = 0.05,
+                 decay: Union[float, torch.Tensor] = 5e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
                  tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None) -> None:
         # language=rst
         """
@@ -563,7 +563,7 @@ class DiehlAndCookNodes(Nodes):
                  trace_tc: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 decay: Union[float, torch.Tensor] = 100.0, theta_plus: Union[float, torch.Tensor] = 0.05,
+                 decay: Union[float, torch.Tensor] = 5e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
                  tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None,
                  one_spike: bool = True) -> None:
         # language=rst
