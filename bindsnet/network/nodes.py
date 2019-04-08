@@ -348,7 +348,7 @@ class LIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages.
-        self.v = self.rest + torch.exp(-self.dt / self.decay) * (self.v - self.rest)
+        self.v -= self.dt * self.decay * (self.v - self.rest)
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
