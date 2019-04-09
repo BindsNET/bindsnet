@@ -30,7 +30,6 @@ def load(file_name: str, map_location: str = 'cpu', learning: bool = None) -> 'N
 class Network:
     # language=rst
     """
-
     Most important object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and
     connections.
 
@@ -62,7 +61,7 @@ class Network:
         network.add_monitor(monitor=M2, name='Y')
 
         # Create Poisson-distributed spike train inputs.
-        data = 15 * torch.rand(1, 100)  # Generate random Poisson rates for 100 input neurons.
+        data = 15 * torch.rand(100)  # Generate random Poisson rates for 100 input neurons.
         train = encoding.poisson(datum=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
 
         # Simulate network on generated spike trains.
@@ -172,8 +171,7 @@ class Network:
     def clone(self) -> None:
         # language=rst
         """
-        Returning a clone network object
-
+        Returning a cloned network object.
         """
         virtualFile = tempfile.SpooledTemporaryFile()
         torch.save(self, virtualFile)
