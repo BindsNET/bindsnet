@@ -1,16 +1,16 @@
 import time
-import torch
-import matplotlib.pyplot as plt
-import numpy as np
-
 from typing import Callable, Optional
 
-from ..network import Network
-from ..encoding import bernoulli
-from ..network.nodes import Input, AbstractInput
-from ..environment import Environment
-from ..network.monitors import Monitor
+import matplotlib.pyplot as plt
+import pandas as pd
+import torch
+
 from ..analysis.plotting import plot_spikes, plot_voltages
+from ..encoding import bernoulli
+from ..environment import Environment
+from ..network import Network
+from ..network.monitors import Monitor
+from ..network.nodes import AbstractInput
 
 __all__ = [
     'Pipeline', 'action'
@@ -47,11 +47,12 @@ class Pipeline:
         :param int time: Time input is presented for to the network.
         :param int history: Number of observations to keep track of.
         :param int delta: Step size to save observations in history.
-        :param bool render_interval: Interval to render the environment.
+        :param int render_interval: Interval to render the environment.
         :param int save_interval: How often to save the network to disk.
         :param str output: String name of the layer from which to take output from.
         :param float plot_length: Relative time length of the plotted record data. Relative to parameter time.
         :param str plot_type: Type of plotting ('color' or 'line').
+        :param int reward_window: Moving average window for the reward plot.
         :param int reward_delay: How many iterations to delay delivery of reward.
         """
         self.network = network
@@ -82,6 +83,7 @@ class Pipeline:
         self.render_interval = kwargs.get('render_interval', None)
         self.plot_length = kwargs.get('plot_length', 1.0)
         self.plot_type = kwargs.get('plot_type', 'color')
+        self.reward_window = kwargs.get('reward_window', None)
         self.reward_delay = kwargs.get('reward_delay', None)
 
         self.dt = network.dt
@@ -94,19 +96,11 @@ class Pipeline:
 
         if self.plot_interval is not None:
             for l in self.network.layers:
-                self.network.add_monitor(
-                    Monitor(
-                        self.network.layers[l], 's', int(self.plot_length * self.plot_interval * self.timestep)
-                    ),
-                    name=f'{l}_spikes'
-                )
+                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length)),
+                                         name=f'{l}_spikes')
                 if 'v' in self.network.layers[l].__dict__:
-                    self.network.add_monitor(
-                        Monitor(
-                            self.network.layers[l], 'v', int(self.plot_length * self.plot_interval * self.timestep)
-                        ),
-                        name=f'{l}_voltages'
-                    )
+                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length)),
+                                             name=f'{l}_voltages')
 
             self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
             self.set_spike_data()
@@ -223,19 +217,28 @@ class Pipeline:
     def plot_reward(self) -> None:
         # language=rst
         """
-        Plot the change of accumulated reward for each episodes
+        Plot the accumulated reward for each episode.
         """
-        if self.reward_im is None and self.reward_ax is None:
-            fig, self.reward_ax = plt.subplots()
-            self.reward_ax.set_title('Reward')
-            self.reward_plot, = self.reward_ax.plot(self.reward_list)
+        # Compute moving average
+        if self.reward_window is not None:
+            # Ensure window size > 0 and < size of reward list
+            window = max(min(len(self.reward_list), self.reward_window), 0)
+
+            # Fastest implementation of moving average
+            reward_list_ = pd.Series(self.reward_list).rolling(window=window, min_periods=1).mean().values
         else:
-            reward_array = np.array(self.reward_list)
-            y_min = reward_array.min()
-            y_max = reward_array.max()
-            self.reward_ax.set_xlim(left=0, right=self.episode)
-            self.reward_ax.set_ylim(bottom=y_min, top=y_max)
-            self.reward_plot.set_data(range(self.episode), self.reward_list)
+            reward_list_ = self.reward_list[:]
+
+        if self.reward_im is None and self.reward_ax is None:
+            self.reward_im, self.reward_ax = plt.subplots()
+            self.reward_ax.set_title('Accumulated reward')
+            self.reward_ax.set_xlabel('Episode')
+            self.reward_ax.set_ylabel('Reward')
+            self.reward_plot, = self.reward_ax.plot(reward_list_)
+        else:
+            self.reward_plot.set_data(range(self.episode), reward_list_)
+            self.reward_ax.relim()
+            self.reward_ax.autoscale_view()
 
     def plot_data(self) -> None:
         # language=rst

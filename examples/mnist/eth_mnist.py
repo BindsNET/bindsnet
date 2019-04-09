@@ -63,7 +63,7 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
 
 # Build network.
-network = DiehlAndCook2015(n_input=784, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt, norm=78.4, theta_plus=1)
+network = DiehlAndCook2015(n_inpt=784, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt, norm=78.4, theta_plus=1)
 
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers['Ae'], ['v'], time=time)

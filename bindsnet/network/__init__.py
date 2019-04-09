@@ -87,7 +87,7 @@ class Network:
         """
         Initializes network object.
 
-        :param dt: Simulation timestep. All other objects' time constants are relative to this value.
+        :param dt: Simulation timestep.
         :param learning: Whether to allow connection updates. True by default.
         """
         self.dt = dt
@@ -168,17 +168,17 @@ class Network:
         """
         torch.save(self, open(file_name, 'wb'))
 
-    def clone(self) -> None:
+    def clone(self) -> 'Network':
         # language=rst
         """
-        Returning a cloned network object.
+        Returns a cloned network object.
+        
+        :return: A copy of this network.
         """
-        virtualFile = tempfile.SpooledTemporaryFile()
-        torch.save(self, virtualFile)
-
-        virtualFile.seek(0)
-
-        return torch.load(virtualFile)
+        virtual_file = tempfile.SpooledTemporaryFile()
+        torch.save(self, virtual_file)
+        virtual_file.seek(0)
+        return torch.load(virtual_file)
 
     def get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
@@ -206,7 +206,7 @@ class Network:
     def run(self, inpts: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
         # language=rst
         """
-        Simulation network for given inputs and time.
+        Simulate network for given inputs and time.
 
         :param inpts: Dictionary of ``Tensor``s of shape ``[time, n_input]``.
         :param time: Simulation time.
@@ -290,7 +290,7 @@ class Network:
                     else:
                         self.layers[l].s[unclamp[t]] = 0
 
-                # Inject voltage to neurons
+                # Inject voltage to neurons.
                 inject_v = injects_v.get(l, None)
                 if inject_v is not None:
                     self.layers[l].v += inject_v
