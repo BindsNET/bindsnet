@@ -6,7 +6,7 @@ import torch
 from .monitors import AbstractMonitor
 from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
-from ..learning.reward import AbstractRPE
+from ..learning.reward import AbstractReward
 
 __all__ = [
     'load', 'Network', 'nodes', 'monitors', 'topology'
@@ -86,7 +86,7 @@ class Network:
     """
 
     def __init__(self, dt: float = 1.0, learning: bool = True,
-                 reward_fn: Optional[AbstractRPE] = None) -> None:
+                 reward_fn: Optional[AbstractReward] = None) -> None:
         # language=rst
         """
         Initializes network object.
@@ -266,14 +266,8 @@ class Network:
         masks = kwargs.get('masks', {})
         injects_v = kwargs.get('injects_v', {})
 
-        # Compute reward prediction error.
-        if self.reward_fn is not None:
-            try:
-                reward = kwargs['reward']
-                del kwargs['reward']
-                kwargs['reward'] = self.reward_fn.compute(reward, **kwargs)
-            except KeyError:
-                raise KeyError('Reward should be specified!')
+        # Compute reward.
+        kwargs['reward'] = self.reward_fn.compute(**kwargs)
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)

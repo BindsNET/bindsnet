@@ -71,13 +71,12 @@ class AbstractConnection(ABC):
         )
 
     @abstractmethod
-    def compute(self, s: torch.Tensor) -> torch.Tensor:
+    def compute(self, s: torch.Tensor) -> None:
         # language=rst
         """
         Compute pre-activations of downstream neurons given spikes of upstream neurons.
 
         :param s: Incoming spikes.
-        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
         pass
 
