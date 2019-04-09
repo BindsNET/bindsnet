@@ -37,9 +37,9 @@ class TwoLayerNetwork(Network):
         self.n_neurons = n_neurons
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_inpt, traces=True, trace=20.0), name='X')
+        self.add_layer(Input(n=self.n_inpt, traces=True, trace=5e-2), name='X')
         self.add_layer(LIFNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-65.0, thresh=-52.0, refrac=5,
-                                decay=100.0, trace=20.0), name='Y')
+                                decay=1e-2, trace=5e-2), name='Y')
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(Connection(source=self.layers['X'], target=self.layers['Y'], w=w, update_rule=PostPre,
@@ -81,14 +81,14 @@ class DiehlAndCook2015(Network):
         self.inh = inh
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_inpt, traces=True, trace=20.0), name='X')
+        self.add_layer(Input(n=self.n_inpt, traces=True, trace=5e-2), name='X')
         self.add_layer(DiehlAndCookNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-                                         decay=100.0, trace=20.0, theta_plus=theta_plus,
+                                         decay=1e-2, trace=5e-2, theta_plus=theta_plus,
                                          theta_decay=theta_decay),
                        name='Ae')
 
         self.add_layer(LIFNodes(n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0, decay=10.0,
-                                refrac=2, trace=20.0),
+                                refrac=2, trace=5e-2),
                        name='Ai')
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
@@ -139,12 +139,12 @@ class DiehlAndCook2015v2(Network):
         self.inh = inh
         self.dt = dt
 
-        input_layer = Input(n=self.n_inpt, traces=True, trace=20.0)
+        input_layer = Input(n=self.n_inpt, traces=True, trace=5e-2)
         self.add_layer(input_layer, name='X')
 
         output_layer = DiehlAndCookNodes(
             n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-            decay=100.0, trace=20.0, theta_plus=theta_plus, theta_decay=theta_decay
+            decay=1e-2, trace=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
         )
         self.add_layer(output_layer, name='Y')
 
@@ -196,12 +196,12 @@ class IncreasingInhibitionNetwork(Network):
         self.max_inhib = max_inhib
         self.dt = dt
 
-        input_layer = Input(n=self.n_input, traces=True, trace=20.0)
+        input_layer = Input(n=self.n_input, traces=True, trace=5e-2)
         self.add_layer(input_layer, name='X')
 
         output_layer = DiehlAndCookNodes(
             n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-            decay=100.0, trace=20.0, theta_plus=theta_plus, theta_decay=theta_decay
+            decay=1e-2, trace=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
         )
         self.add_layer(output_layer, name='Y')
 
@@ -285,13 +285,13 @@ class LocallyConnectedNetwork(Network):
                          int((input_shape[1] - kernel_size[1]) / stride[1]) + 1)
 
         if real:
-            input_layer = RealInput(n=self.n_inpt, traces=True, trace=20.0)
+            input_layer = RealInput(n=self.n_inpt, traces=True, trace=5e-2)
         else:
-            input_layer = Input(n=self.n_inpt, traces=True, trace=20.0)
+            input_layer = Input(n=self.n_inpt, traces=True, trace=5e-2)
 
         output_layer = DiehlAndCookNodes(
             n=self.n_filters * conv_size[0] * conv_size[1], traces=True, rest=-65.0, reset=-60.0,
-            thresh=-52.0, refrac=5, decay=100.0, trace=20.0, theta_plus=theta_plus, theta_decay=theta_decay
+            thresh=-52.0, refrac=5, decay=1e-2, trace=5e-2, theta_plus=theta_plus, theta_decay=theta_decay
         )
         input_output_conn = LocallyConnectedConnection(
             input_layer, output_layer, kernel_size=kernel_size, stride=stride, n_filters=n_filters,
