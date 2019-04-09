@@ -391,7 +391,7 @@ class CurrentLIFNodes(Nodes):
                  trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 decay: Union[float, torch.Tensor] = 5e-2, tc_i_decay: Union[float, torch.Tensor] = 2.0,
+                 decay: Union[float, torch.Tensor] = 5e-2, i_decay: Union[float, torch.Tensor] = 2.0,
                  lbound: float = None) -> None:
         # language=rst
         """
@@ -406,7 +406,7 @@ class CurrentLIFNodes(Nodes):
         :param reset: Post-spike reset voltage.
         :param refrac: Refractory (non-firing) period of the neuron.
         :param decay: Time constant of neuron voltage decay.
-        :param tc_i_decay: Time constant of synaptic input current decay.
+        :param i_decay: Time constant of synaptic input current decay.
         :param lbound: Lower bound of the voltage.
         """
         super().__init__(n, shape, traces, trace, sum_input)
@@ -416,7 +416,7 @@ class CurrentLIFNodes(Nodes):
         self.thresh = torch.tensor(thresh)  # Spike threshold voltage.
         self.refrac = torch.tensor(refrac)  # Post-spike refractory period.
         self.decay = torch.tensor(decay)  # Time constant of neuron voltage decay.
-        self.tc_i_decay = torch.tensor(tc_i_decay)  # Time constant of synaptic input current decay.
+        self.i_decay = torch.tensor(i_decay)  # Time constant of synaptic input current decay.
         self.lbound = lbound  # Lower bound of voltage.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
@@ -432,7 +432,7 @@ class CurrentLIFNodes(Nodes):
         """
         # Decay voltages and current.
         self.v = self.rest + torch.exp(-self.dt / self.decay) * (self.v - self.rest)
-        self.i *= torch.exp(-self.dt / self.tc_i_decay)
+        self.i *= torch.exp(-self.dt / self.i_decay)
 
         # Decrement refractory counters.
         self.refrac_count = (self.refrac_count > 0).float() * (self.refrac_count - self.dt)
@@ -477,7 +477,7 @@ class AdaptiveLIFNodes(Nodes):
                  rest: Union[float, torch.Tensor] = -65.0, reset: Union[float, torch.Tensor] = -65.0,
                  thresh: Union[float, torch.Tensor] = -52.0, refrac: Union[int, torch.Tensor] = 5,
                  decay: Union[float, torch.Tensor] = 5e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
-                 tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None) -> None:
+                 theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons with adaptive firing thresholds.
@@ -493,7 +493,7 @@ class AdaptiveLIFNodes(Nodes):
         :param refrac: Refractory (non-firing) period of the neuron.
         :param decay: Time constant of neuron voltage decay.
         :param theta_plus: Voltage increase of threshold after spiking.
-        :param tc_theta_decay: Time constant of adaptive threshold decay.
+        :param theta_decay: Time constant of adaptive threshold decay.
         :param lbound: Lower bound of the voltage.
         """
         super().__init__(n, shape, traces, trace, sum_input)
@@ -504,7 +504,7 @@ class AdaptiveLIFNodes(Nodes):
         self.refrac = torch.tensor(refrac)  # Post-spike refractory period.
         self.decay = torch.tensor(decay)  # Time constant of neuron voltage decay.
         self.theta_plus = torch.tensor(theta_plus)  # Constant threshold increase on spike.
-        self.tc_theta_decay = torch.tensor(tc_theta_decay)  # Time constant of adaptive threshold decay.
+        self.theta_decay = torch.tensor(theta_decay)  # Time constant of adaptive threshold decay.
         self.lbound = lbound  # Lower bound of voltage.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
@@ -564,7 +564,7 @@ class DiehlAndCookNodes(Nodes):
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
                  decay: Union[float, torch.Tensor] = 5e-2, theta_plus: Union[float, torch.Tensor] = 0.05,
-                 tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None,
+                 theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None,
                  one_spike: bool = True) -> None:
         # language=rst
         """
@@ -581,7 +581,7 @@ class DiehlAndCookNodes(Nodes):
         :param refrac: Refractory (non-firing) period of the neuron.
         :param decay: Time constant of neuron voltage decay.
         :param theta_plus: Voltage increase of threshold after spiking.
-        :param tc_theta_decay: Time constant of adaptive threshold decay.
+        :param theta_decay: Time constant of adaptive threshold decay.
         :param lbound: Lower bound of the voltage.
         :param one_spike: Whether to allow only one spike per timestep.
         """
@@ -593,7 +593,7 @@ class DiehlAndCookNodes(Nodes):
         self.refrac = torch.tensor(refrac)  # Post-spike refractory period.
         self.decay = torch.tensor(decay)  # Time constant of neuron voltage decay.
         self.theta_plus = torch.tensor(theta_plus)  # Constant threshold increase on spike.
-        self.theta_decay = torch.tensor(tc_theta_decay)  # Time constant of adaptive threshold decay.
+        self.theta_decay = torch.tensor(theta_decay)  # Time constant of adaptive threshold decay.
         self.lbound = lbound  # Lower bound of voltage.
         self.one_spike = one_spike  # One spike per timestep.
 
