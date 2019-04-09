@@ -267,7 +267,8 @@ class Network:
         injects_v = kwargs.get('injects_v', {})
 
         # Compute reward.
-        kwargs['reward'] = self.reward_fn.compute(**kwargs)
+        if self.reward_fn is not None:
+            kwargs['reward'] = self.reward_fn.compute(**kwargs)
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
