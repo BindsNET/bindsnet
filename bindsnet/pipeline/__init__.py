@@ -194,7 +194,7 @@ class Pipeline:
 
         if self.done:
             if self.network.reward_fn is not None:
-                self.network.reward_fn.update(self.accumulated_reward, self.iteration, **kwargs)
+                self.network.reward_fn.update(**kwargs)
             self.iteration = 0
             self.episode += 1
             self.reward_list.append(self.accumulated_reward)
@@ -236,14 +236,8 @@ class Pipeline:
             self.reward_ax.set_xlabel('Episode')
             self.reward_ax.set_ylabel('Reward')
             self.reward_plot, = self.reward_ax.plot(reward_list_)
-            if self.network.reward_fn is not None:
-                if self.network.reward_fn.rewards_predict_episode is not None:
-                    self.reward_plot2, = self.reward_ax.plot(self.network.reward_fn.rewards_predict_episode)
         else:
             self.reward_plot.set_data(range(self.episode), reward_list_)
-            if self.network.reward_fn is not None:
-                if self.network.reward_fn.rewards_predict_episode is not None:
-                    self.reward_plot2.set_data(range(self.episode), self.network.reward_fn.rewards_predict_episode)
             self.reward_ax.relim()
             self.reward_ax.autoscale_view()
 
