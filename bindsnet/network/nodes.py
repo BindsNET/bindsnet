@@ -47,6 +47,7 @@ class Nodes(ABC):
         if self.traces:
             self.x = torch.zeros(self.shape)  # Firing traces.
             self.tc_trace = torch.tensor(tc_trace)  # Time constant of spike trace decay.
+            self.trace_decay = torch.exp(-self.dt / self.tc_trace)  # Spike trace decay (per timestep).
 
         if self.sum_input:
             self.summed = torch.zeros(self.shape)  # Summed inputs.
@@ -64,7 +65,7 @@ class Nodes(ABC):
         """
         if self.traces:
             # Decay and set spike traces.
-            self.x *= torch.exp(-self.dt / self.tc_trace)
+            self.x *= self.trace_decay
             self.x.masked_fill_(self.s, 1)
 
         if self.sum_input:
@@ -169,7 +170,7 @@ class RealInput(Nodes, AbstractInput):
 
         if self.traces:
             # Decay and set spike traces.
-            self.x *= torch.exp(-self.dt / self.tc_trace)
+            self.x *= self.trace_decay
             self.x.masked_fill_(self.s != 0, 1)
 
         if self.sum_input:
@@ -335,6 +336,7 @@ class LIFNodes(Nodes):
         self.thresh = torch.tensor(thresh)  # Spike threshold voltage.
         self.refrac = torch.tensor(refrac)  # Post-spike refractory period.
         self.tc_decay = torch.tensor(tc_decay)  # Time constant of neuron voltage decay.
+        self.decay = torch.exp(-self.dt / self.tc_decay)  # Neuron voltage decay (per timestep).
         self.lbound = lbound  # Lower bound of voltage.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
@@ -348,7 +350,7 @@ class LIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages.
-        self.v = self.rest + torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
+        self.v = self.rest + self.decay * (self.v - self.rest)
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -416,7 +418,9 @@ class CurrentLIFNodes(Nodes):
         self.thresh = torch.tensor(thresh)  # Spike threshold voltage.
         self.refrac = torch.tensor(refrac)  # Post-spike refractory period.
         self.tc_decay = torch.tensor(tc_decay)  # Time constant of neuron voltage decay.
+        self.decay = torch.exp(-self.dt / self.tc_decay)  # Neuron voltage decay (per timestep).
         self.tc_i_decay = torch.tensor(tc_i_decay)  # Time constant of synaptic input current decay.
+        self.i_decay = torch.exp(-self.dt / self.tc_i_decay)  # Synaptic input current decay (per timestep).
         self.lbound = lbound  # Lower bound of voltage.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
@@ -431,8 +435,8 @@ class CurrentLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and current.
-        self.v = self.rest + torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
-        self.i *= torch.exp(-self.dt / self.tc_i_decay)
+        self.v = self.rest + self.decay * (self.v - self.rest)
+        self.i *= self.i_decay
 
         # Decrement refractory counters.
         self.refrac_count = (self.refrac_count > 0).float() * (self.refrac_count - self.dt)
@@ -503,8 +507,10 @@ class AdaptiveLIFNodes(Nodes):
         self.thresh = torch.tensor(thresh)  # Spike threshold voltage.
         self.refrac = torch.tensor(refrac)  # Post-spike refractory period.
         self.tc_decay = torch.tensor(tc_decay)  # Time constant of neuron voltage decay.
+        self.decay = torch.exp(-self.dt / self.tc_decay)  # Neuron voltage decay (per timestep).
         self.theta_plus = torch.tensor(theta_plus)  # Constant threshold increase on spike.
         self.tc_theta_decay = torch.tensor(tc_theta_decay)  # Time constant of adaptive threshold decay.
+        self.theta_decay = torch.exp(-self.dt / self.tc_theta_decay)  # Adaptive threshold decay (per timestep).
         self.lbound = lbound  # Lower bound of voltage.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
@@ -519,8 +525,8 @@ class AdaptiveLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v = self.rest + torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
-        self.theta *= torch.exp(-self.dt / self.tc_theta_decay)
+        self.v = self.rest + self.decay * (self.v - self.rest)
+        self.theta *= self.theta_decay
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -592,8 +598,10 @@ class DiehlAndCookNodes(Nodes):
         self.thresh = torch.tensor(thresh)  # Spike threshold voltage.
         self.refrac = torch.tensor(refrac)  # Post-spike refractory period.
         self.tc_decay = torch.tensor(tc_decay)  # Time constant of neuron voltage decay.
+        self.decay = torch.exp(-self.dt / self.tc_decay)  # Neuron voltage decay (per timestep).
         self.theta_plus = torch.tensor(theta_plus)  # Constant threshold increase on spike.
-        self.theta_decay = torch.tensor(tc_theta_decay)  # Time constant of adaptive threshold decay.
+        self.tc_theta_decay = torch.tensor(tc_theta_decay)  # Time constant of adaptive threshold decay.
+        self.theta_decay = torch.exp(-self.dt / self.tc_theta_decay)  # Adaptive threshold decay (per timestep).
         self.lbound = lbound  # Lower bound of voltage.
         self.one_spike = one_spike  # One spike per timestep.
 
@@ -609,8 +617,8 @@ class DiehlAndCookNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v = self.rest + torch.exp(-self.dt / self.tc_decay) * (self.v - self.rest)
-        self.theta *= torch.exp(-self.dt / self.theta_decay)
+        self.v = self.rest + self.decay * (self.v - self.rest)
+        self.theta *= self.theta_decay
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
