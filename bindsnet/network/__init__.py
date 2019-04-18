@@ -107,6 +107,7 @@ class Network:
         self.layers[name] = layer
         layer.network = self
         layer.dt = self.dt
+        layer._compute_decays()
 
     def add_connection(self, connection: AbstractConnection, source: str, target: str) -> None:
         # language=rst
