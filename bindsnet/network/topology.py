@@ -302,7 +302,7 @@ class Conv2dConnection(AbstractConnection):
         Compute convolutional pre-activations given spikes using layer weights.
 
         :param s: Incoming spikes.
-        :return: Spikes multiplied by synapse weights.
+        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
         return F.conv2d(s.float(), self.w, self.b, stride=self.stride, padding=self.padding, dilation=self.dilation)
 
@@ -376,7 +376,7 @@ class MaxPool2dConnection(AbstractConnection):
         Compute max-pool pre-activations given spikes using online firing rate estimates.
 
         :param s: Incoming spikes.
-        :return: Spikes multiplied by synapse weights.
+        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
         self.firing_rates -= self.decay * self.firing_rates
         self.firing_rates += s.float()
@@ -514,7 +514,7 @@ class LocallyConnectedConnection(AbstractConnection):
         Compute pre-activations given spikes using layer weights.
 
         :param s: Incoming spikes.
-        :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
+        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
         # Compute multiplication of pre-activations by connection weights.
         if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
@@ -599,7 +599,7 @@ class MeanFieldConnection(AbstractConnection):
         Compute pre-activations given spikes using layer weights.
 
         :param s: Incoming spikes.
-        :return: Incoming spikes multiplied by synaptic weights (with or with decaying spike activation).
+        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
         # Compute multiplication of mean-field pre-activation by connection weights.
         return s.float().mean() * self.w
@@ -681,7 +681,7 @@ class SparseConnection(AbstractConnection):
         Compute convolutional pre-activations given spikes using layer weights.
 
         :param s: Incoming spikes.
-        :return: Spikes multiplied by synapse weights.
+        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
         return torch.mm(self.w, s.unsqueeze(-1).float()).squeeze(-1)
 

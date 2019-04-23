@@ -124,7 +124,7 @@ class SubtractiveResetIFNodes(nodes.Nodes):
             self.refrac = refrac
 
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
-        self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst
@@ -157,7 +157,14 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         super().reset_()
 
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
-        self.refrac_count = torch.zeros(self.shape)   # Refractory period counters.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+    def _compute_decays(self) -> None:
+        # language=rst
+        """
+        Sets the relevant decays.
+        """
+        super()._compute_decays()
 
 
 class PassThroughNodes(nodes.Nodes):
@@ -209,7 +216,6 @@ class PermuteConnection(topology.AbstractConnection):
 
     def __init__(self, source: nodes.Nodes, target: nodes.Nodes, dims: Sequence,
                  nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
-
         # language=rst
         """
         Constructor for ``PermuteConnection``.
@@ -411,7 +417,6 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
         height = (input_width - current.kernel_size[1] + 2 * current.padding[1]) / current.stride[1] + 1
         shape = (1, out_channels, int(width), int(height))
 
-        
         layer = node_type(shape=shape, reset=0, thresh=1, refrac=0, **kwargs)
         connection = topology.Conv2dConnection(
             source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
@@ -468,7 +473,8 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
 
 
 def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Optional[torch.Tensor] = None,
-               percentile: float = 99.9, node_type: Optional[nodes.Nodes] = SubtractiveResetIFNodes, **kwargs) -> Network:
+               percentile: float = 99.9, node_type: Optional[nodes.Nodes] = SubtractiveResetIFNodes,
+               **kwargs) -> Network:
     # language=rst
     """
     Converts an artificial neural network (ANN) written as a ``torch.nn.Module`` into a near-equivalent spiking neural

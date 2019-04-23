@@ -12,6 +12,7 @@ Check out the [BindsNET experiments repository](https://github.com/djsaunde/bind
 [![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
 [![HitCount](http://hits.dwyl.io/Hananel-Hazan/bindsnet.svg)](http://hits.dwyl.io/Hananel-Hazan/bindsnet)
 [![Analytics](https://ga-beacon.appspot.com/UA-133834596-1/BindsNET/mainpage)](https://github.com/igrigorik/ga-beacon)
+[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/bindsnet_/community)
 
 ## Requirements
 
