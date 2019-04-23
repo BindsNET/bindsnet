@@ -20,10 +20,10 @@ class TestNodes:
                              AdaptiveLIFNodes]:
                     assert (layer.v == layer.rest * torch.ones(n)).all()
 
-                layer = nodes(n, traces=True, trace=1e-5)
+                layer = nodes(n, traces=True, tc_trace=1e5)
 
                 assert layer.n == n;
-                assert layer.trace == 1e-5
+                assert layer.tc_trace == 1e5
                 assert (layer.s.float() == torch.zeros(n)).all()
                 assert (layer.x == torch.zeros(n)).all()
                 assert (layer.x == torch.zeros(n)).all()
@@ -34,12 +34,12 @@ class TestNodes:
 
         for nodes in [LIFNodes, AdaptiveLIFNodes]:
             for n in [1, 100, 10000]:
-                layer = nodes(n, rest=0.0, reset=-10.0, thresh=10.0, refrac=3, decay=7e-4)
+                layer = nodes(n, rest=0.0, reset=-10.0, thresh=10.0, refrac=3, tc_decay=1.5e3)
 
                 assert layer.rest == 0.0;
                 assert layer.reset == -10.0;
                 assert layer.thresh == 10.0
                 assert layer.refrac == 3;
-                assert layer.decay == 7e-4
+                assert layer.tc_decay == 1.5e3
                 assert (layer.s.float() == torch.zeros(n)).all()
                 assert (layer.v == layer.rest * torch.ones(n)).all()
