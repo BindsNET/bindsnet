@@ -186,7 +186,7 @@ class RealInput(Nodes, AbstractInput):
 
         if self.traces:
             # Decay and set spike traces.
-            self.x *= self.trace_decay
+            self.x -= self.trace_decay * self.x
             self.x.masked_fill_(self.s != 0, 1)
 
         if self.sum_input:
