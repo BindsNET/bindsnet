@@ -480,7 +480,7 @@ class CurrentLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and current.
-        self.v = self.rest + self.decay * (self.v - self.rest)
+        self.v -= self.decay * (self.v - self.rest)
         self.i *= self.i_decay
 
         # Decrement refractory counters.
