@@ -579,8 +579,8 @@ class AdaptiveLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v = self.rest + self.decay * (self.v - self.rest)
-        self.theta *= self.theta_decay
+        self.v -= self.decay * (self.v - self.rest)
+        self.theta -= self.theta_decay * self.theta
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -680,8 +680,8 @@ class DiehlAndCookNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v = self.rest + self.decay * (self.v - self.rest)
-        self.theta *= self.theta_decay
+        self.v -= self.decay * (self.v - self.rest)
+        self.theta -= self.theta_decay * self.theta
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
