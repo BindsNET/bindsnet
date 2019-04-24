@@ -186,7 +186,7 @@ class RealInput(Nodes, AbstractInput):
 
         if self.traces:
             # Decay and set spike traces.
-            self.x -= self.trace_decay * self.x
+            self.x *= self.trace_decay
             self.x.masked_fill_(self.s != 0, 1)
 
         if self.sum_input:
@@ -580,7 +580,7 @@ class AdaptiveLIFNodes(Nodes):
         """
         # Decay voltages and adaptive thresholds.
         self.v -= self.decay * (self.v - self.rest)
-        self.theta -= self.theta_decay * self.theta
+        self.theta *= self.theta_decay
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -681,7 +681,7 @@ class DiehlAndCookNodes(Nodes):
         """
         # Decay voltages and adaptive thresholds.
         self.v -= self.decay * (self.v - self.rest)
-        self.theta -= self.theta_decay * self.theta
+        self.theta *= self.theta_decay
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
