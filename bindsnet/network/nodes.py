@@ -186,7 +186,7 @@ class RealInput(Nodes, AbstractInput):
 
         if self.traces:
             # Decay and set spike traces.
-            self.x *= self.trace_decay
+            self.x -= self.tc_trace * self.x
             self.x.masked_fill_(self.s != 0, 1)
 
         if self.sum_input:
@@ -387,7 +387,7 @@ class LIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages.
-        self.v = self.rest + self.decay * (self.v - self.rest)
+        self.v -= self.decay * (self.v - self.rest)
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
