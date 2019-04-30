@@ -387,7 +387,7 @@ class LIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages.
-        self.v -= self.decay * (self.v - self.rest)
+        self.v = self.decay * (self.v - self.rest) + self.rest
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -480,7 +480,7 @@ class CurrentLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and current.
-        self.v -= self.decay * (self.v - self.rest)
+        self.v = self.decay * (self.v - self.rest) + self.rest
         self.i *= self.i_decay
 
         # Decrement refractory counters.
@@ -579,7 +579,7 @@ class AdaptiveLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v -= self.decay * (self.v - self.rest)
+        self.v = self.decay * (self.v - self.rest) + self.rest
         self.theta *= self.theta_decay
 
         # Integrate inputs.
@@ -680,7 +680,7 @@ class DiehlAndCookNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v -= self.decay * (self.v - self.rest)
+        self.v = self.decay * (self.v - self.rest) + self.rest
         self.theta *= self.theta_decay
 
         # Integrate inputs.
