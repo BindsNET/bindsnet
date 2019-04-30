@@ -476,7 +476,7 @@ class CurrentLIFNodes(Nodes):
         # language=rst
         """
         Runs a single simulation step.
-        
+
         :param x: Inputs to the layer.
         """
         # Decay voltages and current.
