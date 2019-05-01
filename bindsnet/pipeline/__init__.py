@@ -54,7 +54,6 @@ class Pipeline:
         :param str plot_type: Type of plotting ('color' or 'line').
         :param int reward_window: Moving average window for the reward plot.
         :param int reward_delay: How many iterations to delay delivery of reward.
-        :param gpu: whether or not to use GPU
         """
         self.network = network
         self.env = environment
@@ -86,13 +85,6 @@ class Pipeline:
         self.plot_type = kwargs.get('plot_type', 'color')
         self.reward_window = kwargs.get('reward_window', None)
         self.reward_delay = kwargs.get('reward_delay', None)
-        self.gpu = kwargs.get('gpu', False)
-
-        if self.gpu and torch.cuda.is_available():
-            torch.set_default_tensor_type('torch.cuda.FloatTensor')
-
-        device = torch.device("cuda" if self.gpu and torch.cuda.is_available() else "cpu")
-        torch.cuda.device(device)
 
         self.dt = network.dt
         self.timestep = int(self.time / self.dt)
