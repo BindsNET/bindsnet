@@ -737,7 +737,7 @@ class CIFAR10(Dataset):
             perm = np.random.permutation(np.arange(labels.shape[0]))
             images, labels = images[perm], labels[perm]
 
-        return images, labels
+        return torch.Tensor(images), torch.Tensor(labels)
 
     def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
@@ -775,7 +775,7 @@ class CIFAR10(Dataset):
             perm = np.random.permutation(np.arange(labels.shape[0]))
             images, labels = images[perm], labels[perm]
 
-        return images, labels
+        return torch.Tensor(images), torch.Tensor(labels)
 
     def _download(self, url: str, file_name: str) -> None:
         # language=rst
@@ -805,7 +805,7 @@ class CIFAR10(Dataset):
                 d['labels'].append(temp[b'labels'])
 
         data, labels = np.concatenate(d['data']), np.concatenate(d['labels'])
-        return torch.from_numpy(data).float(), torch.from_numpy(labels)
+        return data.astype(np.float32), labels.astype(np.float32)
 
 
 class CIFAR100(Dataset):
@@ -872,7 +872,7 @@ class CIFAR100(Dataset):
             perm = np.random.permutation(np.arange(labels.shape[0]))
             images, labels = images[perm], labels[perm]
 
-        return images, labels
+        return torch.Tensor(images), torch.Tensor(labels)
 
     def get_test(self) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
@@ -910,7 +910,7 @@ class CIFAR100(Dataset):
             perm = np.random.permutation(np.arange(labels.shape[0]))
             images, labels = images[perm], labels[perm]
 
-        return images, labels
+        return torch.Tensor(images), torch.Tensor(labels)
 
     def _download(self, url: str, filename: str) -> None:
         # language=rst
@@ -941,4 +941,5 @@ class CIFAR100(Dataset):
                 d['labels'].append(temp[b'fine_labels'])
 
         data, labels = np.concatenate(d['data']), np.concatenate(d['labels'])
-        return torch.from_numpy(data).float(), torch.from_numpy(labels)
+        return data.astype(np.float32), labels.astype(np.float32)
+
