@@ -81,6 +81,9 @@ class DatasetEnvironment(Environment):
         :param train: Whether to use train or test dataset.
         :param time: Length of spike train per example.
         :param kwargs: Raw data is multiplied by this value.
+
+         Keyword arguments:
+         :param gpu: whether or not to use GPU
         """
         self.dataset = dataset
         self.train = train
@@ -89,6 +92,13 @@ class DatasetEnvironment(Environment):
         # Keyword arguments.
         self.intensity = kwargs.get('intensity', 1)
         self.max_prob = kwargs.get('max_prob', 1)
+        self.gpu = kwargs.get('gpu', False)
+
+        if self.gpu and torch.cuda.is_available():
+            torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+        self.device = torch.device("cuda" if self.gpu and torch.cuda.is_available() else "cpu")
+        torch.cuda.device(self.device)
 
         assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
 
@@ -100,6 +110,9 @@ class DatasetEnvironment(Environment):
         else:
             self.data, self.labels = self.dataset.get_test()
             self.label_loader = iter(self.labels)
+
+        self.data.to(self.device)
+        self.labels.to(self.device)
 
         self.env = iter(self.data)
 
@@ -113,7 +126,7 @@ class DatasetEnvironment(Environment):
         """
         try:
             # Attempt to fetch the next observation.
-            self.obs = next(self.env)
+            self.obs = next(self.env).to(self.device)
         except StopIteration:
             # If out of samples, reload data and label generators.
             self.env = iter(self.data)
@@ -124,7 +137,7 @@ class DatasetEnvironment(Environment):
         self.preprocess()
 
         # Info dictionary contains label of MNIST digit.
-        info = {'label' : next(self.label_loader)}
+        info = {'label': next(self.label_loader).to(self.device)}
 
         return self.obs, 0, False, info
 
