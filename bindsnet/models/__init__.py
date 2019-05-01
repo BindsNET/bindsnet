@@ -56,7 +56,7 @@ class DiehlAndCook2015(Network):
 
     def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0, wmax: float = 1.0,
-                 norm: float = 78.4, theta_plus: float = 0.05, tc_theta_decay: float = 1e7) -> None:
+                 norm: float = 78.4, theta_plus: float = 0.05, tc_theta_decay: float = 0.9379591) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015``.
@@ -81,14 +81,14 @@ class DiehlAndCook2015(Network):
         self.inh = inh
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_inpt, traces=True, tc_trace=20.0), name='X')
+        self.add_layer(Input(n=self.n_inpt, traces=True, tc_trace=0.33389), name='X')
         self.add_layer(DiehlAndCookNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-                                         tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus,
+                                         tc_decay=0.2171474, tc_trace=0.33389, theta_plus=theta_plus,
                                          tc_theta_decay=tc_theta_decay),
                        name='Ae')
 
-        self.add_layer(LIFNodes(n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0, tc_decay=10.0,
-                                refrac=2, tc_trace=20.0),
+        self.add_layer(LIFNodes(n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0,
+                                tc_decay=0.4342944, refrac=2, tc_trace=0.33389),
                        name='Ai')
 
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
@@ -116,7 +116,7 @@ class DiehlAndCook2015v2(Network):
     def __init__(self, n_inpt: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: Optional[float] = None,
                  wmax: Optional[float] = None, norm: float = 78.4, theta_plus: float = 0.05,
-                 tc_theta_decay: float = 1e7) -> None:
+                 tc_theta_decay: float = 0.9379591) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015v2``.
@@ -139,12 +139,12 @@ class DiehlAndCook2015v2(Network):
         self.inh = inh
         self.dt = dt
 
-        input_layer = Input(n=self.n_inpt, traces=True, tc_trace=20.0)
+        input_layer = Input(n=self.n_inpt, traces=True, tc_trace=0.33389)
         self.add_layer(input_layer, name='X')
 
         output_layer = DiehlAndCookNodes(
             n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-            tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
+            tc_decay=0.2171474, tc_trace=0.33389, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
         )
         self.add_layer(output_layer, name='Y')
 
@@ -171,7 +171,7 @@ class IncreasingInhibitionNetwork(Network):
 
     def __init__(self, n_input: int, n_neurons: int = 100, start_inhib: float = 1.0, max_inhib: float = 100.0,
                  dt: float = 1.0, nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0,
-                 wmax: float = 1.0, norm: float = 78.4, theta_plus: float = 0.05, tc_theta_decay: float = 1e7) -> None:
+                 wmax: float = 1.0, norm: float = 78.4, theta_plus: float = 0.05, tc_theta_decay: float = 0.9379591) -> None:
         # language=rst
         """
         Constructor for class ``IncreasingInhibitionNetwork``.
@@ -196,12 +196,12 @@ class IncreasingInhibitionNetwork(Network):
         self.max_inhib = max_inhib
         self.dt = dt
 
-        input_layer = Input(n=self.n_input, traces=True, tc_trace=20.0)
+        input_layer = Input(n=self.n_input, traces=True, tc_trace=0.33389)
         self.add_layer(input_layer, name='X')
 
         output_layer = DiehlAndCookNodes(
             n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-            tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
+            tc_decay=0.2171474, tc_trace=0.33389, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
         )
         self.add_layer(output_layer, name='Y')
 
@@ -238,7 +238,7 @@ class LocallyConnectedNetwork(Network):
     def __init__(self, n_inpt: int, input_shape: List[int], kernel_size: Union[int, Tuple[int, int]],
                  stride: Union[int, Tuple[int, int]], n_filters: int, inh: float = 25.0, dt: float = 1.0,
                  nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), theta_plus: float = 0.05,
-                 tc_theta_decay: float = 1e7, wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2,
+                 tc_theta_decay: float = 0.9379591, wmin: float = 0.0, wmax: float = 1.0, norm: Optional[float] = 0.2,
                  real=False) -> None:
         # language=rst
         """
@@ -285,13 +285,13 @@ class LocallyConnectedNetwork(Network):
                          int((input_shape[1] - kernel_size[1]) / stride[1]) + 1)
 
         if real:
-            input_layer = RealInput(n=self.n_inpt, traces=True, tc_trace=20.0)
+            input_layer = RealInput(n=self.n_inpt, traces=True, tc_trace=0.33389)
         else:
-            input_layer = Input(n=self.n_inpt, traces=True, tc_trace=20.0)
+            input_layer = Input(n=self.n_inpt, traces=True, tc_trace=0.33389)
 
         output_layer = DiehlAndCookNodes(
             n=self.n_filters * conv_size[0] * conv_size[1], traces=True, rest=-65.0, reset=-60.0,
-            thresh=-52.0, refrac=5, tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
+            thresh=-52.0, refrac=5, tc_decay=0.2171474, tc_trace=0.33389, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
         )
         input_output_conn = LocallyConnectedConnection(
             input_layer, output_layer, kernel_size=kernel_size, stride=stride, n_filters=n_filters,
