@@ -1,6 +1,7 @@
+from typing import Optional, Union, Iterable, Iterator
+
 import torch
 import numpy as np
-from typing import Optional, Union, Iterable, Iterator
 
 
 def single(datum: torch.Tensor, time: int, dt: float = 1.0, sparsity: float = 0.3, **kwargs) -> torch.Tensor:
