@@ -95,6 +95,13 @@ for layer in set(network.layers) - {'X'}:
     spikes[layer] = Monitor(network.layers[layer], state_vars=['s'], time=time)
     network.add_monitor(spikes[layer], name='%s_spikes' % layer)
 
+inpt_ims, inpt_axes = None, None
+spike_ims, spike_axes = None, None
+weights_im = None
+assigns_im = None
+perf_ax = None
+voltage_axes, voltage_ims = None, None
+
 # Train the network.
 print('\nBegin training.\n')
 start = t()
@@ -146,25 +153,19 @@ for i in range(n_train):
         input_exc_weights = network.connections[('X', 'Ae')].w
         square_weights = get_square_weights(input_exc_weights.view(784, n_neurons), n_sqrt, 28)
         square_assignments = get_square_assignments(assignments, n_sqrt)
+        spikes_ = {layer: spikes[layer].get('s') for layer in spikes}
         voltages = {'Ae': exc_voltages, 'Ai': inh_voltages}
 
-        if i == 0:
-            inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i])
-            spike_ims, spike_axes = plot_spikes({layer: spikes[layer].get('s') for layer in spikes})
-            weights_im = plot_weights(square_weights)
-            assigns_im = plot_assignments(square_assignments)
-            perf_ax = plot_performance(accuracy)
-            voltage_ims, voltage_axes = plot_voltages(voltages)
-
-        else:
-            inpt_axes, inpt_ims = plot_input(images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes,
-                                             ims=inpt_ims)
-            spike_ims, spike_axes = plot_spikes({layer: spikes[layer].get('s') for layer in spikes},
-                                                ims=spike_ims, axes=spike_axes)
-            weights_im = plot_weights(square_weights, im=weights_im)
-            assigns_im = plot_assignments(square_assignments, im=assigns_im)
-            perf_ax = plot_performance(accuracy, ax=perf_ax)
-            voltage_ims, voltage_axes = plot_voltages(voltages, ims=voltage_ims, axes=voltage_axes)
+        inpt_axes, inpt_ims = plot_input(
+            images[i].view(28, 28), inpt, label=labels[i], axes=inpt_axes, ims=inpt_ims
+        )
+        spike_ims, spike_axes = plot_spikes(
+            spikes_, ims=spike_ims, axes=spike_axes
+        )
+        weights_im = plot_weights(square_weights, im=weights_im)
+        assigns_im = plot_assignments(square_assignments, im=assigns_im)
+        perf_ax = plot_performance(accuracy, ax=perf_ax)
+        voltage_ims, voltage_axes = plot_voltages(voltages, ims=voltage_ims, axes=voltage_axes, plot_type='line')
 
         plt.pause(1e-8)
 

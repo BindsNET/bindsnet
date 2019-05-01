@@ -81,28 +81,35 @@ class DiehlAndCook2015(Network):
         self.inh = inh
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_inpt, traces=True, tc_trace=20.0), name='X')
-        self.add_layer(DiehlAndCookNodes(n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
-                                         tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus,
-                                         tc_theta_decay=tc_theta_decay),
-                       name='Ae')
+        # Layers
+        input_layer = Input(n=self.n_inpt, traces=True, tc_trace=20.0)
+        exc_layer = DiehlAndCookNodes(
+            n=self.n_neurons, traces=True, rest=-65.0, reset=-60.0, thresh=-52.0, refrac=5,
+            tc_decay=100.0, tc_trace=20.0, theta_plus=theta_plus, tc_theta_decay=tc_theta_decay
+        )
+        inh_layer = LIFNodes(
+            n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0,
+            thresh=-40.0, tc_decay=10.0, refrac=2, tc_trace=20.0
+        )
 
-        self.add_layer(LIFNodes(n=self.n_neurons, traces=False, rest=-60.0, reset=-45.0, thresh=-40.0, tc_decay=10.0,
-                                refrac=2, tc_trace=20.0),
-                       name='Ai')
-
+        # Connections
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
-        self.add_connection(Connection(source=self.layers['X'], target=self.layers['Ae'], w=w, update_rule=PostPre,
-                                       nu=nu, wmin=wmin, wmax=wmax, norm=norm),
-                            source='X', target='Ae')
-
+        input_exc_conn = Connection(
+            source=input_layer, target=exc_layer, w=w, update_rule=PostPre,
+            nu=nu, wmin=wmin, wmax=wmax, norm=norm
+        )
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
-        self.add_connection(Connection(source=self.layers['Ae'], target=self.layers['Ai'], w=w, wmin=0, wmax=self.exc),
-                            source='Ae', target='Ai')
-
+        exc_inh_conn = Connection(source=exc_layer, target=inh_layer, w=w, wmin=0, wmax=self.exc)
         w = -self.inh * (torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons)))
-        self.add_connection(Connection(source=self.layers['Ai'], target=self.layers['Ae'], w=w, wmin=-self.inh, wmax=0),
-                            source='Ai', target='Ae')
+        inh_exc_conn = Connection(source=inh_layer, target=exc_layer, w=w, wmin=-self.inh, wmax=0)
+
+        # Add to network
+        self.add_layer(input_layer, name='X')
+        self.add_layer(exc_layer, name='Ae')
+        self.add_layer(inh_layer, name='Ai')
+        self.add_connection(input_exc_conn, source='X', target='Ae')
+        self.add_connection(exc_inh_conn, source='Ae', target='Ai')
+        self.add_connection(inh_exc_conn, source='Ai', target='Ae')
 
 
 class DiehlAndCook2015v2(Network):
@@ -114,8 +121,8 @@ class DiehlAndCook2015v2(Network):
     """
 
     def __init__(self, n_inpt: int, n_neurons: int = 100, inh: float = 17.5, dt: float = 1.0,
-                 nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: Optional[float] = None,
-                 wmax: Optional[float] = None, norm: float = 78.4, theta_plus: float = 0.05,
+                 nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: Optional[float] = 0.0,
+                 wmax: Optional[float] = 1.0, norm: float = 78.4, theta_plus: float = 0.05,
                  tc_theta_decay: float = 1e7) -> None:
         # language=rst
         """
