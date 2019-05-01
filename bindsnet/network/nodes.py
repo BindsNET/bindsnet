@@ -13,7 +13,7 @@ class Nodes(ABC):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.666192, sum_input: bool = False) -> None:
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False) -> None:
         # language=rst
         """
         Abstract base class constructor.
@@ -113,7 +113,7 @@ class Input(Nodes, AbstractInput):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None,
-                 traces: bool = False, tc_trace: Union[float, torch.Tensor] = 0.333808, sum_input: bool = False) -> None:
+                 traces: bool = False, tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False) -> None:
         # language=rst
         """
         Instantiates a layer of input neurons.
@@ -159,7 +159,7 @@ class RealInput(Nodes, AbstractInput):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.666192, sum_input: bool = False) -> None:
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False) -> None:
         # language=rst
         """
         Instantiates a layer of input neurons.
@@ -216,7 +216,7 @@ class McCullochPitts(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.333808, sum_input: bool = False,
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = 1.0) -> None:
         # language=rst
         """
@@ -268,7 +268,7 @@ class IFNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.333808, sum_input: bool = False,
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, reset: Union[float, torch.Tensor] = -65.0,
                  refrac: Union[int, torch.Tensor] = 5, lbound: float = None) -> None:
         # language=rst
@@ -346,10 +346,10 @@ class LIFNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.333808, sum_input: bool = False,
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 tc_decay: Union[float, torch.Tensor] = 0.2171474, lbound: float = None) -> None:
+                 tc_decay: Union[float, torch.Tensor] = 100.0, lbound: float = None) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons.
@@ -387,7 +387,7 @@ class LIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages.
-        self.v -= self.decay * (self.v - self.rest)
+        self.v = self.decay * (self.v - self.rest) + self.rest
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -435,10 +435,10 @@ class CurrentLIFNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.333808, sum_input: bool = False,
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 tc_decay: Union[float, torch.Tensor] = 0.2171474, tc_i_decay: Union[float, torch.Tensor] = 2.0,
+                 tc_decay: Union[float, torch.Tensor] = 100.0, tc_i_decay: Union[float, torch.Tensor] = 2.0,
                  lbound: float = None) -> None:
         # language=rst
         """
@@ -480,7 +480,7 @@ class CurrentLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and current.
-        self.v -= self.decay * (self.v - self.rest)
+        self.v = self.decay * (self.v - self.rest) + self.rest
         self.i *= self.i_decay
 
         # Decrement refractory counters.
@@ -531,11 +531,11 @@ class AdaptiveLIFNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.333808, sum_input: bool = False,
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  rest: Union[float, torch.Tensor] = -65.0, reset: Union[float, torch.Tensor] = -65.0,
                  thresh: Union[float, torch.Tensor] = -52.0, refrac: Union[int, torch.Tensor] = 5,
-                 tc_decay: Union[float, torch.Tensor] = 0.2171474, theta_plus: Union[float, torch.Tensor] = 0.05,
-                 tc_theta_decay: Union[float, torch.Tensor] = 0.9379591, lbound: float = None) -> None:
+                 tc_decay: Union[float, torch.Tensor] = 100.0, theta_plus: Union[float, torch.Tensor] = 0.05,
+                 tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons with adaptive firing thresholds.
@@ -579,7 +579,7 @@ class AdaptiveLIFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v -= self.decay * (self.v - self.rest)
+        self.v = self.decay * (self.v - self.rest) + self.rest
         self.theta *= self.theta_decay
 
         # Integrate inputs.
@@ -629,11 +629,11 @@ class DiehlAndCookNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.33389, sum_input: bool = False,
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 tc_decay: Union[float, torch.Tensor] = 0.2171474, theta_plus: Union[float, torch.Tensor] = 0.05,
-                 tc_theta_decay: Union[float, torch.Tensor] = 0.9379591, lbound: float = None,
+                 tc_decay: Union[float, torch.Tensor] = 100.0, theta_plus: Union[float, torch.Tensor] = 0.05,
+                 tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None,
                  one_spike: bool = True) -> None:
         # language=rst
         """
@@ -680,7 +680,7 @@ class DiehlAndCookNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Decay voltages and adaptive thresholds.
-        self.v -= self.decay * (self.v - self.rest)
+        self.v = self.decay * (self.v - self.rest) + self.rest
         self.theta *= self.theta_decay
 
         # Integrate inputs.
@@ -736,7 +736,7 @@ class IzhikevichNodes(Nodes):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 0.333808, sum_input: bool = False, excitatory: float = 1,
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False, excitatory: float = 1,
                  thresh: Union[float, torch.Tensor] = 45.0, rest: Union[float, torch.Tensor] = -65.0,
                  lbound: float = None) -> None:
         # language=rst
