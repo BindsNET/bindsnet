@@ -339,6 +339,8 @@ class LIFNodes(Nodes):
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+        self.summed_spikes = torch.zeros(self.shape)
+
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst
@@ -358,6 +360,7 @@ class LIFNodes(Nodes):
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
+        self.summed_spikes += self.s.float() * 1
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -377,6 +380,8 @@ class LIFNodes(Nodes):
         super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+        self.summed_spikes = torch.zeros(self.shape)
+
 
 
 class CurrentLIFNodes(Nodes):

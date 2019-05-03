@@ -81,7 +81,7 @@ class AbstractConnection(ABC):
         pass
 
     @abstractmethod
-    def update(self, **kwargs) -> None:
+    def update(self, sm, **kwargs) -> None:
         # language=rst
         """
         Compute connection's update rule.
@@ -92,7 +92,10 @@ class AbstractConnection(ABC):
         :param ByteTensor mask: Boolean mask determining which weights to clamp to zero.
         """
         learning = kwargs.get('learning', True)
-
+        if learning and sm is not None:
+            self.update_rule.update(sm=sm, **kwargs)
+            return
+        
         if learning:
             self.update_rule.update(**kwargs)
 

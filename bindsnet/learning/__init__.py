@@ -299,24 +299,23 @@ class Hebbian(LearningRule):
                 'This learning rule is not supported for this Connection type.'
             )
 
-    def _connection_update(self, **kwargs) -> None:
+    def _connection_update(self, sm, **kwargs) -> None:
         # language=rst
         """
         Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
-        source_s = self.source.s.view(-1).float()
-        source_x = self.source.x.view(-1)
-        target_s = self.target.s.view(-1).float()
-        target_x = self.target.x.view(-1)
-
         # Pre-synaptic update.
-        self.connection.w += self.nu[0] * torch.ger(
-            source_s, target_x
-        )
-        # Post-synaptic update.
-        self.connection.w += self.nu[1] * torch.ger(
-            source_x, target_s
-        )
+        source_s = self.source.s.view(-1).float()
+        source_x = self.source.x.view(-1) # trace
+        target_s = self.target.s.view(-1).float()
+        target_x = self.target.x.view(-1) # trace
+
+        # update the locations of spikes based on the update rule h(si-sm)(sj-sm)
+        si = self.connection.source.summed_spikes
+        sj = self.connection.target.summed_spikes
+
+        # this could probably be more efficient
+        self.connection.w[torch.ger(source_s, target_s).byte()] += torch.ger(si-sm, sj-sm)[torch.ger(source_s, target_s).byte()]
 
         super().update()
 

@@ -297,9 +297,7 @@ class Network:
 
             # Run synapse updates.
             for c in self.connections:
-                self.connections[c].update(
-                    mask=masks.get(c, None), learning=self.learning, **kwargs
-                )
+                self.connections[c].update(mask=masks.get(c, None), learning=False, sm=None, **kwargs)
 
             # Get input to all layers.
             inpts.update(self.get_inputs())
@@ -307,6 +305,18 @@ class Network:
             # Record state variables of interest.
             for m in self.monitors:
                 self.monitors[m].record()
+
+        smean = torch.zeros(100)
+        columns = 0
+        for l in self.layers:
+            if 'column_' in l:
+                smean += self.layers[l].summed_spikes
+                columns += 1
+        smean /= columns
+
+        for c in self.connections:
+            if 'column_' in c[0] and 'column_' in c[1]:
+                self.connections[c].update(mask=masks.get(c, None), learning=True, sm=smean, **kwargs)
 
         # Re-normalize connections.
         for c in self.connections:
