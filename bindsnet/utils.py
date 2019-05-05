@@ -3,52 +3,17 @@ import torch
 import numpy as np
 
 from torch import Tensor
+import torch.nn.functional as F
 from numpy import ndarray
 from typing import Tuple, Union
 from torch.nn.modules.utils import _pair
-
-
-def get_im2col_indices(x_shape: Tuple[int, int, int, int], kernel_height: int,
-                       kernel_width: int, padding: Tuple[int, int]=(0, 0),
-                       stride: Tuple[int, int]=(1, 1)) -> Tuple[ndarray, ndarray, ndarray]:
-    # language=rst
-    """
-    Figure out what the size of the output should be. Taken from `this repository
-    <https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py>`_.
-
-    :param x_shape: Shape of the input tensor.
-    :param kernel_height: Height of the convolutional kernel in pixels.
-    :param kernel_width: Width of the convolutional kernel in pixels.
-    :param padding: Amount of zero padding on the input image.
-    :param stride: Amount to stride over image by per convolution.
-    :return: Indices for converted image tensor to column-wise format.
-    """
-    _, c, h, w = x_shape
-
-    assert (h + 2 * padding[0] - kernel_height) % stride[0] == 0
-    assert (w + 2 * padding[1] - kernel_height) % stride[1] == 0
-
-    out_height = int((h + 2 * padding[0] - kernel_height) / stride[0] + 1)
-    out_width = int((w + 2 * padding[1] - kernel_width) / stride[1] + 1)
-
-    i0 = np.repeat(np.arange(kernel_height), kernel_width)
-    i0 = np.tile(i0, c)
-    i1 = stride[0] * np.repeat(np.arange(out_height), out_width)
-    j0 = np.tile(np.arange(kernel_width), kernel_height * c)
-    j1 = stride[1] * np.tile(np.arange(out_width), out_height)
-    i = i0.reshape(-1, 1) + i1.reshape(1, -1)
-    j = j0.reshape(-1, 1) + j1.reshape(1, -1)
-    k = np.repeat(np.arange(c), kernel_height * kernel_width).reshape(-1, 1)
-
-    return k, i, j
 
 
 def im2col_indices(x: Tensor, kernel_height: int, kernel_width: int, padding: Tuple[int, int] = (0, 0),
                    stride: Tuple[int, int] = (1, 1)) -> Tensor:
     # language=rst
     """
-    An implementation of im2col based on some fancy indexing. Taken from `this repository
-    <https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py>`_.
+    im2col is a special case of unfold which is implemented inside of Pytorch.
 
     :param x: Input image tensor to be reshaped to column-wise format.
     :param kernel_height: Height of the convolutional kernel in pixels.
@@ -57,25 +22,16 @@ def im2col_indices(x: Tensor, kernel_height: int, kernel_width: int, padding: Tu
     :param stride: Amount to stride over image by per convolution.
     :return: Input tensor reshaped to column-wise format.
     """
-    # Zero-pad the input
-    p = padding
-    x_padded = np.pad(x, ((0, 0), (0, 0), (p[0], p[0]), (p[1], p[1])), mode='constant')
 
-    k, i, j = get_im2col_indices(x.shape, kernel_height, kernel_width, padding, stride)
-
-    cols = x_padded[:, k, i, j]
-    c = x.shape[1]
-    cols = cols.transpose(1, 2, 0).reshape(kernel_height * kernel_width * c, -1)
-
-    return Tensor(cols)
+    return F.unfold(x, (kernel_height, kernel_width), padding=padding,
+            stride=stride).squeeze()
 
 
 def col2im_indices(cols: Tensor, x_shape: Tuple[int, int, int, int], kernel_height: int, kernel_width: int,
                    padding: Tuple[int, int]=(0, 0), stride: Tuple[int, int]=(1, 1)) -> Tensor:
     # language=rst
     """
-    An implementation of col2im based on fancy indexing and np.add.at. Taken from `this repository
-    <https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py>`_.
+    col2im is a special case of fold which is implemented inside of Pytorch.
 
     :param cols: Image tensor in column-wise format.
     :param x_shape: Shape of original image tensor.
@@ -85,18 +41,9 @@ def col2im_indices(cols: Tensor, x_shape: Tuple[int, int, int, int], kernel_heig
     :param stride: Amount to stride over image by per convolution.
     :return: Image tensor in original image shape.
     """
-    n, c, h, w = x_shape
-    h_padded, w_padded = h + 2 * padding[0], w + 2 * padding[1]
-    x_padded = np.zeros((n, c, h_padded, w_padded), dtype=cols.dtype)
-    k, i, j = get_im2col_indices(x_shape, kernel_height, kernel_width, padding, stride)
-    cols_reshaped = cols.reshape(c * kernel_height * kernel_width, -1, n)
-    cols_reshaped = cols_reshaped.transpose(2, 0, 1)
-    np.add.at(x_padded, (slice(None), k, i, j), cols_reshaped)
 
-    if padding == (0, 0):
-        return Tensor(x_padded)
-
-    return x_padded[:, :, padding[0]:-padding[0], padding[1]:-padding[1]]
+    return F.fold(cols, x_shape, (kernel_height, kernel_width),
+            padding=padding, stride=stride)
 
 
 def get_square_weights(weights: Tensor, n_sqrt: int, side: Union[int, Tuple[int, int]]) -> Tensor:
