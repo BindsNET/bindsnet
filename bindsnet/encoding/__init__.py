@@ -121,7 +121,7 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
     For example, an input of intensity :code:`x` will have an average firing rate of :code:`x`Hz.
 
     :param datum: Tensor of shape ``[n_1, ..., n_k]``.
-    :param time: Length of Bernoulli spike train per input variable.
+    :param time: Length of Poisson spike train per input variable.
     :param dt: Simulation time step.
     :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
     """
