@@ -4,7 +4,7 @@ import torchvision
 
 from .spike_encoders import Encoder
 
-def vd_wrapper_creator(ds_type):
+def torchvision_dataset_wrapper_creator(ds_type):
     """ Creates wrapper classes for datasets that output (image, label)
     from __getitem__. This is all of the datasets inside of torchvision.
     """
@@ -13,7 +13,8 @@ def vd_wrapper_creator(ds_type):
         ds_type = getattr(torchvision.datasets, ds_type)
 
     class torchvision_dataset_wrapper(ds_type):
-        __doc__ = """BindsNET torchvision dataset wrapper for:\n\n"""+ds_type.__doc__
+        __doc__ = """BindsNET torchvision dataset wrapper for:\n\n"""\
+                + str(ds_type) if ds_type.__doc__ is None else ds_type.__doc__
 
         def __init__(self,
                      image_encoder: Encoder,
@@ -24,7 +25,6 @@ def vd_wrapper_creator(ds_type):
             For details on the dataset you're interested in visit
 
             https://pytorch.org/docs/stable/torchvision/datasets.html
-
 
             :param image_encoder: Spike encoder for use on the image
             :param label_encoder: Spike encoder for use on the label

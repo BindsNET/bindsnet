@@ -8,7 +8,7 @@ from time import time as t
 from tqdm import tqdm
 
 import bindsnet.datasets
-from bindsnet.datasets import PoissonEncoder
+from bindsnet.datasets.spike_encoders import PoissonEncoder
 
 from bindsnet.network import Network
 from bindsnet.learning import PostPre
@@ -16,12 +16,10 @@ from bindsnet.network.nodes import DiehlAndCookNodes, Input
 from bindsnet.network.topology import Conv2dConnection, Connection
 from bindsnet.analysis.plotting import plot_input, plot_spikes, plot_conv2d_weights, plot_voltages
 
-print()
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default='MNIST',
-                    choices=['MNIST', 'CIFAR10', 'CIFAR100',
-                             'FashionMNIST'])
+                    choices=['MNIST', 'KMNIST','FashionMNIST',
+                             'CIFAR10', 'CIFAR100'])
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--time', type=int, default=50)
 parser.add_argument('--dt', type=int, default=1.0)
