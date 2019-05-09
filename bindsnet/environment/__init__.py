@@ -5,7 +5,8 @@ import numpy as np
 from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
 
-from ..datasets import Dataset, MNIST, CIFAR10, CIFAR100, SpokenMNIST
+from torch.utils.data import Dataset
+from ..datasets import MNIST, CIFAR10, CIFAR100, SpokenMNIST
 from ..datasets.preprocess import subsample, gray_scale, binary_image, crop
 
 

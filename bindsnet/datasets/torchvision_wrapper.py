@@ -1,5 +1,7 @@
 from typing import Optional
+import warnings
 
+import torch
 import torchvision
 
 from .spike_encoders import Encoder
@@ -17,7 +19,7 @@ def torchvision_dataset_wrapper_creator(ds_type):
                 + str(ds_type) if ds_type.__doc__ is None else ds_type.__doc__
 
         def __init__(self,
-                     image_encoder: Encoder,
+                     image_encoder: Optional[Encoder],
                      label_encoder: Optional[Encoder],
                      *args, **kwargs):
             """
@@ -33,13 +35,17 @@ def torchvision_dataset_wrapper_creator(ds_type):
             """
             super().__init__(*args, **kwargs)
 
+            self.args = args
+            self.kwargs = kwargs
+
             self.image_encoder = image_encoder
             self.label_encoder = label_encoder
 
         def __getitem__(self, ind):
             image, label = super().__getitem__(ind)
 
-            image = self.image_encoder(image)
+            if self.image_encoder is not None:
+                image = self.image_encoder(image)
 
             if self.label_encoder is not None:
                 label = self.label_encoder(label)
@@ -49,10 +55,50 @@ def torchvision_dataset_wrapper_creator(ds_type):
         def __len__(self):
             return super().__len__()
 
+        def get_full_tensor(self):
+            """ Retrieve and format tensors in the old style
+            """
+
+            il_list = [self[i] for i in range(len(self))]
+
+            images = torch.stack([i for i,_ in il_list], 0)
+            if "MNIST" in str(ds_type):
+                images = images.squeeze()
+
+            labels = torch.tensor([l for _,l in il_list])
+
+            return images, labels
+
         def get_train(self):
-            raise NotImplementedError
+            warnings.warn("get_train() is going to be removed"
+                "in upcoming releases to encourage use of the full"
+                "DataLoader pipeline from PyTorch.", DeprecationWarning)
+
+            if not ("MNIST" in str(ds_type) or "CIFAR" in str(ds_type)):
+                raise NotImplementedError()
+
+            kwargs = dict(self.kwargs)
+            kwargs["train"] = True
+
+            train_ds = type(self)(None, None,
+                                  *self.args, **kwargs)
+
+            return train_ds.get_full_tensor()
 
         def get_test(self):
-            raise NotImplementedError
+            warnings.warn("get_train() is going to be removed"
+                "in upcoming releases to encourage use of the full"
+                "DataLoader pipeline from PyTorch.", DeprecationWarning)
+
+            if not ("MNIST" in str(ds_type) or "CIFAR" in str(ds_type)):
+                raise NotImplementedError()
+
+            kwargs = dict(self.kwargs)
+            kwargs["train"] = False
+
+            train_ds = type(self)(None, None,
+                                  *self.args, **kwargs)
+
+            return train_ds.get_full_tensor()
 
     return torchvision_dataset_wrapper

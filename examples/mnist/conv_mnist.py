@@ -1,5 +1,6 @@
 import os
 import torch
+from torchvision import transforms
 import argparse
 import matplotlib.pyplot as plt
 
@@ -132,9 +133,8 @@ voltage_monitor = Monitor(network.layers["Y"], ["v"], time=time)
 network.add_monitor(voltage_monitor, name="output_voltage")
 
 # Load MNIST data.
-images, labels = MNIST(
-    path=os.path.join("..", "..", "data", "MNIST"), download=True
-).get_train()
+images, labels = MNIST(None, None, os.path.join('..', '..', 'data',
+    'MNIST'), download=True, transform=transforms.ToTensor()).get_train()
 images *= intensity
 
 # Lazily encode data as Poisson spike trains.

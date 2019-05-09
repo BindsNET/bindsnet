@@ -11,6 +11,8 @@ from scipy.io import wavfile
 
 from .spike_encoders import Encoder
 
+import warnings
+
 class SpokenMNIST(torch.utils.data.Dataset):
     # language=rst
     """
@@ -60,9 +62,9 @@ class SpokenMNIST(torch.utils.data.Dataset):
         self.zip_path = os.path.join(path, 'repo.zip')
 
         if train:
-            self.audio, self.labels = self.get_train(split)
+            self.audio, self.labels = self._get_train(split)
         else:
-            self.audio, self.labels = self.get_test(split)
+            self.audio, self.labels = self._get_test(split)
 
         self.num_samples = num_samples
 
@@ -76,6 +78,13 @@ class SpokenMNIST(torch.utils.data.Dataset):
         return audio, label
 
     def get_train(self, split: float=0.8) -> Tuple[torch.Tensor, torch.Tensor]:
+        warnings.warn("get_train() is going to be removed"
+                "in upcoming releases to encourage use of the full"
+                "DataLoader pipeline from PyTorch.", DeprecationWarning)
+
+        return self._get_train(split)
+
+    def _get_train(self, split: float=0.8) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
         """
         Gets the Spoken MNIST training audio and labels.
@@ -121,6 +130,13 @@ class SpokenMNIST(torch.utils.data.Dataset):
         return audio, torch.Tensor(labels)
 
     def get_test(self, split: float=0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        warnings.warn("get_train() is going to be removed"
+                "in upcoming releases to encourage use of the full"
+                "DataLoader pipeline from PyTorch.", DeprecationWarning)
+
+        return self._get_test(split)
+
+    def _get_test(self, split: float=0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         # language=rst
         """
         Gets the Spoken MNIST training audio and labels.
