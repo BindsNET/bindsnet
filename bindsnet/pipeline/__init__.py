@@ -12,7 +12,12 @@ from ..network import Network
 from ..network.monitors import Monitor
 from ..network.nodes import AbstractInput
 
-__all__ = ["Pipeline", "action"]
+from .dataloader_pipeline import DataLoaderPipeline, TorchVisionDatasetPipeline
+
+__all__ = [
+    'Pipeline', 'action', 'DataLoaderPipeline',
+    'TorchVisionDatasetPipeline',
+]
 
 plt.ion()
 
@@ -48,9 +53,7 @@ class Pipeline:
         :param int plot_interval: Interval to update plots.
         :param str save_dir: Directory to save network object to.
         :param int print_interval: Interval to print text output.
-        :param int time: Time input is presented for to the network.
         :param int history: Number of observations to keep track of.
-        :param int delta: Step size to save observations in history.
         :param int render_interval: Interval to render the environment.
         :param int save_interval: How often to save the network to disk.
         :param str output: String name of the layer from which to take output from.
@@ -61,7 +64,6 @@ class Pipeline:
         """
         self.network = network
         self.env = environment
-        self.encoding = encoding
         self.action_function = action_function
         self.enable_history = enable_history
 
@@ -76,22 +78,19 @@ class Pipeline:
         self.reward_list = []
 
         # Setting kwargs.
-        self.time = kwargs.get("time", 1)
-        self.delta = kwargs.get("delta", 1)
-        self.output = kwargs.get("output", None)
-        self.save_dir = kwargs.get("save_dir", "network.pt")
-        self.plot_interval = kwargs.get("plot_interval", None)
-        self.save_interval = kwargs.get("save_interval", None)
-        self.print_interval = kwargs.get("print_interval", None)
-        self.history_length = kwargs.get("history_length", None)
-        self.render_interval = kwargs.get("render_interval", None)
-        self.plot_length = kwargs.get("plot_length", 1.0)
-        self.plot_type = kwargs.get("plot_type", "color")
-        self.reward_window = kwargs.get("reward_window", None)
-        self.reward_delay = kwargs.get("reward_delay", None)
+        self.output = kwargs.get('output', None)
+        self.save_dir = kwargs.get('save_dir', 'network.pt')
+        self.plot_interval = kwargs.get('plot_interval', None)
+        self.save_interval = kwargs.get('save_interval', None)
+        self.print_interval = kwargs.get('print_interval', None)
+        self.history_length = kwargs.get('history_length', None)
+        self.render_interval = kwargs.get('render_interval', None)
+        self.plot_length = kwargs.get('plot_length', 1.0)
+        self.plot_type = kwargs.get('plot_type', 'color')
+        self.reward_window = kwargs.get('reward_window', None)
+        self.reward_delay = kwargs.get('reward_delay', None)
 
         self.dt = network.dt
-        self.timestep = int(self.time / self.dt)
 
         if self.history_length is not None and self.delta is not None:
             self.history = {
@@ -197,14 +196,11 @@ class Pipeline:
 
         # Encode the observation using given encoding function.
         for inpt in self.encoded:
-            self.encoded[inpt] = self.encoding(
-                self.obs, time=self.time, dt=self.network.dt, **kwargs
-            )
+            self.encoded[inpt] = self.obs
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(
-            inpts=self.encoded, time=self.time, reward=self.reward, **kwargs
-        )
+        self.network.run(inpts=self.encoded, time=self.obs.shape[0],
+                         reward=self.reward, **kwargs)
 
         # Plot relevant data.
         if self.plot_interval is not None and self.iteration % self.plot_interval == 0:

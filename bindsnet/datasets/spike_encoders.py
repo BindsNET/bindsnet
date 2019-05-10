@@ -31,7 +31,7 @@ class SingleEncoder(Encoder):
         :param dt: Simulation time step.
         :param sparsity: Sparsity of the input representation. 0 for no spike and 1 for all spike.
         """
-        super().__init__(time, **kwargs)
+        super().__init__(time, dt=dt, sparsity=sparsity, **kwargs)
         self.enc = encoding.single
 
 
@@ -44,7 +44,7 @@ class RepeatEncoder(Encoder):
         :param time: Length of Repeat spike train per input variable.
         :param dt: Simulation time step.
         """
-        super().__init__(time, **kwargs)
+        super().__init__(time, dt=dt, **kwargs)
         self.enc = encoding.repeat
 
 
@@ -61,7 +61,7 @@ class BernoulliEncoder(Encoder):
 
         :param float max_prob: Maximum probability of spike per Bernoulli trial.
         """
-        super().__init__(time, **kwargs)
+        super().__init__(time, dt=dt, **kwargs)
         self.enc = encoding.bernoulli
 
 
@@ -74,7 +74,7 @@ class PoissonEncoder(Encoder):
         :param time: Length of Poisson spike train per input variable.
         :param dt: Simulation time step.
         """
-        super().__init__(time, **kwargs)
+        super().__init__(time, dt=dt, **kwargs)
         self.enc = encoding.poisson
 
 
@@ -87,5 +87,5 @@ class RankOrderEncoder(Encoder):
         :param time: Length of RankOrder spike train per input variable.
         :param dt: Simulation time step.
         """
-        super().__init__(time, **kwargs)
+        super().__init__(time, dt=dt, **kwargs)
         self.enc = encoding.rank_order

@@ -75,14 +75,8 @@ class SpokenMNIST(torch.utils.data.Dataset):
         audio = self.audio[ind][:self.num_samples, :]
         label = self.labels[ind]
 
-        return audio, label
-
-    def get_train(self, split: float=0.8) -> Tuple[torch.Tensor, torch.Tensor]:
-        warnings.warn("get_train() is going to be removed"
-                "in upcoming releases to encourage use of the full"
-                "DataLoader pipeline from PyTorch.", DeprecationWarning)
-
-        return self._get_train(split)
+        return {"audio": audio,
+                "label": label}
 
     def _get_train(self, split: float=0.8) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
@@ -128,13 +122,6 @@ class SpokenMNIST(torch.utils.data.Dataset):
             audio, labels = [torch.Tensor(audio[_]) for _ in perm], labels[perm]
 
         return audio, torch.Tensor(labels)
-
-    def get_test(self, split: float=0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
-        warnings.warn("get_train() is going to be removed"
-                "in upcoming releases to encourage use of the full"
-                "DataLoader pipeline from PyTorch.", DeprecationWarning)
-
-        return self._get_test(split)
 
     def _get_test(self, split: float=0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         # language=rst

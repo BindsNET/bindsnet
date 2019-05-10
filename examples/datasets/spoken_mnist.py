@@ -51,8 +51,8 @@ network.add_layer(input_layer, name='X')
 network.add_layer(out_layer, name='Y')
 network.add_connection(out_conn, source='X', target='Y')
 
-for step, (spike_audio, label) in enumerate(tqdm(train_dataloader)):
-    inpts = {'X': spike_audio}
+for step, batch in enumerate(tqdm(train_dataloader)):
+    inpts = {'X': batch["audio"]}
 
     # the audio has potentially a variable amount of time
     time = spike_audio.shape[1]

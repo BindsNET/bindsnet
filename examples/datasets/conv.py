@@ -87,11 +87,12 @@ network.add_connection(conv_conn, source='X', target='Y')
 # Train the network.
 print('Begin training.\n');
 
-for step, (spike_image, label) in enumerate(tqdm(train_dataloader)):
-    # spike_image is in BxTxCxHxW format
+for step, batch in enumerate(tqdm(train_dataloader)):
+    # batch contains image, label, encoded_image since an image_encoder
+    # was provided
 
-    # Get next input sample.
-    inpts = {'X': spike_image}
+    # batch["encoded_image"] is in BxTxCxHxW format
+    inpts = {'X': batch["encoded_image"]}
 
     # Run the network on the input.
     # Specify the location of the time dimension
