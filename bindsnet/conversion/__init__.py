@@ -207,6 +207,13 @@ class PassThroughNodes(nodes.Nodes):
         """
         self.s = torch.zeros(self.shape)
 
+    def _compute_decays(self) -> None:
+        # language=rst
+        """
+        Sets the relevant decays.
+        """
+        super()._compute_decays()
+
 
 class PermuteConnection(topology.AbstractConnection):
     # language=rst
