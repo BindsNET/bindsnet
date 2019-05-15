@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 with open('README.md') as f:
     long_description = f.read()
 
-version = '0.2.3'
+version = '0.2.4'
 
 setup(
     name='bindsnet',
@@ -14,7 +14,7 @@ setup(
     long_description_content_type='text/markdown',  # This is important!
     url='http://github.com/Hananel-Hazan/bindsnet',
     author='Daniel Saunders, Hananel Hazan, Darpan Sanghavi, Hassaan Khan',
-    author_email='djsaunde@cs.umass.edu',
+    author_email='danjsaund@gmail.com',
     packages=find_packages(),
     zip_safe=False,
     download_url='https://github.com/Hananel-Hazan/bindsnet/archive/%s.tar.gz' % version,
