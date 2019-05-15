@@ -37,7 +37,7 @@ class CustomPipeline(DataLoaderPipeline):
     def init_fn(self):
         pass
 
-    def _step(self, batch):
+    def step_(self, batch):
         self.network.reset_()
         inpts = {"I": batch["encoded_image"]}
         self.network.run(inpts,
@@ -58,7 +58,7 @@ class CustomPipeline(DataLoaderPipeline):
         return loss.item()
 
     def plots(self, input_batch, loss):
-        print("Loss at step %d: %f", (self.step_count, loss))
+        print("Loss at step %d: %f" % (self.step_count, loss))
 
     def test_step(self):
         pass
