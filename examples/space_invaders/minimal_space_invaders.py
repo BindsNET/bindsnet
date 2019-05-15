@@ -1,7 +1,7 @@
 import torch
 
 from bindsnet.network import Network
-from bindsnet.pipeline import Pipeline
+from bindsnet.pipeline import RLPipeline
 from bindsnet.learning import MSTDPET
 from bindsnet.encoding import bernoulli
 from bindsnet.network.topology import Connection
@@ -40,21 +40,10 @@ environment = GymEnvironment("SpaceInvaders-v0")
 environment.reset()
 
 # Build pipeline from specified components.
-pipeline = Pipeline(
-    network,
-    environment,
-    encoding=bernoulli,
-    action_function=select_multinomial,
-    output="Z",
-    time=1,
-    history_length=2,
-    delta=4,
-    plot_interval=100,
-    render_interval=5,
-)
+pipeline = RLPipeline(network, environment, encoding=bernoulli,
+                    action_function=select_multinomial, output='Z',
+                    time=1, history_length=2, delta=4,
+                    plot_interval=100, render_interval=5)
 
 # Run environment simulation and network training.
-while True:
-    pipeline.step()
-    if pipeline.done:
-        pipeline.reset_()
+pipeline.train()

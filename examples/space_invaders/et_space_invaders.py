@@ -9,7 +9,7 @@ from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Connection
-from bindsnet.pipeline import Pipeline
+from bindsnet.pipeline import RLPipeline
 from bindsnet.pipeline.action import select_multinomial
 from bindsnet.analysis.plotting import plot_weights
 
@@ -104,27 +104,13 @@ for layer in layers:
 environment = GymEnvironment("SpaceInvaders-v0")
 environment.reset()
 
-pipeline = Pipeline(
-    network,
-    environment,
-    encoding=bernoulli,
-    time=1,
-    history_length=5,
-    delta=10,
-    plot_interval=plot_interval,
-    print_interval=print_interval,
-    render_interval=render_interval,
-    action_function=select_multinomial,
-    output="R",
-)
+pipeline = RLPipeline(network, environment, encoding=bernoulli, time=1, history_length=5, delta=10,
+                    plot_interval=plot_interval, print_interval=print_interval, render_interval=render_interval,
+                    action_function=select_multinomial, output='R')
 
-weights_im = None
+
 try:
-    while True:
-        pipeline.step()
-        if pipeline.done:
-            pipeline.reset_()
-
+    pipeline.train()
 except KeyboardInterrupt:
     plt.close("all")
     environment.close()

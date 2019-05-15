@@ -1,15 +1,15 @@
 import torch
 import numpy as np
 
-from . import Pipeline
+from . import RLPipeline
 
 
-def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
+def select_multinomial(pipeline: RLPipeline, **kwargs) -> int:
     # language=rst
     """
     Selects an action probabilistically based on spiking activity from a network layer.
 
-    :param pipeline: Pipeline with environment that has an integer action space.
+    :param pipeline: RLPipeline with environment that has an integer action space.
     :return: Action sampled from multinomial over activity of similarly-sized output layer.
 
     Keyword arguments:
@@ -47,12 +47,12 @@ def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
     return action
 
 
-def select_softmax(pipeline: Pipeline, **kwargs) -> int:
+def select_softmax(pipeline: RLPipeline, **kwargs) -> int:
     # language=rst
     """
     Selects an action using softmax function based on spiking from a network layer.
 
-    :param pipeline: Pipeline with environment that has an integer action space.
+    :param pipeline: RLPipeline with environment that has an integer action space.
     :return: Action sampled from softmax over activity of similarly-sized output layer.
 
     Keyword arguments:
@@ -68,9 +68,7 @@ def select_softmax(pipeline: Pipeline, **kwargs) -> int:
         pipeline.network.layers[output].n == pipeline.env.action_space.n
     ), "Output layer size not equal to size of action space."
 
-    assert hasattr(
-        pipeline, "spike_record"
-    ), "Pipeline has not attribute named: spike_record."
+    assert hasattr(pipeline, 'spike_record'), 'RLPipeline has not attribute named: spike_record.'
 
     # Sum of previous iterations' spikes (Not yet implemented)
     spikes = torch.sum(pipeline.spike_record[output], dim=1)
@@ -84,12 +82,12 @@ def select_softmax(pipeline: Pipeline, **kwargs) -> int:
     return action
 
 
-def select_random(pipeline: Pipeline, **kwargs) -> int:
+def select_random(pipeline: RLPipeline, **kwargs) -> int:
     # language=rst
     """
     Selects an action randomly from the action space.
 
-    :param pipeline: Pipeline with environment that has an integer action space.
+    :param pipeline: RLPipeline with environment that has an integer action space.
     :return: Action randomly sampled over size of pipeline's action space.
     """
     # Choose action randomly from the action space.

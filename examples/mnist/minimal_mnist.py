@@ -9,7 +9,7 @@ network = DiehlAndCook2015(n_inpt=784, n_neurons=400, exc=22.5,
                            inh=17.5, dt=1.0, norm=78.4,
                            inpt_shape=(1,1,28,28))
 
-# Specify dataset wrapper environment.
+# Specify dataset
 mnist = MNIST(PoissonEncoder(time=50., dt=1.),
                       None,
                       '../../data/MNIST',

@@ -6,6 +6,7 @@ from .. import encoding
 __all__ = ['Encoder', 'SingleEncoder', 'RepeatEncoder',
            'BernoulliEncoder', 'PoissonEncoder', 'RankOrderEncoder']
 
+
 class Encoder:
     """
     Base class for spike encoding transforms.
