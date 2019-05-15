@@ -200,6 +200,13 @@ class PassThroughNodes(nodes.Nodes):
         """
         self.s = torch.zeros(self.shape)
 
+    def _compute_decays(self) -> None:
+        # language=rst
+        """
+        Sets the relevant decays.
+        """
+        super()._compute_decays()
+
 
 class PermuteConnection(topology.AbstractConnection):
     # language=rst
@@ -388,6 +395,79 @@ def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, per
     return ann
 
 
+def data_based_normalization_snn(snn: Network, data: torch.Tensor, time: int = 500) -> Network:
+    # language=rst
+    """
+    Use a dataset to rescale ANN weights and biases such that that the max activation is less than 1.
+
+    :param snn: Spiking neural network to normalize.
+    :param data: Data to use to perform data-based weight normalization``[n_examples, ...]``.
+    :param percentile: Percentile (in ``[0, 100]``) of activations to scale by in data-based normalization scheme.
+    :param time: Simulation time of SNN for each input.
+    :return: Spiking neural network with rescaled weights and biases according to activations on the dataset.
+    """
+
+    prev_layer = None
+    for layer in snn.layers:
+        if not isinstance(snn.layers[layer], SubtractiveResetIFNodes):
+            continue
+        layer_max = torch.zeros(len(data))
+        for i, datum in enumerate(data):
+            inp = datum.unsqueeze(0)
+            repeat_dims = torch.ones(len(inp.shape), dtype=torch.int8)
+            repeat_dims = (500, ) + tuple(repeat_dims.tolist())
+            inpts = {'Input': inp.unsqueeze(0).repeat(repeat_dims)}
+
+            max_activation = _get_snn_activations(snn=snn, inpts=inpts, time=time, layer=layer)
+            layer_max[i] = max_activation
+
+        snn.connections[(prev_layer, layer)].w = snn.connections[(prev_layer, layer)].w/torch.argmax(layer_max)
+        snn.connections[(prev_layer, layer)].b = snn.connections[(prev_layer, layer)].b/torch.argmax(layer_max)
+
+        prev_layer = layer
+
+    return  snn
+
+
+def _get_snn_activations(snn: Network, inpts: Dict[str, torch.Tensor], time: int,
+                         layer: str) -> torch.Tensor:
+    # language=rst
+    """
+    Get the activations of SNN after running the network.
+
+    :param snn: Spiking neural network object.
+    :param inpts: Dictionary of ``Tensor``s of shape ``[time, n_input]``.
+    :param time: Simulation time.
+    :param layer: Name of layer to record.
+    :return:  torch.Tensor of shape (time, activations).
+    """
+
+    # Effective number of timesteps.
+    timesteps = int(time / snn.dt)
+
+    # Get input to all layers.
+    inpts.update(snn.get_inputs())
+
+    max_activation = 0
+
+    # Simulate network activity for `time` timesteps.
+    for t in range(timesteps):
+        for l in snn.layers:
+            # Update each layer of nodes.
+            if isinstance(snn.layers[l], nodes.AbstractInput):
+                snn.layers[l].forward(x=inpts[l][t])
+            else:
+                snn.layers[l].forward(x=inpts[l])
+
+        max_activation = max(max_activation, torch.argmax(inpts[layer]))
+        # Get input to all layers.
+        inpts.update(snn.get_inputs())
+
+    snn.reset_()
+
+    return max_activation
+
+
 def _ann_to_snn_helper(prev, current, node_type, **kwargs):
     # language=rst
     """
@@ -468,7 +548,8 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
 
 
 def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Optional[torch.Tensor] = None,
-               percentile: float = 99.9, node_type: Optional[nodes.Nodes] = SubtractiveResetIFNodes, **kwargs) -> Network:
+               percentile: float = 99.9, node_type: Optional[nodes.Nodes] = SubtractiveResetIFNodes,
+               normalize_on_spikes: Optional[bool] = False, time: Optional[int] = 500, **kwargs) -> Network:
     # language=rst
     """
     Converts an artificial neural network (ANN) written as a ``torch.nn.Module`` into a near-equivalent spiking neural
@@ -479,6 +560,9 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     :param input_shape: Shape of input data.
     :param data: Data to use to perform data-based weight normalization of shape ``[n_examples, ...]``.
     :param percentile: Percentile (in ``[0, 100]``) of activations to scale by in data-based normalization scheme.
+    :param node_type: Type of nodes to use in the converted spiking neural network (``node.Nodes``).
+    :param normalize_on_spikes: Weather to normalize based on activations of SNN instead of ANN (requires ``data``).
+    :param time: Simulation time of SNN for each input. Used for normalizing based on spikes.
     :return: Spiking neural network implemented in PyTorch.
     """
     if isinstance(ann, str):
@@ -486,11 +570,10 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
 
     assert isinstance(ann, nn.Module)
 
-    if data is not None:
-        print()
-        print('Example data provided. Performing data-based normalization...')
-
-        t0 = t()
+    if data is None:
+        import warnings
+        warnings.warn('Data is None. Weights will not be scaled.', RuntimeWarning)
+    elif not normalize_on_spikes:
         ann = data_based_normalization(
             ann=ann, data=data.detach(), percentile=percentile
         )
@@ -534,5 +617,8 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     if layer is not None or connection is not None:
         snn.add_layer(layer, name=str(i))
         snn.add_connection(connection, source=str(i - 1), target=str(i))
+
+    if normalize_on_spikes:
+        snn = data_based_normalization_snn(snn=snn, data=data.detach(), time=time)
 
     return snn
