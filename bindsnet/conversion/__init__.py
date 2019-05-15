@@ -411,6 +411,7 @@ def data_based_normalization_snn(snn: Network, data: torch.Tensor, time: int = 5
     for layer in snn.layers:
         if not isinstance(snn.layers[layer], SubtractiveResetIFNodes):
             continue
+        print("Converting Layer: ", layer)
         layer_max = torch.zeros(len(data))
         for i, datum in enumerate(data):
             inp = datum.unsqueeze(0)
