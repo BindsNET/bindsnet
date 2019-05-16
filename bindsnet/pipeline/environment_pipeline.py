@@ -90,6 +90,8 @@ class RLPipeline(BasePipeline):
 
                 if batch['done']:
                     break
+            print("Episode %d - accumulated reward %f" %
+                    (self.episode, self.accumulated_reward))
 
     def env_step(self):
         # Render game.
@@ -132,7 +134,6 @@ class RLPipeline(BasePipeline):
             if self.network.reward_fn is not None:
                 self.network.reward_fn.update(**kwargs)
             self.reward_list.append(self.accumulated_reward)
-            self.accumulated_reward = 0.0
 
     def reset_(self) -> None:
         # language=rst

@@ -3,7 +3,7 @@ from typing import Tuple, List, Dict
 
 from .. import encoding
 
-__all__ = ['Encoder', 'SingleEncoder', 'RepeatEncoder',
+__all__ = ['Encoder', 'NullEncoder', 'SingleEncoder', 'RepeatEncoder',
            'BernoulliEncoder', 'PoissonEncoder', 'RankOrderEncoder']
 
 
@@ -21,6 +21,20 @@ class Encoder:
 
     def __call__(self, img):
         return self.enc(img, *self.enc_args, **self.enc_kwargs)
+
+class NullEncoder(Encoder):
+    """
+    Pass through of the datum that was input.
+    
+    WARNING - this is not a real enocder into spikes. Be careful with
+    the usage of this class.
+    """
+
+    def __init__(self):
+        pass
+
+    def __call__(self, img):
+        return img
 
 class SingleEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, sparsity: float = 0.3, **kwargs):
