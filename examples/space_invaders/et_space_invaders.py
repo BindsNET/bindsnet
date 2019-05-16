@@ -2,14 +2,14 @@ import torch
 import argparse
 import matplotlib.pyplot as plt
 
-from bindsnet.encoding import bernoulli
 from bindsnet.environment import GymEnvironment
+from bindsnet.datasets.spike_encoders import BernoulliEncoder
 from bindsnet.learning import MSTDPET
 from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Connection
-from bindsnet.pipeline import RLPipeline
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.pipeline.action import select_multinomial
 from bindsnet.analysis.plotting import plot_weights
 
@@ -100,13 +100,18 @@ for layer in layers:
     if layer in voltages:
         network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
+
 # Load SpaceInvaders environment.
-environment = GymEnvironment("SpaceInvaders-v0")
+environment = GymEnvironment('SpaceInvaders-v0',
+                             BernoulliEncoder(time=1, dt=network.dt),
+                             history_length=2, delta=4)
 environment.reset()
 
-pipeline = RLPipeline(network, environment, encoding=bernoulli, time=1, history_length=5, delta=10,
-                    plot_interval=plot_interval, print_interval=print_interval, render_interval=render_interval,
-                    action_function=select_multinomial, output='R')
+# Build pipeline from specified components.
+pipeline = EnvironmentPipeline(network, environment,
+                    action_function=select_multinomial, output='R',
+                    plot_interval=plot_interval, print_interval=print_interval,
+                    render_interval=render_interval)
 
 
 try:

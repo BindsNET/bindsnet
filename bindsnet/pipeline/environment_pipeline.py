@@ -15,7 +15,7 @@ from ..network.nodes import AbstractInput
 from .base_pipeline import BasePipeline
 
 
-class RLPipeline(BasePipeline):
+class EnvironmentPipeline(BasePipeline):
     # language=rst
     """
     Abstracts the interaction between network, environment (or dataset), input encoding, and environment feedback

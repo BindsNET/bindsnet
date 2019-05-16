@@ -1,7 +1,7 @@
 import torch
 
 from bindsnet.network import Network
-from bindsnet.pipeline import RLPipeline
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.learning import MSTDPET
 from bindsnet.datasets.spike_encoders import PoissonEncoder
 from bindsnet.network.topology import Connection
@@ -42,7 +42,7 @@ environment = GymEnvironment('SpaceInvaders-v0',
 environment.reset()
 
 # Build pipeline from specified components.
-pipeline = RLPipeline(network, environment,
+pipeline = EnvironmentPipeline(network, environment,
                     action_function=select_multinomial, output='Z',
                     plot_interval=100, render_interval=5)
 
