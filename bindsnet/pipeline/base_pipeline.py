@@ -43,7 +43,7 @@ class BasePipeline:
         self.plot_interval = kwargs.get('plot_interval', None)
         self.plot_length = kwargs.get('plot_length', 10)
 
-        self.print_interval = kwargs.get('print_interval', 100)
+        self.print_interval = kwargs.get('print_interval', None)
 
         self.test_interval = kwargs.get('test_interval', None)
 

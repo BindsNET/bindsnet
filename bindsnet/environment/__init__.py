@@ -126,12 +126,22 @@ class GymEnvironment(Environment):
             self.update_history()
             self.update_index()
 
-        self.obs = self.encoder(self.obs)
+        raw_obs = self.obs
+
+        # The new standard is BxTxCxHxW. The gym environment doesn't
+        # follow exactly the same protocol.
+        self.obs = self.encoder(self.obs).unsqueeze(1)
+        if self.obs.dim() == 4:
+            self.obs = self.obs.unsqueeze(2)
 
         self.episode_step_count += 1
 
         # Return converted observations and other information.
-        return self.obs, self.reward, self.done, info
+        return {"obs": self.obs,
+                "reward": self.reward,
+                "done": self.done,
+                "info": info,
+                "raw_obs": raw_obs}
 
     def reset(self) -> torch.Tensor:
         # language=rst

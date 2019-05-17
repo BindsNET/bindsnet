@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 
+import torch
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import torch
 from ..analysis.plotting import plot_spikes, plot_voltages
 
 class PipelineAnalyzer(ABC):
@@ -28,7 +29,8 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
     plots.
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        self.plot_type = kwargs.get('plot_type', 'color')
         plt.ion()
         self.plots = {}
 
@@ -36,7 +38,11 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         """
         Plot the processed observation after difference against history
         """
-        if obs in self.plots:
+
+        obs = obs.detach().cpu().numpy()
+        obs = np.transpose(obs, (1,2,0)).squeeze()
+
+        if tag in self.plots:
             obs_ax, obs_im = self.plots[tag]
         else:
             obs_ax, obs_im = None, None
@@ -48,7 +54,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             obs_ax.set_yticks(())
             obs_im = obs_ax.imshow(obs, cmap='gray')
             
-            self.plots[obs] = obs_ax, obs_im
+            self.plots[tag] = obs_ax, obs_im
         else:
             obs_im.set_data(obs)
 
@@ -57,10 +63,10 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         """
         Plot the accumulated reward for each episode.
         """
-        if obs in self.plots:
-            obs_ax, obs_im = self.plots[tag]
+        if tag in self.plots:
+            reward_ax, reward_im = self.plots[tag]
         else:
-            obs_ax, obs_im = None, None
+            reward_ax, reward_im = None, None
 
         # Compute moving average
         if self.reward_window is not None:
@@ -85,27 +91,29 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax.relim()
             reward_ax.autoscale_view()
 
-    def plot_spike(self, spike_record, tag='spike'):
-        if self.s_ims is None and self.s_axes is None:
-            self.s_ims, self.s_axes = plot_spikes(self.spike_record)
+    def plot_spikes(self, spike_record, tag='spike'):
+        if tag not in self.plots:
+            self.plots[tag] = plot_spikes(spike_record)
         else:
-            self.s_ims, self.s_axes = plot_spikes(self.spike_record, ims=self.s_ims, axes=self.s_axes)
+            s_im, s_ax = self.plots[tag]
+            self.plots[tag] = plot_spikes(spike_record, ims=s_im, axes=s_ax)
 
-    def plot_voltage(self, voltage_record, tag='voltage'):
-        if self.v_ims is None and self.v_axes is None:
-            self.v_ims, self.v_axes = plot_voltages(
-                self.voltage_record, plot_type=self.plot_type, threshold=self.threshold_value
+    def plot_voltage(self, voltage_record, threshold_value, tag='voltage'):
+        if tag not in self.plots:
+            self.plots[tag] = plot_voltages(
+                voltage_record, plot_type=self.plot_type, threshold=threshold_value
             )
         else:
-            self.v_ims, self.v_axes = plot_voltages(
-                self.voltage_record, ims=self.v_ims, axes=self.v_axes,
-                plot_type=self.plot_type, threshold=self.threshold_value
+            v_im, v_ax = self.plots[tag]
+            self.plots[tag] = plot_voltages(
+                voltage_record, ims=v_im, axes=v_ax,
+                plot_type=self.plot_type, threshold=threshold_value
             )
 
-    def plot_data(self, spike_record, voltage_record, tag='data'):
+    def plot_data(self, spike_record, voltage_record, threshold_value, tag='data'):
         # Initialize plots
         self.plot_spikes(spike_record, tag+'_s')
-        self.plot_voltage(voltage_record, tag+'_v')
+        self.plot_voltage(voltage_record, threshold_value, tag+'_v')
 
     def finalize_step(self):
         plt.pause(1e-8)

@@ -3,7 +3,7 @@ import torch
 from bindsnet.network import Network
 from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.learning import MSTDPET
-from bindsnet.datasets.spike_encoders import PoissonEncoder
+from bindsnet.datasets.spike_encoders import BernoulliEncoder
 from bindsnet.network.topology import Connection
 from bindsnet.environment import GymEnvironment
 from bindsnet.network.nodes import Input, LIFNodes
@@ -13,7 +13,7 @@ from bindsnet.pipeline.action import select_multinomial
 network = Network(dt=1.0)
 
 # Layers of neurons.
-inpt = Input(n=78 * 84, shape=[78, 84], traces=True)
+inpt = Input(n=78 * 84, shape=[1,1,78, 84], traces=True)
 middle = LIFNodes(n=225, traces=True, thresh=-52.0 + torch.randn(225))
 out = LIFNodes(n=60, refrac=0, traces=True, thresh=-40.0)
 
@@ -37,7 +37,7 @@ network.add_connection(middle_out, source="Y", target="Z")
 
 # Load SpaceInvaders environment.
 environment = GymEnvironment('SpaceInvaders-v0',
-                             PoissonEncoder(time=1, dt=network.dt),
+                             BernoulliEncoder(time=1, dt=network.dt),
                              history_length=2, delta=4)
 environment.reset()
 

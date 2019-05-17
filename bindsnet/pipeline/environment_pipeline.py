@@ -13,6 +13,7 @@ from ..network.monitors import Monitor
 from ..network.nodes import AbstractInput
 
 from .base_pipeline import BasePipeline
+from .pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
 
 
 class EnvironmentPipeline(BasePipeline):
@@ -66,15 +67,14 @@ class EnvironmentPipeline(BasePipeline):
         ]
 
         self.action = None
-        self.obs = None
         self.reward = None
-        self.done = None
 
         self.voltage_record = None
         self.threshold_value = None
         self.reward_plot = None
 
         self.first = True
+        self.analyzer = MatplotlibAnalyzer()
 
     def init_fn(self):
         pass
@@ -90,6 +90,7 @@ class EnvironmentPipeline(BasePipeline):
 
                 if batch['done']:
                     break
+
             print("Episode %d - accumulated reward %f" %
                     (self.episode, self.accumulated_reward))
 
@@ -103,7 +104,8 @@ class EnvironmentPipeline(BasePipeline):
             self.action = self.action_function(self, output=self.output)
 
         # Run a step of the environment.
-        self.obs, reward, self.done, info = self.env.step(self.action)
+        batch = self.env.step(self.action)
+        reward = batch['reward']
 
         # Set reward in case of delay.
         if self.reward_delay is not None:
@@ -115,8 +117,10 @@ class EnvironmentPipeline(BasePipeline):
         # Accumulate reward
         self.accumulated_reward += self.reward
 
-        return {'obs': self.obs, 'reward': reward,
-                'done': self.done, 'info': info}
+        batch['reward'] = self.reward
+        batch['accumulated_reward'] = self.accumulated_reward
+
+        return batch
 
     def step_(self, batch) -> None:
         # language=rst
@@ -130,7 +134,7 @@ class EnvironmentPipeline(BasePipeline):
         # Run the network on the spike train-encoded inputs.
         self.network.run(inpts=inpts, time=batch['obs'].shape[0], reward=reward)
 
-        if self.done:
+        if batch['done']:
             if self.network.reward_fn is not None:
                 self.network.reward_fn.update(**kwargs)
             self.reward_list.append(self.accumulated_reward)
@@ -144,5 +148,9 @@ class EnvironmentPipeline(BasePipeline):
         self.network.reset_()
         self.accumulated_reward = 0.0
 
-    def plots(self, batch, *args):
-        return
+    def plots(self, input_batch, *args):
+        self.analyzer.plot_obs(input_batch["obs"][0,...].sum(0))
+        self.analyzer.plot_spikes(self.get_spike_data())
+        self.analyzer.plot_voltage(*self.get_voltage_data())
+
+        self.analyzer.finalize_step()

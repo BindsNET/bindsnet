@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from ..network import Network
 from .base_pipeline import BasePipeline
-from .pipeline_analysis import PipelineAnalyzer
+from .pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
 
 class DataLoaderPipeline(BasePipeline):
     """
@@ -67,10 +67,13 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
                  train_ds: Dataset, **kwargs):
         super().__init__(network, train_ds, **kwargs)
 
+        self.analyzer = MatplotlibAnalyzer()
+
     def step_(self, batch):
         self.network.reset_()
         inpts = {"X": batch["encoded_image"]}
-        self.network.run(inpts, time=batch['encoded_image'].shape[0],
+        self.network.run(inpts,
+                time=batch['encoded_image'].shape[1],
                 input_time_dim=1)
 
         # Unsupervised training means that everything is stored inside
@@ -80,8 +83,12 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
     def init_fn(self):
         pass
 
-    def plots(self, input_batch):
-        return
+    def plots(self, input_batch, step_out):
+        self.analyzer.plot_obs(input_batch["encoded_image"][0,...].sum(0))
+        self.analyzer.plot_spikes(self.get_spike_data())
+        self.analyzer.plot_voltage(*self.get_voltage_data())
+
+        self.analyzer.finalize_step()
 
     def test_step(self):
         pass
