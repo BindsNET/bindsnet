@@ -85,7 +85,7 @@ class Network:
     """
 
     def __init__(self, dt: float = 1.0, learning: bool = True,
-                 reward_fn: Optional[AbstractReward] = None) -> None:
+                 reward_fn: Optional[AbstractReward] = None, **kwargs) -> None:
         # language=rst
         """
         Initializes network object.
@@ -100,7 +100,7 @@ class Network:
         self.monitors = {}
         self.learning = learning
         if reward_fn is not None:
-            self.reward_fn = reward_fn()
+            self.reward_fn = reward_fn(**kwargs)
         else:
             self.reward_fn = None
 

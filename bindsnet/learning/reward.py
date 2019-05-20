@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Union
 
 import torch
 
@@ -30,10 +29,10 @@ class AbstractReward(ABC):
 class MovingAvgRPE(AbstractReward):
     # language=rst
     """
-    Calculates reward prediction error (RPE) based on an exponential moving average (EMA) of past rewards.
+    Computes reward prediction error (RPE) based on an exponential moving average (EMA) of past rewards.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         # language=rst
         """
         Constructor for EMA reward prediction error.

@@ -13,7 +13,7 @@ class Nodes(ABC):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False) -> None:
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False, **kwargs) -> None:
         # language=rst
         """
         Abstract base class constructor.
@@ -66,7 +66,7 @@ class Nodes(ABC):
         if self.traces:
             # Decay and set spike traces.
             self.x *= self.trace_decay
-            self.x.masked_fill_(self.s, 1)
+            self.x += self.s.float()
 
         if self.sum_input:
             # Add current input to running sum.
@@ -113,7 +113,8 @@ class Input(Nodes, AbstractInput):
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None,
-                 traces: bool = False, tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False) -> None:
+                 traces: bool = False, tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
+                 **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of input neurons.
@@ -154,12 +155,13 @@ class Input(Nodes, AbstractInput):
 
 
 class RealInput(Nodes, AbstractInput):
+    # language=rst
     """
     Layer of nodes with user-specified real-valued outputs.
     """
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
-                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False) -> None:
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False, **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of input neurons.
@@ -187,7 +189,7 @@ class RealInput(Nodes, AbstractInput):
         if self.traces:
             # Decay and set spike traces.
             self.x *= self.trace_decay
-            self.x.masked_fill_(self.s != 0, 1)
+            self.x += self.s.float()
 
         if self.sum_input:
             # Add current input to running sum.
@@ -217,7 +219,7 @@ class McCullochPitts(Nodes):
 
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
                  tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
-                 thresh: Union[float, torch.Tensor] = 1.0) -> None:
+                 thresh: Union[float, torch.Tensor] = 1.0, **kwargs) -> None:
         # language=rst
         """
         Instantiates a McCulloch-Pitts layer of neurons.
@@ -270,7 +272,7 @@ class IFNodes(Nodes):
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
                  tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, reset: Union[float, torch.Tensor] = -65.0,
-                 refrac: Union[int, torch.Tensor] = 5, lbound: float = None) -> None:
+                 refrac: Union[int, torch.Tensor] = 5, lbound: float = None, **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of IF neurons.
@@ -349,7 +351,7 @@ class LIFNodes(Nodes):
                  tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
-                 tc_decay: Union[float, torch.Tensor] = 100.0, lbound: float = None) -> None:
+                 tc_decay: Union[float, torch.Tensor] = 100.0, lbound: float = None, **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons.
@@ -439,7 +441,7 @@ class CurrentLIFNodes(Nodes):
                  thresh: Union[float, torch.Tensor] = -52.0, rest: Union[float, torch.Tensor] = -65.0,
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
                  tc_decay: Union[float, torch.Tensor] = 100.0, tc_i_decay: Union[float, torch.Tensor] = 2.0,
-                 lbound: float = None) -> None:
+                 lbound: float = None, **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of synaptic input current-based LIF neurons.
@@ -535,7 +537,7 @@ class AdaptiveLIFNodes(Nodes):
                  rest: Union[float, torch.Tensor] = -65.0, reset: Union[float, torch.Tensor] = -65.0,
                  thresh: Union[float, torch.Tensor] = -52.0, refrac: Union[int, torch.Tensor] = 5,
                  tc_decay: Union[float, torch.Tensor] = 100.0, theta_plus: Union[float, torch.Tensor] = 0.05,
-                 tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None) -> None:
+                 tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None, **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of LIF neurons with adaptive firing thresholds.
@@ -634,7 +636,7 @@ class DiehlAndCookNodes(Nodes):
                  reset: Union[float, torch.Tensor] = -65.0, refrac: Union[int, torch.Tensor] = 5,
                  tc_decay: Union[float, torch.Tensor] = 100.0, theta_plus: Union[float, torch.Tensor] = 0.05,
                  tc_theta_decay: Union[float, torch.Tensor] = 1e7, lbound: float = None,
-                 one_spike: bool = True) -> None:
+                 one_spike: bool = True, **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of Diehl & Cook 2015 neurons.
@@ -738,7 +740,7 @@ class IzhikevichNodes(Nodes):
     def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
                  tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False, excitatory: float = 1,
                  thresh: Union[float, torch.Tensor] = 45.0, rest: Union[float, torch.Tensor] = -65.0,
-                 lbound: float = None) -> None:
+                 lbound: float = None, **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of Izhikevich neurons.
@@ -869,7 +871,8 @@ class SRM0Nodes(Nodes):
                  thresh: Union[float, torch.Tensor] = -50.0, rest: Union[float, torch.Tensor] = -70.0,
                  reset: Union[float, torch.Tensor] = -70.0, refrac: Union[int, torch.Tensor] = 5,
                  tc_decay: Union[float, torch.Tensor] = 10.0, lbound: float = None,
-                 rho_0: Union[float, torch.Tensor] = 1.0, dthresh: Union[float, torch.Tensor] = 5.0, **kwargs) -> None:
+                 eps_0: Union[float, torch.Tensor] = 1.0, rho_0: Union[float, torch.Tensor] = 1.0,
+                 d_thresh: Union[float, torch.Tensor] = 5.0, **kwargs) -> None:
         # language=rst
         """
         Instantiates a layer of SRM0 neurons.
@@ -885,8 +888,9 @@ class SRM0Nodes(Nodes):
         :param refrac: Refractory (non-firing) period of the neuron.
         :param tc_decay: Time constant of neuron voltage decay.
         :param lbound: Lower bound of the voltage.
+        :param eps_0: Scaling factor for pre-synaptic spike contributions.
         :param rho_0: Stochastic intensity at threshold.
-        :param dthresh: Width of the threshold region.
+        :param d_thresh: Width of the threshold region.
         """
         super().__init__(n, shape, traces, tc_trace, sum_input)
 
@@ -897,8 +901,9 @@ class SRM0Nodes(Nodes):
         self.tc_decay = torch.tensor(tc_decay)  # Time constant of neuron voltage decay.
         self.decay = None  # Set in _compute_decays.
         self.lbound = lbound  # Lower bound of voltage.
+        self.eps_0 = torch.tensor(eps_0)  # Scaling factor for pre-synaptic spike contributions.
         self.rho_0 = torch.tensor(rho_0)  # Stochastic intensity at threshold.
-        self.dthresh = torch.tensor(dthresh)  # Width of the threshold region.
+        self.d_thresh = torch.tensor(d_thresh)  # Width of the threshold region.
 
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
@@ -914,11 +919,11 @@ class SRM0Nodes(Nodes):
         self.v = self.decay * (self.v - self.rest) + self.rest
 
         # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * x
+        self.v += (self.refrac_count == 0).float() * self.eps_0 * x
 
         # Compute (instantaneous) probabilities of spiking, clamp between 0 and 1 using exponentials.
         # Also known as 'escape noise', this simulates nearby neurons.
-        self.rho = self.rho_0 * torch.exp((self.v - self.thresh) / self.dthresh)
+        self.rho = self.rho_0 * torch.exp((self.v - self.thresh) / self.d_thresh)
         self.s_prob = 1.0 - torch.exp(-self.rho * self.dt)
 
         # Decrement refractory counters.

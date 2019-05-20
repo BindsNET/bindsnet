@@ -28,7 +28,7 @@ class Pipeline:
 
     def __init__(self, network: Network, environment: Environment, encoding: Callable = bernoulli,
                  action_function: Optional[Callable] = None, enable_history: Optional[bool] = False,
-                 **kwargs):
+                 **kwargs) -> None:
         # language=rst
         """
         Initializes the pipeline.
