@@ -660,7 +660,6 @@ class Rmax(LearningRule):
 
         :param float tc_c: Time constant for balancing naive Hebbian and policy gradient learning.
         :param float tc_e_trace: Time constant for the eligibility trace.
-        :param float eps_0: Scaling factor for pre-synaptic spike contributions.
         """
         super().__init__(
             connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
@@ -681,7 +680,6 @@ class Rmax(LearningRule):
 
         self.tc_c = torch.tensor(kwargs.get('tc_c', 5.0))  # 0 for pure naive Hebbian, inf for pure policy gradient.
         self.tc_e_trace = torch.tensor(kwargs.get('tc_e_trace', 25.0))
-        self.eps_0 = torch.tensor(kwargs.get('eps_0', 1.0))
 
     def _connection_update(self, **kwargs) -> None:
         # language=rst
@@ -706,9 +704,8 @@ class Rmax(LearningRule):
 
         # New eligibility trace.
         self.eligibility_trace *= (1 - self.connection.dt / self.tc_e_trace)
-        self.eligibility_trace += (target_s -
-                                   (target_s_prob / (1.0 + self.tc_c / self.connection.dt * target_s_prob))) \
-                                  * self.eps_0 * source_x[:, None]
+        self.eligibility_trace += (target_s - (
+                target_s_prob / (1.0 + self.tc_c / self.connection.dt * target_s_prob))) * source_x[:, None]
 
         # Compute weight update.
         self.connection.w += self.nu[0] * reward * self.eligibility_trace
