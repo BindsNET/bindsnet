@@ -855,3 +855,101 @@ class IzhikevichNodes(Nodes):
         super().reset_()
         self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
         self.u = self.b * self.v  # Neuron recovery.
+
+
+class SRM0Nodes(Nodes):
+    # language=rst
+    """
+    Layer of simpliefied spike response model (SRM0) neurons with stochastic threshold (escape noise). Adapted from
+    `(Vasilaki et al., 2009) <https://intranet.physio.unibe.ch/Publikationen/Dokumente/Vasilaki2009PloSComputBio_1.pdf>`_.
+    """
+
+    def __init__(self, n: Optional[int] = None, shape: Optional[Iterable[int]] = None, traces: bool = False,
+                 tc_trace: Union[float, torch.Tensor] = 20.0, sum_input: bool = False,
+                 thresh: Union[float, torch.Tensor] = -50.0, rest: Union[float, torch.Tensor] = -70.0,
+                 reset: Union[float, torch.Tensor] = -70.0, refrac: Union[int, torch.Tensor] = 5,
+                 tc_decay: Union[float, torch.Tensor] = 10.0, lbound: float = None,
+                 rho_0: Union[float, torch.Tensor] = 1.0, dthresh: Union[float, torch.Tensor] = 5.0, **kwargs) -> None:
+        # language=rst
+        """
+        Instantiates a layer of SRM0 neurons.
+
+        :param n: The number of neurons in the layer.
+        :param shape: The dimensionality of the layer.
+        :param traces: Whether to record spike traces.
+        :param tc_trace: Time constant of spike trace decay.
+        :param sum_input: Whether to sum all inputs.
+        :param thresh: Spike threshold voltage.
+        :param rest: Resting membrane voltage.
+        :param reset: Post-spike reset voltage.
+        :param refrac: Refractory (non-firing) period of the neuron.
+        :param tc_decay: Time constant of neuron voltage decay.
+        :param lbound: Lower bound of the voltage.
+        :param rho_0: Stochastic intensity at threshold.
+        :param dthresh: Width of the threshold region.
+        """
+        super().__init__(n, shape, traces, tc_trace, sum_input)
+
+        self.rest = torch.tensor(rest)  # Rest voltage.
+        self.reset = torch.tensor(reset)  # Post-spike reset voltage.
+        self.thresh = torch.tensor(thresh)  # Spike threshold voltage.
+        self.refrac = torch.tensor(refrac)  # Post-spike refractory period.
+        self.tc_decay = torch.tensor(tc_decay)  # Time constant of neuron voltage decay.
+        self.decay = None  # Set in _compute_decays.
+        self.lbound = lbound  # Lower bound of voltage.
+        self.rho_0 = torch.tensor(rho_0)  # Stochastic intensity at threshold.
+        self.dthresh = torch.tensor(dthresh)  # Width of the threshold region.
+
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+    def forward(self, x: torch.Tensor) -> None:
+        # language=rst
+        """
+        Runs a single simulation step.
+
+        :param x: Inputs to the layer.
+        """
+        # Decay voltages.
+        self.v = self.decay * (self.v - self.rest) + self.rest
+
+        # Integrate inputs.
+        self.v += (self.refrac_count == 0).float() * x
+
+        # Compute (instantaneous) probabilities of spiking, clamp between 0 and 1 using exponentials.
+        # Also known as 'escape noise', this simulates nearby neurons.
+        self.rho = self.rho_0 * torch.exp((self.v - self.thresh) / self.dthresh)
+        self.s_prob = 1.0 - torch.exp(-self.rho * self.dt)
+
+        # Decrement refractory counters.
+        self.refrac_count = (self.refrac_count > 0).float() * (self.refrac_count - self.dt)
+
+        # Check for spiking neurons (spike when probability > some random number).
+        self.s = torch.rand(self.shape) < self.s_prob
+
+        # Refractoriness and voltage reset.
+        self.refrac_count.masked_fill_(self.s, self.refrac)
+        self.v.masked_fill_(self.s, self.reset)
+
+        # Voltage clipping to lower bound.
+        if self.lbound is not None:
+            self.v.masked_fill_(self.v < self.lbound, self.lbound)
+
+        super().forward(x)
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Resets relevant state variables.
+        """
+        super().reset_()
+        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+
+    def _compute_decays(self) -> None:
+        # language=rst
+        """
+        Sets the relevant decays.
+        """
+        super()._compute_decays()
+        self.decay = torch.exp(-self.dt / self.tc_decay)  # Neuron voltage decay (per timestep).
