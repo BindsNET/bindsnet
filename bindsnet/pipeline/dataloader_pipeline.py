@@ -11,7 +11,9 @@ from .pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
 class DataLoaderPipeline(BasePipeline):
     """
     A generic DataLoader pipeline that leverages the torch.utils.data
-    setup.
+    setup. This still needs to be subclasses for specific
+    implementations for functions given the dataset that will be used.
+    An example can be seen in `TorchVisionDatasetPipeline`.
     """
 
     def __init__(self, network: Network,
@@ -39,7 +41,12 @@ class DataLoaderPipeline(BasePipeline):
         self.pin_memory = kwargs.get('pin_memory', False)
         self.shuffle = kwargs.get('shuffle', True)
 
-    def train(self):
+    def train(self) -> None:
+        """
+        Training loop that runs for the set number of epochs and creates
+        a new DataLoader at each epoch.
+        """
+
         for epoch in range(self.num_epochs):
             train_dataloader = DataLoader(self.train_ds,
                     batch_size=self.batch_size,
@@ -67,11 +74,31 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
                  train_ds: Dataset,
                  pipeline_analyzer: Optional[PipelineAnalyzer]=None,
                  **kwargs):
+        """
+        Initialize the pipeline
+
+        :param network: Arbitrary network object
+        :param train_ds: A `torchvision.datasets` wrapper dataset from `bindsnet.datasets`
+
+        Keywork arguments
+
+        :param str input_layer: Layer of the network to place input
+        """
+
         super().__init__(network, train_ds, pipeline_analyzer, **kwargs)
 
-    def step_(self, batch):
+        self.input_layer = kwargs.get('input_layer', 'X')
+
+    def step_(self, batch: Dict[str, torch.Tensor]) -> None:
+        """
+        Perform a pass of the network given the input batch
+
+        :param batch: A dictionary of the current batch. Includes image,
+                      label and encoded versions.
+        """
+
         self.network.reset_()
-        inpts = {"X": batch["encoded_image"]}
+        inpts = {self.input_layer: batch["encoded_image"]}
         self.network.run(inpts,
                 time=batch['encoded_image'].shape[1],
                 input_time_dim=1)
@@ -80,13 +107,23 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         # of the network object
         return None
 
-    def init_fn(self):
+    def init_fn(self) -> None:
         pass
 
-    def plots(self, input_batch, step_out):
+    def plots(self, input_batch: Dict[str, torch.Tensor], step_out: None=None) -> None:
+        """
+        Create any plots and logs for a step given the input batch and
+        step output.
+
+        :param input_batch: The batch that was just passed into the network
+        :param step_out: The output from the step_ function
+        """
+
         self.pipeline_analyzer.plot_obs(input_batch["encoded_image"][0,...].sum(0))
         self.pipeline_analyzer.plot_spikes(self.get_spike_data())
         self.pipeline_analyzer.plot_voltage(*self.get_voltage_data())
+
+        self.pipeline_analyzer.finalize_step()
 
     def test_step(self):
         pass

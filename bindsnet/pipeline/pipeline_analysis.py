@@ -9,11 +9,11 @@ from ..analysis.plotting import plot_spikes, plot_voltages
 class PipelineAnalyzer(ABC):
     """
     Responsible for pipeline analysis. Subclasses maintain state
-    information related to plotting.
+    information related to plotting or logging.
     """
 
     @abstractmethod
-    def finalize_step(self):
+    def finalize_step(self) -> None:
         """
         Flush the output from the current step
         """
@@ -34,9 +34,10 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         plt.ion()
         self.plots = {}
 
-    def plot_obs(self, obs, tag='obs'):
+    def plot_obs(self, obs, tag='obs') -> None:
         """
-        Plot the processed observation after difference against history
+        Pulls the observation off of torch and sets up for matplotlib
+        plotting.
         """
 
         obs = obs.detach().cpu().numpy()
@@ -62,6 +63,10 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         # language=rst
         """
         Plot the accumulated reward for each episode.
+
+        :param list reward_list: The list of recent rewards to be plotted
+        :param int reward_window: The length of the window to compute a
+                                  moving average over
         """
         if tag in self.plots:
             reward_ax, reward_im = self.plots[tag]
@@ -71,12 +76,12 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         # Compute moving average
         if self.reward_window is not None:
             # Ensure window size > 0 and < size of reward list
-            window = max(min(len(self.reward_list), self.reward_window), 0)
+            window = max(min(len(reward_list), self.reward_window), 0)
 
             # Fastest implementation of moving average
-            reward_list_ = pd.Series(self.reward_list).rolling(window=window, min_periods=1).mean().values
+            reward_list_ = pd.Series(reward_list).rolling(window=window, min_periods=1).mean().values
         else:
-            reward_list_ = self.reward_list[:]
+            reward_list_ = reward_list[:]
 
         if reward_im is None and reward_ax is None:
             reward_im, reward_ax = plt.subplots()
@@ -91,7 +96,14 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax.relim()
             reward_ax.autoscale_view()
 
-    def plot_spikes(self, spike_record, tag='spike'):
+    def plot_spikes(self, spike_record: Dict[str, torch.Tensor], tag='spike'):
+        """
+        Plots all spike records inside of spike_record. Keeps unique
+        plots for all unique tags that are given.
+
+        :param dict spike_record: Dictionary of spikes to be rasterized
+        """
+
         if tag not in self.plots:
             self.plots[tag] = plot_spikes(spike_record)
         else:
@@ -99,6 +111,15 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             self.plots[tag] = plot_spikes(spike_record, ims=s_im, axes=s_ax)
 
     def plot_voltage(self, voltage_record, threshold_value, tag='voltage'):
+        """
+        Plots all voltage records and given thresholds. Keeps unique
+        plots for all unique tags that are given.
+
+        :param dict voltage_record: Dictionary of voltages for neurons
+        inside of networks organized by the layer they correspond to
+        :param dict threshold_value: Dictionary of threshold values for
+        neurons
+        """
         if tag not in self.plots:
             self.plots[tag] = plot_voltages(
                 voltage_record, plot_type=self.plot_type, threshold=threshold_value
@@ -111,6 +132,16 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             )
 
     def plot_data(self, spike_record, voltage_record, threshold_value, tag='data'):
+        """
+        Convience function that wraps plot_spikes and plot_voltage in a
+        single call.
+
+        :param dict spike_record: Dictionary of spikes to be rasterized
+        :param dict voltage_record: Dictionary of voltages for neurons
+        inside of networks organized by the layer they correspond to
+        :param dict threshold_value: Dictionary of threshold values for
+        neurons
+        """
         # Initialize plots
         self.plot_spikes(spike_record, tag+'_s')
         self.plot_voltage(voltage_record, threshold_value, tag+'_v')

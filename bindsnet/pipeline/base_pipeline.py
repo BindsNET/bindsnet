@@ -1,6 +1,6 @@
 import torch
 
-from typing import Optional
+from typing import Optional, Tuple, Dict, Any
 import time
 
 from ..network import Network
@@ -73,9 +73,16 @@ class BasePipeline:
         self.network.reset_()
         self.step_count = 0
 
-    def step(self, batch) -> None:
+    def step(self, batch) -> Any:
         """
-        Single step of any pipeline. Requires these moving components
+        Single step of any pipeline at a high level.
+
+        :param batch: A batch of inputs to be handed to the step_
+                      function. This is an agreed upon standard in a
+                      subclass of the BasePipeline.
+
+        :return: The output from the subclass' step_ method which could
+                 be anything. Passed to plotting to accomadate this.
         """
 
         net_out = self.step_(batch)
@@ -97,17 +104,22 @@ class BasePipeline:
 
         return net_out
 
-    def get_spike_data(self) -> None:
+    def get_spike_data(self) -> Dict[str, torch.Tensor]:
         # language=rst
         """
         Get the spike data from all layers in the pipeline's network.
+
+        :return: A dictionary containing all spike monitors from the network.
         """
         return {l: self.network.monitors[f'{l}_spikes'].get('s') for l in self.network.layers}
 
-    def get_voltage_data(self) -> None:
+    def get_voltage_data(self) -> Tuple[Dict[str, torch.Tensor],Dict[str, torch.Tensor]]:
         # language=rst
         """
         Get the voltage data and threshold value from all applicable layers in the pipeline's network.
+
+        :return: Two dictionaries containing the voltage data and
+                 threshold values from the network.
         """
         voltage_record = {}
         threshold_value = {}
@@ -119,17 +131,42 @@ class BasePipeline:
 
         return voltage_record, threshold_value
 
-    def step_(self, batch):
+    def step_(self, batch: Any) -> Any:
+        """
+        Perform a pass of the network given the input batch
+
+        :param batch: The current batch. This could be anything as long
+        as the subclass agrees upon the format in some way.
+
+        :return: Any output that is need for recording purposes.
+        """
         raise NotImplementedError('You need to provide a step_ method')
 
-    def train(self):
+    def train(self) -> None:
+        """
+        A fully self contained training loop.
+        """
         raise NotImplementedError('You need to provide a train method')
 
-    def test(self):
+    def test(self) -> None:
+        """
+        A fully self contained test function.
+        """
         raise NotImplementedError('You need to provide a test method')
 
-    def init_fn(self):
+    def init_fn(self) -> None:
+        """
+        Place holder function for subclass specific actions that need to
+        happen during the constructor of the BasePipeline.
+        """
         raise NotImplementedError('You need to provide an init_fn method')
 
-    def plots(self, batch, *args):
+    def plots(self, batch, step_output) -> None:
+        """
+        Create any plots and logs for a step given the input batch and
+        step output.
+
+        :param input_batch: The batch that was just passed into the network
+        :param step_out: The output from the step_ function
+        """
         raise NotImplementedError('You need to provide a plots method')
