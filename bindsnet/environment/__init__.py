@@ -67,7 +67,11 @@ class GymEnvironment(Environment):
     def __init__(self, name: str, encoder: Encoder, **kwargs) -> None:
         # language=rst
         """
-        Initializes the environment wrapper.
+        Initializes the environment wrapper. This class makes the
+        assumption that the OpenAI gym environment will provide an image
+        of format HxW or CxHxW as an observation (we will add the C
+        dimension to HxW tensors) or a 1D observation in which case no
+        dimensions will be added.
 
         :param name: The name of an OpenAI :code:`gym` environment.
         :param encoder: Function to encode observations into spike trains.
@@ -79,6 +83,8 @@ class GymEnvironment(Environment):
 
         :param int history: Number of observations to keep track of.
         :param int delta: Step size to save observations in history.
+        :param bool add_channel_dim: Allows for the adding of the channel
+        dimension in 2D inputs
         """
         self.name = name
         self.env = gym.make(name)
@@ -91,6 +97,7 @@ class GymEnvironment(Environment):
 
         self.history_length = kwargs.get('history_length', None)
         self.delta = kwargs.get('delta', 1)
+        self.add_channel_dim = kwargs.get('add_channel_dim', True)
 
         if self.history_length is not None and self.delta is not None:
             self.history = {i: torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
@@ -133,17 +140,22 @@ class GymEnvironment(Environment):
             # display
             info['delta_obs'] = self.obs
 
-        # The new standard is BxTxCxHxW. The gym environment doesn't
-        # follow exactly the same protocol.
+        # The new standard for images is BxTxCxHxW.
+        # The gym environment doesn't follow exactly the same protocol.
+        # 
+        # 1D observations will be left as is before the encoder and will
+        # become BxTxL
+        # 2D observations are assumed to be mono images will become BxTx1xHxW
+        # 3D observations will become BxTxCxHxW
 
-        # we want CxHxW. If it is in HxW add in  the channel dimension
-        if self.obs.dim() == 2:
+        if self.obs.dim() == 2 and self.add_channel_dim:
+            # we want CxHxW, it is currently HxW
             self.obs = self.obs.unsqueeze(0)
 
-        # the encoder will add time - now TxCxHxW
+        # the encoder will add time - now Tx...
         self.obs = self.encoder(self.obs)
 
-        # add the batch - now BxTxCxHxW
+        # add the batch - now BxTx...
         self.obs = self.obs.unsqueeze(0)
 
         self.episode_step_count += 1
