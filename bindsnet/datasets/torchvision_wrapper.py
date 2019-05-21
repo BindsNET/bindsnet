@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 import warnings
 
 import torch
@@ -47,7 +47,17 @@ def torchvision_dataset_wrapper_creator(ds_type):
             self.image_encoder = image_encoder
             self.label_encoder = label_encoder
 
-        def __getitem__(self, ind):
+        def __getitem__(self, ind: int) -> Dict[str, torch.Tensor]:
+            """
+            Utilizes the torchvision.dataset parent class to grab the
+            data, then encodes using the supplied encoders.
+
+            :param int ind: Index to grab data at
+
+            :return: The relevant data and encoded data from the
+            requested index.
+            """
+
             image, label = super().__getitem__(ind)
 
             output = {"image": image, "label": label}

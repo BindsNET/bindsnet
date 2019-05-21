@@ -1,12 +1,11 @@
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple, Dict
 import itertools
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 
-from ..encoding import bernoulli
 from ..environment import Environment
 from ..network import Network
 from ..network.monitors import Monitor
@@ -19,11 +18,11 @@ from .pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
 class EnvironmentPipeline(BasePipeline):
     # language=rst
     """
-    Abstracts the interaction between network, environment (or dataset), input encoding, and environment feedback
+    Abstracts the interaction between network, environment (or dataset), and environment feedback
     action.
     """
 
-    def __init__(self, network: Network, environment: Environment, encoding: Callable = bernoulli,
+    def __init__(self, network: Network, environment: Environment,
                  action_function: Optional[Callable] = None, **kwargs):
         # language=rst
         """
@@ -67,7 +66,6 @@ class EnvironmentPipeline(BasePipeline):
         ]
 
         self.action = None
-        self.reward = None
 
         self.voltage_record = None
         self.threshold_value = None
@@ -79,7 +77,12 @@ class EnvironmentPipeline(BasePipeline):
     def init_fn(self):
         pass
 
-    def train(self):
+    def train(self) -> None:
+        """
+        Runs for the specified number of episodes from the Environment.
+        Each episode can be an arbitrary length.
+        """
+
         for self.episode in range(self.num_episodes):
             self.reset_()
 
@@ -94,7 +97,15 @@ class EnvironmentPipeline(BasePipeline):
             print("Episode %d - accumulated reward %f" %
                     (self.episode, self.accumulated_reward))
 
-    def env_step(self):
+    def env_step(self) -> Tuple[torch.Tensor, float, bool, Dict]:
+        """
+        Single step of the environment which includes rendering, getting
+        and performing the action, and accumulating/delaying rewards.
+
+        :return: An OpenAI gym compatible return with modified reward
+        and info
+        """
+
         # Render game.
         if self.render_interval is not None and self.step_count % self.render_interval == 0:
             self.env.render()
@@ -109,12 +120,10 @@ class EnvironmentPipeline(BasePipeline):
         # Set reward in case of delay.
         if self.reward_delay is not None:
             self.rewards = torch.tensor([reward, *self.rewards[1:]]).float()
-            self.reward = self.rewards[-1]
-        else:
-            self.reward = reward
+            reward = self.rewards[-1]
 
         # Accumulate reward
-        self.accumulated_reward += self.reward
+        self.accumulated_reward += reward
 
         info['accumulated_reward'] = self.accumulated_reward
 
@@ -123,7 +132,8 @@ class EnvironmentPipeline(BasePipeline):
     def step_(self, gym_batch) -> None:
         # language=rst
         """
-        Run an iteration of the network and log any needed data
+        Run a single iteration of the network and if it is done update
+        the network and reward list
         """
 
         obs, reward, done, info = gym_batch
@@ -142,6 +152,8 @@ class EnvironmentPipeline(BasePipeline):
                 self.network.reward_fn.update(**kwargs)
             self.reward_list.append(self.accumulated_reward)
 
+        return None
+
     def reset_(self) -> None:
         # language=rst
         """
@@ -152,6 +164,10 @@ class EnvironmentPipeline(BasePipeline):
         self.accumulated_reward = 0.0
 
     def plots(self, gym_batch, *args):
+        """
+        Plots the encoded input, layer spikes, and layer voltages
+        """
+
         obs, reward, done, info = gym_batch
 
         self.analyzer.plot_obs(obs[0,...].sum(0))
