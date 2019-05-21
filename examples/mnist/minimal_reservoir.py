@@ -22,16 +22,20 @@ class LogisticRegression(nn.Module):
     def forward(self, x):
         return F.sigmoid(self.linear(x)).unsqueeze(0)
 
+
 class CustomPipeline(DataLoaderPipeline):
-    def __init__(self, network: Network,
-                 train_ds: torch.utils.data.Dataset,
-                 test_ds: torch.utils.data.Dataset,
-                 logistic_reg: LogisticRegression,
-                 **kwargs):
+    def __init__(
+        self,
+        network: Network,
+        train_ds: torch.utils.data.Dataset,
+        test_ds: torch.utils.data.Dataset,
+        logistic_reg: LogisticRegression,
+        **kwargs
+    ):
         super().__init__(network, train_ds, test_ds, **kwargs)
 
         self.model = logistic_reg
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.1)  
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.1)
         self.loss = nn.CrossEntropyLoss()
 
     def init_fn(self):
@@ -40,18 +44,15 @@ class CustomPipeline(DataLoaderPipeline):
     def step_(self, batch):
         self.network.reset_()
         inpts = {"I": batch["encoded_image"]}
-        self.network.run(inpts,
-                time=batch['encoded_image'].shape[0],
-                input_time_dim=1)
+        self.network.run(inpts, time=batch["encoded_image"].shape[0], input_time_dim=1)
 
-        s = network.monitors['output_spikes'].get('s').sum(-1)
+        s = network.monitors["output_spikes"].get("s").sum(-1)
         label = batch["label"]
 
         # train the logistic regression model
         self.optimizer.zero_grad()
         output = self.model(s.float())
-        loss = self.loss(output,
-                         label.long())
+        loss = self.loss(output, label.long())
         loss.backward()
         self.optimizer.step()
 
@@ -63,29 +64,38 @@ class CustomPipeline(DataLoaderPipeline):
     def test_step(self):
         pass
 
+
 # Build a simple, two layer, "input-output" network.
 network = Network(dt=1.0)
 
-inpt = Input(784, shape=(1, 1, 28, 28)); network.add_layer(inpt, name='I')
-output = LIFNodes(625, thresh=-52 + torch.randn(625)); network.add_layer(output, name='O')
-network.add_connection(Connection(inpt, output, w=torch.randn(inpt.n, output.n)), 'I', 'O')
-network.add_connection(Connection(output, output, w=0.5*torch.randn(output.n, output.n)), 'O', 'O')
+inpt = Input(784, shape=(1, 1, 28, 28))
+network.add_layer(inpt, name="I")
+output = LIFNodes(625, thresh=-52 + torch.randn(625))
+network.add_layer(output, name="O")
+network.add_connection(
+    Connection(inpt, output, w=torch.randn(inpt.n, output.n)), "I", "O"
+)
+network.add_connection(
+    Connection(output, output, w=0.5 * torch.randn(output.n, output.n)), "O", "O"
+)
 
 # Specify dataset
-mnist = MNIST(PoissonEncoder(time=250., dt=1.),
-                      None,
-                      '../../data/MNIST',
-                      download=True,
-                      train=True,
-                      transform=transforms.Compose([
-                          transforms.ToTensor(),
-                          transforms.Lambda(lambda x: x*128.),
-                      ]))
+mnist = MNIST(
+    PoissonEncoder(time=250.0, dt=1.0),
+    None,
+    "../../data/MNIST",
+    download=True,
+    train=True,
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * 128.0)]
+    ),
+)
 
 log_reg_model = LogisticRegression(625, 10)
 
-pipeline = CustomPipeline(network, mnist, mnist, log_reg_model,
-        plot_interval=100, plot_length=10)
+pipeline = CustomPipeline(
+    network, mnist, mnist, log_reg_model, plot_interval=100, plot_length=10
+)
 
 pipeline.train()
 
@@ -95,10 +105,10 @@ pipeline.train()
 #     network.run(inpts={'I' : datum}, time=250)
 #     test_pairs.append([network.monitors['output_spikes'].get('s').sum(-1), label])
 #     network.reset_()
-#     
+#
 #     if (i + 1) % 50 == 0: print('Test progress: (%d / 500)' % (i + 1))
 #     if (i + 1) == 500: print(); break  # stop after 500 test examples
-# 
+#
 # # Test the logistic regression model on (spikes, label) pairs.
 # correct, total = 0, 0
 # for s, label in test_pairs:

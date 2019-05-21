@@ -25,22 +25,22 @@ from bindsnet.analysis.plotting import (
 print()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--seed', type=int, default=0)
-parser.add_argument('--n_epochs', type=int, default=1)
-parser.add_argument('--n_test', type=int, default=10000)
-parser.add_argument('--kernel_size', type=int, default=16)
-parser.add_argument('--stride', type=int, default=4)
-parser.add_argument('--n_filters', type=int, default=25)
-parser.add_argument('--padding', type=int, default=0)
-parser.add_argument('--time', type=int, default=50)
-parser.add_argument('--dt', type=int, default=1.0)
-parser.add_argument('--intensity', type=float, default=128.)
-parser.add_argument('--progress_interval', type=int, default=10)
-parser.add_argument('--update_interval', type=int, default=250)
-parser.add_argument('--train', dest='train', action='store_true')
-parser.add_argument('--test', dest='train', action='store_false')
-parser.add_argument('--plot', dest='plot', action='store_true')
-parser.add_argument('--gpu', dest='gpu', action='store_true')
+parser.add_argument("--seed", type=int, default=0)
+parser.add_argument("--n_epochs", type=int, default=1)
+parser.add_argument("--n_test", type=int, default=10000)
+parser.add_argument("--kernel_size", type=int, default=16)
+parser.add_argument("--stride", type=int, default=4)
+parser.add_argument("--n_filters", type=int, default=25)
+parser.add_argument("--padding", type=int, default=0)
+parser.add_argument("--time", type=int, default=50)
+parser.add_argument("--dt", type=int, default=1.0)
+parser.add_argument("--intensity", type=float, default=128.0)
+parser.add_argument("--progress_interval", type=int, default=10)
+parser.add_argument("--update_interval", type=int, default=250)
+parser.add_argument("--train", dest="train", action="store_true")
+parser.add_argument("--test", dest="train", action="store_false")
+parser.add_argument("--plot", dest="plot", action="store_true")
+parser.add_argument("--gpu", dest="gpu", action="store_true")
 parser.set_defaults(plot=False, gpu=False, train=True)
 
 args = parser.parse_args()
@@ -115,15 +115,16 @@ voltage_monitor = Monitor(network.layers["Y"], ["v"], time=time)
 network.add_monitor(voltage_monitor, name="output_voltage")
 
 # Load MNIST data.
-train_dataset = MNIST(PoissonEncoder(time=time, dt=dt),
-                      None,
-                      '../../data/MNIST',
-                      download=True,
-                      train=True,
-                      transform=transforms.Compose([
-                          transforms.ToTensor(),
-                          transforms.Lambda(lambda x: x*intensity),
-                      ]))
+train_dataset = MNIST(
+    PoissonEncoder(time=time, dt=dt),
+    None,
+    "../../data/MNIST",
+    download=True,
+    train=True,
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+    ),
+)
 
 spikes = {}
 for layer in set(network.layers):
@@ -141,18 +142,17 @@ start = t()
 
 for epoch in range(n_epochs):
     if epoch % progress_interval == 0:
-        print('Progress: %d / %d (%.4f seconds)' % (epoch, n_epochs, t() - start));
+        print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
         start = t()
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset,
-                                                   batch_size=1,
-                                                   shuffle=True,
-                                                   num_workers=0)
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=1, shuffle=True, num_workers=0
+    )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
         # Get next input sample.
 
-        inpts = {'X': batch["encoded_image"]}
+        inpts = {"X": batch["encoded_image"]}
         label = batch["label"]
 
         # Run the network on the input.
@@ -160,13 +160,17 @@ for epoch in range(n_epochs):
 
         # Optionally plot various simulation information.
         if plot:
-            image = batch["image"].view(28,28)
+            image = batch["image"].view(28, 28)
 
-            inpt = inpts['X'].view(time, 784).sum(0).view(28, 28)
+            inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
             weights1 = conv_conn.w
-            _spikes = {'X': spikes['X'].get('s').view(28 ** 2, time),
-                       'Y': spikes['Y'].get('s').view(n_filters * conv_size ** 2, time)}
-            _voltages = {'Y': voltages['Y'].get('v').view(n_filters * conv_size ** 2, time)}
+            _spikes = {
+                "X": spikes["X"].get("s").view(28 ** 2, time),
+                "Y": spikes["Y"].get("s").view(n_filters * conv_size ** 2, time),
+            }
+            _voltages = {
+                "Y": voltages["Y"].get("v").view(n_filters * conv_size ** 2, time)
+            }
 
             if step == 0 and epoch == 0:
                 inpt_axes, inpt_ims = plot_input(image, inpt, label=label)
@@ -175,16 +179,20 @@ for epoch in range(n_epochs):
                 voltage_ims, voltage_axes = plot_voltages(_voltages)
 
             else:
-                inpt_axes, inpt_ims = plot_input(image, inpt, label=label,
-                                                 axes=inpt_axes, ims=inpt_ims)
-                spike_ims, spike_axes = plot_spikes(_spikes, ims=spike_ims,
-                                                    axes=spike_axes)
+                inpt_axes, inpt_ims = plot_input(
+                    image, inpt, label=label, axes=inpt_axes, ims=inpt_ims
+                )
+                spike_ims, spike_axes = plot_spikes(
+                    _spikes, ims=spike_ims, axes=spike_axes
+                )
                 weights1_im = plot_conv2d_weights(weights1, im=weights1_im)
-                voltage_ims, voltage_axes = plot_voltages(_voltages, ims=voltage_ims, axes=voltage_axes)
+                voltage_ims, voltage_axes = plot_voltages(
+                    _voltages, ims=voltage_ims, axes=voltage_axes
+                )
 
             plt.pause(1e-8)
 
         network.reset_()  # Reset state variables.
 
-print('Progress: %d / %d (%.4f seconds)\n' % (n_epochs, n_epochs, t() - start))
-print('Training complete.\n')
+print("Progress: %d / %d (%.4f seconds)\n" % (n_epochs, n_epochs, t() - start))
+print("Training complete.\n")

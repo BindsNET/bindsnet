@@ -269,11 +269,11 @@ class Network:
             plt.show()
         """
         # Parse keyword arguments.
-        clamps = kwargs.get('clamp', {})
-        unclamps = kwargs.get('unclamp', {})
-        masks = kwargs.get('masks', {})
-        injects_v = kwargs.get('injects_v', {})
-        input_time_dim = kwargs.get('input_time_dim', 0)
+        clamps = kwargs.get("clamp", {})
+        unclamps = kwargs.get("unclamp", {})
+        masks = kwargs.get("masks", {})
+        injects_v = kwargs.get("injects_v", {})
+        input_time_dim = kwargs.get("input_time_dim", 0)
 
         # Compute reward.
         if self.reward_fn is not None:
@@ -284,10 +284,10 @@ class Network:
 
         # convert an int input to a dictionary
         if type(input_time_dim) == int:
-            input_time_dim = {k:input_time_dim for k in inpts.keys()}
+            input_time_dim = {k: input_time_dim for k in inpts.keys()}
 
         # keep around a list of slices for each input
-        time_slices = {k:[slice(None)]*inpts[k].dim() for k in inpts.keys()}
+        time_slices = {k: [slice(None)] * inpts[k].dim() for k in inpts.keys()}
 
         # Get input to all layers.
         inpts.update(self.get_inputs())

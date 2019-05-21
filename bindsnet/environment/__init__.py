@@ -95,12 +95,15 @@ class GymEnvironment(Environment):
         self.max_prob = kwargs.get("max_prob", 1)
         self.clip_rewards = kwargs.get("clip_rewards", True)
 
-        self.history_length = kwargs.get('history_length', None)
-        self.delta = kwargs.get('delta', 1)
-        self.add_channel_dim = kwargs.get('add_channel_dim', True)
+        self.history_length = kwargs.get("history_length", None)
+        self.delta = kwargs.get("delta", 1)
+        self.add_channel_dim = kwargs.get("add_channel_dim", True)
 
         if self.history_length is not None and self.delta is not None:
-            self.history = {i: torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
+            self.history = {
+                i: torch.Tensor()
+                for i in range(1, self.history_length * self.delta + 1, self.delta)
+            }
         else:
             self.history = {}
 
@@ -130,7 +133,7 @@ class GymEnvironment(Environment):
 
         # Add the raw observation from the gym environment into the info
         # for debugging and display
-        info['gym_obs'] = self.obs
+        info["gym_obs"] = self.obs
 
         # Store frame of history and encode the inputs.
         if len(self.history) > 0:
@@ -138,11 +141,11 @@ class GymEnvironment(Environment):
             self.update_index()
             # add the delta observation into the info for debugging and
             # display
-            info['delta_obs'] = self.obs
+            info["delta_obs"] = self.obs
 
         # The new standard for images is BxTxCxHxW.
         # The gym environment doesn't follow exactly the same protocol.
-        # 
+        #
         # 1D observations will be left as is before the encoder and will
         # become BxTxL
         # 2D observations are assumed to be mono images will become BxTx1xHxW
@@ -232,7 +235,9 @@ class GymEnvironment(Environment):
             if self.episode_step_count % self.delta == 0:
                 self.history[self.history_index] = self.obs
 
-            assert (len(self.history) == self.history_length), 'History size is out of bounds'
+            assert (
+                len(self.history) == self.history_length
+            ), "History size is out of bounds"
             self.obs = temp
 
     def update_index(self) -> None:

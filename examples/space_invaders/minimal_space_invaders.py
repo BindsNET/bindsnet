@@ -13,7 +13,7 @@ from bindsnet.pipeline.action import select_multinomial
 network = Network(dt=1.0)
 
 # Layers of neurons.
-inpt = Input(n=78 * 84, shape=[1,1,78, 84], traces=True)
+inpt = Input(n=78 * 84, shape=[1, 1, 78, 84], traces=True)
 middle = LIFNodes(n=225, traces=True, thresh=-52.0 + torch.randn(225))
 out = LIFNodes(n=60, refrac=0, traces=True, thresh=-40.0)
 
@@ -36,15 +36,23 @@ network.add_connection(inpt_middle, source="X", target="Y")
 network.add_connection(middle_out, source="Y", target="Z")
 
 # Load SpaceInvaders environment.
-environment = GymEnvironment('SpaceInvaders-v0',
-                             BernoulliEncoder(time=1, dt=network.dt),
-                             history_length=2, delta=4)
+environment = GymEnvironment(
+    "SpaceInvaders-v0",
+    BernoulliEncoder(time=1, dt=network.dt),
+    history_length=2,
+    delta=4,
+)
 environment.reset()
 
 # Build pipeline from specified components.
-pipeline = EnvironmentPipeline(network, environment,
-                    action_function=select_multinomial, output='Z',
-                    plot_interval=100, render_interval=5)
+pipeline = EnvironmentPipeline(
+    network,
+    environment,
+    action_function=select_multinomial,
+    output="Z",
+    plot_interval=100,
+    render_interval=5,
+)
 
 # Run environment simulation and network training.
 pipeline.train()

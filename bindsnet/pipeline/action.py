@@ -68,7 +68,9 @@ def select_softmax(pipeline: EnvironmentPipeline, **kwargs) -> int:
         pipeline.network.layers[output].n == pipeline.env.action_space.n
     ), "Output layer size not equal to size of action space."
 
-    assert hasattr(pipeline, 'spike_record'), 'EnvironmentPipeline has not attribute named: spike_record.'
+    assert hasattr(
+        pipeline, "spike_record"
+    ), "EnvironmentPipeline has not attribute named: spike_record."
 
     # Sum of previous iterations' spikes (Not yet implemented)
     spikes = torch.sum(pipeline.spike_record[output], dim=1)

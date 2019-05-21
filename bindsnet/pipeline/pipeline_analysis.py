@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from ..analysis.plotting import plot_spikes, plot_voltages
 
+
 class PipelineAnalyzer(ABC):
     """
     Responsible for pipeline analysis. Subclasses maintain state
@@ -20,6 +21,7 @@ class PipelineAnalyzer(ABC):
         """
         pass
 
+
 class MatplotlibAnalyzer(PipelineAnalyzer):
     """
     Renders output using matplotlib.
@@ -31,18 +33,18 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
     """
 
     def __init__(self, **kwargs):
-        self.plot_type = kwargs.get('plot_type', 'color')
+        self.plot_type = kwargs.get("plot_type", "color")
         plt.ion()
         self.plots = {}
 
-    def plot_obs(self, obs, tag='obs') -> None:
+    def plot_obs(self, obs, tag="obs") -> None:
         """
         Pulls the observation off of torch and sets up for matplotlib
         plotting.
         """
 
         obs = obs.detach().cpu().numpy()
-        obs = np.transpose(obs, (1,2,0)).squeeze()
+        obs = np.transpose(obs, (1, 2, 0)).squeeze()
 
         if tag in self.plots:
             obs_ax, obs_im = self.plots[tag]
@@ -51,16 +53,16 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
 
         if obs_im is None and obs_ax is None:
             fig, obs_ax = plt.subplots()
-            obs_ax.set_title('Observation')
+            obs_ax.set_title("Observation")
             obs_ax.set_xticks(())
             obs_ax.set_yticks(())
-            obs_im = obs_ax.imshow(obs, cmap='gray')
-            
+            obs_im = obs_ax.imshow(obs, cmap="gray")
+
             self.plots[tag] = obs_ax, obs_im
         else:
             obs_im.set_data(obs)
 
-    def plot_reward(self, reward_list, reward_window: int=None, tag='reward') -> None:
+    def plot_reward(self, reward_list, reward_window: int = None, tag="reward") -> None:
         # language=rst
         """
         Plot the accumulated reward for each episode.
@@ -80,15 +82,20 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             window = max(min(len(reward_list), self.reward_window), 0)
 
             # Fastest implementation of moving average
-            reward_list_ = pd.Series(reward_list).rolling(window=window, min_periods=1).mean().values
+            reward_list_ = (
+                pd.Series(reward_list)
+                .rolling(window=window, min_periods=1)
+                .mean()
+                .values
+            )
         else:
             reward_list_ = reward_list[:]
 
         if reward_im is None and reward_ax is None:
             reward_im, reward_ax = plt.subplots()
-            reward_ax.set_title('Accumulated reward')
-            reward_ax.set_xlabel('Episode')
-            reward_ax.set_ylabel('Reward')
+            reward_ax.set_title("Accumulated reward")
+            reward_ax.set_xlabel("Episode")
+            reward_ax.set_ylabel("Reward")
             reward_plot, = self.reward_ax.plot(reward_list_)
 
             self.plots[tag] = reward_im, reward_ax
@@ -97,7 +104,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax.relim()
             reward_ax.autoscale_view()
 
-    def plot_spikes(self, spike_record: Dict[str, torch.Tensor], tag='spike'):
+    def plot_spikes(self, spike_record: Dict[str, torch.Tensor], tag="spike"):
         """
         Plots all spike records inside of spike_record. Keeps unique
         plots for all unique tags that are given.
@@ -111,7 +118,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             s_im, s_ax = self.plots[tag]
             self.plots[tag] = plot_spikes(spike_record, ims=s_im, axes=s_ax)
 
-    def plot_voltage(self, voltage_record, threshold_value, tag='voltage'):
+    def plot_voltage(self, voltage_record, threshold_value, tag="voltage"):
         """
         Plots all voltage records and given thresholds. Keeps unique
         plots for all unique tags that are given.
@@ -128,11 +135,14 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         else:
             v_im, v_ax = self.plots[tag]
             self.plots[tag] = plot_voltages(
-                voltage_record, ims=v_im, axes=v_ax,
-                plot_type=self.plot_type, threshold=threshold_value
+                voltage_record,
+                ims=v_im,
+                axes=v_ax,
+                plot_type=self.plot_type,
+                threshold=threshold_value,
             )
 
-    def plot_data(self, spike_record, voltage_record, threshold_value, tag='data'):
+    def plot_data(self, spike_record, voltage_record, threshold_value, tag="data"):
         """
         Convience function that wraps plot_spikes and plot_voltage in a
         single call.
@@ -144,8 +154,8 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         neurons
         """
         # Initialize plots
-        self.plot_spikes(spike_record, tag+'_s')
-        self.plot_voltage(voltage_record, threshold_value, tag+'_v')
+        self.plot_spikes(spike_record, tag + "_s")
+        self.plot_voltage(voltage_record, threshold_value, tag + "_v")
 
     def finalize_step(self):
         plt.pause(1e-8)

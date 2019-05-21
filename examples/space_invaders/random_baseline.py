@@ -17,7 +17,7 @@ n = args.n
 render = args.render
 
 # Load SpaceInvaders environment.
-env = GymEnvironment('SpaceInvaders-v0', NullEncoder())
+env = GymEnvironment("SpaceInvaders-v0", NullEncoder())
 env.reset()
 
 total = 0

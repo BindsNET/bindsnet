@@ -22,8 +22,13 @@ class EnvironmentPipeline(BasePipeline):
     action.
     """
 
-    def __init__(self, network: Network, environment: Environment,
-                 action_function: Optional[Callable] = None, **kwargs):
+    def __init__(
+        self,
+        network: Network,
+        environment: Environment,
+        action_function: Optional[Callable] = None,
+        **kwargs
+    ):
         # language=rst
         """
         Initializes the pipeline.
@@ -50,11 +55,11 @@ class EnvironmentPipeline(BasePipeline):
         self.reward_list = []
 
         # Setting kwargs.
-        self.output = kwargs.get('output', None)
-        self.render_interval = kwargs.get('render_interval', None)
-        self.reward_window = kwargs.get('reward_window', None)
-        self.reward_delay = kwargs.get('reward_delay', None)
-        self.num_episodes = kwargs.get('num_episodes', 100)
+        self.output = kwargs.get("output", None)
+        self.render_interval = kwargs.get("render_interval", None)
+        self.reward_window = kwargs.get("reward_window", None)
+        self.reward_delay = kwargs.get("reward_delay", None)
+        self.num_episodes = kwargs.get("num_episodes", 100)
 
         if self.reward_delay is not None:
             assert self.reward_delay > 0
@@ -62,7 +67,9 @@ class EnvironmentPipeline(BasePipeline):
 
         # Set up for multiple layers of input layers.
         self.inpts = [
-            name for name, layer in network.layers.items() if isinstance(layer, AbstractInput)
+            name
+            for name, layer in network.layers.items()
+            if isinstance(layer, AbstractInput)
         ]
 
         self.action = None
@@ -94,8 +101,10 @@ class EnvironmentPipeline(BasePipeline):
                 if batch[2]:
                     break
 
-            print("Episode %d - accumulated reward %f" %
-                    (self.episode, self.accumulated_reward))
+            print(
+                "Episode %d - accumulated reward %f"
+                % (self.episode, self.accumulated_reward)
+            )
 
     def env_step(self) -> Tuple[torch.Tensor, float, bool, Dict]:
         """
@@ -107,7 +116,10 @@ class EnvironmentPipeline(BasePipeline):
         """
 
         # Render game.
-        if self.render_interval is not None and self.step_count % self.render_interval == 0:
+        if (
+            self.render_interval is not None
+            and self.step_count % self.render_interval == 0
+        ):
             self.env.render()
 
         # Choose action based on output neuron spiking.
@@ -125,7 +137,7 @@ class EnvironmentPipeline(BasePipeline):
         # Accumulate reward
         self.accumulated_reward += reward
 
-        info['accumulated_reward'] = self.accumulated_reward
+        info["accumulated_reward"] = self.accumulated_reward
 
         return obs, reward, done, info
 
@@ -142,10 +154,9 @@ class EnvironmentPipeline(BasePipeline):
         inpts = {k: obs for k in self.inpts}
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(inpts=inpts,
-                         time=obs.shape[1],
-                         reward=reward,
-                         input_time_dim=1)
+        self.network.run(
+            inpts=inpts, time=obs.shape[1], reward=reward, input_time_dim=1
+        )
 
         if done:
             if self.network.reward_fn is not None:
@@ -170,7 +181,7 @@ class EnvironmentPipeline(BasePipeline):
 
         obs, reward, done, info = gym_batch
 
-        self.analyzer.plot_obs(obs[0,...].sum(0))
+        self.analyzer.plot_obs(obs[0, ...].sum(0))
         self.analyzer.plot_spikes(self.get_spike_data())
         self.analyzer.plot_voltage(*self.get_voltage_data())
 

@@ -102,16 +102,24 @@ for layer in layers:
 
 
 # Load SpaceInvaders environment.
-environment = GymEnvironment('SpaceInvaders-v0',
-                             BernoulliEncoder(time=1, dt=network.dt),
-                             history_length=2, delta=4)
+environment = GymEnvironment(
+    "SpaceInvaders-v0",
+    BernoulliEncoder(time=1, dt=network.dt),
+    history_length=2,
+    delta=4,
+)
 environment.reset()
 
 # Build pipeline from specified components.
-pipeline = EnvironmentPipeline(network, environment,
-                    action_function=select_multinomial, output='R',
-                    plot_interval=plot_interval, print_interval=print_interval,
-                    render_interval=render_interval)
+pipeline = EnvironmentPipeline(
+    network,
+    environment,
+    action_function=select_multinomial,
+    output="R",
+    plot_interval=plot_interval,
+    print_interval=print_interval,
+    render_interval=render_interval,
+)
 
 
 try:

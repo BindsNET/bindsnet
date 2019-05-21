@@ -8,13 +8,13 @@ from ..network.monitors import Monitor
 
 from .pipeline_analysis import PipelineAnalyzer
 
+
 class BasePipeline:
     """
     A generic pipeline that handles high level functionality
     """
 
-    def __init__(self, network: Network,
-                 **kwargs):
+    def __init__(self, network: Network, **kwargs):
         """
         Initializes the pipeline.
 
@@ -37,27 +37,31 @@ class BasePipeline:
         """
         Network saving handles caching of intermediate results
         """
-        self.save_dir = kwargs.get('save_dir', 'network.pt')
-        self.save_interval = kwargs.get('save_interval', None)
+        self.save_dir = kwargs.get("save_dir", "network.pt")
+        self.save_interval = kwargs.get("save_interval", None)
 
         """
         Handles plotting of all layer spikes and voltages. This
         constructs monitors at every level.
         """
-        self.plot_interval = kwargs.get('plot_interval', None)
-        self.plot_length = kwargs.get('plot_length', 10)
+        self.plot_interval = kwargs.get("plot_interval", None)
+        self.plot_length = kwargs.get("plot_length", 10)
 
         if self.plot_interval is not None:
             for l in self.network.layers:
-                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length)),
-                                         name=f'{l}_spikes')
-                if 'v' in self.network.layers[l].__dict__:
-                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length)),
-                                             name=f'{l}_voltages')
+                self.network.add_monitor(
+                    Monitor(self.network.layers[l], "s", int(self.plot_length)),
+                    name=f"{l}_spikes",
+                )
+                if "v" in self.network.layers[l].__dict__:
+                    self.network.add_monitor(
+                        Monitor(self.network.layers[l], "v", int(self.plot_length)),
+                        name=f"{l}_voltages",
+                    )
 
-        self.print_interval = kwargs.get('print_interval', None)
+        self.print_interval = kwargs.get("print_interval", None)
 
-        self.test_interval = kwargs.get('test_interval', None)
+        self.test_interval = kwargs.get("test_interval", None)
 
         self.step_count = 0
 
@@ -87,8 +91,13 @@ class BasePipeline:
 
         net_out = self.step_(batch)
 
-        if self.print_interval is not None and self.step_count % self.print_interval == 0:
-            print(f'Iteration: {self.step_count} (Time: {time.time() - self.clock:.4f})')
+        if (
+            self.print_interval is not None
+            and self.step_count % self.print_interval == 0
+        ):
+            print(
+                f"Iteration: {self.step_count} (Time: {time.time() - self.clock:.4f})"
+            )
             self.clock = time.time()
 
         if self.plot_interval is not None and self.step_count % self.plot_interval == 0:
@@ -111,9 +120,14 @@ class BasePipeline:
 
         :return: A dictionary containing all spike monitors from the network.
         """
-        return {l: self.network.monitors[f'{l}_spikes'].get('s') for l in self.network.layers}
+        return {
+            l: self.network.monitors[f"{l}_spikes"].get("s")
+            for l in self.network.layers
+        }
 
-    def get_voltage_data(self) -> Tuple[Dict[str, torch.Tensor],Dict[str, torch.Tensor]]:
+    def get_voltage_data(
+        self
+    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         # language=rst
         """
         Get the voltage data and threshold value from all applicable layers in the pipeline's network.
@@ -124,9 +138,9 @@ class BasePipeline:
         voltage_record = {}
         threshold_value = {}
         for l in self.network.layers:
-            if 'v' in self.network.layers[l].__dict__:
-                voltage_record[l] = self.network.monitors[f'{l}_voltages'].get('v')
-            if 'thresh' in self.network.layers[l].__dict__:
+            if "v" in self.network.layers[l].__dict__:
+                voltage_record[l] = self.network.monitors[f"{l}_voltages"].get("v")
+            if "thresh" in self.network.layers[l].__dict__:
                 threshold_value[l] = self.network.layers[l].thresh
 
         return voltage_record, threshold_value
@@ -140,26 +154,26 @@ class BasePipeline:
 
         :return: Any output that is need for recording purposes.
         """
-        raise NotImplementedError('You need to provide a step_ method')
+        raise NotImplementedError("You need to provide a step_ method")
 
     def train(self) -> None:
         """
         A fully self contained training loop.
         """
-        raise NotImplementedError('You need to provide a train method')
+        raise NotImplementedError("You need to provide a train method")
 
     def test(self) -> None:
         """
         A fully self contained test function.
         """
-        raise NotImplementedError('You need to provide a test method')
+        raise NotImplementedError("You need to provide a test method")
 
     def init_fn(self) -> None:
         """
         Place holder function for subclass specific actions that need to
         happen during the constructor of the BasePipeline.
         """
-        raise NotImplementedError('You need to provide an init_fn method')
+        raise NotImplementedError("You need to provide an init_fn method")
 
     def plots(self, batch, step_output) -> None:
         """
@@ -169,4 +183,4 @@ class BasePipeline:
         :param input_batch: The batch that was just passed into the network
         :param step_out: The output from the step_ function
         """
-        raise NotImplementedError('You need to provide a plots method')
+        raise NotImplementedError("You need to provide a plots method")
