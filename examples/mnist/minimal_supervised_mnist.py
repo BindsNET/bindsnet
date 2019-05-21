@@ -9,13 +9,19 @@ from bindsnet.environment import DatasetEnvironment
 
 
 # Build network.
-network = DiehlAndCook2015(n_inpt=784, n_neurons=100, dt=1.0, exc=22.5, inh=17.5, nu=[0, 1e-2], norm=78.4)
+network = DiehlAndCook2015(
+    n_inpt=784, n_neurons=100, dt=1.0, exc=22.5, inh=17.5, nu=[0, 1e-2], norm=78.4
+)
 
 # Specify dataset wrapper environment.
-environment = DatasetEnvironment(dataset=MNIST(path='../../data/MNIST'), train=True, download=True, intensity=0.25)
+environment = DatasetEnvironment(
+    dataset=MNIST(path="../../data/MNIST"), train=True, download=True, intensity=0.25
+)
 
 # Build pipeline from components.
-pipeline = Pipeline(network=network, environment=environment, encoding=poisson, time=50, plot_interval=1)
+pipeline = Pipeline(
+    network=network, environment=environment, encoding=poisson, time=50, plot_interval=1
+)
 
 # Train the network.
 labels = environment.labels
@@ -23,11 +29,11 @@ for i in range(60000):
     # Choose an output neuron to clamp to spiking behavior.
     c = choice(10, size=1, replace=False)
     c = 10 * labels[i].long() + Tensor(c).long()
-    clamp = torch.zeros(pipeline.time, network.n_neurons,dtype=torch.uint8)
+    clamp = torch.zeros(pipeline.time, network.n_neurons, dtype=torch.uint8)
     clamp[:, c] = 1
-    clamp_v = torch.zeros(pipeline.time, network.n_neurons,dtype=torch.float)
-    clamp_v[:,c] =  network.layers['Ae'].thresh + network.layers['Ae'].theta[c] + 10
+    clamp_v = torch.zeros(pipeline.time, network.n_neurons, dtype=torch.float)
+    clamp_v[:, c] = network.layers["Ae"].thresh + network.layers["Ae"].theta[c] + 10
 
     # Run a step of the pipeline with clamped neuron.
-    pipeline.step(clamp={'Ae':clamp},clamp_v={'Ae':clamp_v})
+    pipeline.step(clamp={"Ae": clamp}, clamp_v={"Ae": clamp_v})
     network.reset_()

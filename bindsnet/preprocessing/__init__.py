@@ -16,18 +16,23 @@ class AbstractPreprocessor(ABC):
     Abstract base class for Preprocessor.
     """
 
-    def process(self, csvfile: str, use_cache: bool = True, cachedfile: str = './processed/data.pt') -> torch.tensor:
+    def process(
+        self,
+        csvfile: str,
+        use_cache: bool = True,
+        cachedfile: str = "./processed/data.pt",
+    ) -> torch.tensor:
         # cache dictionary for storing encodings if previously encoded
-        cache = {'verify': '', 'data': None}
+        cache = {"verify": "", "data": None}
 
         # if the file exists
         if use_cache:
             # generate a hash
-            cache['verify'] = self.__gen_hash(csvfile)
+            cache["verify"] = self.__gen_hash(csvfile)
 
             # compare hash, if valid return cached value
             if self.__check_file(cachedfile, cache):
-                return cache['data']
+                return cache["data"]
 
         # otherwise process the data
         self._process(csvfile, cache)
@@ -37,7 +42,7 @@ class AbstractPreprocessor(ABC):
             self.__save(cachedfile, cache)
 
         # return data
-        return cache['data']
+        return cache["data"]
 
     @abstractmethod
     def _process(self, filename: str, cache: dict):
@@ -57,11 +62,11 @@ class AbstractPreprocessor(ABC):
          :return: hash for the csv file
         """
         # read all the lines
-        with open(filename, 'r') as f:
+        with open(filename, "r") as f:
             lines = f.readlines()
         # generate md5 hash after concatenating all of the lines
-        pre = ''.join(lines) + str(self.__class__.__name__)
-        m = hashlib.md5(pre.encode('utf-8'))
+        pre = "".join(lines) + str(self.__class__.__name__)
+        m = hashlib.md5(pre.encode("utf-8"))
         return m.hexdigest()
 
     @staticmethod
@@ -76,16 +81,14 @@ class AbstractPreprocessor(ABC):
         """
         # try opening the cached file
         try:
-            with open(cachedfile, 'rb') as f:
+            with open(cachedfile, "rb") as f:
                 temp = pickle.load(f)
         except FileNotFoundError:
-            temp = {
-                'verify': '', 'data': None,
-            }
+            temp = {"verify": "", "data": None}
 
         # if the hash matches up, keep the data from the cache
-        if cache['verify'] == temp['verify']:
-            cache['data'] = temp['data']
+        if cache["verify"] == temp["verify"]:
+            cache["data"] = temp["data"]
             return True
 
         # otherwise don't do anything
@@ -103,5 +106,5 @@ class AbstractPreprocessor(ABC):
             os.makedirs(os.path.dirname(filename), exist_ok=True)
 
         # save file
-        with open(filename, 'wb') as f:
+        with open(filename, "wb") as f:
             pickle.dump(data, f)

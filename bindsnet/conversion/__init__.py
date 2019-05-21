@@ -68,7 +68,7 @@ class FeatureExtractor(nn.Module):
         :param x: Input data for the ``submodule''.
         :return: A dictionary mapping
         """
-        activations = {'input': x}
+        activations = {"input": x}
         for name, module in self.submodule._modules.items():
             if isinstance(module, nn.Linear):
                 x = x.view(-1, module.in_features)
@@ -86,10 +86,17 @@ class SubtractiveResetIFNodes(nodes.Nodes):
     subtraction.
     """
 
-    def __init__(self, n: Optional[int] = None, shape: Optional[Sequence[int]] = None, traces: bool = False,
-                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False,
-                 thresh: Union[float, torch.Tensor] = -52.0, reset: Union[float, torch.Tensor] = -65.0,
-                 refrac: Union[int, torch.Tensor] = 5) -> None:
+    def __init__(
+        self,
+        n: Optional[int] = None,
+        shape: Optional[Sequence[int]] = None,
+        traces: bool = False,
+        trace_tc: Union[float, torch.Tensor] = 5e-2,
+        sum_input: bool = False,
+        thresh: Union[float, torch.Tensor] = -52.0,
+        reset: Union[float, torch.Tensor] = -65.0,
+        refrac: Union[int, torch.Tensor] = 5,
+    ) -> None:
         # language=rst
         """
         Instantiates a layer of IF neurons.
@@ -174,8 +181,14 @@ class PassThroughNodes(nodes.Nodes):
     subtraction.
     """
 
-    def __init__(self, n: Optional[int] = None, shape: Optional[Sequence[int]] = None, traces: bool = False,
-                 trace_tc: Union[float, torch.Tensor] = 5e-2, sum_input: bool = False) -> None:
+    def __init__(
+        self,
+        n: Optional[int] = None,
+        shape: Optional[Sequence[int]] = None,
+        traces: bool = False,
+        trace_tc: Union[float, torch.Tensor] = 5e-2,
+        sum_input: bool = False,
+    ) -> None:
         # language=rst
         """
         Instantiates a layer of IF neurons.
@@ -214,8 +227,15 @@ class PermuteConnection(topology.AbstractConnection):
     Special-purpose connection for emulating the custom ``Permute`` module in spiking neural networks.
     """
 
-    def __init__(self, source: nodes.Nodes, target: nodes.Nodes, dims: Sequence,
-                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+    def __init__(
+        self,
+        source: nodes.Nodes,
+        target: nodes.Nodes,
+        dims: Sequence,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        weight_decay: float = 0.0,
+        **kwargs
+    ) -> None:
         # language=rst
         """
         Constructor for ``PermuteConnection``.
@@ -275,8 +295,15 @@ class ConstantPad2dConnection(topology.AbstractConnection):
     Special-purpose connection for emulating the ``ConstantPad2d`` PyTorch module in spiking neural networks.
     """
 
-    def __init__(self, source: nodes.Nodes, target: nodes.Nodes, padding: Tuple,
-                 nu: Optional[Union[float, Sequence[float]]] = None, weight_decay: float = 0.0, **kwargs) -> None:
+    def __init__(
+        self,
+        source: nodes.Nodes,
+        target: nodes.Nodes,
+        padding: Tuple,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        weight_decay: float = 0.0,
+        **kwargs
+    ) -> None:
         # language=rst
         """
         Constructor for ``ConstantPad2dConnection``.
@@ -331,7 +358,9 @@ class ConstantPad2dConnection(topology.AbstractConnection):
         pass
 
 
-def data_based_normalization(ann: Union[nn.Module, str], data: torch.Tensor, percentile: float = 99.9):
+def data_based_normalization(
+    ann: Union[nn.Module, str], data: torch.Tensor, percentile: float = 99.9
+):
     # language=rst
     """
     Use a dataset to rescale ANN weights and biases such that that the max ReLU activation is less than 1.
@@ -411,16 +440,30 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
 
     elif isinstance(current, nn.Conv2d):
         input_height, input_width = prev.shape[2], prev.shape[3]
-        out_channels, output_height, output_width = current.out_channels, prev.shape[2], prev.shape[3]
+        out_channels, output_height, output_width = (
+            current.out_channels,
+            prev.shape[2],
+            prev.shape[3],
+        )
 
-        width = (input_height - current.kernel_size[0] + 2 * current.padding[0]) / current.stride[0] + 1
-        height = (input_width - current.kernel_size[1] + 2 * current.padding[1]) / current.stride[1] + 1
+        width = (
+            input_height - current.kernel_size[0] + 2 * current.padding[0]
+        ) / current.stride[0] + 1
+        height = (
+            input_width - current.kernel_size[1] + 2 * current.padding[1]
+        ) / current.stride[1] + 1
         shape = (1, out_channels, int(width), int(height))
 
         layer = node_type(shape=shape, reset=0, thresh=1, refrac=0, **kwargs)
         connection = topology.Conv2dConnection(
-            source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
-            padding=current.padding, dilation=current.dilation, w=current.weight, b=current.bias
+            source=prev,
+            target=layer,
+            kernel_size=current.kernel_size,
+            stride=current.stride,
+            padding=current.padding,
+            dilation=current.dilation,
+            w=current.weight,
+            b=current.bias,
         )
 
     elif isinstance(current, nn.MaxPool2d):
@@ -429,36 +472,44 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
         current.padding = _pair(current.padding)
         current.stride = _pair(current.stride)
 
-        width = (input_height - current.kernel_size[0] + 2 * current.padding[0]) / current.stride[0] + 1
-        height = (input_width - current.kernel_size[1] + 2 * current.padding[1]) / current.stride[1] + 1
+        width = (
+            input_height - current.kernel_size[0] + 2 * current.padding[0]
+        ) / current.stride[0] + 1
+        height = (
+            input_width - current.kernel_size[1] + 2 * current.padding[1]
+        ) / current.stride[1] + 1
         shape = (1, prev.shape[1], int(width), int(height))
 
-        layer = PassThroughNodes(
-            shape=shape
-        )
+        layer = PassThroughNodes(shape=shape)
         connection = topology.MaxPool2dConnection(
-            source=prev, target=layer, kernel_size=current.kernel_size, stride=current.stride,
-            padding=current.padding, dilation=current.dilation, decay=1
+            source=prev,
+            target=layer,
+            kernel_size=current.kernel_size,
+            stride=current.stride,
+            padding=current.padding,
+            dilation=current.dilation,
+            decay=1,
         )
 
     elif isinstance(current, Permute):
         layer = PassThroughNodes(
             shape=[
-                prev.shape[current.dims[0]], prev.shape[current.dims[1]],
-                prev.shape[current.dims[2]], prev.shape[current.dims[3]]
+                prev.shape[current.dims[0]],
+                prev.shape[current.dims[1]],
+                prev.shape[current.dims[2]],
+                prev.shape[current.dims[3]],
             ]
         )
 
-        connection = PermuteConnection(
-            source=prev, target=layer, dims=current.dims
-        )
+        connection = PermuteConnection(source=prev, target=layer, dims=current.dims)
 
     elif isinstance(current, nn.ConstantPad2d):
         layer = PassThroughNodes(
             shape=[
-                prev.shape[0], prev.shape[1],
+                prev.shape[0],
+                prev.shape[1],
                 current.padding[0] + current.padding[1] + prev.shape[2],
-                current.padding[2] + current.padding[3] + prev.shape[3]
+                current.padding[2] + current.padding[3] + prev.shape[3],
             ]
         )
 
@@ -472,9 +523,14 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
     return layer, connection
 
 
-def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Optional[torch.Tensor] = None,
-               percentile: float = 99.9, node_type: Optional[nodes.Nodes] = SubtractiveResetIFNodes,
-               **kwargs) -> Network:
+def ann_to_snn(
+    ann: Union[nn.Module, str],
+    input_shape: Sequence[int],
+    data: Optional[torch.Tensor] = None,
+    percentile: float = 99.9,
+    node_type: Optional[nodes.Nodes] = SubtractiveResetIFNodes,
+    **kwargs
+) -> Network:
     # language=rst
     """
     Converts an artificial neural network (ANN) written as a ``torch.nn.Module`` into a near-equivalent spiking neural
@@ -496,7 +552,8 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
 
     if data is None:
         import warnings
-        warnings.warn('Data is None. Weights will not be scaled.', RuntimeWarning)
+
+        warnings.warn("Data is None. Weights will not be scaled.", RuntimeWarning)
     else:
         ann = data_based_normalization(
             ann=ann, data=data.detach(), percentile=percentile
@@ -505,7 +562,7 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     snn = Network()
 
     input_layer = nodes.RealInput(shape=input_shape)
-    snn.add_layer(input_layer, name='Input')
+    snn.add_layer(input_layer, name="Input")
 
     children = []
     for c in ann.children():
@@ -518,7 +575,7 @@ def ann_to_snn(ann: Union[nn.Module, str], input_shape: Sequence[int], data: Opt
     i = 0
     prev = input_layer
     while i < len(children) - 1:
-        current, nxt = children[i:i + 2]
+        current, nxt = children[i : i + 2]
         layer, connection = _ann_to_snn_helper(prev, current, node_type, **kwargs)
 
         i += 1

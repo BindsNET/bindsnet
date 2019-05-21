@@ -9,8 +9,13 @@ from typing import Tuple, Union
 from torch.nn.modules.utils import _pair
 
 
-def im2col_indices(x: Tensor, kernel_height: int, kernel_width: int, padding: Tuple[int, int] = (0, 0),
-                   stride: Tuple[int, int] = (1, 1)) -> Tensor:
+def im2col_indices(
+    x: Tensor,
+    kernel_height: int,
+    kernel_width: int,
+    padding: Tuple[int, int] = (0, 0),
+    stride: Tuple[int, int] = (1, 1),
+) -> Tensor:
     # language=rst
     """
     im2col is a special case of unfold which is implemented inside of Pytorch.
@@ -23,12 +28,19 @@ def im2col_indices(x: Tensor, kernel_height: int, kernel_width: int, padding: Tu
     :return: Input tensor reshaped to column-wise format.
     """
 
-    return F.unfold(x, (kernel_height, kernel_width), padding=padding,
-            stride=stride).squeeze()
+    return F.unfold(
+        x, (kernel_height, kernel_width), padding=padding, stride=stride
+    ).squeeze()
 
 
-def col2im_indices(cols: Tensor, x_shape: Tuple[int, int, int, int], kernel_height: int, kernel_width: int,
-                   padding: Tuple[int, int]=(0, 0), stride: Tuple[int, int]=(1, 1)) -> Tensor:
+def col2im_indices(
+    cols: Tensor,
+    x_shape: Tuple[int, int, int, int],
+    kernel_height: int,
+    kernel_width: int,
+    padding: Tuple[int, int] = (0, 0),
+    stride: Tuple[int, int] = (1, 1),
+) -> Tensor:
     # language=rst
     """
     col2im is a special case of fold which is implemented inside of Pytorch.
@@ -42,11 +54,14 @@ def col2im_indices(cols: Tensor, x_shape: Tuple[int, int, int, int], kernel_heig
     :return: Image tensor in original image shape.
     """
 
-    return F.fold(cols, x_shape, (kernel_height, kernel_width),
-            padding=padding, stride=stride)
+    return F.fold(
+        cols, x_shape, (kernel_height, kernel_width), padding=padding, stride=stride
+    )
 
 
-def get_square_weights(weights: Tensor, n_sqrt: int, side: Union[int, Tuple[int, int]]) -> Tensor:
+def get_square_weights(
+    weights: Tensor, n_sqrt: int, side: Union[int, Tuple[int, int]]
+) -> Tensor:
     # language=rst
     """
     Return a grid of a number of filters ``sqrt ** 2`` with side lengths ``side``.
@@ -70,7 +85,7 @@ def get_square_weights(weights: Tensor, n_sqrt: int, side: Union[int, Tuple[int,
             x = i * side[0]
             y = (j % n_sqrt) * side[1]
             filter_ = weights[:, n].contiguous().view(*side)
-            square_weights[x: x + side[0], y: y + side[1]] = filter_
+            square_weights[x : x + side[0], y : y + side[1]] = filter_
 
     return square_weights
 
@@ -92,14 +107,21 @@ def get_square_assignments(assignments: Tensor, n_sqrt: int) -> Tensor:
             if not n < assignments.size(0):
                 break
 
-            square_assignments[i: (i + 1), (j % n_sqrt): ((j % n_sqrt) + 1)] = assignments[n]
+            square_assignments[
+                i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)
+            ] = assignments[n]
 
     return square_assignments
 
 
-def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: Union[int, Tuple[int, int]],
-                                      conv_size: Union[int, Tuple[int, int]], locations: Tensor,
-                                      input_sqrt: Union[int, Tuple[int, int]]) -> Tensor:
+def reshape_locally_connected_weights(
+    w: Tensor,
+    n_filters: int,
+    kernel_size: Union[int, Tuple[int, int]],
+    conv_size: Union[int, Tuple[int, int]],
+    locations: Tensor,
+    input_sqrt: Union[int, Tuple[int, int]],
+) -> Tensor:
     # language=rst
     """
     Get the weights from a locally connected layer and reshape them to be two-dimensional and square.
@@ -128,14 +150,20 @@ def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: Un
         for n2 in range(c2):
             for feature in range(n_filters):
                 n = n1 * c2 + n2
-                filter_ = w[locations[:, n], feature * (c1 * c2) + (n // c2sqrt) * c2sqrt + (n % c2sqrt)].view(k1, k2)
-                w_[feature * k1: (feature + 1) * k1, n * k2: (n + 1) * k2] = filter_
+                filter_ = w[
+                    locations[:, n],
+                    feature * (c1 * c2) + (n // c2sqrt) * c2sqrt + (n % c2sqrt),
+                ].view(k1, k2)
+                w_[feature * k1 : (feature + 1) * k1, n * k2 : (n + 1) * k2] = filter_
 
     if c1 == 1 and c2 == 1:
         square = torch.zeros((i1 * fs, i2 * fs))
 
         for n in range(n_filters):
-            square[(n // fs) * i1: ((n // fs) + 1) * i2, (n % fs) * i2: ((n % fs) + 1) * i2] = w_[n * i1: (n + 1) * i2]
+            square[
+                (n // fs) * i1 : ((n // fs) + 1) * i2,
+                (n % fs) * i2 : ((n % fs) + 1) * i2,
+            ] = w_[n * i1 : (n + 1) * i2]
 
         return square
     else:
@@ -146,9 +174,12 @@ def reshape_locally_connected_weights(w: Tensor, n_filters: int, kernel_size: Un
                 for f1 in range(fs):
                     for f2 in range(fs):
                         if f1 * fs + f2 < n_filters:
-                            square[k1 * (n1 * fs + f1): k1 * (n1 * fs + f1 + 1),
-                                   k2 * (n2 * fs + f2): k2 * (n2 * fs + f2 + 1)] = \
-                                   w_[(f1 * fs + f2) * k1: (f1 * fs + f2 + 1) * k1,
-                                      (n1 * c2 + n2) * k2: (n1 * c2 + n2 + 1) * k2]
+                            square[
+                                k1 * (n1 * fs + f1) : k1 * (n1 * fs + f1 + 1),
+                                k2 * (n2 * fs + f2) : k2 * (n2 * fs + f2 + 1),
+                            ] = w_[
+                                (f1 * fs + f2) * k1 : (f1 * fs + f2 + 1) * k1,
+                                (n1 * c2 + n2) * k2 : (n1 * c2 + n2 + 1) * k2,
+                            ]
 
         return square
