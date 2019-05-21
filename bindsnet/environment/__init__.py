@@ -87,10 +87,10 @@ class DatasetEnvironment(Environment):
         self.time = time
 
         # Keyword arguments.
-        self.intensity = kwargs.get('intensity', 1)
-        self.max_prob = kwargs.get('max_prob', 1)
+        self.intensity = kwargs.get("intensity", 1)
+        self.max_prob = kwargs.get("max_prob", 1)
 
-        assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
+        assert 0 < self.max_prob <= 1, "Maximum spiking probability must be in (0, 1]."
 
         self.obs = None
 
@@ -124,7 +124,7 @@ class DatasetEnvironment(Environment):
         self.preprocess()
 
         # Info dictionary contains label of MNIST digit.
-        info = {'label' : next(self.label_loader)}
+        info = {"label": next(self.label_loader)}
 
         return self.obs, 0, False, info
 
@@ -198,13 +198,13 @@ class GymEnvironment(Environment):
         self.action_space = self.env.action_space
 
         # Keyword arguments.
-        self.max_prob = kwargs.get('max_prob', 1)
-        self.clip_rewards = kwargs.get('clip_rewards', True)
+        self.max_prob = kwargs.get("max_prob", 1)
+        self.clip_rewards = kwargs.get("clip_rewards", True)
 
         self.obs = None
         self.reward = None
 
-        assert 0 < self.max_prob <= 1, 'Maximum spiking probability must be in (0, 1].'
+        assert 0 < self.max_prob <= 1, "Maximum spiking probability must be in (0, 1]."
 
     def step(self, a: int) -> Tuple[torch.Tensor, float, bool, Dict[Any, Any]]:
         # language=rst
@@ -257,14 +257,14 @@ class GymEnvironment(Environment):
         """
         Pre-processing step for an observation from a Gym environment.
         """
-        if self.name == 'SpaceInvaders-v0':
+        if self.name == "SpaceInvaders-v0":
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = self.obs[26:104, :]
             self.obs = binary_image(self.obs)
-        elif self.name == 'BreakoutDeterministic-v4':
+        elif self.name == "BreakoutDeterministic-v4":
             self.obs = subsample(gray_scale(crop(self.obs, 34, 194, 0, 160)), 80, 80)
             self.obs = binary_image(self.obs)
-        else: # Default pre-processing step
+        else:  # Default pre-processing step
             self.obs = subsample(gray_scale(self.obs), 84, 110)
             self.obs = binary_image(self.obs)
 

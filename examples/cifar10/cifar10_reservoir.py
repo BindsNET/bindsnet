@@ -10,28 +10,35 @@ from bindsnet.utils import get_square_weights
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.topology import Connection
 from bindsnet.network.nodes import Input, LIFNodes
-from bindsnet.analysis.plotting import plot_spikes, plot_voltages, plot_input, plot_weights
+from bindsnet.analysis.plotting import (
+    plot_spikes,
+    plot_voltages,
+    plot_input,
+    plot_weights,
+)
 
 # Build a simple two-layer, input-output network.
 network = Network(dt=1.0)
-inpt = Input(shape=(32, 32, 3)); network.add_layer(inpt, name='I')
-output = LIFNodes(625, thresh=-52 + torch.randn(625)); network.add_layer(output, name='O')
+inpt = Input(shape=(32, 32, 3))
+network.add_layer(inpt, name="I")
+output = LIFNodes(625, thresh=-52 + torch.randn(625))
+network.add_layer(output, name="O")
 C1 = Connection(source=inpt, target=output, w=torch.randn(inpt.n, output.n))
-C2 = Connection(source=output, target=output, w=0.5*torch.randn(output.n, output.n))
+C2 = Connection(source=output, target=output, w=0.5 * torch.randn(output.n, output.n))
 
-network.add_connection(C1, source='I', target='O')
-network.add_connection(C2, source='O', target='O')
+network.add_connection(C1, source="I", target="O")
+network.add_connection(C2, source="O", target="O")
 
 spikes = {}
 for l in network.layers:
-    spikes[l] = Monitor(network.layers[l], ['s'], time=250)
-    network.add_monitor(spikes[l], name='%s_spikes' % l)
+    spikes[l] = Monitor(network.layers[l], ["s"], time=250)
+    network.add_monitor(spikes[l], name="%s_spikes" % l)
 
-voltages = {'O': Monitor(network.layers['O'], ['v'], time=250)}
-network.add_monitor(voltages['O'], name='O_voltages')
+voltages = {"O": Monitor(network.layers["O"], ["v"], time=250)}
+network.add_monitor(voltages["O"], name="O_voltages")
 
 # Get MNIST training images and labels.
-images, labels = CIFAR10(path='../../data/CIFAR10', download=True).get_train()
+images, labels = CIFAR10(path="../../data/CIFAR10", download=True).get_train()
 images *= 0.25
 
 # Create lazily iterating Poisson-distributed data loader.
@@ -51,31 +58,41 @@ n_iters = 500
 training_pairs = []
 for i, (datum, label) in enumerate(loader):
     if i % 100 == 0:
-        print('Train progress: (%d / %d)' % (i, n_iters))
+        print("Train progress: (%d / %d)" % (i, n_iters))
 
-    network.run(inpts={'I': datum}, time=250)
-    training_pairs.append([spikes['O'].get('s').sum(-1), label])
-    
+    network.run(inpts={"I": datum}, time=250)
+    training_pairs.append([spikes["O"].get("s").sum(-1), label])
+
     image = images[i].numpy()
     image /= image.max()
     datum = datum.sum(0).numpy().astype(np.float)
     datum /= datum.max()
-    
+
     w1 = torch.from_numpy(C1.w.numpy().reshape(3, 32 * 32, -1).sum(0))
     w2 = C2.w
 
-    inpt_axes, inpt_ims = plot_input(image, datum, label=label, axes=inpt_axes, ims=inpt_ims)
-    spike_ims, spike_axes = plot_spikes({layer: spikes[layer].get('s').view(-1, 250) for layer in spikes},
-                                        axes=spike_axes, ims=spike_ims)
-    voltage_ims, voltage_axes = plot_voltages({layer: voltages[layer].get('v').view(-1, 250) for layer in voltages},
-                                              ims=voltage_ims, axes=voltage_axes)
-    weights_im = plot_weights(get_square_weights(w1, 23, 32), im=weights_im, wmin=-2, wmax=2)
+    inpt_axes, inpt_ims = plot_input(
+        image, datum, label=label, axes=inpt_axes, ims=inpt_ims
+    )
+    spike_ims, spike_axes = plot_spikes(
+        {layer: spikes[layer].get("s").view(-1, 250) for layer in spikes},
+        axes=spike_axes,
+        ims=spike_ims,
+    )
+    voltage_ims, voltage_axes = plot_voltages(
+        {layer: voltages[layer].get("v").view(-1, 250) for layer in voltages},
+        ims=voltage_ims,
+        axes=voltage_axes,
+    )
+    weights_im = plot_weights(
+        get_square_weights(w1, 23, 32), im=weights_im, wmin=-2, wmax=2
+    )
     weights_im2 = plot_weights(w2, im=weights_im2, wmin=-2, wmax=2)
-    
+
     plt.pause(1e-8)
-    
+
     network.reset_()
-    
+
     if i > n_iters:
         break
 
@@ -85,7 +102,7 @@ class LogisticRegression(nn.Module):
     def __init__(self, input_size, num_classes):
         super(LogisticRegression, self).__init__()
         self.linear = nn.Linear(input_size, num_classes)
-    
+
     def forward(self, x):
         out = self.linear(x)
         return out
@@ -93,8 +110,8 @@ class LogisticRegression(nn.Module):
 
 # Create and train logistic regression model on reservoir outputs.
 model = LogisticRegression(625, 10)
-criterion = nn.CrossEntropyLoss()  
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1)  
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
 # Training the Model
 for epoch in range(10):
@@ -106,12 +123,14 @@ for epoch in range(10):
         loss.backward()
         optimizer.step()
 
-        if (i+1) % 100 == 0:
-            print ('Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f' 
-                   % (epoch+1, 10, i+1, len(training_pairs), loss.data[0]))
+        if (i + 1) % 100 == 0:
+            print(
+                "Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f"
+                % (epoch + 1, 10, i + 1, len(training_pairs), loss.data[0])
+            )
 
 # Get MNIST test images and labels.
-images, labels = CIFAR10(path='../../data/CIFAR10').get_test()
+images, labels = CIFAR10(path="../../data/CIFAR10").get_test()
 images *= 0.25
 
 # Create lazily iterating Poisson-distributed data loader.
@@ -121,31 +140,41 @@ n_iters = 500
 test_pairs = []
 for i, (datum, label) in enumerate(loader):
     if i % 100 == 0:
-        print('Test progress: (%d / %d)' % (i, n_iters))
-    
-    network.run(inpts={'I': datum}, time=250)
-    test_pairs.append([spikes['O'].get('s').sum(-1), label])
-    
+        print("Test progress: (%d / %d)" % (i, n_iters))
+
+    network.run(inpts={"I": datum}, time=250)
+    test_pairs.append([spikes["O"].get("s").sum(-1), label])
+
     image = images[i].numpy()
     image /= image.max()
     datum = datum.sum(0).numpy().astype(np.float)
     datum /= datum.max()
-    
+
     w1 = torch.from_numpy(C1.w.numpy().reshape(3, 32 * 32, -1).sum(0))
     w2 = C2.w
-    
-    inpt_axes, inpt_ims = plot_input(image, datum, label=label, axes=inpt_axes, ims=inpt_ims)
-    spike_ims, spike_axes = plot_spikes({layer: spikes[layer].get('s').view(-1, 250) for layer in spikes},
-                                        axes=spike_axes, ims=spike_ims)
-    voltage_ims, voltage_axes = plot_voltages({layer: voltages[layer].get('v').view(-1, 250) for layer in voltages},
-                                              ims=voltage_ims, axes=voltage_axes)
-    weights_im = plot_weights(get_square_weights(w1, 23, 32), im=weights_im, wmin=-2, wmax=2)
+
+    inpt_axes, inpt_ims = plot_input(
+        image, datum, label=label, axes=inpt_axes, ims=inpt_ims
+    )
+    spike_ims, spike_axes = plot_spikes(
+        {layer: spikes[layer].get("s").view(-1, 250) for layer in spikes},
+        axes=spike_axes,
+        ims=spike_ims,
+    )
+    voltage_ims, voltage_axes = plot_voltages(
+        {layer: voltages[layer].get("v").view(-1, 250) for layer in voltages},
+        ims=voltage_ims,
+        axes=voltage_axes,
+    )
+    weights_im = plot_weights(
+        get_square_weights(w1, 23, 32), im=weights_im, wmin=-2, wmax=2
+    )
     weights_im2 = plot_weights(w2, im=weights_im2, wmin=-2, wmax=2)
-    
+
     plt.pause(1e-8)
-    
+
     network.reset_()
-    
+
     if i > n_iters:
         break
 
@@ -156,5 +185,8 @@ for s, label in test_pairs:
     _, predicted = torch.max(outputs.data.unsqueeze(0), 1)
     total += 1
     correct += int(predicted == label.long())
-    
-print('Accuracy of the model on %d test images: %.2f %%' % (n_iters, 100 * correct / total))
+
+print(
+    "Accuracy of the model on %d test images: %.2f %%"
+    % (n_iters, 100 * correct / total)
+)

@@ -14,7 +14,13 @@ from urllib.request import urlretrieve
 from typing import Tuple, List, Iterable, Any
 
 __all__ = [
-    'Dataset', 'MNIST', 'FashionMNIST', 'SpokenMNIST', 'CIFAR10', 'CIFAR100', 'preprocess'
+    "Dataset",
+    "MNIST",
+    "FashionMNIST",
+    "SpokenMNIST",
+    "CIFAR10",
+    "CIFAR100",
+    "preprocess",
 ]
 
 
@@ -24,7 +30,9 @@ class Dataset(ABC):
     Abstract base class for dataset.
     """
 
-    def __init__(self, path: str='.', download: bool = False, shuffle: bool = True) -> None:
+    def __init__(
+        self, path: str = ".", download: bool = False, shuffle: bool = True
+    ) -> None:
         # language=rst
         """
         Abstract constructor for the Dataset class.
@@ -62,22 +70,27 @@ class MNIST(Dataset):
     """
     Handles loading and saving of the MNIST handwritten digits `(link) <http://yann.lecun.com/exdb/mnist/>`_.
     """
-    train_images_pickle = 'train_images.pt'
-    train_labels_pickle = 'train_labels.pt'
-    test_images_pickle = 'test_images.pt'
-    test_labels_pickle = 'test_labels.pt'
+    train_images_pickle = "train_images.pt"
+    train_labels_pickle = "train_labels.pt"
+    test_images_pickle = "test_images.pt"
+    test_labels_pickle = "test_labels.pt"
 
-    train_images_file = 'train-images-idx3-ubyte'
-    train_labels_file = 'train-labels-idx1-ubyte'
-    test_images_file = 't10k-images-idx3-ubyte'
-    test_labels_file = 't10k-labels-idx1-ubyte'
+    train_images_file = "train-images-idx3-ubyte"
+    train_labels_file = "train-labels-idx1-ubyte"
+    test_images_file = "t10k-images-idx3-ubyte"
+    test_labels_file = "t10k-labels-idx1-ubyte"
 
-    train_images_url = 'http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz'
-    train_labels_url = 'http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz'
-    test_images_url = 'http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz'
-    test_labels_url = 'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz'
+    train_images_url = "http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz"
+    train_labels_url = "http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz"
+    test_images_url = "http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz"
+    test_labels_url = "http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz"
 
-    def __init__(self, path: str = os.path.join('data', 'MNIST'), download: bool = False, shuffle: bool = True) -> None:
+    def __init__(
+        self,
+        path: str = os.path.join("data", "MNIST"),
+        download: bool = False,
+        shuffle: bool = True,
+    ) -> None:
         # language=rst
         """
         Constructor for the ``MNIST`` object. Makes the data directory if it doesn't already exist.
@@ -98,36 +111,46 @@ class MNIST(Dataset):
         if not os.path.isfile(os.path.join(self.path, MNIST.train_images_pickle)):
             # Download training images if they aren't on disk.
             if self.download:
-                print('Downloading training images.\n')
+                print("Downloading training images.\n")
                 self._download(MNIST.train_images_url, MNIST.train_images_file)
                 images = self.process_images(MNIST.train_images_file)
 
                 # Serialize image data on disk for next time.
-                torch.save(images, open(os.path.join(self.path, MNIST.train_images_pickle), 'wb'))
+                torch.save(
+                    images,
+                    open(os.path.join(self.path, MNIST.train_images_pickle), "wb"),
+                )
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             # Load image data from disk if it has already been processed.
-            print('Loading training images from serialized object file.\n')
-            images = torch.load(open(os.path.join(self.path, MNIST.train_images_pickle), 'rb'))
+            print("Loading training images from serialized object file.\n")
+            images = torch.load(
+                open(os.path.join(self.path, MNIST.train_images_pickle), "rb")
+            )
 
         if not os.path.isfile(os.path.join(self.path, MNIST.train_labels_pickle)):
             # Download training labels if they aren't on disk.
             if self.download:
-                print('Downloading training labels.\n')
+                print("Downloading training labels.\n")
                 self._download(MNIST.train_labels_url, MNIST.train_labels_file)
                 labels = self.process_labels(MNIST.train_labels_file)
 
                 # Serialize label data on disk for next time.
-                torch.save(labels, open(os.path.join(self.path, MNIST.train_labels_pickle), 'wb'))
+                torch.save(
+                    labels,
+                    open(os.path.join(self.path, MNIST.train_labels_pickle), "wb"),
+                )
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             # Load label data from disk if it has already been processed.
-            print('Loading training labels from serialized object file.\n')
-            labels = torch.load(open(os.path.join(self.path, MNIST.train_labels_pickle), 'rb'))
+            print("Loading training labels from serialized object file.\n")
+            labels = torch.load(
+                open(os.path.join(self.path, MNIST.train_labels_pickle), "rb")
+            )
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
@@ -145,36 +168,46 @@ class MNIST(Dataset):
         if not os.path.isfile(os.path.join(self.path, MNIST.test_images_pickle)):
             # Download test images if they aren't on disk.
             if self.download:
-                print('Downloading test images.\n')
+                print("Downloading test images.\n")
                 self._download(MNIST.test_images_url, MNIST.test_images_file)
                 images = self.process_images(MNIST.test_images_file)
 
                 # Serialize image data on disk for next time.
-                torch.save(images, open(os.path.join(self.path, MNIST.test_images_pickle), 'wb'))
+                torch.save(
+                    images,
+                    open(os.path.join(self.path, MNIST.test_images_pickle), "wb"),
+                )
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             # Load image data from disk if it has already been processed.
-            print('Loading test images from serialized object file.\n')
-            images = torch.load(open(os.path.join(self.path, MNIST.test_images_pickle), 'rb'))
+            print("Loading test images from serialized object file.\n")
+            images = torch.load(
+                open(os.path.join(self.path, MNIST.test_images_pickle), "rb")
+            )
 
         if not os.path.isfile(os.path.join(self.path, MNIST.test_labels_pickle)):
             if self.download:
                 # Download test labels if they aren't on disk.
-                print('Downloading test labels.\n')
+                print("Downloading test labels.\n")
                 self._download(MNIST.test_labels_url, MNIST.test_labels_file)
                 labels = self.process_labels(MNIST.test_labels_file)
 
                 # Serialize image data on disk for next time.
-                torch.save(labels, open(os.path.join(self.path, MNIST.test_labels_pickle), 'wb'))
+                torch.save(
+                    labels,
+                    open(os.path.join(self.path, MNIST.test_labels_pickle), "wb"),
+                )
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             # Load label data from disk if it has already been processed.
-            print('Loading test labels from serialized object file.\n')
-            labels = torch.load(open(os.path.join(self.path, MNIST.test_labels_pickle), 'rb'))
+            print("Loading test labels from serialized object file.\n")
+            labels = torch.load(
+                open(os.path.join(self.path, MNIST.test_labels_pickle), "rb")
+            )
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
@@ -190,9 +223,9 @@ class MNIST(Dataset):
         :param url: The URL of the data file to be downloaded.
         :param filename: The name of the file to save the downloaded data to.
         """
-        urlretrieve(url, os.path.join(self.path, filename + '.gz'))
-        with gzip.open(os.path.join(self.path, filename + '.gz'), 'rb') as _in:
-            with open(os.path.join(self.path, filename), 'wb') as _out:
+        urlretrieve(url, os.path.join(self.path, filename + ".gz"))
+        with gzip.open(os.path.join(self.path, filename + ".gz"), "rb") as _in:
+            with open(os.path.join(self.path, filename), "wb") as _out:
                 shutil.copyfileobj(_in, _out)
 
     def process_images(self, filename: str) -> np.ndarray:
@@ -204,25 +237,28 @@ class MNIST(Dataset):
         :return: A numpy array of shape ``[n_images, 28, 28]``, where ``n_images`` is the number of images in the file.
         """
         filename = os.path.join(self.path, filename)
-        data = open(filename, 'rb')
+        data = open(filename, "rb")
 
         # Get metadata for images.
         data.read(4)
-        n_images = unpack('>I', data.read(4))[0]
-        rows = unpack('>I', data.read(4))[0]
-        cols = unpack('>I', data.read(4))[0]
+        n_images = unpack(">I", data.read(4))[0]
+        rows = unpack(">I", data.read(4))[0]
+        cols = unpack(">I", data.read(4))[0]
 
         images = np.zeros((n_images, rows, cols), dtype=np.uint8)
 
-        print('\nProcessing images.\n')
+        print("\nProcessing images.\n")
 
         for i in range(n_images):
             if i % 1000 == 0:
-                print('Progress: %d / %d' % (i, n_images))
+                print("Progress: %d / %d" % (i, n_images))
 
-            images[i] = [[unpack('>B', data.read(1))[0] for _ in range(cols)] for _ in range(rows)]
+            images[i] = [
+                [unpack(">B", data.read(1))[0] for _ in range(cols)]
+                for _ in range(rows)
+            ]
 
-        print('Progress: %d / %d\n' % (n_images, n_images))
+        print("Progress: %d / %d\n" % (n_images, n_images))
 
         return images
 
@@ -235,23 +271,23 @@ class MNIST(Dataset):
         :return: An array of shape ``(n_labels,)``, where ``n_labels`` is the number of labels in the file.
         """
         filename = os.path.join(self.path, filename)
-        data = open(filename, 'rb')
+        data = open(filename, "rb")
 
         # Get metadata for labels.
         data.read(4)
-        n_labels = unpack('>I', data.read(4))[0]
+        n_labels = unpack(">I", data.read(4))[0]
 
         labels = np.zeros(n_labels, dtype=np.uint8)
 
-        print('\nProcessing labels.\n')
+        print("\nProcessing labels.\n")
 
         for i in range(n_labels):
             if i % 1000 == 0:
-                print('Progress: %d / %d' % (i, n_labels))
+                print("Progress: %d / %d" % (i, n_labels))
 
-            labels[i] = unpack('>B', data.read(1))[0]
+            labels[i] = unpack(">B", data.read(1))[0]
 
-        print('Progress: %d / %d\n' % (n_labels, n_labels))
+        print("Progress: %d / %d\n" % (n_labels, n_labels))
 
         return labels
 
@@ -261,23 +297,27 @@ class FashionMNIST(Dataset):
     """
     Handles loading and saving of the Fashion MNIST grayscale image dataset `(link) <>`_.
     """
-    train_images_pickle = 'train_images.pt'
-    train_labels_pickle = 'train_labels.pt'
-    test_images_pickle = 'test_images.pt'
-    test_labels_pickle = 'test_labels.pt'
+    train_images_pickle = "train_images.pt"
+    train_labels_pickle = "train_labels.pt"
+    test_images_pickle = "test_images.pt"
+    test_labels_pickle = "test_labels.pt"
 
-    train_images_file = 'train-images-idx3-ubyte'
-    train_labels_file = 'train-labels-idx1-ubyte'
-    test_images_file = 't10k-images-idx3-ubyte'
-    test_labels_file = 't10k-labels-idx1-ubyte'
+    train_images_file = "train-images-idx3-ubyte"
+    train_labels_file = "train-labels-idx1-ubyte"
+    test_images_file = "t10k-images-idx3-ubyte"
+    test_labels_file = "t10k-labels-idx1-ubyte"
 
-    train_images_url = 'http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz'
-    train_labels_url = 'http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz'
-    test_images_url = 'http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz'
-    test_labels_url = 'http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz'
+    train_images_url = "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz"
+    train_labels_url = "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz"
+    test_images_url = "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz"
+    test_labels_url = "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz"
 
-    def __init__(self, path: str = os.path.join('data', 'FashionMNIST'), download: bool = False,
-                 shuffle: bool = True) -> None:
+    def __init__(
+        self,
+        path: str = os.path.join("data", "FashionMNIST"),
+        download: bool = False,
+        shuffle: bool = True,
+    ) -> None:
         # language=rst
         """
         Constructor for the ``FashionMNIST`` object. Makes the data directory if it doesn't already exist.
@@ -295,39 +335,61 @@ class FashionMNIST(Dataset):
 
         :return: Fashion-MNIST training images and labels.
         """
-        if not os.path.isfile(os.path.join(self.path, FashionMNIST.train_images_pickle)):
+        if not os.path.isfile(
+            os.path.join(self.path, FashionMNIST.train_images_pickle)
+        ):
             # Download training images if they aren't on disk.
             if self.download:
-                print('Downloading training images.\n')
-                self._download(FashionMNIST.train_images_url, FashionMNIST.train_images_file)
+                print("Downloading training images.\n")
+                self._download(
+                    FashionMNIST.train_images_url, FashionMNIST.train_images_file
+                )
                 images = self.process_images(FashionMNIST.train_images_file)
 
                 # Serialize image data on disk for next time.
-                torch.save(images, open(os.path.join(self.path, FashionMNIST.train_images_pickle), 'wb'))
+                torch.save(
+                    images,
+                    open(
+                        os.path.join(self.path, FashionMNIST.train_images_pickle), "wb"
+                    ),
+                )
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             # Load image data from disk if it has already been processed.
-            print('Loading training images from serialized object file.\n')
-            images = torch.load(open(os.path.join(self.path, FashionMNIST.train_images_pickle), 'rb'))
+            print("Loading training images from serialized object file.\n")
+            images = torch.load(
+                open(os.path.join(self.path, FashionMNIST.train_images_pickle), "rb")
+            )
 
-        if not os.path.isfile(os.path.join(self.path, FashionMNIST.train_labels_pickle)):
+        if not os.path.isfile(
+            os.path.join(self.path, FashionMNIST.train_labels_pickle)
+        ):
             # Download training labels if they aren't on disk.
             if self.download:
-                print('Downloading training labels.\n')
-                self._download(FashionMNIST.train_labels_url, FashionMNIST.train_labels_file)
+                print("Downloading training labels.\n")
+                self._download(
+                    FashionMNIST.train_labels_url, FashionMNIST.train_labels_file
+                )
                 labels = self.process_labels(FashionMNIST.train_labels_file)
 
                 # Serialize label data on disk for next time.
-                torch.save(labels, open(os.path.join(self.path, FashionMNIST.train_labels_pickle), 'wb'))
+                torch.save(
+                    labels,
+                    open(
+                        os.path.join(self.path, FashionMNIST.train_labels_pickle), "wb"
+                    ),
+                )
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             # Load label data from disk if it has already been processed.
-            print('Loading training labels from serialized object file.\n')
-            labels = torch.load(open(os.path.join(self.path, FashionMNIST.train_labels_pickle), 'rb'))
+            print("Loading training labels from serialized object file.\n")
+            labels = torch.load(
+                open(os.path.join(self.path, FashionMNIST.train_labels_pickle), "rb")
+            )
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
@@ -345,36 +407,54 @@ class FashionMNIST(Dataset):
         if not os.path.isfile(os.path.join(self.path, FashionMNIST.test_images_pickle)):
             # Download test images if they aren't on disk.
             if self.download:
-                print('Downloading test images.\n')
-                self._download(FashionMNIST.test_images_url, FashionMNIST.test_images_file)
+                print("Downloading test images.\n")
+                self._download(
+                    FashionMNIST.test_images_url, FashionMNIST.test_images_file
+                )
                 images = self.process_images(FashionMNIST.test_images_file)
 
                 # Serialize image data on disk for next time.
-                torch.save(images, open(os.path.join(self.path, FashionMNIST.test_images_pickle), 'wb'))
+                torch.save(
+                    images,
+                    open(
+                        os.path.join(self.path, FashionMNIST.test_images_pickle), "wb"
+                    ),
+                )
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             # Load image data from disk if it has already been processed.
-            print('Loading test images from serialized object file.\n')
-            images = torch.load(open(os.path.join(self.path, FashionMNIST.test_images_pickle), 'rb'))
+            print("Loading test images from serialized object file.\n")
+            images = torch.load(
+                open(os.path.join(self.path, FashionMNIST.test_images_pickle), "rb")
+            )
 
         if not os.path.isfile(os.path.join(self.path, FashionMNIST.test_labels_pickle)):
             if self.download:
                 # Download test labels if they aren't on disk.
-                print('Downloading test labels.\n')
-                self._download(FashionMNIST.test_labels_url, FashionMNIST.test_labels_file)
+                print("Downloading test labels.\n")
+                self._download(
+                    FashionMNIST.test_labels_url, FashionMNIST.test_labels_file
+                )
                 labels = self.process_labels(FashionMNIST.test_labels_file)
 
                 # Serialize image data on disk for next time.
-                torch.save(labels, open(os.path.join(self.path, FashionMNIST.test_labels_pickle), 'wb'))
+                torch.save(
+                    labels,
+                    open(
+                        os.path.join(self.path, FashionMNIST.test_labels_pickle), "wb"
+                    ),
+                )
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             # Load label data from disk if it has already been processed.
-            print('Loading test labels from serialized object file.\n')
-            labels = torch.load(open(os.path.join(self.path, FashionMNIST.test_labels_pickle), 'rb'))
+            print("Loading test labels from serialized object file.\n")
+            labels = torch.load(
+                open(os.path.join(self.path, FashionMNIST.test_labels_pickle), "rb")
+            )
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
@@ -390,9 +470,9 @@ class FashionMNIST(Dataset):
         :param url: The URL of the data file to be downloaded.
         :param filename: The name of the file to save the downloaded data to.
         """
-        urlretrieve(url, os.path.join(self.path, filename + '.gz'))
-        with gzip.open(os.path.join(self.path, filename + '.gz'), 'rb') as _in:
-            with open(os.path.join(self.path, filename), 'wb') as _out:
+        urlretrieve(url, os.path.join(self.path, filename + ".gz"))
+        with gzip.open(os.path.join(self.path, filename + ".gz"), "rb") as _in:
+            with open(os.path.join(self.path, filename), "wb") as _out:
                 shutil.copyfileobj(_in, _out)
 
     def process_images(self, filename: str) -> np.ndarray:
@@ -404,25 +484,28 @@ class FashionMNIST(Dataset):
         :return: A numpy array of shape ``[n_images, 28, 28]``, where ``n_images`` is the number of images in the file.
         """
         filename = os.path.join(self.path, filename)
-        data = open(filename, 'rb')
+        data = open(filename, "rb")
 
         # Get metadata for images.
         data.read(4)
-        n_images = unpack('>I', data.read(4))[0]
-        rows = unpack('>I', data.read(4))[0]
-        cols = unpack('>I', data.read(4))[0]
+        n_images = unpack(">I", data.read(4))[0]
+        rows = unpack(">I", data.read(4))[0]
+        cols = unpack(">I", data.read(4))[0]
 
         images = np.zeros((n_images, rows, cols), dtype=np.uint8)
 
-        print('\nProcessing images.\n')
+        print("\nProcessing images.\n")
 
         for i in range(n_images):
             if i % 1000 == 0:
-                print('Progress: %d / %d' % (i, n_images))
+                print("Progress: %d / %d" % (i, n_images))
 
-            images[i] = [[unpack('>B', data.read(1))[0] for _ in range(cols)] for _ in range(rows)]
+            images[i] = [
+                [unpack(">B", data.read(1))[0] for _ in range(cols)]
+                for _ in range(rows)
+            ]
 
-        print('Progress: %d / %d\n' % (n_images, n_images))
+        print("Progress: %d / %d\n" % (n_images, n_images))
 
         return images
 
@@ -435,23 +518,23 @@ class FashionMNIST(Dataset):
         :return: An array of shape ``(n_labels,)``, where ``n_labels`` is the number of labels in the file.
         """
         filename = os.path.join(self.path, filename)
-        data = open(filename, 'rb')
+        data = open(filename, "rb")
 
         # Get metadata for labels.
         data.read(4)
-        n_labels = unpack('>I', data.read(4))[0]
+        n_labels = unpack(">I", data.read(4))[0]
 
         labels = np.zeros(n_labels, dtype=np.uint8)
 
-        print('\nProcessing labels.\n')
+        print("\nProcessing labels.\n")
 
         for i in range(n_labels):
             if i % 1000 == 0:
-                print('Progress: %d / %d' % (i, n_labels))
+                print("Progress: %d / %d" % (i, n_labels))
 
-            labels[i] = unpack('>B', data.read(1))[0]
+            labels[i] = unpack(">B", data.read(1))[0]
 
-        print('Progress: %d / %d\n' % (n_labels, n_labels))
+        print("Progress: %d / %d\n" % (n_labels, n_labels))
 
         return labels
 
@@ -462,21 +545,25 @@ class SpokenMNIST(Dataset):
     Handles loading and saving of the Spoken MNIST audio dataset `(link)
     <https://github.com/Jakobovski/free-spoken-digit-dataset>`_.
     """
-    train_pickle = 'train.pt'
-    test_pickle = 'test.pt'
+    train_pickle = "train.pt"
+    test_pickle = "test.pt"
 
-    url = 'https://github.com/Jakobovski/free-spoken-digit-dataset/archive/master.zip'
+    url = "https://github.com/Jakobovski/free-spoken-digit-dataset/archive/master.zip"
 
     files = []
     for digit in range(10):
-        for speaker in ['jackson', 'nicolas', 'theo']:
+        for speaker in ["jackson", "nicolas", "theo"]:
             for example in range(50):
-                files.append('_'.join([str(digit), speaker, str(example)]) + '.wav')
+                files.append("_".join([str(digit), speaker, str(example)]) + ".wav")
 
     n_files = len(files)
 
-    def __init__(self, path: str = os.path.join('data', 'SpokenMNIST'), download: bool = False,
-                 shuffle: bool = True) -> None:
+    def __init__(
+        self,
+        path: str = os.path.join("data", "SpokenMNIST"),
+        download: bool = False,
+        shuffle: bool = True,
+    ) -> None:
         # language=rst
         """
         Constructor for the ``SpokenMNIST`` object. Makes the data directory if it doesn't already exist.
@@ -486,9 +573,9 @@ class SpokenMNIST(Dataset):
         :param shuffle: Whether to randomly permute order of dataset.
         """
         super().__init__(path, download)
-        self.zip_path = os.path.join(path, 'repo.zip')
+        self.zip_path = os.path.join(path, "repo.zip")
 
-    def get_train(self, split: float=0.8) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_train(self, split: float = 0.8) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
         """
         Gets the Spoken MNIST training audio and labels.
@@ -497,21 +584,21 @@ class SpokenMNIST(Dataset):
         :return: Spoken MNIST training audio and labels.
         """
         split_index = int(split * SpokenMNIST.n_files)
-        path = os.path.join(self.path, '_'.join([SpokenMNIST.train_pickle, str(split)]))
+        path = os.path.join(self.path, "_".join([SpokenMNIST.train_pickle, str(split)]))
 
         if not all([os.path.isfile(os.path.join(self.path, f)) for f in self.files]):
             # Download data if it isn't on disk.
             if self.download:
-                print('Downloading Spoken MNIST data.\n')
+                print("Downloading Spoken MNIST data.\n")
                 self._download()
 
                 # Process data into audio, label (input, output) pairs.
                 audio, labels = self.process_data(SpokenMNIST.files[:split_index])
 
                 # Serialize image data on disk for next time.
-                torch.save((audio, labels), open(path, 'wb'))
+                torch.save((audio, labels), open(path, "wb"))
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -519,11 +606,11 @@ class SpokenMNIST(Dataset):
                 audio, labels = self.process_data(SpokenMNIST.files)
 
                 # Serialize image data on disk for next time.
-                torch.save((audio, labels), open(path, 'wb'))
+                torch.save((audio, labels), open(path, "wb"))
             else:
                 # Load image data from disk if it has already been processed.
-                print('Loading training data from serialized object file.\n')
-                audio, labels = torch.load(open(path, 'rb'))
+                print("Loading training data from serialized object file.\n")
+                audio, labels = torch.load(open(path, "rb"))
 
         labels = torch.Tensor(labels)
 
@@ -533,7 +620,7 @@ class SpokenMNIST(Dataset):
 
         return audio, torch.Tensor(labels)
 
-    def get_test(self, split: float=0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+    def get_test(self, split: float = 0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         # language=rst
         """
         Gets the Spoken MNIST training audio and labels.
@@ -542,21 +629,21 @@ class SpokenMNIST(Dataset):
         :return: The Spoken MNIST test audio and labels.
         """
         split_index = int(split * SpokenMNIST.n_files)
-        path = os.path.join(self.path, '_'.join([SpokenMNIST.test_pickle, str(split)]))
+        path = os.path.join(self.path, "_".join([SpokenMNIST.test_pickle, str(split)]))
 
         if not all([os.path.isfile(os.path.join(self.path, f)) for f in self.files]):
             # Download data if it isn't on disk.
             if self.download:
-                print('Downloading Spoken MNIST data.\n')
+                print("Downloading Spoken MNIST data.\n")
                 self._download()
 
                 # Process data into audio, label (input, output) pairs.
                 audio, labels = self.process_data(SpokenMNIST.files[split_index:])
 
                 # Serialize image data on disk for next time.
-                torch.save((audio, labels), open(path, 'wb'))
+                torch.save((audio, labels), open(path, "wb"))
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -564,11 +651,11 @@ class SpokenMNIST(Dataset):
                 audio, labels = self.process_data(SpokenMNIST.files)
 
                 # Serialize image data on disk for next time.
-                torch.save((audio, labels), open(path, 'wb'))
+                torch.save((audio, labels), open(path, "wb"))
             else:
                 # Load image data from disk if it has already been processed.
-                print('Loading test data from serialized object file.\n')
-                audio, labels = torch.load(open(path, 'rb'))
+                print("Loading test data from serialized object file.\n")
+                audio, labels = torch.load(open(path, "rb"))
 
         labels = torch.Tensor(labels)
 
@@ -585,20 +672,22 @@ class SpokenMNIST(Dataset):
         """
         urlretrieve(SpokenMNIST.url, self.zip_path)
 
-        z = zipfile.ZipFile(self.zip_path, 'r')
+        z = zipfile.ZipFile(self.zip_path, "r")
         z.extractall(path=self.path)
         z.close()
 
-        path = os.path.join(self.path, 'free-spoken-digit-dataset-master', 'recordings')
+        path = os.path.join(self.path, "free-spoken-digit-dataset-master", "recordings")
         for f in os.listdir(path):
             shutil.move(os.path.join(path, f), os.path.join(self.path))
 
         cwd = os.getcwd()
         os.chdir(self.path)
-        shutil.rmtree('free-spoken-digit-dataset-master')
+        shutil.rmtree("free-spoken-digit-dataset-master")
         os.chdir(cwd)
 
-    def process_data(self, file_names: Iterable[str]) -> Tuple[List[torch.Tensor], torch.Tensor]:
+    def process_data(
+        self, file_names: Iterable[str]
+    ) -> Tuple[List[torch.Tensor], torch.Tensor]:
         # language=rst
         """
         Opens files of Spoken MNIST data and processes them into ``numpy`` arrays.
@@ -609,32 +698,42 @@ class SpokenMNIST(Dataset):
         audio, labels = [], []
 
         for f in file_names:
-            label = int(f.split('_')[0])
+            label = int(f.split("_")[0])
 
             sample_rate, signal = wavfile.read(os.path.join(self.path, f))
             pre_emphasis = 0.97
-            emphasized_signal = np.append(signal[0], signal[1:] - pre_emphasis * signal[:-1])
+            emphasized_signal = np.append(
+                signal[0], signal[1:] - pre_emphasis * signal[:-1]
+            )
 
             # Popular settings are 25 ms for the frame size and a 10 ms stride (15 ms overlap)
             frame_size = 0.025
             frame_stride = 0.01
 
             # Convert from seconds to samples
-            frame_length, frame_step = frame_size * sample_rate, frame_stride * sample_rate
+            frame_length, frame_step = (
+                frame_size * sample_rate,
+                frame_stride * sample_rate,
+            )
             signal_length = len(emphasized_signal)
             frame_length = int(round(frame_length))
             frame_step = int(round(frame_step))
 
             # Make sure that we have at least 1 frame
-            num_frames = int(np.ceil(float(np.abs(signal_length - frame_length)) / frame_step))
+            num_frames = int(
+                np.ceil(float(np.abs(signal_length - frame_length)) / frame_step)
+            )
 
             pad_signal_length = num_frames * frame_step + frame_length
             z = np.zeros((pad_signal_length - signal_length))
             pad_signal = np.append(emphasized_signal, z)  # Pad signal
 
-            indices = np.tile(np.arange(0, frame_length), (num_frames, 1)) + np.tile(
-                np.arange(0, num_frames * frame_step, frame_step), (frame_length, 1)
-            ).T
+            indices = (
+                np.tile(np.arange(0, frame_length), (num_frames, 1))
+                + np.tile(
+                    np.arange(0, num_frames * frame_step, frame_step), (frame_length, 1)
+                ).T
+            )
             frames = pad_signal[indices.astype(np.int32, copy=False)]
 
             # Hamming Window
@@ -643,14 +742,18 @@ class SpokenMNIST(Dataset):
             # Fast Fourier Transform and Power Spectrum
             NFFT = 512
             mag_frames = np.absolute(np.fft.rfft(frames, NFFT))  # Magnitude of the FFT
-            pow_frames = ((1.0 / NFFT) * ((mag_frames) ** 2))  # Power Spectrum
+            pow_frames = (1.0 / NFFT) * (mag_frames ** 2)  # Power Spectrum
 
             # Log filter banks
             nfilt = 40
             low_freq_mel = 0
-            high_freq_mel = (2595 * np.log10(1 + (sample_rate / 2) / 700))  # Convert Hz to Mel
-            mel_points = np.linspace(low_freq_mel, high_freq_mel, nfilt + 2)  # Equally spaced in Mel scale
-            hz_points = (700 * (10 ** (mel_points / 2595) - 1))  # Convert Mel to Hz
+            high_freq_mel = 2595 * np.log10(
+                1 + (sample_rate / 2) / 700
+            )  # Convert Hz to Mel
+            mel_points = np.linspace(
+                low_freq_mel, high_freq_mel, nfilt + 2
+            )  # Equally spaced in Mel scale
+            hz_points = 700 * (10 ** (mel_points / 2595) - 1)  # Convert Mel to Hz
             bin = np.floor((NFFT + 1) * hz_points / sample_rate)
 
             fbank = np.zeros((nfilt, int(np.floor(NFFT / 2 + 1))))
@@ -665,7 +768,9 @@ class SpokenMNIST(Dataset):
                     fbank[m - 1, k] = (bin[m + 1] - k) / (bin[m + 1] - bin[m])
 
             filter_banks = np.dot(pow_frames, fbank.T)
-            filter_banks = np.where(filter_banks == 0, np.finfo(float).eps, filter_banks)  # Numerical Stability
+            filter_banks = np.where(
+                filter_banks == 0, np.finfo(float).eps, filter_banks
+            )  # Numerical Stability
             filter_banks = 20 * np.log10(filter_banks)  # dB
 
             audio.append(filter_banks), labels.append(label)
@@ -678,19 +783,29 @@ class CIFAR10(Dataset):
     """
     Handles loading and saving of the CIFAR-10 image dataset `(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
     """
-    data_directory = 'cifar-10-batches-py'
-    data_archive = 'cifar-10-python.tar.gz'
+    data_directory = "cifar-10-batches-py"
+    data_archive = "cifar-10-python.tar.gz"
 
-    train_pickle = 'train.pt'
-    test_pickle = 'test.pt'
+    train_pickle = "train.pt"
+    test_pickle = "test.pt"
 
-    train_files = ['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5']
-    test_files = ['test_batch']
+    train_files = [
+        "data_batch_1",
+        "data_batch_2",
+        "data_batch_3",
+        "data_batch_4",
+        "data_batch_5",
+    ]
+    test_files = ["test_batch"]
 
-    url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
+    url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
 
-    def __init__(self, path: str = os.path.join('data', 'CIFAR10'), download: bool = False,
-                 shuffle: bool = True) -> None:
+    def __init__(
+        self,
+        path: str = os.path.join("data", "CIFAR10"),
+        download: bool = False,
+        shuffle: bool = True,
+    ) -> None:
         # language=rst
         """
         Constructor for the ``CIFAR10`` object. Makes the data directory if it doesn't already exist.
@@ -712,14 +827,14 @@ class CIFAR10(Dataset):
         if not os.path.isdir(os.path.join(self.path, CIFAR10.data_directory)):
             # Download data if it isn't on disk.
             if self.download:
-                print('Downloading CIFAR-10 data.\n')
+                print("Downloading CIFAR-10 data.\n")
                 self._download(CIFAR10.url, CIFAR10.data_archive)
                 images, labels = self.process_data(CIFAR10.train_files)
 
                 # Serialize image data on disk for next time.
-                torch.save((images, labels), open(path, 'wb'))
+                torch.save((images, labels), open(path, "wb"))
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -727,11 +842,11 @@ class CIFAR10(Dataset):
                 images, labels = self.process_data(CIFAR10.train_files)
 
                 # Serialize image data on disk for next time.
-                torch.save((images, labels), open(path, 'wb'))
+                torch.save((images, labels), open(path, "wb"))
             else:
                 # Load image data from disk if it has already been processed.
-                print('Loading training images from serialized object file.\n')
-                images, labels = torch.load(open(path, 'rb'))
+                print("Loading training images from serialized object file.\n")
+                images, labels = torch.load(open(path, "rb"))
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
@@ -750,14 +865,14 @@ class CIFAR10(Dataset):
         if not os.path.isdir(os.path.join(self.path, CIFAR10.data_directory)):
             # Download data if it isn't on disk.
             if self.download:
-                print('Downloading CIFAR-10 data.\n')
+                print("Downloading CIFAR-10 data.\n")
                 self._download(CIFAR10.url, CIFAR10.data_archive)
                 images, labels = self.process_data(CIFAR10.test_files)
 
                 # Serialize image data on disk for next time.
-                torch.save((images, labels), open(path, 'wb'))
+                torch.save((images, labels), open(path, "wb"))
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -765,11 +880,11 @@ class CIFAR10(Dataset):
                 images, labels = self.process_data(CIFAR10.test_files)
 
                 # Serialize image data on disk for next time.
-                torch.save((images, labels), open(path, 'wb'))
+                torch.save((images, labels), open(path, "wb"))
             else:
                 # Load image data from disk if it has already been processed.
-                print('Loading test images from serialized object file.\n')
-                images, labels = torch.load(open(path, 'rb'))
+                print("Loading test images from serialized object file.\n")
+                images, labels = torch.load(open(path, "rb"))
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
@@ -786,25 +901,29 @@ class CIFAR10(Dataset):
         :param file_name: The name of the file to store extract the archive to.
         """
         urlretrieve(url, os.path.join(self.path, file_name))
-        tar = tarfile.open(os.path.join(self.path, file_name), 'r:gz')
+        tar = tarfile.open(os.path.join(self.path, file_name), "r:gz")
         tar.extractall(path=self.path)
         tar.close()
 
-    def process_data(self, file_names: Iterable[str]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def process_data(
+        self, file_names: Iterable[str]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
         """
         Opens files of CIFAR-10 data and processes them into ``torch.Tensors``.
         :param file_names: Name of the file containing CIFAR-10 images and labels to load.
         :return: Processed CIFAR-10 image and label data.
         """
-        d = {'data': [], 'labels': []}
+        d = {"data": [], "labels": []}
         for filename in file_names:
-            with open(os.path.join(self.data_path, filename), 'rb') as f:
-                temp = p.load(f, encoding='bytes')
-                d['data'].append(temp[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1))
-                d['labels'].append(temp[b'labels'])
+            with open(os.path.join(self.data_path, filename), "rb") as f:
+                temp = p.load(f, encoding="bytes")
+                d["data"].append(
+                    temp[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+                )
+                d["labels"].append(temp[b"labels"])
 
-        data, labels = np.concatenate(d['data']), np.concatenate(d['labels'])
+        data, labels = np.concatenate(d["data"]), np.concatenate(d["labels"])
         return data.astype(np.float32), labels.astype(np.float32)
 
 
@@ -813,19 +932,23 @@ class CIFAR100(Dataset):
     """
     Handles loading and saving of the CIFAR-100 image dataset `(link) <https://www.cs.toronto.edu/~kriz/cifar.html>`_.
     """
-    data_directory = 'cifar-100-python'
-    data_archive = 'cifar-100-python.tar.gz'
+    data_directory = "cifar-100-python"
+    data_archive = "cifar-100-python.tar.gz"
 
-    train_pickle = 'train.pt'
-    test_pickle = 'test.pt'
+    train_pickle = "train.pt"
+    test_pickle = "test.pt"
 
-    train_files = ['train']
-    test_files = ['test']
+    train_files = ["train"]
+    test_files = ["test"]
 
-    url = 'https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz'
+    url = "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz"
 
-    def __init__(self, path: str = os.path.join('data', 'CIFAR100'), download: bool = False,
-                 shuffle: bool = True) -> None:
+    def __init__(
+        self,
+        path: str = os.path.join("data", "CIFAR100"),
+        download: bool = False,
+        shuffle: bool = True,
+    ) -> None:
         # language=rst
         """
         Constructor for the ``CIFAR100`` object. Makes the data directory if it doesn't already exist.
@@ -847,14 +970,14 @@ class CIFAR100(Dataset):
         if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
             # Download data if it isn't on disk.
             if self.download:
-                print('Downloading CIFAR-100 data.\n')
+                print("Downloading CIFAR-100 data.\n")
                 self._download(CIFAR100.url, CIFAR100.data_archive)
                 images, labels = self.process_data(CIFAR100.train_files)
 
                 # Serialize image data on disk for next time.
-                torch.save((images, labels), open(path, 'wb'))
+                torch.save((images, labels), open(path, "wb"))
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -862,11 +985,11 @@ class CIFAR100(Dataset):
                 images, labels = self.process_data(CIFAR100.train_files)
 
                 # Serialize image data on disk for next time.
-                torch.save((images, labels), open(path, 'wb'))
+                torch.save((images, labels), open(path, "wb"))
             else:
                 # Load image data from disk if it has already been processed.
-                print('Loading training images from serialized object file.\n')
-                images, labels = torch.load(open(path, 'rb'))
+                print("Loading training images from serialized object file.\n")
+                images, labels = torch.load(open(path, "rb"))
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
@@ -885,14 +1008,14 @@ class CIFAR100(Dataset):
         if not os.path.isdir(os.path.join(self.path, CIFAR100.data_directory)):
             # Download data if it isn't on disk.
             if self.download:
-                print('Downloading CIFAR-100 data.\n')
+                print("Downloading CIFAR-100 data.\n")
                 self._download(CIFAR100.url, CIFAR100.data_archive)
                 images, labels = self.process_data(CIFAR100.test_files)
 
                 # Serialize image data on disk for next time.
-                torch.save((images, labels), open(path, 'wb'))
+                torch.save((images, labels), open(path, "wb"))
             else:
-                msg = 'Dataset not found on disk; specify \'download=True\' to allow downloads.'
+                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -900,11 +1023,11 @@ class CIFAR100(Dataset):
                 images, labels = self.process_data(CIFAR100.test_files)
 
                 # Serialize image data on disk for next time.
-                torch.save((images, labels), open(path, 'wb'))
+                torch.save((images, labels), open(path, "wb"))
             else:
                 # Load image data from disk if it has already been processed.
-                print('Loading test images from serialized object file.\n')
-                images, labels = torch.load(open(path, 'rb'))
+                print("Loading test images from serialized object file.\n")
+                images, labels = torch.load(open(path, "rb"))
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
@@ -921,7 +1044,7 @@ class CIFAR100(Dataset):
         :param file_name: The name of the file to store extract the archive to.
         """
         urlretrieve(url, os.path.join(self.path, filename))
-        tar = tarfile.open(os.path.join(self.path, filename), 'r:gz')
+        tar = tarfile.open(os.path.join(self.path, filename), "r:gz")
         tar.extractall(path=self.path)
         tar.close()
 
@@ -933,13 +1056,14 @@ class CIFAR100(Dataset):
         :param file_names: Name of the file containing CIFAR-100 images and labels to load.
         :return: Processed CIFAR-100 image and label data.
         """
-        d = {'data': [], 'labels': []}
+        d = {"data": [], "labels": []}
         for filename in file_names:
-            with open(os.path.join(self.data_path, filename), 'rb') as f:
-                temp = p.load(f, encoding='bytes')
-                d['data'].append(temp[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1))
-                d['labels'].append(temp[b'fine_labels'])
+            with open(os.path.join(self.data_path, filename), "rb") as f:
+                temp = p.load(f, encoding="bytes")
+                d["data"].append(
+                    temp[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+                )
+                d["labels"].append(temp[b"fine_labels"])
 
-        data, labels = np.concatenate(d['data']), np.concatenate(d['labels'])
+        data, labels = np.concatenate(d["data"]), np.concatenate(d["labels"])
         return data.astype(np.float32), labels.astype(np.float32)
-

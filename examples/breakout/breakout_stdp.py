@@ -19,24 +19,40 @@ out = LIFNodes(n=4, refrac=0, traces=True)
 
 # Connections between layers.
 inpt_middle = Connection(source=inpt, target=middle, wmin=0, wmax=1e-1)
-middle_out = Connection(source=middle, target=out, wmin=0, wmax=1, update_rule=MSTDP, nu=1e-1, norm=0.5 * middle.n)
+middle_out = Connection(
+    source=middle,
+    target=out,
+    wmin=0,
+    wmax=1,
+    update_rule=MSTDP,
+    nu=1e-1,
+    norm=0.5 * middle.n,
+)
 
 # Add all layers and connections to the network.
-network.add_layer(inpt, name='Input Layer')
-network.add_layer(middle, name='Hidden Layer')
-network.add_layer(out, name='Output Layer')
-network.add_connection(inpt_middle, source='Input Layer', target='Hidden Layer')
-network.add_connection(middle_out, source='Hidden Layer', target='Output Layer')
+network.add_layer(inpt, name="Input Layer")
+network.add_layer(middle, name="Hidden Layer")
+network.add_layer(out, name="Output Layer")
+network.add_connection(inpt_middle, source="Input Layer", target="Hidden Layer")
+network.add_connection(middle_out, source="Hidden Layer", target="Output Layer")
 
 # Load SpaceInvaders environment.
-environment = GymEnvironment('BreakoutDeterministic-v4')
+environment = GymEnvironment("BreakoutDeterministic-v4")
 environment.reset()
 
 # Build pipeline from specified components.
-pipeline = Pipeline(network, environment, encoding=bernoulli,
-                    action_function=select_softmax, output='Output Layer',
-                    time=100, history_length=1, delta=1,
-                    plot_interval=1, render_interval=1)
+pipeline = Pipeline(
+    network,
+    environment,
+    encoding=bernoulli,
+    action_function=select_softmax,
+    output="Output Layer",
+    time=100,
+    history_length=1,
+    delta=1,
+    plot_interval=1,
+    render_interval=1,
+)
 
 
 # Train agent for 100 episodes.

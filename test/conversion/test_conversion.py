@@ -9,6 +9,7 @@ class FullyConnectedNetwork(nn.Module):
     """
     Simply fully-connected network implemented in PyTorch.
     """
+
     def __init__(self):
         super(FullyConnectedNetwork, self).__init__()
 
@@ -33,5 +34,5 @@ def main():
     return ann_to_snn(ann, input_shape=(28, 28))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

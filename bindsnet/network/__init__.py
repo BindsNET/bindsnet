@@ -8,12 +8,10 @@ from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
 from ..learning.reward import AbstractReward
 
-__all__ = [
-    'load', 'Network', 'nodes', 'monitors', 'topology'
-]
+__all__ = ["load", "Network", "nodes", "monitors", "topology"]
 
 
-def load(file_name: str, map_location: str = 'cpu', learning: bool = None) -> 'Network':
+def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
     # language=rst
     """
     Loads serialized network object from disk.
@@ -22,8 +20,8 @@ def load(file_name: str, map_location: str = 'cpu', learning: bool = None) -> 'N
     :param map_location: One of ``'cpu'`` or ``'cuda'``. Defaults to ``'cpu'``.
     :param learning: Whether to load with learning enabled. Default loads value from disk.
     """
-    network = torch.load(open(file_name, 'rb'), map_location=map_location)
-    if learning is not None and 'learning' in vars(network):
+    network = torch.load(open(file_name, "rb"), map_location=map_location)
+    if learning is not None and "learning" in vars(network):
         network.learning = learning
 
     return network
@@ -84,8 +82,12 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0, learning: bool = True,
-                 reward_fn: Optional[AbstractReward] = None) -> None:
+    def __init__(
+        self,
+        dt: float = 1.0,
+        learning: bool = True,
+        reward_fn: Optional[AbstractReward] = None,
+    ) -> None:
         # language=rst
         """
         Initializes network object.
@@ -117,7 +119,9 @@ class Network:
         layer.dt = self.dt
         layer._compute_decays()
 
-    def add_connection(self, connection: AbstractConnection, source: str, target: str) -> None:
+    def add_connection(
+        self, connection: AbstractConnection, source: str, target: str
+    ) -> None:
         # language=rst
         """
         Adds a connection between layers of nodes to the network.
@@ -175,9 +179,9 @@ class Network:
             # Save the network to disk.
             network.save(str(Path.home()) + '/network.pt')
         """
-        torch.save(self, open(file_name, 'wb'))
+        torch.save(self, open(file_name, "wb"))
 
-    def clone(self) -> 'Network':
+    def clone(self) -> "Network":
         # language=rst
         """
         Returns a cloned network object.
@@ -263,14 +267,14 @@ class Network:
             plt.show()
         """
         # Parse keyword arguments.
-        clamps = kwargs.get('clamp', {})
-        unclamps = kwargs.get('unclamp', {})
-        masks = kwargs.get('masks', {})
-        injects_v = kwargs.get('injects_v', {})
+        clamps = kwargs.get("clamp", {})
+        unclamps = kwargs.get("unclamp", {})
+        masks = kwargs.get("masks", {})
+        injects_v = kwargs.get("injects_v", {})
 
         # Compute reward.
         if self.reward_fn is not None:
-            kwargs['reward'] = self.reward_fn.compute(**kwargs)
+            kwargs["reward"] = self.reward_fn.compute(**kwargs)
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)

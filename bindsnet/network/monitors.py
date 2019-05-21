@@ -54,7 +54,13 @@ class Monitor(AbstractMonitor):
     """
     Records state variables of interest.
     """
-    def __init__(self, obj: Union[Nodes, AbstractConnection], state_vars: Iterable[str], time: Optional[int]=None):
+
+    def __init__(
+        self,
+        obj: Union[Nodes, AbstractConnection],
+        state_vars: Iterable[str],
+        time: Optional[int] = None,
+    ):
         # language=rst
         """
         Constructs a ``Monitor`` object.
@@ -71,14 +77,20 @@ class Monitor(AbstractMonitor):
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
-            self.recording = {v: torch.tensor([], dtype=self.obj.__dict__[v].dtype) for v in self.state_vars}
+            self.recording = {
+                v: torch.tensor([], dtype=self.obj.__dict__[v].dtype)
+                for v in self.state_vars
+            }
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
             self.recording = self.recording = {
                 v: torch.zeros(
-                    *self.obj.__dict__[v].size(), self.time, dtype=self.obj.__dict__[v].dtype
-                ) for v in self.state_vars
+                    *self.obj.__dict__[v].size(),
+                    self.time,
+                    dtype=self.obj.__dict__[v].dtype
+                )
+                for v in self.state_vars
             }
 
     def get(self, var: str) -> torch.Tensor:
@@ -100,12 +112,16 @@ class Monitor(AbstractMonitor):
         if self.time is None:
             for v in self.state_vars:
                 data = self.obj.__dict__[v].unsqueeze(-1)
-                self.recording[v] = torch.cat([self.recording[v].type(data.type()), data], -1)
+                self.recording[v] = torch.cat(
+                    [self.recording[v].type(data.type()), data], -1
+                )
         else:
             for v in self.state_vars:
                 # Remove the oldest data and concatenate new data
                 data = self.obj.__dict__[v].unsqueeze(-1)
-                self.recording[v] = torch.cat([self.recording[v][..., 1:].type(data.type()), data], -1)
+                self.recording[v] = torch.cat(
+                    [self.recording[v][..., 1:].type(data.type()), data], -1
+                )
 
     def reset_(self) -> None:
         # language=rst
@@ -115,14 +131,20 @@ class Monitor(AbstractMonitor):
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
-            self.recording = {v: torch.tensor([], dtype=self.obj.__dict__[v].dtype) for v in self.state_vars}
+            self.recording = {
+                v: torch.tensor([], dtype=self.obj.__dict__[v].dtype)
+                for v in self.state_vars
+            }
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
             self.recording = self.recording = {
                 v: torch.zeros(
-                    *self.obj.__dict__[v].size(), self.time, dtype=self.obj.__dict__[v].dtype
-                ) for v in self.state_vars
+                    *self.obj.__dict__[v].size(),
+                    self.time,
+                    dtype=self.obj.__dict__[v].dtype
+                )
+                for v in self.state_vars
             }
 
 
@@ -131,9 +153,15 @@ class NetworkMonitor(AbstractMonitor):
     """
     Record state variables of all layers and connections.
     """
-    def __init__(self, network: 'Network', layers: Optional[Iterable[str]]=None,
-                 connections: Optional[Iterable[str]]=None, state_vars: Optional[Iterable[str]]=None,
-                 time: Optional[int]=None):
+
+    def __init__(
+        self,
+        network: "Network",
+        layers: Optional[Iterable[str]] = None,
+        connections: Optional[Iterable[str]] = None,
+        state_vars: Optional[Iterable[str]] = None,
+        time: Optional[int] = None,
+    ):
         # language=rst
         """
         Constructs a ``NetworkMonitor`` object.
@@ -148,15 +176,19 @@ class NetworkMonitor(AbstractMonitor):
 
         self.network = network
         self.layers = layers if layers is not None else list(self.network.layers.keys())
-        self.connections = connections if connections is not None else list(self.network.connections.keys())
-        self.state_vars = state_vars if state_vars is not None else ('v', 's', 'w')
+        self.connections = (
+            connections
+            if connections is not None
+            else list(self.network.connections.keys())
+        )
+        self.state_vars = state_vars if state_vars is not None else ("v", "s", "w")
         self.time = time
 
         if self.time is not None:
             self.i = 0
 
         # Initialize empty recording.
-        self.recording = {k : {} for k in self.layers + self.connections}
+        self.recording = {k: {} for k in self.layers + self.connections}
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
@@ -174,11 +206,15 @@ class NetworkMonitor(AbstractMonitor):
             for v in self.state_vars:
                 for l in self.layers:
                     if v in self.network.layers[l].__dict__:
-                        self.recording[l][v] = torch.zeros(*self.network.layers[l].__dict__[v].size(), self.time)
+                        self.recording[l][v] = torch.zeros(
+                            *self.network.layers[l].__dict__[v].size(), self.time
+                        )
 
                 for c in self.connections:
                     if v in self.network.connections[c].__dict__:
-                        self.recording[c][v] = torch.zeros(*self.network.connections[c].__dict__[v].size(), self.time)
+                        self.recording[c][v] = torch.zeros(
+                            *self.network.connections[c].__dict__[v].size(), self.time
+                        )
 
     def get(self) -> Dict[str, Dict[str, Union[Nodes, AbstractConnection]]]:
         # language=rst
@@ -199,12 +235,16 @@ class NetworkMonitor(AbstractMonitor):
                 for l in self.layers:
                     if v in self.network.layers[l].__dict__:
                         data = self.network.layers[l].__dict__[v].unsqueeze(-1).float()
-                        self.recording[l][v] = torch.cat([self.recording[l][v], data], -1)
+                        self.recording[l][v] = torch.cat(
+                            [self.recording[l][v], data], -1
+                        )
 
                 for c in self.connections:
                     if v in self.network.connections[c].__dict__:
                         data = self.network.connections[c].__dict__[v].unsqueeze(-1)
-                        self.recording[c][v] = torch.cat([self.recording[c][v],  data], -1)
+                        self.recording[c][v] = torch.cat(
+                            [self.recording[c][v], data], -1
+                        )
 
         else:
             for v in self.state_vars:
@@ -220,7 +260,7 @@ class NetworkMonitor(AbstractMonitor):
 
             self.i += 1
 
-    def save(self, path: str, fmt: str='npz') -> None:
+    def save(self, path: str, fmt: str = "npz") -> None:
         # language=rst
         """
         Write the recording dictionary out to file.
@@ -231,19 +271,29 @@ class NetworkMonitor(AbstractMonitor):
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
 
-        if fmt == 'npz':
+        if fmt == "npz":
             # Build a list of arrays to write to disk.
             arrays = {}
             for o in self.recording:
                 if type(o) == tuple:
-                    arrays.update({'_'.join(['-'.join(o), v]): self.recording[o][v] for v in self.recording[o]})
+                    arrays.update(
+                        {
+                            "_".join(["-".join(o), v]): self.recording[o][v]
+                            for v in self.recording[o]
+                        }
+                    )
                 elif type(o) == str:
-                    arrays.update({'_'.join([o, v]): self.recording[o][v] for v in self.recording[o]})
+                    arrays.update(
+                        {
+                            "_".join([o, v]): self.recording[o][v]
+                            for v in self.recording[o]
+                        }
+                    )
 
             np.savez_compressed(path, **arrays)
 
-        elif fmt == 'pickle':
-            with open(path, 'wb') as f:
+        elif fmt == "pickle":
+            with open(path, "wb") as f:
                 torch.save(self.recording, f)
 
     def reset_(self) -> None:
@@ -273,8 +323,12 @@ class NetworkMonitor(AbstractMonitor):
             for v in self.state_vars:
                 for l in self.layers:
                     if v in self.network.layers[l].__dict__:
-                        self.recording[l][v] = torch.zeros(self.network.layers[l].n, self.time)
+                        self.recording[l][v] = torch.zeros(
+                            self.network.layers[l].n, self.time
+                        )
 
                 for c in self.connections:
                     if v in self.network.connections[c].__dict__:
-                        self.recording[c][v] = torch.zeros(*self.network.connections[c].w.size(), self.time)
+                        self.recording[c][v] = torch.zeros(
+                            *self.network.connections[c].w.size(), self.time
+                        )

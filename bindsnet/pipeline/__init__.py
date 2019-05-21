@@ -12,9 +12,7 @@ from ..network import Network
 from ..network.monitors import Monitor
 from ..network.nodes import AbstractInput
 
-__all__ = [
-    'Pipeline', 'action'
-]
+__all__ = ["Pipeline", "action"]
 
 plt.ion()
 
@@ -26,9 +24,15 @@ class Pipeline:
     action.
     """
 
-    def __init__(self, network: Network, environment: Environment, encoding: Callable = bernoulli,
-                 action_function: Optional[Callable] = None, enable_history: Optional[bool] = False,
-                 **kwargs):
+    def __init__(
+        self,
+        network: Network,
+        environment: Environment,
+        encoding: Callable = bernoulli,
+        action_function: Optional[Callable] = None,
+        enable_history: Optional[bool] = False,
+        **kwargs,
+    ):
         # language=rst
         """
         Initializes the pipeline.
@@ -72,35 +76,42 @@ class Pipeline:
         self.reward_list = []
 
         # Setting kwargs.
-        self.time = kwargs.get('time', 1)
-        self.delta = kwargs.get('delta', 1)
-        self.output = kwargs.get('output', None)
-        self.save_dir = kwargs.get('save_dir', 'network.pt')
-        self.plot_interval = kwargs.get('plot_interval', None)
-        self.save_interval = kwargs.get('save_interval', None)
-        self.print_interval = kwargs.get('print_interval', None)
-        self.history_length = kwargs.get('history_length', None)
-        self.render_interval = kwargs.get('render_interval', None)
-        self.plot_length = kwargs.get('plot_length', 1.0)
-        self.plot_type = kwargs.get('plot_type', 'color')
-        self.reward_window = kwargs.get('reward_window', None)
-        self.reward_delay = kwargs.get('reward_delay', None)
+        self.time = kwargs.get("time", 1)
+        self.delta = kwargs.get("delta", 1)
+        self.output = kwargs.get("output", None)
+        self.save_dir = kwargs.get("save_dir", "network.pt")
+        self.plot_interval = kwargs.get("plot_interval", None)
+        self.save_interval = kwargs.get("save_interval", None)
+        self.print_interval = kwargs.get("print_interval", None)
+        self.history_length = kwargs.get("history_length", None)
+        self.render_interval = kwargs.get("render_interval", None)
+        self.plot_length = kwargs.get("plot_length", 1.0)
+        self.plot_type = kwargs.get("plot_type", "color")
+        self.reward_window = kwargs.get("reward_window", None)
+        self.reward_delay = kwargs.get("reward_delay", None)
 
         self.dt = network.dt
         self.timestep = int(self.time / self.dt)
 
         if self.history_length is not None and self.delta is not None:
-            self.history = {i: torch.Tensor() for i in range(1, self.history_length * self.delta + 1, self.delta)}
+            self.history = {
+                i: torch.Tensor()
+                for i in range(1, self.history_length * self.delta + 1, self.delta)
+            }
         else:
             self.history = {}
 
         if self.plot_interval is not None:
             for l in self.network.layers:
-                self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length)),
-                                         name=f'{l}_spikes')
-                if 'v' in self.network.layers[l].__dict__:
-                    self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length)),
-                                             name=f'{l}_voltages')
+                self.network.add_monitor(
+                    Monitor(self.network.layers[l], "s", int(self.plot_length)),
+                    name=f"{l}_spikes",
+                )
+                if "v" in self.network.layers[l].__dict__:
+                    self.network.add_monitor(
+                        Monitor(self.network.layers[l], "v", int(self.plot_length)),
+                        name=f"{l}_voltages",
+                    )
 
             self.spike_record = {l: torch.Tensor().byte() for l in self.network.layers}
             self.set_spike_data()
@@ -112,7 +123,9 @@ class Pipeline:
 
         # Set up for multiple layers of input layers.
         self.encoded = {
-            name: torch.Tensor() for name, layer in network.layers.items() if isinstance(layer, AbstractInput)
+            name: torch.Tensor()
+            for name, layer in network.layers.items()
+            if isinstance(layer, AbstractInput)
         }
 
         self.action = None
@@ -142,16 +155,22 @@ class Pipeline:
                                                      weights to clamp to zero.
         :param float max_prob: Maximum probability of firing for ``bernoulli`` spike train encoder.
         """
-        if self.print_interval is not None and self.iteration % self.print_interval == 0:
-            print(f'Iteration: {self.iteration} (Time: {time.time() - self.clock:.4f})')
+        if (
+            self.print_interval is not None
+            and self.iteration % self.print_interval == 0
+        ):
+            print(f"Iteration: {self.iteration} (Time: {time.time() - self.clock:.4f})")
             self.clock = time.time()
 
         if self.save_interval is not None and self.iteration % self.save_interval == 0:
-            print(f'Saving network to {self.save_dir}')
+            print(f"Saving network to {self.save_dir}")
             self.network.save(self.save_dir)
 
         # Render game.
-        if self.render_interval is not None and self.iteration % self.render_interval == 0:
+        if (
+            self.render_interval is not None
+            and self.iteration % self.render_interval == 0
+        ):
             self.env.render()
 
         # Choose action based on output neuron spiking.
@@ -178,10 +197,14 @@ class Pipeline:
 
         # Encode the observation using given encoding function.
         for inpt in self.encoded:
-            self.encoded[inpt] = self.encoding(self.obs, time=self.time, dt=self.network.dt, **kwargs)
+            self.encoded[inpt] = self.encoding(
+                self.obs, time=self.time, dt=self.network.dt, **kwargs
+            )
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(inpts=self.encoded, time=self.time, reward=self.reward, **kwargs)
+        self.network.run(
+            inpts=self.encoded, time=self.time, reward=self.reward, **kwargs
+        )
 
         # Plot relevant data.
         if self.plot_interval is not None and self.iteration % self.plot_interval == 0:
@@ -208,10 +231,10 @@ class Pipeline:
         """
         if self.obs_im is None and self.obs_ax is None:
             fig, self.obs_ax = plt.subplots()
-            self.obs_ax.set_title('Observation')
+            self.obs_ax.set_title("Observation")
             self.obs_ax.set_xticks(())
             self.obs_ax.set_yticks(())
-            self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap='gray')
+            self.obs_im = self.obs_ax.imshow(self.env.reshape(), cmap="gray")
         else:
             self.obs_im.set_data(self.env.reshape())
 
@@ -226,16 +249,21 @@ class Pipeline:
             window = max(min(len(self.reward_list), self.reward_window), 0)
 
             # Fastest implementation of moving average
-            reward_list_ = pd.Series(self.reward_list).rolling(window=window, min_periods=1).mean().values
+            reward_list_ = (
+                pd.Series(self.reward_list)
+                .rolling(window=window, min_periods=1)
+                .mean()
+                .values
+            )
         else:
             reward_list_ = self.reward_list[:]
 
         if self.reward_im is None and self.reward_ax is None:
             self.reward_im, self.reward_ax = plt.subplots()
-            self.reward_ax.set_title('Accumulated reward')
-            self.reward_ax.set_xlabel('Episode')
-            self.reward_ax.set_ylabel('Reward')
-            self.reward_plot, = self.reward_ax.plot(reward_list_)
+            self.reward_ax.set_title("Accumulated reward")
+            self.reward_ax.set_xlabel("Episode")
+            self.reward_ax.set_ylabel("Reward")
+            (self.reward_plot,) = self.reward_ax.plot(reward_list_)
         else:
             self.reward_plot.set_data(range(self.episode), reward_list_)
             self.reward_ax.relim()
@@ -251,17 +279,29 @@ class Pipeline:
         self.set_voltage_data()
 
         # Initialize plots
-        if self.s_ims is None and self.s_axes is None and self.v_ims is None and self.v_axes is None:
+        if (
+            self.s_ims is None
+            and self.s_axes is None
+            and self.v_ims is None
+            and self.v_axes is None
+        ):
             self.s_ims, self.s_axes = plot_spikes(self.spike_record)
             self.v_ims, self.v_axes = plot_voltages(
-                self.voltage_record, plot_type=self.plot_type, threshold=self.threshold_value
+                self.voltage_record,
+                plot_type=self.plot_type,
+                threshold=self.threshold_value,
             )
         else:
             # Update the plots dynamically
-            self.s_ims, self.s_axes = plot_spikes(self.spike_record, ims=self.s_ims, axes=self.s_axes)
+            self.s_ims, self.s_axes = plot_spikes(
+                self.spike_record, ims=self.s_ims, axes=self.s_axes
+            )
             self.v_ims, self.v_axes = plot_voltages(
-                self.voltage_record, ims=self.v_ims, axes=self.v_axes,
-                plot_type=self.plot_type, threshold=self.threshold_value
+                self.voltage_record,
+                ims=self.v_ims,
+                axes=self.v_axes,
+                plot_type=self.plot_type,
+                threshold=self.threshold_value,
             )
 
         plt.pause(1e-8)
@@ -272,7 +312,10 @@ class Pipeline:
         """
         Get the spike data from all layers in the pipeline's network.
         """
-        self.spike_record = {l: self.network.monitors[f'{l}_spikes'].get('s') for l in self.network.layers}
+        self.spike_record = {
+            l: self.network.monitors[f"{l}_spikes"].get("s")
+            for l in self.network.layers
+        }
 
     def set_voltage_data(self) -> None:
         # language=rst
@@ -282,9 +325,9 @@ class Pipeline:
         self.voltage_record = {}
         self.threshold_value = {}
         for l in self.network.layers:
-            if 'v' in self.network.layers[l].__dict__:
-                self.voltage_record[l] = self.network.monitors[f'{l}_voltages'].get('v')
-            if 'thresh' in self.network.layers[l].__dict__:
+            if "v" in self.network.layers[l].__dict__:
+                self.voltage_record[l] = self.network.monitors[f"{l}_voltages"].get("v")
+            if "thresh" in self.network.layers[l].__dict__:
                 self.threshold_value[l] = self.network.layers[l].thresh
 
     def update_history(self) -> None:
@@ -307,7 +350,9 @@ class Pipeline:
             if self.iteration % self.delta == 0:
                 self.history[self.history_index] = self.obs
 
-            assert (len(self.history) == self.history_length), 'History size is out of bounds'
+            assert (
+                len(self.history) == self.history_length
+            ), "History size is out of bounds"
             self.obs = temp
 
     def update_index(self) -> None:

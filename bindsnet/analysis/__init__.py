@@ -1,3 +1,1 @@
-__all__ = [
-    'plotting', 'visualization'
-]
+__all__ = ["plotting", "visualization"]
