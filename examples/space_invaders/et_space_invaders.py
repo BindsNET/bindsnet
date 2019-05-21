@@ -9,7 +9,7 @@ from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Connection
-from bindsnet.pipeline import EnvironmentPipeline
+from bindsnet.pipeline.environment_pipeline import EnvironmentPipeline
 from bindsnet.pipeline.action import select_multinomial
 from bindsnet.analysis.plotting import plot_weights
 
