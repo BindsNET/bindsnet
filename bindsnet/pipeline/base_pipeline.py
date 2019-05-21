@@ -6,16 +6,20 @@ import time
 from ..network import Network
 from ..network.monitors import Monitor
 
+from .pipeline_analysis import PipelineAnalyzer
+
 class BasePipeline:
     """
     A generic pipeline that handles high level functionality
     """
 
-    def __init__(self, network: Network, **kwargs):
+    def __init__(self, network: Network,
+                 **kwargs):
         """
         Initializes the pipeline.
 
         :param network: Arbitrary network object.
+        will be managed by the BasePipeline class.
 
         Keyword arguments:
 
@@ -43,10 +47,6 @@ class BasePipeline:
         self.plot_interval = kwargs.get('plot_interval', None)
         self.plot_length = kwargs.get('plot_length', 10)
 
-        self.print_interval = kwargs.get('print_interval', None)
-
-        self.test_interval = kwargs.get('test_interval', None)
-
         if self.plot_interval is not None:
             for l in self.network.layers:
                 self.network.add_monitor(Monitor(self.network.layers[l], 's', int(self.plot_length)),
@@ -54,6 +54,10 @@ class BasePipeline:
                 if 'v' in self.network.layers[l].__dict__:
                     self.network.add_monitor(Monitor(self.network.layers[l], 'v', int(self.plot_length)),
                                              name=f'{l}_voltages')
+
+        self.print_interval = kwargs.get('print_interval', None)
+
+        self.test_interval = kwargs.get('test_interval', None)
 
         self.step_count = 0
 

@@ -70,7 +70,6 @@ inpt = Input(784, shape=(1, 1, 28, 28)); network.add_layer(inpt, name='I')
 output = LIFNodes(625, thresh=-52 + torch.randn(625)); network.add_layer(output, name='O')
 network.add_connection(Connection(inpt, output, w=torch.randn(inpt.n, output.n)), 'I', 'O')
 network.add_connection(Connection(output, output, w=0.5*torch.randn(output.n, output.n)), 'O', 'O')
-network.add_monitor(Monitor(output, ['s'], time=250), name='output_spikes')
 
 # Specify dataset
 mnist = MNIST(PoissonEncoder(time=250., dt=1.),

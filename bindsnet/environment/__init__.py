@@ -121,27 +121,35 @@ class GymEnvironment(Environment):
 
         self.preprocess()
 
+        # Add the raw observation from the gym environment into the info
+        # for debugging and display
+        info['gym_obs'] = self.obs
+
         # Store frame of history and encode the inputs.
         if len(self.history) > 0:
             self.update_history()
             self.update_index()
-
-        raw_obs = self.obs
+            # add the delta observation into the info for debugging and
+            # display
+            info['delta_obs'] = self.obs
 
         # The new standard is BxTxCxHxW. The gym environment doesn't
         # follow exactly the same protocol.
-        self.obs = self.encoder(self.obs).unsqueeze(1)
-        if self.obs.dim() == 4:
-            self.obs = self.obs.unsqueeze(2)
+
+        # we want CxHxW. If it is in HxW add in  the channel dimension
+        if self.obs.dim() == 2:
+            self.obs = self.obs.unsqueeze(0)
+
+        # the encoder will add time - now TxCxHxW
+        self.obs = self.encoder(self.obs)
+
+        # add the batch - now BxTxCxHxW
+        self.obs = self.obs.unsqueeze(0)
 
         self.episode_step_count += 1
 
         # Return converted observations and other information.
-        return {"obs": self.obs,
-                "reward": self.reward,
-                "done": self.done,
-                "info": info,
-                "raw_obs": raw_obs}
+        return self.obs, self.reward, self.done, info
 
     def reset(self) -> torch.Tensor:
         # language=rst

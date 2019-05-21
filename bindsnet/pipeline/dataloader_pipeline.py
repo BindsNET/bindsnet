@@ -17,7 +17,6 @@ class DataLoaderPipeline(BasePipeline):
     def __init__(self, network: Network,
             train_ds: Dataset,
             test_ds: Optional[Dataset]=None,
-            pipeline_analyzer: Optional[PipelineAnalyzer]=None,
             **kwargs):
         """
         Initializes the pipeline
@@ -25,6 +24,7 @@ class DataLoaderPipeline(BasePipeline):
         :param network: Arbitrary network object.
         :param train_ds: Arbitrary torch.utils.data.Dataset object.
         :param test_ds: Arbitrary torch.utils.data.Dataset object.
+        will be managed by the BasePipeline class.
 
         Keyword arguments:
         """
@@ -64,10 +64,10 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
     unsupervised network.
     """
     def __init__(self, network: Network,
-                 train_ds: Dataset, **kwargs):
-        super().__init__(network, train_ds, **kwargs)
-
-        self.analyzer = MatplotlibAnalyzer()
+                 train_ds: Dataset,
+                 pipeline_analyzer: Optional[PipelineAnalyzer]=None,
+                 **kwargs):
+        super().__init__(network, train_ds, pipeline_analyzer, **kwargs)
 
     def step_(self, batch):
         self.network.reset_()
@@ -84,11 +84,9 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         pass
 
     def plots(self, input_batch, step_out):
-        self.analyzer.plot_obs(input_batch["encoded_image"][0,...].sum(0))
-        self.analyzer.plot_spikes(self.get_spike_data())
-        self.analyzer.plot_voltage(*self.get_voltage_data())
-
-        self.analyzer.finalize_step()
+        self.pipeline_analyzer.plot_obs(input_batch["encoded_image"][0,...].sum(0))
+        self.pipeline_analyzer.plot_spikes(self.get_spike_data())
+        self.pipeline_analyzer.plot_voltage(*self.get_voltage_data())
 
     def test_step(self):
         pass

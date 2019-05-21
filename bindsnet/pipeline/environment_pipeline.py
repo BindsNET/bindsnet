@@ -88,7 +88,7 @@ class EnvironmentPipeline(BasePipeline):
 
                 self.step(batch)
 
-                if batch['done']:
+                if batch[2]:
                     break
 
             print("Episode %d - accumulated reward %f" %
@@ -104,8 +104,7 @@ class EnvironmentPipeline(BasePipeline):
             self.action = self.action_function(self, output=self.output)
 
         # Run a step of the environment.
-        batch = self.env.step(self.action)
-        reward = batch['reward']
+        obs, reward, done, info = self.env.step(self.action)
 
         # Set reward in case of delay.
         if self.reward_delay is not None:
@@ -117,24 +116,28 @@ class EnvironmentPipeline(BasePipeline):
         # Accumulate reward
         self.accumulated_reward += self.reward
 
-        batch['reward'] = self.reward
-        batch['accumulated_reward'] = self.accumulated_reward
+        info['accumulated_reward'] = self.accumulated_reward
 
-        return batch
+        return obs, reward, done, info
 
-    def step_(self, batch) -> None:
+    def step_(self, gym_batch) -> None:
         # language=rst
         """
         Run an iteration of the network and log any needed data
         """
 
-        inpts = {k: batch['obs'] for k in self.inpts}
-        reward = batch['reward']
+        obs, reward, done, info = gym_batch
+
+        # place the observations into the inputs
+        inpts = {k: obs for k in self.inpts}
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(inpts=inpts, time=batch['obs'].shape[0], reward=reward)
+        self.network.run(inpts=inpts,
+                         time=obs.shape[1],
+                         reward=reward,
+                         input_time_dim=1)
 
-        if batch['done']:
+        if done:
             if self.network.reward_fn is not None:
                 self.network.reward_fn.update(**kwargs)
             self.reward_list.append(self.accumulated_reward)
@@ -148,8 +151,10 @@ class EnvironmentPipeline(BasePipeline):
         self.network.reset_()
         self.accumulated_reward = 0.0
 
-    def plots(self, input_batch, *args):
-        self.analyzer.plot_obs(input_batch["obs"][0,...].sum(0))
+    def plots(self, gym_batch, *args):
+        obs, reward, done, info = gym_batch
+
+        self.analyzer.plot_obs(obs[0,...].sum(0))
         self.analyzer.plot_spikes(self.get_spike_data())
         self.analyzer.plot_voltage(*self.get_voltage_data())
 
