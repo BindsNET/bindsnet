@@ -1,7 +1,7 @@
 import torch
 
 from bindsnet.network import Network
-from bindsnet.pipeline.environment_pipeline import EnvironmentPipeline
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.learning import MSTDPET
 from bindsnet.datasets.spike_encoders import BernoulliEncoder
 from bindsnet.network.topology import Connection
