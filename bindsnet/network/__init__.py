@@ -235,6 +235,8 @@ class Network:
         :param Union[float, torch.Tensor] reward: Scalar value used in reward-modulated learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
                                                      weights to clamp to zero.
+        :param Union[int, Dict[str, int]] input_time_dim: Dimension for slicing in time for inputs. Can vary 
+                                                          for each individual input using a dictionary.
 
         **Example:**
 
@@ -271,6 +273,7 @@ class Network:
         unclamps = kwargs.get("unclamp", {})
         masks = kwargs.get("masks", {})
         injects_v = kwargs.get("injects_v", {})
+        input_time_dim = kwargs.get("input_time_dim", 0)
 
         # Compute reward.
         if self.reward_fn is not None:
@@ -278,6 +281,13 @@ class Network:
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
+
+        # convert an int input to a dictionary
+        if type(input_time_dim) == int:
+            input_time_dim = {k: input_time_dim for k in inpts.keys()}
+
+        # keep around a list of slices for each input
+        time_slices = {k: [slice(None)] * inpts[k].dim() for k in inpts.keys()}
 
         # Get input to all layers.
         inpts.update(self.get_inputs())
@@ -287,7 +297,13 @@ class Network:
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    self.layers[l].forward(x=inpts[l][t])
+                    # grab the time slice for each input
+                    t_slice = time_slices[l]
+                    # overwrite the None with a specific time
+                    t_slice[input_time_dim[l]] = t
+                    # pull out that individual time slice and ensure the
+                    # memory is contiguous
+                    self.layers[l].forward(x=inpts[l][t_slice].contiguous())
                 else:
                     self.layers[l].forward(x=inpts[l])
 
