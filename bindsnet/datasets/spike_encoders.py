@@ -3,8 +3,15 @@ from typing import Tuple, List, Dict
 
 from .. import encoding
 
-__all__ = ['Encoder', 'NullEncoder', 'SingleEncoder', 'RepeatEncoder',
-           'BernoulliEncoder', 'PoissonEncoder', 'RankOrderEncoder']
+__all__ = [
+    "Encoder",
+    "NullEncoder",
+    "SingleEncoder",
+    "RepeatEncoder",
+    "BernoulliEncoder",
+    "PoissonEncoder",
+    "RankOrderEncoder",
+]
 
 
 class Encoder:
@@ -22,6 +29,7 @@ class Encoder:
     def __call__(self, img):
         return self.enc(img, *self.enc_args, **self.enc_kwargs)
 
+
 class NullEncoder(Encoder):
     """
     Pass through of the datum that was input.
@@ -35,6 +43,7 @@ class NullEncoder(Encoder):
 
     def __call__(self, img):
         return img
+
 
 class SingleEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, sparsity: float = 0.3, **kwargs):
