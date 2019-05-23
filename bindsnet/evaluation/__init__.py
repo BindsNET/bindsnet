@@ -5,8 +5,13 @@ from typing import Optional, Tuple, Dict
 from sklearn.linear_model import LogisticRegression
 
 
-def assign_labels(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, rates: Optional[torch.Tensor] = None,
-                  alpha: float = 1.0) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def assign_labels(
+    spikes: torch.Tensor,
+    labels: torch.Tensor,
+    n_labels: int,
+    rates: Optional[torch.Tensor] = None,
+    alpha: float = 1.0,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     # language=rst
     """
     Assign labels to the neurons based on highest average spiking activity.
@@ -35,7 +40,9 @@ def assign_labels(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, rat
             indices = torch.nonzero(labels == i).view(-1)
 
             # Compute average firing rates for this label.
-            rates[:, i] = alpha * rates[:, i] + (torch.sum(spikes[indices], 0) / n_labeled)
+            rates[:, i] = alpha * rates[:, i] + (
+                torch.sum(spikes[indices], 0) / n_labeled
+            )
 
     # Compute proportions of spike activity per class.
     proportions = rates / rates.sum(1, keepdim=True)
@@ -47,7 +54,9 @@ def assign_labels(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, rat
     return assignments, proportions, rates
 
 
-def logreg_fit(spikes: torch.Tensor, labels: torch.Tensor, logreg: LogisticRegression) -> LogisticRegression:
+def logreg_fit(
+    spikes: torch.Tensor, labels: torch.Tensor, logreg: LogisticRegression
+) -> LogisticRegression:
     # language=rst
     """
     (Re)fit logistic regression model to spike data summed over time.
@@ -72,14 +81,16 @@ def logreg_predict(spikes: torch.Tensor, logreg: LogisticRegression) -> torch.Te
     :return: Predictions per example.
     """
     # Make class label predictions.
-    if not hasattr(logreg, 'coef_') or logreg.coef_ is None:
+    if not hasattr(logreg, "coef_") or logreg.coef_ is None:
         return -1 * torch.ones(spikes.size(0)).long()
 
     predictions = logreg.predict(spikes)
     return torch.Tensor(predictions).long()
 
 
-def all_activity(spikes: torch.Tensor, assignments: torch.Tensor, n_labels: int) -> torch.Tensor:
+def all_activity(
+    spikes: torch.Tensor, assignments: torch.Tensor, n_labels: int
+) -> torch.Tensor:
     # language=rst
     """
     Classify data with the label with highest average spiking activity over all neurons.
@@ -110,8 +121,12 @@ def all_activity(spikes: torch.Tensor, assignments: torch.Tensor, n_labels: int)
     return torch.sort(rates, dim=1, descending=True)[1][:, 0]
 
 
-def proportion_weighting(spikes: torch.Tensor, assignments: torch.Tensor, proportions: torch.Tensor,
-                         n_labels: int) -> torch.Tensor:
+def proportion_weighting(
+    spikes: torch.Tensor,
+    assignments: torch.Tensor,
+    proportions: torch.Tensor,
+    n_labels: int,
+) -> torch.Tensor:
     # language=rst
     """
     Classify data with the label with highest average spiking activity over all neurons, weighted by class-wise
@@ -140,7 +155,9 @@ def proportion_weighting(spikes: torch.Tensor, assignments: torch.Tensor, propor
             indices = torch.nonzero(assignments == i).view(-1)
 
             # Compute layer-wise firing rate for this label.
-            rates[:, i] += torch.sum((proportions[:, i] * spikes)[:, indices], 1) / n_assigns
+            rates[:, i] += (
+                torch.sum((proportions[:, i] * spikes)[:, indices], 1) / n_assigns
+            )
 
     # Predictions are arg-max of layer-wise firing rates.
     predictions = torch.sort(rates, dim=1, descending=True)[1][:, 0]
@@ -148,8 +165,12 @@ def proportion_weighting(spikes: torch.Tensor, assignments: torch.Tensor, propor
     return predictions
 
 
-def ngram(spikes: torch.Tensor, ngram_scores: Dict[Tuple[int, ...], torch.Tensor], n_labels: int,
-          n: int) -> torch.Tensor:
+def ngram(
+    spikes: torch.Tensor,
+    ngram_scores: Dict[Tuple[int, ...], torch.Tensor],
+    n_labels: int,
+    n: int,
+) -> torch.Tensor:
     # language=rst
     """
     Predicts between ``n_labels`` using ``ngram_scores``.
@@ -173,16 +194,21 @@ def ngram(spikes: torch.Tensor, ngram_scores: Dict[Tuple[int, ...], torch.Tensor
 
         # Consider all n-gram sequences.
         for j in range(len(fire_order) - n):
-            if tuple(fire_order[j:j + n]) in ngram_scores:
-                score += ngram_scores[tuple(fire_order[j:j + n])]
+            if tuple(fire_order[j : j + n]) in ngram_scores:
+                score += ngram_scores[tuple(fire_order[j : j + n])]
 
         predictions.append(torch.argmax(score))
 
     return torch.Tensor(predictions).long()
 
 
-def update_ngram_scores(spikes: torch.Tensor, labels: torch.Tensor, n_labels: int, n: int,
-                        ngram_scores: Dict[Tuple[int, ...], torch.Tensor]) -> Dict[Tuple[int, ...], torch.Tensor]:
+def update_ngram_scores(
+    spikes: torch.Tensor,
+    labels: torch.Tensor,
+    n_labels: int,
+    n: int,
+    ngram_scores: Dict[Tuple[int, ...], torch.Tensor],
+) -> Dict[Tuple[int, ...], torch.Tensor]:
     # language=rst
     """
     Updates ngram scores by adding the count of each spike sequence of length n from the past ``n_examples``.

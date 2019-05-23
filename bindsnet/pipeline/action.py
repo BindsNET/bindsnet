@@ -1,15 +1,15 @@
 import torch
 import numpy as np
 
-from . import Pipeline
+from . import EnvironmentPipeline
 
 
-def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
+def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
     # language=rst
     """
     Selects an action probabilistically based on spiking activity from a network layer.
 
-    :param pipeline: Pipeline with environment that has an integer action space.
+    :param pipeline: EnvironmentPipeline with environment that has an integer action space.
     :return: Action sampled from multinomial over activity of similarly-sized output layer.
 
     Keyword arguments:
@@ -17,14 +17,16 @@ def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
     :param str output: Name of output layer whose activity to base action selection on.
     """
     try:
-        output = kwargs['output']
+        output = kwargs["output"]
     except KeyError:
         raise KeyError('select_multinomial() requires an "output" layer argument.')
 
     output = pipeline.network.layers[output]
     action_space = pipeline.env.action_space
 
-    assert output.n % action_space.n == 0, 'Output layer size not divisible by size of action space.'
+    assert (
+        output.n % action_space.n == 0
+    ), "Output layer size not divisible by size of action space."
 
     pop_size = int(output.n / action_space.n)
     spikes = output.s
@@ -35,19 +37,22 @@ def select_multinomial(pipeline: Pipeline, **kwargs) -> int:
         action = np.random.choice(pipeline.env.action_space.n)
     else:
         pop_spikes = torch.Tensor(
-            [spikes[(i * pop_size):(i * pop_size) + pop_size].sum() for i in range(action_space.n)]
+            [
+                spikes[(i * pop_size) : (i * pop_size) + pop_size].sum()
+                for i in range(action_space.n)
+            ]
         )
         action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0].item()
 
     return action
 
 
-def select_softmax(pipeline: Pipeline, **kwargs) -> int:
+def select_softmax(pipeline: EnvironmentPipeline, **kwargs) -> int:
     # language=rst
     """
     Selects an action using softmax function based on spiking from a network layer.
 
-    :param pipeline: Pipeline with environment that has an integer action space.
+    :param pipeline: EnvironmentPipeline with environment that has an integer action space.
     :return: Action sampled from softmax over activity of similarly-sized output layer.
 
     Keyword arguments:
@@ -55,14 +60,17 @@ def select_softmax(pipeline: Pipeline, **kwargs) -> int:
     :param str output: Name of output layer whose activity to base action selection on.
     """
     try:
-        output = kwargs['output']
+        output = kwargs["output"]
     except KeyError:
         raise KeyError('select_softmax() requires an "output" layer argument.')
 
-    assert pipeline.network.layers[output].n == pipeline.env.action_space.n, \
-        'Output layer size not equal to size of action space.'
+    assert (
+        pipeline.network.layers[output].n == pipeline.env.action_space.n
+    ), "Output layer size not equal to size of action space."
 
-    assert hasattr(pipeline, 'spike_record'), 'Pipeline has not attribute named: spike_record.'
+    assert hasattr(
+        pipeline, "spike_record"
+    ), "EnvironmentPipeline has not attribute named: spike_record."
 
     # Sum of previous iterations' spikes (Not yet implemented)
     spikes = torch.sum(pipeline.spike_record[output], dim=1)
@@ -76,12 +84,12 @@ def select_softmax(pipeline: Pipeline, **kwargs) -> int:
     return action
 
 
-def select_random(pipeline: Pipeline, **kwargs) -> int:
+def select_random(pipeline: EnvironmentPipeline, **kwargs) -> int:
     # language=rst
     """
     Selects an action randomly from the action space.
 
-    :param pipeline: Pipeline with environment that has an integer action space.
+    :param pipeline: EnvironmentPipeline with environment that has an integer action space.
     :return: Action randomly sampled over size of pipeline's action space.
     """
     # Choose action randomly from the action space.

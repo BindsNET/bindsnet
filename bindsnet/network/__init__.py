@@ -8,12 +8,10 @@ from .nodes import AbstractInput, Nodes
 from .topology import AbstractConnection
 from ..learning.reward import AbstractReward
 
-__all__ = [
-    'load', 'Network', 'nodes', 'monitors', 'topology'
-]
+__all__ = ["load", "Network", "nodes", "monitors", "topology"]
 
 
-def load(file_name: str, map_location: str = 'cpu', learning: bool = None) -> 'Network':
+def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
     # language=rst
     """
     Loads serialized network object from disk.
@@ -22,8 +20,8 @@ def load(file_name: str, map_location: str = 'cpu', learning: bool = None) -> 'N
     :param map_location: One of ``'cpu'`` or ``'cuda'``. Defaults to ``'cpu'``.
     :param learning: Whether to load with learning enabled. Default loads value from disk.
     """
-    network = torch.load(open(file_name, 'rb'), map_location=map_location)
-    if learning is not None and 'learning' in vars(network):
+    network = torch.load(open(file_name, "rb"), map_location=map_location)
+    if learning is not None and "learning" in vars(network):
         network.learning = learning
 
     return network
@@ -84,8 +82,12 @@ class Network:
         plt.tight_layout(); plt.show()
     """
 
-    def __init__(self, dt: float = 1.0, learning: bool = True,
-                 reward_fn: Optional[AbstractReward] = None) -> None:
+    def __init__(
+        self,
+        dt: float = 1.0,
+        learning: bool = True,
+        reward_fn: Optional[AbstractReward] = None,
+    ) -> None:
         # language=rst
         """
         Initializes network object.
@@ -117,7 +119,9 @@ class Network:
         layer.dt = self.dt
         layer._compute_decays()
 
-    def add_connection(self, connection: AbstractConnection, source: str, target: str) -> None:
+    def add_connection(
+        self, connection: AbstractConnection, source: str, target: str
+    ) -> None:
         # language=rst
         """
         Adds a connection between layers of nodes to the network.
@@ -175,9 +179,9 @@ class Network:
             # Save the network to disk.
             network.save(str(Path.home()) + '/network.pt')
         """
-        torch.save(self, open(file_name, 'wb'))
+        torch.save(self, open(file_name, "wb"))
 
-    def clone(self) -> 'Network':
+    def clone(self) -> "Network":
         # language=rst
         """
         Returns a cloned network object.
@@ -231,6 +235,8 @@ class Network:
         :param Union[float, torch.Tensor] reward: Scalar value used in reward-modulated learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
                                                      weights to clamp to zero.
+        :param Union[int, Dict[str, int]] input_time_dim: Dimension for slicing in time for inputs. Can vary 
+                                                          for each individual input using a dictionary.
 
         **Example:**
 
@@ -263,17 +269,25 @@ class Network:
             plt.show()
         """
         # Parse keyword arguments.
-        clamps = kwargs.get('clamp', {})
-        unclamps = kwargs.get('unclamp', {})
-        masks = kwargs.get('masks', {})
-        injects_v = kwargs.get('injects_v', {})
+        clamps = kwargs.get("clamp", {})
+        unclamps = kwargs.get("unclamp", {})
+        masks = kwargs.get("masks", {})
+        injects_v = kwargs.get("injects_v", {})
+        input_time_dim = kwargs.get("input_time_dim", 0)
 
         # Compute reward.
         if self.reward_fn is not None:
-            kwargs['reward'] = self.reward_fn.compute(**kwargs)
+            kwargs["reward"] = self.reward_fn.compute(**kwargs)
 
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
+
+        # convert an int input to a dictionary
+        if type(input_time_dim) == int:
+            input_time_dim = {k: input_time_dim for k in inpts.keys()}
+
+        # keep around a list of slices for each input
+        time_slices = {k: [slice(None)] * inpts[k].dim() for k in inpts.keys()}
 
         # Get input to all layers.
         inpts.update(self.get_inputs())
@@ -283,7 +297,13 @@ class Network:
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    self.layers[l].forward(x=inpts[l][t])
+                    # grab the time slice for each input
+                    t_slice = time_slices[l]
+                    # overwrite the None with a specific time
+                    t_slice[input_time_dim[l]] = t
+                    # pull out that individual time slice and ensure the
+                    # memory is contiguous
+                    self.layers[l].forward(x=inpts[l][t_slice].contiguous())
                 else:
                     self.layers[l].forward(x=inpts[l])
 
