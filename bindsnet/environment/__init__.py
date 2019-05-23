@@ -157,7 +157,7 @@ class GymEnvironment(Environment):
             self.obs = self.obs.unsqueeze(0)
 
         # the encoder will add time - now Tx...
-        if self.encoder is not None:
+        if self.encoder != None:
             self.obs = self.encoder(self.obs)
 
         # add the batch - now BxTx...
