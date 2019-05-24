@@ -19,7 +19,7 @@ class Nodes(ABC):
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
-        trace_scale: Union[float, torch.Tensor] = 1.0
+        trace_scale: Union[float, torch.Tensor] = 1.0,
         sum_input: bool = False,
         **kwargs,
     ) -> None:
