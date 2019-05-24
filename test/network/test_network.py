@@ -18,52 +18,52 @@ class TestNetwork:
 
             network.run(inpts={}, time=1000)
 
-            network.save('net.pt')
-            _network = load('net.pt')
+            network.save("net.pt")
+            _network = load("net.pt")
             assert _network.dt == dt
             assert _network.learning
             del _network
 
-            _network = load('net.pt', learning=True)
+            _network = load("net.pt", learning=True)
             assert _network.dt == dt
             assert _network.learning
             del _network
 
-            _network = load('net.pt', learning=False)
+            _network = load("net.pt", learning=False)
             assert _network.dt == dt
             assert not _network.learning
             del _network
 
-            os.remove('net.pt')
+            os.remove("net.pt")
 
     def test_add_objects(self):
         network = Network(dt=1.0, learning=False)
 
         inpt = Input(100)
-        network.add_layer(inpt, name='X')
+        network.add_layer(inpt, name="X")
         lif = LIFNodes(50)
-        network.add_layer(lif, name='Y')
+        network.add_layer(lif, name="Y")
 
-        assert inpt == network.layers['X']
-        assert lif == network.layers['Y']
+        assert inpt == network.layers["X"]
+        assert lif == network.layers["Y"]
 
         conn = Connection(inpt, lif)
-        network.add_connection(conn, source='X', target='Y')
+        network.add_connection(conn, source="X", target="Y")
 
-        assert conn == network.connections[('X', 'Y')]
+        assert conn == network.connections[("X", "Y")]
 
-        monitor = Monitor(lif, state_vars=['s', 'v'])
-        network.add_monitor(monitor, 'Y')
+        monitor = Monitor(lif, state_vars=["s", "v"])
+        network.add_monitor(monitor, "Y")
 
-        assert monitor == network.monitors['Y']
+        assert monitor == network.monitors["Y"]
 
-        network.save('net.pt')
-        _network = load('net.pt', learning=True)
+        network.save("net.pt")
+        _network = load("net.pt", learning=True)
         assert _network.learning
-        assert 'X' in _network.layers
-        assert 'Y' in _network.layers
-        assert ('X', 'Y') in _network.connections
-        assert 'Y' in _network.monitors
+        assert "X" in _network.layers
+        assert "Y" in _network.layers
+        assert ("X", "Y") in _network.connections
+        assert "Y" in _network.monitors
         del _network
 
-        os.remove('net.pt')
+        os.remove("net.pt")
