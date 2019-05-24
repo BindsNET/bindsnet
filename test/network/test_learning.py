@@ -250,7 +250,7 @@ class TestLearningRules:
         # Connection test
         network = Network(dt=1.0)
         network.add_layer(
-            Input(n=100, traces=True), name='input'
+            Input(n=100, traces=True, traces_additive=True), name='input'
         )
         network.add_layer(
             SRM0Nodes(n=100), name='output'

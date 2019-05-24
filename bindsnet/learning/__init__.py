@@ -666,7 +666,8 @@ class Rmax(LearningRule):
         )
 
         # Trace is needed for computing epsilon.
-        assert self.source.traces, 'Pre-synaptic nodes should keep track of their firing trace.'
+        assert self.source.traces and self.source.traces_additive, \
+            'Pre-synaptic nodes should keep track of their firing trace in an additive way.'
 
         # Derivation of R-max depends on stochastic SRM neurons!
         assert isinstance(self.target, SRM0Nodes), 'R-max needs stochastically firing neurons, use SRM0Nodes.'
