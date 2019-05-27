@@ -3,13 +3,14 @@ from typing import Union, Tuple, Optional, Sequence
 
 import numpy as np
 import torch
+from torch.nn import Module, Parameter
 import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 
 from .nodes import Nodes
 
 
-class AbstractConnection(ABC):
+class AbstractConnection(ABC, Module):
     # language=rst
     """
     Abstract base method for connections between ``Nodes``.
@@ -42,15 +43,14 @@ class AbstractConnection(ABC):
         :param ByteTensor norm_by_max_with_shadow_weights: Normalize the weight of a neuron by its max weight by
                                                                 original weights
         """
-        self.w = None
-        self.dt = None
-        self.source = source
-        self.target = target
-        self.nu = nu
-        self.weight_decay = weight_decay
-
         assert isinstance(source, Nodes), "Source is not a Nodes object"
         assert isinstance(target, Nodes), "Target is not a Nodes object"
+
+        self.source = source
+        self.target = target
+
+        self.nu = nu
+        self.weight_decay = weight_decay
 
         from ..learning import NoOp
 
@@ -66,8 +66,6 @@ class AbstractConnection(ABC):
 
         if self.update_rule is None:
             self.update_rule = NoOp
-
-        self.a_pre = 0.0
 
         self.update_rule = self.update_rule(
             connection=self, nu=self.nu, weight_decay=weight_decay, **kwargs
