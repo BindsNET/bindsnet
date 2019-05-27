@@ -3,7 +3,7 @@ import argparse
 import matplotlib.pyplot as plt
 
 from bindsnet.environment import GymEnvironment
-from bindsnet.datasets.spike_encoders import BernoulliEncoder
+from bindsnet.encoders import BernoulliEncoder
 from bindsnet.learning import MSTDPET
 from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor

@@ -4,7 +4,7 @@ import warnings
 import torch
 import torchvision
 
-from .spike_encoders import Encoder
+from ..encoders import Encoder, NullEncoder
 
 def torchvision_dataset_wrapper_creator(ds_type):
     """ Creates wrapper classes for datasets that output (image, label)
@@ -44,6 +44,13 @@ def torchvision_dataset_wrapper_creator(ds_type):
             self.args = args
             self.kwargs = kwargs
 
+            # Allow the passthrough of None, but change to NullEncoder
+            if image_encoder is None:
+                image_encoder = NullEncoder()
+
+            if label_encoder is None:
+                label_encoder = NullEncoder()
+
             self.image_encoder = image_encoder
             self.label_encoder = label_encoder
 
@@ -62,11 +69,8 @@ def torchvision_dataset_wrapper_creator(ds_type):
 
             output = {"image": image, "label": label}
 
-            if self.image_encoder is not None:
-                output["encoded_image"] = self.image_encoder(image)
-
-            if self.label_encoder is not None:
-                output["encoded_label"] = self.label_encoder(label)
+            output["encoded_image"] = self.image_encoder(image)
+            output["encoded_label"] = self.label_encoder(label)
 
             return output
 

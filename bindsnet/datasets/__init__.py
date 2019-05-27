@@ -27,7 +27,7 @@ VOCSegmentation = torchvision_dataset_wrapper_creator('VOCSegmentation')
 
 from .spoken_mnist import SpokenMNIST
 
-__all__ = ['spike_encoders', 'SpokenMNIST',
+__all__ = ['SpokenMNIST',
            'CIFAR10', 'CIFAR100', 'Cityscapes',
            'CocoCaptions', 'CocoDetection', 'DatasetFolder', 'EMNIST',
            'FakeData', 'FashionMNIST', 'Flickr30k', 'Flickr8k',
