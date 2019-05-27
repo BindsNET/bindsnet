@@ -53,6 +53,9 @@ class TestNodes:
                 assert (layer.v == layer.rest * torch.ones(n)).all()
 
     def test_transfer(self):
+        if torch.cuda.is_available():
+            return
+
         for nodes in Nodes.__subclasses__():
             layer = nodes(10)
 

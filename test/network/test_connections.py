@@ -13,6 +13,9 @@ class TestConnection:
     """
 
     def test_transfer(self):
+        if torch.cuda.is_available():
+            return
+
         connection_types = [Connection, Conv2dConnection,
                 MaxPool2dConnection, LocallyConnectedConnection,
                 MeanFieldConnection, SparseConnection]
