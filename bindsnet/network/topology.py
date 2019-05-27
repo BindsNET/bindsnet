@@ -43,6 +43,8 @@ class AbstractConnection(ABC, Module):
         :param ByteTensor norm_by_max_with_shadow_weights: Normalize the weight of a neuron by its max weight by
                                                                 original weights
         """
+        super().__init__()
+
         assert isinstance(source, Nodes), "Source is not a Nodes object"
         assert isinstance(target, Nodes), "Target is not a Nodes object"
 
@@ -155,19 +157,21 @@ class Connection(AbstractConnection):
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
-        self.w = kwargs.get("w", None)
-        if self.w is None:
+        w = kwargs.get("w", None)
+        if w is None:
             if self.wmin == -np.inf or self.wmax == np.inf:
-                self.w = torch.clamp(
+                w = torch.clamp(
                     torch.rand(source.n, target.n), self.wmin, self.wmax
                 )
             else:
-                self.w = self.wmin + torch.rand(source.n, target.n) * (
+                w = self.wmin + torch.rand(source.n, target.n) * (
                     self.wmax - self.wmin
                 )
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
-                self.w = torch.clamp(self.w, self.wmin, self.wmax)
+                w = torch.clamp(w, self.wmin, self.wmax)
+
+        self.w = Parameter(w, False)
 
         self.b = kwargs.get("b", torch.zeros(target.n))
 
@@ -312,24 +316,27 @@ class Conv2dConnection(AbstractConnection):
             and target.shape[3] == shape[3]
         ), error
 
-        self.w = kwargs.get("w", None)
-        if self.w is None:
+        w = kwargs.get("w", None)
+        if w is None:
             if self.wmin == -np.inf or self.wmax == np.inf:
-                self.w = torch.clamp(
+                w = torch.clamp(
                     torch.rand(self.out_channels, self.in_channels, *self.kernel_size),
                     self.wmin,
                     self.wmax,
                 )
             else:
-                self.w = (self.wmax - self.wmin) * torch.rand(
+                w = (self.wmax - self.wmin) * torch.rand(
                     self.out_channels, self.in_channels, *self.kernel_size
                 )
-                self.w += self.wmin
+                w += self.wmin
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
-                self.w = torch.clamp(self.w, self.wmin, self.wmax)
+                w = torch.clamp(w, self.wmin, self.wmax)
 
-        self.b = kwargs.get("b", torch.zeros(self.out_channels))
+        self.w = Parameter(w, False)
+
+        self.b = Parameter(kwargs.get("b",
+            torch.zeros(self.out_channels)))
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -420,7 +427,7 @@ class MaxPool2dConnection(AbstractConnection):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
 
-        self.firing_rates = torch.ones(source.shape)
+        self.register_buffer('firing_rates', torch.ones(source.shape))
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -557,29 +564,32 @@ class LocallyConnectedConnection(AbstractConnection):
                         )
                         locations[k1, k2, c1, c2] = location
 
-        self.locations = locations.view(kernel_prod, conv_prod)
-        self.w = kwargs.get("w", None)
+        self.register_buffer('locations', locations.view(kernel_prod, conv_prod))
+        w = kwargs.get("w", None)
 
-        if self.w is None:
-            self.w = torch.zeros(source.n, target.n)
+        if w is None:
+            w = torch.zeros(source.n, target.n)
             for f in range(n_filters):
                 for c in range(conv_prod):
                     for k in range(kernel_prod):
                         if self.wmin == -np.inf or self.wmax == np.inf:
-                            self.w[self.locations[k, c], f * conv_prod + c] = np.clip(
+                            w[self.locations[k, c], f * conv_prod + c] = np.clip(
                                 np.random.rand(), self.wmin, self.wmax
                             )
                         else:
-                            self.w[
+                            w[
                                 self.locations[k, c], f * conv_prod + c
-                            ] = self.wmin + np.random.rand() * (self.wmax - self.wmin)
+                            ] = self.wmin + np.random.rand() * (self.wmax - wmin)
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
-                self.w = torch.clamp(self.w, self.wmin, self.wmax)
+                w = torch.clamp(w, self.wmin, self.wmax)
 
-        self.mask = self.w == 0
+        self.w = Parameter(w, False)
 
-        self.b = kwargs.get("b", torch.zeros(target.n))
+        self.register_buffer('mask', self.w == 0)
+
+        self.b = Parameter(kwargs.get("b",
+            torch.zeros(target.n)))
 
         if self.norm is not None:
             self.norm *= kernel_prod
@@ -667,17 +677,19 @@ class MeanFieldConnection(AbstractConnection):
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
-        self.w = kwargs.get("w", None)
-        if self.w is None:
+        w = kwargs.get("w", None)
+        if w is None:
             if self.wmin == -np.inf or self.wmax == np.inf:
-                self.w = torch.clamp((torch.randn(1)[0] + 1) / 10, self.wmin, self.wmax)
+                w = torch.clamp((torch.randn(1)[0] + 1) / 10, self.wmin, self.wmax)
             else:
-                self.w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (
+                w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (
                     self.wmax - self.wmin
                 )
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
-                self.w = torch.clamp(self.w, self.wmin, self.wmax)
+                w = torch.clamp(w, self.wmin, self.wmax)
+
+        self.w = Parameter(w, False)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -749,17 +761,17 @@ class SparseConnection(AbstractConnection):
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
-        self.w = kwargs.get("w", None)
+        w = kwargs.get("w", None)
         self.sparsity = kwargs.get("sparsity", None)
 
         assert (
-            self.w is not None
+            w is not None
             and self.sparsity is None
-            or self.w is None
+            or w is None
             and self.sparsity is not None
         ), 'Only one of "weights" or "sparsity" must be specified'
 
-        if self.w is None and self.sparsity is not None:
+        if w is None and self.sparsity is not None:
             i = torch.bernoulli(
                 1 - self.sparsity * torch.ones(*source.shape, *target.shape)
             )
@@ -773,13 +785,15 @@ class SparseConnection(AbstractConnection):
                 v = self.wmin + torch.rand(*source.shape, *target.shape)[i.byte()] * (
                     self.wmax - self.wmin
                 )
-            self.w = torch.sparse.FloatTensor(i.nonzero().t(), v)
-        elif self.w is not None and self.sparsity is None:
+            w = torch.sparse.FloatTensor(i.nonzero().t(), v)
+        elif w is not None and self.sparsity is None:
             assert (
-                self.w.is_sparse
+                w.is_sparse
             ), "Weight matrix is not sparse (see torch.sparse module)"
             if self.wmin != -np.inf or self.wmax != np.inf:
-                self.w = torch.clamp(self.w, self.wmin, self.wmax)
+                w = torch.clamp(w, self.wmin, self.wmax)
+
+        self.w = Parameter(w, False)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
