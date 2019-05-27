@@ -96,7 +96,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax.set_title("Accumulated reward")
             reward_ax.set_xlabel("Episode")
             reward_ax.set_ylabel("Reward")
-            reward_plot, = self.reward_ax.plot(reward_list_)
+            (reward_plot,) = self.reward_ax.plot(reward_list_)
 
             self.plots[tag] = reward_im, reward_ax
         else:
