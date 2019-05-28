@@ -666,7 +666,8 @@ class AdaptiveLIFNodes(Nodes):
         """
         # Decay voltages and adaptive thresholds.
         self.v = self.decay * (self.v - self.rest) + self.rest
-        self.theta *= self.theta_decay
+        if self.network.learning:
+            self.theta *= self.theta_decay
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -682,7 +683,8 @@ class AdaptiveLIFNodes(Nodes):
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
-        self.theta += self.theta_plus * self.s.float()
+        if self.network.learning:
+            self.theta += self.theta_plus * self.s.float()
 
         # voltage clipping to lowerbound
         if self.lbound is not None:
@@ -787,7 +789,8 @@ class DiehlAndCookNodes(Nodes):
         """
         # Decay voltages and adaptive thresholds.
         self.v = self.decay * (self.v - self.rest) + self.rest
-        self.theta *= self.theta_decay
+        if self.network.learning:
+            self.theta *= self.theta_decay
 
         # Integrate inputs.
         self.v += (self.refrac_count == 0).float() * x
@@ -803,7 +806,8 @@ class DiehlAndCookNodes(Nodes):
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
-        self.theta += self.theta_plus * self.s.float()
+        if self.network.learning:
+            self.theta += self.theta_plus * self.s.float()
 
         # Choose only a single neuron to spike.
         if self.one_spike:

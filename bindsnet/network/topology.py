@@ -41,10 +41,6 @@ class AbstractConnection(ABC):
         :param ByteTensor norm_by_max: Normalize the weight of a neuron by its max weight.
         :param ByteTensor norm_by_max_with_shadow_weights: Normalize the weight of a neuron by its max weight by
                                                                 original weights
-        :param ByteTensor sign: True: to keep the connection positive.
-                                False: keep the connection negative.
-                                None: Ignore, connection can change signs on the fly
-                                ----NOT IMPLEMENTED YET ----
         """
         self.w = None
         self.dt = None
@@ -67,7 +63,6 @@ class AbstractConnection(ABC):
         self.norm_by_max_from_shadow_weights = kwargs.get(
             "norm_by_max_from_shadow_weights", False
         )
-        self.sign = kwargs.get("sign", None)
 
         if self.update_rule is None:
             self.update_rule = NoOp
@@ -159,10 +154,6 @@ class Connection(AbstractConnection):
         :param ByteTensor norm_by_max: Normalize the weight of a neuron by its max weight.
         :param ByteTensor norm_by_max_with_shadow_weights: Normalize the weight of a neuron by its max weight by
                                                            original weights.
-        :param ByteTensor sign: True: to keep the connection positive.
-                                False: keep the connection negative.
-                                None: Ignore, connection can change signs on the fly.
-                                ----NOT IMPLEMENTED YET ----
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
