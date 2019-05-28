@@ -1,5 +1,5 @@
 from bindsnet.datasets import MNIST
-from bindsnet.datasets.spike_encoders import PoissonEncoder
+from bindsnet.encoders import PoissonEncoder
 from bindsnet.pipeline import TorchVisionDatasetPipeline
 from bindsnet.models import DiehlAndCook2015
 from torchvision import transforms
@@ -17,7 +17,7 @@ network = DiehlAndCook2015(
 
 # Specify dataset
 mnist = MNIST(
-    PoissonEncoder(time=50.0, dt=1.0),
+    PoissonEncoder(time=50, dt=1.0),
     None,
     "../../data/MNIST",
     download=True,

@@ -9,8 +9,6 @@ import zipfile
 from urllib.request import urlretrieve
 from scipy.io import wavfile
 
-from .spike_encoders import Encoder
-
 import warnings
 
 

@@ -4,6 +4,7 @@ from typing import Union, Optional, Sequence
 import numpy as np
 import torch
 
+from ..network.nodes import SRM0Nodes
 from ..network.topology import (
     AbstractConnection,
     Connection,
@@ -11,6 +12,10 @@ from ..network.topology import (
     LocallyConnectedConnection,
 )
 from ..utils import im2col_indices
+
+__all__ = [
+    'LearningRule', 'NoOp', 'PostPre', 'WeightDependentPostPre', 'Hebbian', 'MSTDP', 'MSTDPET', 'Rmax', 'reward'
+]
 
 
 class LearningRule(ABC):
@@ -721,5 +726,80 @@ class MSTDPET(LearningRule):
         # Calculate point eligibility value.
         self.eligibility = target_s @ self.p_plus.t() + self.p_minus @ source_s.t()
         self.eligibility = self.eligibility.view(self.connection.w.size())
+
+        super().update()
+
+
+class Rmax(LearningRule):
+    # language=rst
+    """
+    Reward-modulated learning rule derived from reward maximization principles. Adapted from
+    `(Vasilaki et al., 2009) <https://intranet.physio.unibe.ch/Publikationen/Dokumente/Vasilaki2009PloSComputBio_1.pdf>`_.
+    """
+
+    def __init__(self, connection: AbstractConnection, nu: Optional[Union[float, Sequence[float]]] = None,
+                 weight_decay: float = 0.0, **kwargs) -> None:
+        # language=rst
+        """
+        Constructor for ``R-max`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the ``R-max`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+
+        Keyword arguments:
+
+        :param float tc_c: Time constant for balancing naive Hebbian and policy gradient learning.
+        :param float tc_e_trace: Time constant for the eligibility trace.
+        """
+        super().__init__(
+            connection=connection, nu=nu, weight_decay=weight_decay, **kwargs
+        )
+
+        # Trace is needed for computing epsilon.
+        assert self.source.traces and self.source.traces_additive, \
+            'Pre-synaptic nodes should keep track of their firing trace in an additive way.'
+
+        # Derivation of R-max depends on stochastic SRM neurons!
+        assert isinstance(self.target, SRM0Nodes), 'R-max needs stochastically firing neurons, use SRM0Nodes.'
+
+        if isinstance(connection, (Connection, LocallyConnectedConnection)):
+            self.update = self._connection_update
+        else:
+            raise NotImplementedError(
+                'This learning rule is not supported for this Connection type.'
+            )
+
+        self.tc_c = torch.tensor(kwargs.get('tc_c', 5.0))  # 0 for pure naive Hebbian, inf for pure policy gradient.
+        self.tc_e_trace = torch.tensor(kwargs.get('tc_e_trace', 25.0))
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        R-max learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
+
+        Keyword arguments:
+
+        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement learning task.
+        """
+        # Initialize eligibility trace.
+        if not hasattr(self, 'eligibility_trace'):
+            self.eligibility_trace = torch.zeros(*self.connection.w.shape)
+
+        # Reshape variables.
+        target_s = self.target.s.view(-1).float()
+        target_s_prob = self.target.s_prob.view(-1)
+        source_x = self.source.x.view(-1)
+
+        # Parse keyword arguments.
+        reward = kwargs['reward']
+
+        # New eligibility trace.
+        self.eligibility_trace *= (1 - self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace += (target_s - (
+                target_s_prob / (1.0 + self.tc_c / self.connection.dt * target_s_prob))) * source_x[:, None]
+
+        # Compute weight update.
+        self.connection.w += self.nu[0] * reward * self.eligibility_trace
 
         super().update()

@@ -6,6 +6,7 @@ from bindsnet.network.nodes import (
     IFNodes,
     LIFNodes,
     AdaptiveLIFNodes,
+    SRM0Nodes,
 )
 
 
@@ -15,7 +16,7 @@ class TestNodes:
     """
 
     def test_init(self):
-        for nodes in [Input, McCullochPitts, IFNodes, LIFNodes, AdaptiveLIFNodes]:
+        for nodes in [Input, McCullochPitts, IFNodes, LIFNodes, AdaptiveLIFNodes, SRM0Nodes]:
             for n in [1, 100, 10000]:
                 layer = nodes(n)
 
@@ -33,7 +34,7 @@ class TestNodes:
                 assert (layer.x == torch.zeros(n)).all()
                 assert (layer.x == torch.zeros(n)).all()
 
-                if nodes in [LIFNodes, AdaptiveLIFNodes]:
+                if nodes in [LIFNodes, AdaptiveLIFNodes, SRM0Nodes]:
                     assert (layer.v == layer.rest * torch.ones(n)).all()
 
         for nodes in [LIFNodes, AdaptiveLIFNodes]:
