@@ -1,5 +1,5 @@
 from bindsnet.datasets import MNIST
-from bindsnet.datasets.spike_encoders import PoissonEncoder
+from bindsnet.encoders import PoissonEncoder
 from bindsnet.pipeline import TorchVisionDatasetPipeline
 from bindsnet.models import DiehlAndCook2015
 from torchvision import transforms
