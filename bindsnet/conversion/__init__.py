@@ -434,8 +434,9 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
     """
     if isinstance(current, nn.Linear):
         layer = node_type(n=current.out_features, reset=0, thresh=1, refrac=0, **kwargs)
+        bias = current.bias if current.bias is not None else torch.zeros(layer.n)
         connection = topology.Connection(
-            source=prev, target=layer, w=current.weight.t(), b=current.bias
+            source=prev, target=layer, w=current.weight.t(), b=bias
         )
 
     elif isinstance(current, nn.Conv2d):
@@ -455,15 +456,16 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
         shape = (1, out_channels, int(width), int(height))
 
         layer = node_type(shape=shape, reset=0, thresh=1, refrac=0, **kwargs)
+        bias = current.bias if current.bias is not None else torch.zeros(layer.shape[1])
         connection = topology.Conv2dConnection(
-            source=prev,
-            target=layer,
-            kernel_size=current.kernel_size,
+            source=prev, 
+            target=layer, 
+            kernel_size=current.kernel_size, 
             stride=current.stride,
-            padding=current.padding,
-            dilation=current.dilation,
-            w=current.weight,
-            b=current.bias,
+            padding=current.padding, 
+            dilation=current.dilation, 
+            w=current.weight, 
+            b=bias
         )
 
     elif isinstance(current, nn.MaxPool2d):

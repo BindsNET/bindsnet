@@ -21,7 +21,7 @@ setup(
     % version,
     install_requires=[
         "numpy>=1.14.2",
-        "torch>=1.0.0",
+        "torch>=1.1.0",
         "tqdm>=4.19.9",
         "matplotlib>=2.1.0",
         "gym>=0.10.4",

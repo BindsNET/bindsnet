@@ -84,11 +84,21 @@ class DiehlAndCook2015(Network):
     <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
     """
 
-    def __init__(self, n_inpt: int, n_neurons: int = 100, exc: float = 22.5, inh: float = 17.5, dt: float = 1.0,
-                 nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2), wmin: float = 0.0, wmax: float = 1.0,
-                 norm: float = 78.4, theta_plus: float = 0.05,
-                 tc_theta_decay: float = 1e7,
-                 inpt_shape: Optional[Iterable[int]]=None) -> None:
+    def __init__(
+        self,
+        n_inpt: int,
+        n_neurons: int = 100,
+        exc: float = 22.5,
+        inh: float = 17.5,
+        dt: float = 1.0,
+        nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
+        wmin: float = 0.0,
+        wmax: float = 1.0,
+        norm: float = 78.4,
+        theta_plus: float = 0.05,
+        tc_theta_decay: float = 1e7,
+        inpt_shape: Optional[Iterable[int]] = None,
+    ) -> None:
         # language=rst
         """
         Constructor for class ``DiehlAndCook2015``.
@@ -116,7 +126,9 @@ class DiehlAndCook2015(Network):
         self.dt = dt
 
         # Layers
-        input_layer = Input(n=self.n_inpt, shape=self.inpt_shape, traces=True, tc_trace=20.0)
+        input_layer = Input(
+            n=self.n_inpt, shape=self.inpt_shape, traces=True, tc_trace=20.0
+        )
         exc_layer = DiehlAndCookNodes(
             n=self.n_neurons,
             traces=True,
