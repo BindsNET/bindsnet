@@ -30,7 +30,7 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
 class Network:
     # language=rst
     """
-    Most important object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and
+    Main object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and
     connections.
 
     **Example:**
