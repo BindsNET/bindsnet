@@ -87,6 +87,7 @@ class Network:
         dt: float = 1.0,
         learning: bool = True,
         reward_fn: Optional[AbstractReward] = None,
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -102,7 +103,7 @@ class Network:
         self.monitors = {}
         self.learning = learning
         if reward_fn is not None:
-            self.reward_fn = reward_fn()
+            self.reward_fn = reward_fn(**kwargs)
         else:
             self.reward_fn = None
 
