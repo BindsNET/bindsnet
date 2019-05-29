@@ -8,7 +8,7 @@ from time import time as t
 from tqdm import tqdm
 
 import bindsnet.datasets
-from bindsnet.encoders import PoissonEncoder, NullEncoder
+from bindsnet.encoding import PoissonEncoder, NullEncoder
 
 from bindsnet.network import Network
 from bindsnet.learning import PostPre

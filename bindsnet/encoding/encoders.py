@@ -1,22 +1,12 @@
 import torch
 from typing import Tuple, List, Dict
 
-from .. import encoding
-
-__all__ = [
-    "Encoder",
-    "NullEncoder",
-    "SingleEncoder",
-    "RepeatEncoder",
-    "BernoulliEncoder",
-    "PoissonEncoder",
-    "RankOrderEncoder",
-]
+from . import encodings
 
 
 class Encoder:
     """
-    Base class for spike encoding transforms.
+    Base class for spike encodings transforms.
 
     - Calls self.enc from the subclass and passes whatever arguments were
       provided. self.enc must be callable with torch.Tensor, *args, **kwargs
@@ -49,34 +39,34 @@ class SingleEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, sparsity: float = 0.3, **kwargs):
         """
         Creates a callable SingleEncoder which encodes as defined in
-        :code:`bindsnet.encodings.single`
+        :code:`bindsnet.encodingss.single`
 
         :param time: Length of Single spike train per input variable.
         :param dt: Simulation time step.
         :param sparsity: Sparsity of the input representation. 0 for no spike and 1 for all spike.
         """
         super().__init__(time, dt=dt, sparsity=sparsity, **kwargs)
-        self.enc = encoding.single
+        self.enc = encodings.single
 
 
 class RepeatEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, **kwargs):
         """
         Creates a callable RepeatEncoder which encodes as defined in
-        :code:`bindsnet.encodings.repeat`
+        :code:`bindsnet.encodingss.repeat`
 
         :param time: Length of Repeat spike train per input variable.
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
-        self.enc = encoding.repeat
+        self.enc = encodings.repeat
 
 
 class BernoulliEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, **kwargs):
         """
         Creates a callable BernoulliEncoder which encodes as defined in
-        :code:`bindsnet.encodings.bernoulli`
+        :code:`bindsnet.encodingss.bernoulli`
 
         :param time: Length of Bernoulli spike train per input variable.
         :param dt: Simulation time step.
@@ -86,30 +76,30 @@ class BernoulliEncoder(Encoder):
         :param float max_prob: Maximum probability of spike per Bernoulli trial.
         """
         super().__init__(time, dt=dt, **kwargs)
-        self.enc = encoding.bernoulli
+        self.enc = encodings.bernoulli
 
 
 class PoissonEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, **kwargs):
         """
         Creates a callable PoissonEncoder which encodes as defined in
-        :code:`bindsnet.encodings.poisson`
+        :code:`bindsnet.encodingss.poisson`
 
         :param time: Length of Poisson spike train per input variable.
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
-        self.enc = encoding.poisson
+        self.enc = encodings.poisson
 
 
 class RankOrderEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, **kwargs):
         """
         Creates a callable RankOrderEncoder which encodes as defined in
-        :code:`bindsnet.encodings.rank_order`
+        :code:`bindsnet.encodingss.rank_order`
 
         :param time: Length of RankOrder spike train per input variable.
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
-        self.enc = encoding.rank_order
+        self.enc = encodings.rank_order
