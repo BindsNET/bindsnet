@@ -39,7 +39,7 @@ class SingleEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, sparsity: float = 0.3, **kwargs):
         """
         Creates a callable SingleEncoder which encodes as defined in
-        :code:`bindsnet.encodingss.single`
+        :code:`bindsnet.encodings.single`
 
         :param time: Length of Single spike train per input variable.
         :param dt: Simulation time step.
@@ -53,7 +53,7 @@ class RepeatEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, **kwargs):
         """
         Creates a callable RepeatEncoder which encodes as defined in
-        :code:`bindsnet.encodingss.repeat`
+        :code:`bindsnet.encodings.repeat`
 
         :param time: Length of Repeat spike train per input variable.
         :param dt: Simulation time step.
@@ -66,7 +66,7 @@ class BernoulliEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, **kwargs):
         """
         Creates a callable BernoulliEncoder which encodes as defined in
-        :code:`bindsnet.encodingss.bernoulli`
+        :code:`bindsnet.encodings.bernoulli`
 
         :param time: Length of Bernoulli spike train per input variable.
         :param dt: Simulation time step.
@@ -83,7 +83,7 @@ class PoissonEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, **kwargs):
         """
         Creates a callable PoissonEncoder which encodes as defined in
-        :code:`bindsnet.encodingss.poisson`
+        :code:`bindsnet.encodings.poisson`
 
         :param time: Length of Poisson spike train per input variable.
         :param dt: Simulation time step.
@@ -96,7 +96,7 @@ class RankOrderEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, **kwargs):
         """
         Creates a callable RankOrderEncoder which encodes as defined in
-        :code:`bindsnet.encodingss.rank_order`
+        :code:`bindsnet.encodings.rank_order`
 
         :param time: Length of RankOrder spike train per input variable.
         :param dt: Simulation time step.
