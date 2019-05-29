@@ -3,7 +3,7 @@ import torch
 from bindsnet.network import Network
 from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.learning import MSTDPET
-from bindsnet.encoders import BernoulliEncoder
+from bindsnet.encoding import BernoulliEncoder
 from bindsnet.network.topology import Connection
 from bindsnet.environment import GymEnvironment
 from bindsnet.network.nodes import Input, LIFNodes

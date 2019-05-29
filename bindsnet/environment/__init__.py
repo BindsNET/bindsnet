@@ -5,7 +5,7 @@ import numpy as np
 from typing import Tuple, Dict, Any, Optional
 from abc import ABC, abstractmethod
 
-from ..encoders import Encoder, NullEncoder
+from ..encoding import Encoder, NullEncoder
 from ..datasets.preprocess import subsample, gray_scale, binary_image, crop
 
 

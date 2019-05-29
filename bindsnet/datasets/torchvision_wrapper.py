@@ -4,7 +4,7 @@ import warnings
 import torch
 import torchvision
 
-from ..encoders import Encoder, NullEncoder
+from ..encoding import Encoder, NullEncoder
 
 
 def torchvision_dataset_wrapper_creator(ds_type):
