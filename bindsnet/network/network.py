@@ -358,3 +358,14 @@ class Network:
 
         for monitor in self.monitors:
             self.monitors[monitor].reset_()
+
+    def to(self, device):
+        """
+        Transfers all layers and connections to target device
+        """
+
+        for layer in self.layers:
+            self.layers[layer].to(device)
+
+        for connection in self.connections:
+            self.connections[connection].to(device)
