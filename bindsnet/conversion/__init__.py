@@ -218,7 +218,7 @@ class PassThroughNodes(nodes.Nodes):
         """
         Resets relevant state variables.
         """
-        self.s = torch.zeros(self.shape)
+        self.s.zero_()
 
     def _compute_decays(self) -> None:
         # language=rst

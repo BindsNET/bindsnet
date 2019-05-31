@@ -66,8 +66,7 @@ class Nodes(ABC, torch.nn.Module):
             self.register_buffer('x', torch.zeros(self.shape))  # Firing traces.
             self.register_buffer('tc_trace', torch.tensor(
                 tc_trace
-            )  # Time constant of spike trace decay.
-            self.trace_decay = None  # Set in _compute_decays.
+            ))  # Time constant of spike trace decay.
             if self.traces_additive:
                 self.register_buffer('trace_scale',
                     torch.tensor(trace_scale))  # Scaling factor for spike trace.
@@ -1030,6 +1029,13 @@ class IzhikevichNodes(Nodes):
         super().reset_()
         self.v.fill_(self.rest)  # Neuron voltages.
         self.u = self.b * self.v  # Neuron recovery.
+
+    def _compute_decays(self) -> None:
+        # language=rst
+        """
+        Sets the relevant decays.
+        """
+        super()._compute_decays()
 
 class SRM0Nodes(Nodes):
     # language=rst
