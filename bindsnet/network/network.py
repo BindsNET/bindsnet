@@ -100,7 +100,8 @@ class Network(torch.nn.Module):
         self.layers = {}
         self.connections = {}
         self.monitors = {}
-        self.learning = learning
+        self.train(learning)
+
         if reward_fn is not None:
             self.reward_fn = reward_fn()
         else:
@@ -117,6 +118,7 @@ class Network(torch.nn.Module):
         self.layers[name] = layer
         self.add_module(name, layer)
 
+        layer.train(self.learning)
         layer.dt = self.dt
         layer._compute_decays()
 
@@ -135,6 +137,7 @@ class Network(torch.nn.Module):
         self.add_module(source+"_to_"+target, connection)
 
         connection.dt = self.dt
+        connection.train(self.learning)
 
     def add_monitor(self, monitor: AbstractMonitor, name: str) -> None:
         # language=rst
@@ -271,6 +274,7 @@ class Network(torch.nn.Module):
             plt.title('Input spiking')
             plt.show()
         """
+
         # Parse keyword arguments.
         clamps = kwargs.get("clamp", {})
         unclamps = kwargs.get("unclamp", {})
@@ -361,3 +365,12 @@ class Network(torch.nn.Module):
 
         for monitor in self.monitors:
             self.monitors[monitor].reset_()
+
+    def train(self, mode: bool=True):
+        """Sets the node in training mode.
+
+        :param bool mode: Turn training on or off
+        :return: self as specified in `torch.nn.Module`
+        """
+        self.learning = mode
+        return super().train(mode)

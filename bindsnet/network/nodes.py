@@ -21,6 +21,7 @@ class Nodes(ABC, torch.nn.Module):
         tc_trace: Union[float, torch.Tensor] = 20.0,
         trace_scale: Union[float, torch.Tensor] = 1.0,
         sum_input: bool = False,
+        learning: bool = True,
         **kwargs,
     ) -> None:
         # language=rst
@@ -34,6 +35,7 @@ class Nodes(ABC, torch.nn.Module):
         :param tc_trace: Time constant of spike trace decay.
         :param trace_scale: Scaling factor for spike trace.
         :param sum_input: Whether to sum all inputs.
+        :param learning: Whether to be in learning or testing
         """
         super().__init__()
 
@@ -77,6 +79,7 @@ class Nodes(ABC, torch.nn.Module):
             self.register_buffer('summed', torch.zeros(self.shape))  # Summed inputs.
 
         self.dt = None
+        self.learning = learning
 
     @abstractmethod
     def forward(self, x: torch.Tensor) -> None:
@@ -122,6 +125,15 @@ class Nodes(ABC, torch.nn.Module):
             self.trace_decay = torch.exp(
                 -self.dt / self.tc_trace
             )  # Spike trace decay (per timestep).
+
+    def train(self, mode: bool=True):
+        """Sets the node in training mode.
+
+        :param bool mode: Turn training on or off
+        :return: self as specified in `torch.nn.Module`
+        """
+        self.learning = mode
+        return super().train(mode)
 
 
 class AbstractInput(ABC):
@@ -702,7 +714,7 @@ class AdaptiveLIFNodes(Nodes):
         """
         # Decay voltages and adaptive thresholds.
         self.v = self.decay * (self.v - self.rest) + self.rest
-        if self.network.learning:
+        if self.learning:
             self.theta *= self.theta_decay
 
         # Integrate inputs.
@@ -719,7 +731,7 @@ class AdaptiveLIFNodes(Nodes):
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
-        if self.network.learning:
+        if self.learning:
             self.theta += self.theta_plus * self.s.float()
 
         # voltage clipping to lowerbound
@@ -826,7 +838,7 @@ class DiehlAndCookNodes(Nodes):
         """
         # Decay voltages and adaptive thresholds.
         self.v = self.decay * (self.v - self.rest) + self.rest
-        if self.network.learning:
+        if self.learning:
             self.theta *= self.theta_decay
 
         # Integrate inputs.
@@ -843,7 +855,7 @@ class DiehlAndCookNodes(Nodes):
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
-        if self.network.learning:
+        if self.learning:
             self.theta += self.theta_plus * self.s.float()
 
         # Choose only a single neuron to spike.
