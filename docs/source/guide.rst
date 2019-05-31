@@ -5,7 +5,7 @@ BindsNET User Manual
 Creating a Network
 ------------------
 
-The :code:`bindsnet.network.Network` object is BindsNET's main offering. To create one:
+The :class:`bindsnet.network.Network` object is BindsNET's main offering. To create one:
 
 .. code-block:: python
 
@@ -13,12 +13,12 @@ The :code:`bindsnet.network.Network` object is BindsNET's main offering. To crea
 
     network = Network()
 
-The :code:`Network` object accepts optional keyword arguments :code:`dt: float`, :code:`learning: bool`, and
-:code:`reward_fn: Optional[bindsnet.learning.reward.AbstractReward]`.
+The :py:class:`bindsnet.network.Network` object accepts optional keyword arguments :code:`dt: float`,
+:code:`learning: bool`, and :code:`reward_fn: Optional[bindsnet.learning.reward.AbstractReward]`.
 
-The :code:`dt` argument specifies the simulation time step, which determines what temporal granularity, in milliseconds, simulations are
-solved at. All simulation is done with the Euler method for the sake of computational simplicity. If inaccuracy in
-simulation is encountered, use a smaller :code:`dt` to resolve numerical instability.
+The :code:`dt` argument specifies the simulation time step, which determines what temporal granularity, in milliseconds,
+simulations are solved at. All simulation is done with the Euler method for the sake of computational simplicity. If
+inaccuracy in simulation is encountered, use a smaller :code:`dt` to resolve numerical instability.
 
 The :code:`learning` argument acts to enable or disable updates to adaptive parameters of network components; e.g.,
 synapse weights or adaptive voltage thresholds. See `Using Learning Rules`_ for more details.
@@ -32,8 +32,8 @@ Adding Network Components
 -------------------------
 
 BindsNET supports three categories of network component: *layers* of neurons (:code:`nodes`), *connections* between them
-(:code:`bindsnet.network.topology`), and *monitors* for recording the evolution of state variables
-(:code:`bindsnet.network.monitors`).
+(:py:mod:`bindsnet.network.topology`), and *monitors* for recording the evolution of state variables
+(:py:mod:`bindsnet.network.monitors`).
 
 Creating and adding layers
 **************************
@@ -50,11 +50,11 @@ To create a layer (or *population*) of nodes (in this case, leaky integrate-and-
         ...
     )
 
-Each :code:`bindsnet.network.nodes` object has many keyword arguments, but one of either :code:`n` (the number of nodes
-in the layer, or :code:`shape` (the arrangement of the layer, from which the number of nodes can be computed) is
+Each :py:mod:`bindsnet.network.nodes` object has many keyword arguments, but one of either :code:`n` (the number of
+nodes in the layer, or :code:`shape` (the arrangement of the layer, from which the number of nodes can be computed) is
 required.
 
-To add a layer to the network, use the :code:`Network.add_layer` function, and give it a name (a string) to call it by:
+To add a layer to the network, use the :code:`add_layer` function, and give it a name (a string) to call it by:
 
 .. code-block:: python
 
@@ -63,18 +63,24 @@ To add a layer to the network, use the :code:`Network.add_layer` function, and g
         name='LIF population'
     )
 
-Such layers are kept in the public dictionary :code:`network.layers`, and can be accessed by the user; e.g., by
+Such layers are kept in the dictionary attribute :code:`network.layers`, and can be accessed by the user; e.g., by
 :code:`network.layers['LIF population']`.
 
-Other layer types include :code:`Input` (for user-specified input spikes), :code:`RealInput` (for
-user-specified real-valued inputs), :code:`McCullochPitts` (the McCulloch-Pitts neuron model), `AdaptiveLIFNodes`
-(LIF neurons with adaptive thresholds), and `IzhikevichNodes` (the Izhikevich neuron model). Any number of layers can be
+Other layer types include :py:class:`bindsnet.network.nodes.Input` (for user-specified input spikes),
+:py:class:`bindsnet.network.nodes.RealInput` (for user-specified real-valued inputs),
+:py:class:`bindsnet.network.nodes.McCullochPitts` (the McCulloch-Pitts neuron model),
+:py:class:`bindsnet.network.nodes.AdaptiveLIFNodes` (LIF neurons with adaptive thresholds), and
+:py:class:`bindsnet.network.nodes.IzhikevichNodes` (the Izhikevich neuron model). Any number of layers can be
 added to the network.
 
-All nodes classes subclass `bindsnet.network.nodes.Nodes`, an abstract class with common logic for neuron simulation.
+Custom nodes objects can be implemented by sub-classing :py:class:`bindsnet.network.nodes.Nodes`, an abstract class with
+common logic for neuron simulation. The functions :code:`forward(self, x: torch.Tensor)` (computes effects of input
+data on neuron population; e.g., voltage changes, spike occurrences, etc.), :code:`reset_(self)` (resets neuron state
+variables to default values), and :code:`_compute_decays(self)` must be implemented, as they are included as abstract
+functions of :py:class:`bindsnet.network.nodes.Nodes`.
 
 Creating and adding connections
--------------------------------
+*******************************
 
 Connections can be added between different populations of neurons (a *projection*), or from a population back to itself
 (a *recurrent* connection). To create an all-to-all connection:
@@ -89,8 +95,38 @@ Connections can be added between different populations of neurons (a *projection
         ...
     )
 
+
 Like nodes, each connection object has many keyword arguments, but both :code:`source` and :code:`target` are required.
-These require objects that subclass `bindsnet.network.nodes.Nodes`.
+These must be objects that subclass `bindsnet.network.nodes.Nodes`. Other arguments include :code:`w` and :code:`b`
+(weight and bias tensors for the connection), :code:`wmin` and :code:`wmax` (minimum and maximum allowable weight
+values), :code:`update_rule` (:py:class:`bindsnet.learning.LearningRule`; used for updating connection weights based on
+pre- and post-synaptic neuron activity and global neuromodulatory signals), and :code:`norm` (a floating point value
+to normalize weights to sum to).
+
+To add a connection to the network, use the :code:`add_connection` function, and pass the names given to source and
+target populations as :code:`source` and :code:`target` arguments:
+
+.. code-block:: python
+
+    network.add_connection(
+        connection=connection,
+        source='A'
+        target='B'
+    )
+
+Such layers are kept in the dictionary attribute :code:`network.layers`, and can be accessed by the user; e.g., by
+:code:`network.connections['A', 'B']`.
+
+Custom connection objects can be implemented by sub-classing :py:class:`bindsnet.network.topology.AbstractConnection`, an
+abstract class with common logic for computing synapse outputs and updates. The functions :code:`compute` (for computing
+input to downstream layer as a function of spikes and connection weights), :code:`update` (for updating connection
+weights based on pre-, post-synaptic activity and possibly other signals; e.g., reward prediction error),
+:code:`normalize`, and :code:`reset_`.
+
+Specifying monitors
+*******************
+
+
 
 Simulation Notes
 ----------------
