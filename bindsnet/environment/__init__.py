@@ -212,8 +212,9 @@ class GymEnvironment(Environment):
             self.obs = subsample(gray_scale(crop(self.obs, 34, 194, 0, 160)), 80, 80)
             self.obs = binary_image(self.obs)
         else:  # Default pre-processing step
-            self.obs = subsample(gray_scale(self.obs), 84, 110)
-            self.obs = binary_image(self.obs)
+            # self.obs = subsample(gray_scale(self.obs), 84, 110)
+            # self.obs = binary_image(self.obs)
+            pass
 
         self.obs = torch.from_numpy(self.obs).float()
 

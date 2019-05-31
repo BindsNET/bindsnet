@@ -40,10 +40,7 @@ class EnvironmentPipeline(BasePipeline):
         Keyword arguments:
 
         :param int render_interval: Interval to render the environment.
-
         :param str output: String name of the layer from which to take output from.
-
-        :param int reward_window: Moving average window for the reward plot.
         :param int reward_delay: How many iterations to delay delivery of reward.
         """
         super().__init__(network, **kwargs)
@@ -57,7 +54,6 @@ class EnvironmentPipeline(BasePipeline):
         # Setting kwargs.
         self.output = kwargs.get("output", None)
         self.render_interval = kwargs.get("render_interval", None)
-        self.reward_window = kwargs.get("reward_window", None)
         self.reward_delay = kwargs.get("reward_delay", None)
         self.num_episodes = kwargs.get("num_episodes", 100)
 
@@ -79,12 +75,12 @@ class EnvironmentPipeline(BasePipeline):
         self.reward_plot = None
 
         self.first = True
-        self.analyzer = MatplotlibAnalyzer()
+        self.analyzer = MatplotlibAnalyzer(**kwargs)
 
     def init_fn(self):
         pass
 
-    def train(self) -> None:
+    def train(self, **kwargs) -> None:
         """
         Runs for the specified number of episodes from the Environment.
         Each episode can be an arbitrary length.
@@ -96,7 +92,7 @@ class EnvironmentPipeline(BasePipeline):
             for step in itertools.count():
                 batch = self.env_step()
 
-                self.step(batch)
+                self.step(batch, **kwargs)
 
                 if batch[2]:
                     break
@@ -141,7 +137,7 @@ class EnvironmentPipeline(BasePipeline):
 
         return obs, reward, done, info
 
-    def step_(self, gym_batch) -> None:
+    def step_(self, gym_batch, **kwargs) -> None:
         # language=rst
         """
         Run a single iteration of the network and if it is done update
@@ -160,7 +156,7 @@ class EnvironmentPipeline(BasePipeline):
 
         if done:
             if self.network.reward_fn is not None:
-                self.network.reward_fn.update(**kwargs)
+                self.network.reward_fn.update(accumulated_reward=self.accumulated_reward, steps=self.step_count, **kwargs)
             self.reward_list.append(self.accumulated_reward)
 
         return None
@@ -173,6 +169,7 @@ class EnvironmentPipeline(BasePipeline):
         self.env.reset()
         self.network.reset_()
         self.accumulated_reward = 0.0
+        self.step_count = 0
 
     def plots(self, gym_batch, *args):
         """
@@ -181,8 +178,9 @@ class EnvironmentPipeline(BasePipeline):
 
         obs, reward, done, info = gym_batch
 
-        self.analyzer.plot_obs(obs[0, ...].sum(0))
+        # self.analyzer.plot_obs(obs[0, ...].sum(0))
         self.analyzer.plot_spikes(self.get_spike_data())
         self.analyzer.plot_voltage(*self.get_voltage_data())
+        self.analyzer.plot_reward(self.reward_list)
 
         self.analyzer.finalize_step()

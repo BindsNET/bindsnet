@@ -33,7 +33,16 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
     """
 
     def __init__(self, **kwargs):
+        # language=rst
+        """
+        Initializes the analyzer.
+
+        Keyword arguments:
+
+        :param int reward_window: Moving average window for the reward plot.
+        """
         self.plot_type = kwargs.get("plot_type", "color")
+        self.reward_window = kwargs.get("reward_window", None)
         plt.ion()
         self.plots = {}
 
@@ -62,19 +71,17 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         else:
             obs_im.set_data(obs)
 
-    def plot_reward(self, reward_list, reward_window: int = None, tag="reward") -> None:
+    def plot_reward(self, reward_list, tag="reward") -> None:
         # language=rst
         """
         Plot the accumulated reward for each episode.
 
         :param list reward_list: The list of recent rewards to be plotted
-        :param int reward_window: The length of the window to compute a
-                                  moving average over
         """
         if tag in self.plots:
-            reward_ax, reward_im = self.plots[tag]
+            reward_im, reward_ax, reward_plot = self.plots[tag]
         else:
-            reward_ax, reward_im = None, None
+            reward_im, reward_ax, reward_plot = None, None, None
 
         # Compute moving average
         if self.reward_window is not None:
@@ -96,11 +103,11 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax.set_title("Accumulated reward")
             reward_ax.set_xlabel("Episode")
             reward_ax.set_ylabel("Reward")
-            (reward_plot,) = self.reward_ax.plot(reward_list_)
+            reward_plot, = reward_ax.plot(reward_list_)
 
-            self.plots[tag] = reward_im, reward_ax
+            self.plots[tag] = reward_im, reward_ax, reward_plot
         else:
-            reward_plot.set_data(range(self.episode), reward_list_)
+            reward_plot.set_data(range(len(reward_list_)), reward_list_)
             reward_ax.relim()
             reward_ax.autoscale_view()
 

@@ -284,11 +284,11 @@ class Network:
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
-        # convert an int input to a dictionary
+        # Convert an int input to a dictionary.
         if type(input_time_dim) == int:
             input_time_dim = {k: input_time_dim for k in inpts.keys()}
 
-        # keep around a list of slices for each input
+        # Keep around a list of slices for each input.
         time_slices = {k: [slice(None)] * inpts[k].dim() for k in inpts.keys()}
 
         # Get input to all layers.
@@ -299,12 +299,12 @@ class Network:
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    # grab the time slice for each input
+                    # Grab the time slice for each input.
                     t_slice = time_slices[l]
-                    # overwrite the None with a specific time
+                    # Overwrite the None with a specific time.
                     t_slice[input_time_dim[l]] = t
-                    # pull out that individual time slice and ensure the
-                    # memory is contiguous
+                    # Pull out that individual time slice and ensure the
+                    # memory is contiguous.
                     self.layers[l].forward(x=inpts[l][t_slice].contiguous())
                 else:
                     self.layers[l].forward(x=inpts[l])

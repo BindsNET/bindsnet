@@ -77,7 +77,7 @@ class BasePipeline:
         self.network.reset_()
         self.step_count = 0
 
-    def step(self, batch) -> Any:
+    def step(self, batch, **kwargs) -> Any:
         """
         Single step of any pipeline at a high level.
 
@@ -86,10 +86,12 @@ class BasePipeline:
                       subclass of the BasePipeline.
 
         :return: The output from the subclass' step_ method which could
-                 be anything. Passed to plotting to accomadate this.
+                 be anything. Passed to plotting to accomodate this.
         """
 
-        net_out = self.step_(batch)
+        self.step_count += 1
+
+        net_out = self.step_(batch, **kwargs)
 
         if (
             self.print_interval is not None
@@ -108,8 +110,6 @@ class BasePipeline:
 
         if self.test_interval is not None and self.step_count % self.test_interval == 0:
             self.test()
-
-        self.step_count += 1
 
         return net_out
 
@@ -145,7 +145,7 @@ class BasePipeline:
 
         return voltage_record, threshold_value
 
-    def step_(self, batch: Any) -> Any:
+    def step_(self, batch: Any, **kwargs) -> Any:
         """
         Perform a pass of the network given the input batch
 
