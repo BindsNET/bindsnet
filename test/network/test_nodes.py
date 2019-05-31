@@ -53,7 +53,7 @@ class TestNodes:
                 assert (layer.v == layer.rest * torch.ones(n)).all()
 
     def test_transfer(self):
-        if torch.cuda.is_available():
+        if not torch.cuda.is_available():
             return
 
         for nodes in Nodes.__subclasses__():
@@ -78,6 +78,16 @@ class TestNodes:
                 print(d, d==torch.device('cuda:0'))
                 assert d == torch.device('cuda:0')
 
+            print("Reset layer")
+            layer.reset_()
+            layer_tensors = [k for k, v in layer.state_dict().items() if
+                    isinstance(v, torch.Tensor)]
+
+            tensor_devs = [getattr(layer,k).device for k in layer_tensors]
+
+            for d in tensor_devs:
+                print(d, d==torch.device('cuda:0'))
+                assert d == torch.device('cuda:0')
 
 if __name__ == "__main__":
     tester = TestNodes()

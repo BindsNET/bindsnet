@@ -468,6 +468,7 @@ class LIFNodes(Nodes):
 
         :param x: Inputs to the layer.
         """
+
         # Decay voltages.
         self.v = self.decay * (self.v - self.rest) + self.rest
 
@@ -498,8 +499,8 @@ class LIFNodes(Nodes):
         Resets relevant state variables.
         """
         super().reset_()
-        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+        self.v.fill_(self.rest)  # Neuron voltages.
+        self.refrac_count.zero_() # Refractory period counters.
 
     def _compute_decays(self) -> None:
         # language=rst
@@ -612,9 +613,9 @@ class CurrentLIFNodes(Nodes):
         Resets relevant state variables.
         """
         super().reset_()
-        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.i = torch.zeros(self.shape)  # Synaptic input currents.
-        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+        self.v.fill_(self.rest)  # Neuron voltages.
+        self.i.zero_()  # Synaptic input currents.
+        self.refrac_count.zero_()  # Refractory period counters.
 
     def _compute_decays(self) -> None:
         # language=rst
@@ -734,8 +735,8 @@ class AdaptiveLIFNodes(Nodes):
         Resets relevant state variables.
         """
         super().reset_()
-        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+        self.v.fill_(self.rest)  # Neuron voltages.
+        self.refrac_count.zero_()  # Refractory period counters.
 
     def _compute_decays(self) -> None:
         # language=rst
@@ -1027,7 +1028,7 @@ class IzhikevichNodes(Nodes):
         Resets relevant state variables.
         """
         super().reset_()
-        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
+        self.v.fill_(self.rest)  # Neuron voltages.
         self.u = self.b * self.v  # Neuron recovery.
 
 class SRM0Nodes(Nodes):

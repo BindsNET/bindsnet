@@ -13,7 +13,7 @@ class TestConnection:
     """
 
     def test_transfer(self):
-        if torch.cuda.is_available():
+        if not torch.cuda.is_available():
             return
 
         connection_types = [Connection, Conv2dConnection,
