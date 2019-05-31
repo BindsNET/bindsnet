@@ -35,7 +35,7 @@ class Nodes(ABC, torch.nn.Module):
         :param tc_trace: Time constant of spike trace decay.
         :param trace_scale: Scaling factor for spike trace.
         :param sum_input: Whether to sum all inputs.
-        :param learning: Whether to be in learning or testing
+        :param learning: Whether to be in learning or testing.
         """
         super().__init__()
 
