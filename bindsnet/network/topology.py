@@ -173,7 +173,8 @@ class Connection(AbstractConnection):
 
         self.w = Parameter(w, False)
 
-        self.b = kwargs.get("b", torch.zeros(target.n))
+        self.b = Parameter(kwargs.get("b",
+            torch.zeros(target.n)), False)
 
         if self.norm_by_max_from_shadow_weights:
             self.shadow_w = self.w.clone().detach()
@@ -336,7 +337,7 @@ class Conv2dConnection(AbstractConnection):
         self.w = Parameter(w, False)
 
         self.b = Parameter(kwargs.get("b",
-            torch.zeros(self.out_channels)))
+            torch.zeros(self.out_channels)), False)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -368,15 +369,13 @@ class Conv2dConnection(AbstractConnection):
         Normalize weights along the first axis according to total weight per target neuron.
         """
         if self.norm is not None:
-            shape = self.w.size()
-            self.w = self.w.view(
+            # get a view and modify in place
+            w = self.w.view(
                 self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3)
             )
 
-            for fltr in range(self.w.size(0)):
-                self.w[fltr] *= self.norm / self.w[fltr].sum(0)
-
-            self.w = self.w.view(*shape)
+            for fltr in range(w.size(0)):
+                w[fltr] *= self.norm / w[fltr].sum(0)
 
     def reset_(self) -> None:
         # language=rst
@@ -589,7 +588,7 @@ class LocallyConnectedConnection(AbstractConnection):
         self.register_buffer('mask', self.w == 0)
 
         self.b = Parameter(kwargs.get("b",
-            torch.zeros(target.n)))
+            torch.zeros(target.n)), False)
 
         if self.norm is not None:
             self.norm *= kernel_prod

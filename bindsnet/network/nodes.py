@@ -395,8 +395,8 @@ class IFNodes(Nodes):
         Resets relevant state variables.
         """
         super().reset_()
-        self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
-        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+        self.v.fill_(self.reset)  # Neuron voltages.
+        self.refrac_count.zero_() # Refractory period counters.
 
     def _compute_decays(self) -> None:
         # language=rst
@@ -849,9 +849,9 @@ class DiehlAndCookNodes(Nodes):
         # Choose only a single neuron to spike.
         if self.one_spike:
             if self.s.any():
-                s = torch.zeros(self.n).byte()
-                s[torch.multinomial(self.s.float().view(-1), 1)] = 1
-                self.s = s.view(self.shape)
+                ind = torch.multinomial(self.s.float().view(-1), 1)
+                self.s.zero_()
+                self.s.view(-1)[ind] = 1
 
         # Voltage clipping to lower bound.
         if self.lbound is not None:
@@ -865,8 +865,8 @@ class DiehlAndCookNodes(Nodes):
         Resets relevant state variables.
         """
         super().reset_()
-        self.v = self.rest * torch.ones(self.shape)  # Neuron voltages.
-        self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
+        self.v.fill_(self.rest)  # Neuron voltages.
+        self.refrac_count.zero_()  # Refractory period counters.
 
     def _compute_decays(self) -> None:
         # language=rst

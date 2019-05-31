@@ -27,7 +27,7 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
     return network
 
 
-class Network:
+class Network(torch.nn.Module):
     # language=rst
     """
     Most important object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and
@@ -96,6 +96,8 @@ class Network:
         :param learning: Whether to allow connection updates. True by default.
         :param reward_fn: Optional class allowing for modification of reward in case of reward-modulated learning.
         """
+        super().__init__()
+
         self.dt = dt
         self.layers = {}
         self.connections = {}
@@ -115,7 +117,8 @@ class Network:
         :param name: Logical name of layer.
         """
         self.layers[name] = layer
-        layer.network = self
+        self.add_module(name, layer)
+
         layer.dt = self.dt
         layer._compute_decays()
 
@@ -131,7 +134,8 @@ class Network:
         :param target: Logical name of the connection's target layer.
         """
         self.connections[(source, target)] = connection
-        connection.network = self
+        self.add_module(source+"_to_"+target, connection)
+
         connection.dt = self.dt
 
     def add_monitor(self, monitor: AbstractMonitor, name: str) -> None:
@@ -209,7 +213,8 @@ class Network:
             target = self.connections[c].target
 
             if not c[1] in inpts:
-                inpts[c[1]] = torch.zeros(target.shape)
+                inpts[c[1]] = torch.zeros(target.shape,
+                                          device=target.s.device)
 
             # Add to input: source's spikes multiplied by connection weights.
             inpts[c[1]] += self.connections[c].compute(source.s)
@@ -358,14 +363,3 @@ class Network:
 
         for monitor in self.monitors:
             self.monitors[monitor].reset_()
-
-    def to(self, device):
-        """
-        Transfers all layers and connections to target device
-        """
-
-        for layer in self.layers:
-            self.layers[layer].to(device)
-
-        for connection in self.connections:
-            self.connections[connection].to(device)
