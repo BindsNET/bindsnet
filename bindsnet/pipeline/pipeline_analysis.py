@@ -1,14 +1,16 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import Dict
 
-import torch
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import torch
+
 from ..analysis.plotting import plot_spikes, plot_voltages
 
 
 class PipelineAnalyzer(ABC):
+    # language=rst
     """
     Responsible for pipeline analysis. Subclasses maintain state
     information related to plotting or logging.
@@ -16,18 +18,20 @@ class PipelineAnalyzer(ABC):
 
     @abstractmethod
     def finalize_step(self) -> None:
+        # language=rst
         """
-        Flush the output from the current step
+        Flush the output from the current step.
         """
         pass
 
 
 class MatplotlibAnalyzer(PipelineAnalyzer):
+    # language=rst
     """
-    Renders output using matplotlib.
+    Renders output using Matplotlib.
 
     Matplotlib requires objects to be kept around over the full lifetime
-    of the plots--this is done through self.plots. Interactive session
+    of the plots; this is done through ``self.plots``. An interactive session
     is needed so that we can continue processing and just update the
     plots.
     """
@@ -39,19 +43,20 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
 
         Keyword arguments:
 
+        :param str volts_type: Type of plotting for voltages (``"color"`` or ``"line"``).
         :param int reward_window: Moving average window for the reward plot.
         """
-        self.plot_type = kwargs.get("plot_type", "color")
+        self.volts_type = kwargs.get("volts_type", "color")
         self.reward_window = kwargs.get("reward_window", None)
         plt.ion()
         self.plots = {}
 
     def plot_obs(self, obs, tag="obs") -> None:
+        # language=rst
         """
-        Pulls the observation off of torch and sets up for matplotlib
+        Pulls the observation off of torch and sets up for Matplotlib
         plotting.
         """
-
         obs = obs.detach().cpu().numpy()
         obs = np.transpose(obs, (1, 2, 0)).squeeze()
 
@@ -76,19 +81,19 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         """
         Plot the accumulated reward for each episode.
 
-        :param list reward_list: The list of recent rewards to be plotted
+        :param list reward_list: The list of recent rewards to be plotted.
         """
         if tag in self.plots:
             reward_im, reward_ax, reward_plot = self.plots[tag]
         else:
             reward_im, reward_ax, reward_plot = None, None, None
 
-        # Compute moving average
+        # Compute moving average.
         if self.reward_window is not None:
-            # Ensure window size > 0 and < size of reward list
+            # Ensure window size > 0 and < size of reward list.
             window = max(min(len(reward_list), self.reward_window), 0)
 
-            # Fastest implementation of moving average
+            # Fastest implementation of moving average.
             reward_list_ = (
                 pd.Series(reward_list)
                 .rolling(window=window, min_periods=1)
@@ -112,13 +117,13 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax.autoscale_view()
 
     def plot_spikes(self, spike_record: Dict[str, torch.Tensor], tag="spike"):
+        # language=rst
         """
         Plots all spike records inside of spike_record. Keeps unique
         plots for all unique tags that are given.
 
-        :param dict spike_record: Dictionary of spikes to be rasterized
+        :param dict spike_record: Dictionary of spikes to be rasterized.
         """
-
         if tag not in self.plots:
             self.plots[tag] = plot_spikes(spike_record)
         else:
@@ -126,18 +131,19 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             self.plots[tag] = plot_spikes(spike_record, ims=s_im, axes=s_ax)
 
     def plot_voltage(self, voltage_record, threshold_value, tag="voltage"):
+        # language=rst
         """
         Plots all voltage records and given thresholds. Keeps unique
         plots for all unique tags that are given.
 
         :param dict voltage_record: Dictionary of voltages for neurons
-        inside of networks organized by the layer they correspond to
+        inside of networks organized by the layer they correspond to.
         :param dict threshold_value: Dictionary of threshold values for
-        neurons
+        neurons.
         """
         if tag not in self.plots:
             self.plots[tag] = plot_voltages(
-                voltage_record, plot_type=self.plot_type, threshold=threshold_value
+                voltage_record, plot_type=self.volts_type, threshold=threshold_value
             )
         else:
             v_im, v_ax = self.plots[tag]
@@ -145,25 +151,25 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
                 voltage_record,
                 ims=v_im,
                 axes=v_ax,
-                plot_type=self.plot_type,
+                plot_type=self.volts_type,
                 threshold=threshold_value,
             )
 
-    def plot_data(self, spike_record, voltage_record, threshold_value, tag="data"):
+    def plot_data(self, spike_record, voltage_record, threshold_value, tag="data") -> None:
+        # language=rst
         """
-        Convience function that wraps plot_spikes and plot_voltage in a
-        single call.
+        Convenience function that wraps plot_spikes and plot_voltage in a single call.
 
-        :param dict spike_record: Dictionary of spikes to be rasterized
+        :param dict spike_record: Dictionary of spikes to be rasterized.
         :param dict voltage_record: Dictionary of voltages for neurons
-        inside of networks organized by the layer they correspond to
+        inside of networks organized by the layer they correspond to.
         :param dict threshold_value: Dictionary of threshold values for
-        neurons
+        neurons.
         """
-        # Initialize plots
+        # Initialize plots.
         self.plot_spikes(spike_record, tag + "_s")
         self.plot_voltage(voltage_record, threshold_value, tag + "_v")
 
-    def finalize_step(self):
+    def finalize_step(self) -> None:
         plt.pause(1e-8)
         plt.show()

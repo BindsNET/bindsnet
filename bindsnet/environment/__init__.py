@@ -1,12 +1,12 @@
-import gym
-import torch
-import numpy as np
-
-from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
+from typing import Tuple, Dict, Any
 
-from ..encoding import Encoder, NullEncoder
+import gym
+import numpy as np
+import torch
+
 from ..datasets.preprocess import subsample, gray_scale, binary_image, crop
+from ..encoding import Encoder, NullEncoder
 
 
 class Environment(ABC):
@@ -68,7 +68,7 @@ class GymEnvironment(Environment):
         # language=rst
         """
         Initializes the environment wrapper. This class makes the
-        assumption that the OpenAI gym environment will provide an image
+        assumption that the OpenAI ``gym`` environment will provide an image
         of format HxW or CxHxW as an observation (we will add the C
         dimension to HxW tensors) or a 1D observation in which case no
         dimensions will be added.
@@ -78,8 +78,8 @@ class GymEnvironment(Environment):
 
         Keyword arguments:
 
-        :param max_prob: Maximum spiking probability.
-        :param clip_rewards: Whether or not to use ``np.sign`` of rewards.
+        :param float max_prob: Maximum spiking probability.
+        :param bool clip_rewards: Whether or not to use ``np.sign`` of rewards.
 
         :param int history: Number of observations to keep track of.
         :param int delta: Step size to save observations in history.
@@ -92,7 +92,7 @@ class GymEnvironment(Environment):
         self.encoder = encoder
 
         # Keyword arguments.
-        self.max_prob = kwargs.get("max_prob", 1)
+        self.max_prob = kwargs.get("max_prob", 1.0)
         self.clip_rewards = kwargs.get("clip_rewards", True)
 
         self.history_length = kwargs.get("history_length", None)
@@ -113,12 +113,12 @@ class GymEnvironment(Environment):
         self.obs = None
         self.reward = None
 
-        assert 0 < self.max_prob <= 1, "Maximum spiking probability must be in (0, 1]."
+        assert 0.0 < self.max_prob <= 1.0, "Maximum spiking probability must be in (0, 1]."
 
     def step(self, a: int) -> Tuple[torch.Tensor, float, bool, Dict[Any, Any]]:
         # language=rst
         """
-        Wrapper around the OpenAI Gym environment ``step()`` function.
+        Wrapper around the OpenAI ``gym`` environment ``step()`` function.
 
         :param a: Action to take in the environment.
         :return: Observation, reward, done flag, and information dictionary.
@@ -167,7 +167,7 @@ class GymEnvironment(Environment):
     def reset(self) -> torch.Tensor:
         # language=rst
         """
-        Wrapper around the OpenAI Gym environment ``reset()`` function.
+        Wrapper around the OpenAI ``gym`` environment ``reset()`` function.
 
         :return: Observation from the environment.
         """
@@ -184,21 +184,21 @@ class GymEnvironment(Environment):
     def render(self) -> None:
         # language=rst
         """
-        Wrapper around the OpenAI Gym environment ``render()`` function.
+        Wrapper around the OpenAI ``gym`` environment ``render()`` function.
         """
         self.env.render()
 
     def close(self) -> None:
         # language=rst
         """
-        Wrapper around the OpenAI Gym environment ``close()`` function.
+        Wrapper around the OpenAI ``gym`` environment ``close()`` function.
         """
         self.env.close()
 
     def preprocess(self) -> None:
         # language=rst
         """
-        Pre-processing step for an observation from a Gym environment.
+        Pre-processing step for an observation from a ``gym`` environment.
         """
         if self.name == "SpaceInvaders-v0":
             self.obs = subsample(gray_scale(self.obs), 84, 110)
@@ -240,9 +240,9 @@ class GymEnvironment(Environment):
     def update_index(self) -> None:
         # language=rst
         """
-        Updates the index to keep track of history. For example: history = 4, delta = 3 will produce self.history = {1,
-        4, 7, 10} and self.history_index will be updated according to self.delta and will wrap around the history
-        dictionary.
+        Updates the index to keep track of history. For example: ``history = 4``, ``delta = 3`` will produce
+        ``self.history = {1, 4, 7, 10}`` and ``self.history_index`` will be updated according to ``self.delta``
+        and will wrap around the history dictionary.
         """
         if self.episode_step_count % self.delta == 0:
             if self.history_index != max(self.history.keys()):

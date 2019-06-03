@@ -583,6 +583,7 @@ def plot_voltages(
                         )
                     )
                     if threshold is not None:
+                        assert threshold[v[0]].size() == torch.Size([]), "Line plots need a single threshold per layer."
                         ims.append(
                             axes[i].axhline(y=threshold[v[0]], c="r", linestyle="--")
                         )

@@ -479,7 +479,6 @@ class LIFNodes(Nodes):
 
         :param x: Inputs to the layer.
         """
-
         # Decay voltages.
         self.v = self.decay * (self.v - self.rest) + self.rest
 
@@ -1052,7 +1051,7 @@ class IzhikevichNodes(Nodes):
 class SRM0Nodes(Nodes):
     # language=rst
     """
-    Layer of simpliefied spike response model (SRM0) neurons with stochastic threshold (escape noise). Adapted from
+    Layer of simplified spike response model (SRM0) neurons with stochastic threshold (escape noise). Adapted from
     `(Vasilaki et al., 2009) <https://intranet.physio.unibe.ch/Publikationen/Dokumente/Vasilaki2009PloSComputBio_1.pdf>`_.
     """
 
@@ -1096,7 +1095,6 @@ class SRM0Nodes(Nodes):
         self.register_buffer('eps_0', torch.tensor(eps_0))  # Scaling factor for pre-synaptic spike contributions.
         self.register_buffer('rho_0', torch.tensor(rho_0))  # Stochastic intensity at threshold.
         self.register_buffer('d_thresh', torch.tensor(d_thresh))  # Width of the threshold region.
-
         self.register_buffer('v', self.rest * torch.ones(self.shape))  # Neuron voltages.
         self.register_buffer('refrac_count', torch.zeros(self.shape))  # Refractory period counters.
 

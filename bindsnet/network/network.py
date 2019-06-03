@@ -1,5 +1,5 @@
 import tempfile
-from typing import Dict, Optional
+from typing import Dict, Optional, Type
 
 import torch
 
@@ -15,7 +15,7 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
     Loads serialized network object from disk.
 
     :param file_name: Path to serialized network object on disk.
-    :param map_location: One of ``'cpu'`` or ``'cuda'``. Defaults to ``'cpu'``.
+    :param map_location: One of ``"cpu"`` or ``"cuda"``. Defaults to ``"cpu"``.
     :param learning: Whether to load with learning enabled. Default loads value from disk.
     """
     network = torch.load(open(file_name, "rb"), map_location=map_location)
@@ -28,7 +28,7 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
 class Network(torch.nn.Module):
     # language=rst
     """
-    Most important object of the :code:`bindsnet` package. Responsible for the simulation and interaction of nodes and
+    Most important object of the ``bindsnet`` package. Responsible for the simulation and interaction of nodes and
     connections.
 
     **Example:**
@@ -84,7 +84,7 @@ class Network(torch.nn.Module):
         self,
         dt: float = 1.0,
         learning: bool = True,
-        reward_fn: Optional[AbstractReward] = None,
+        reward_fn: Type[Optional[AbstractReward]] = None,
     ) -> None:
         # language=rst
         """
@@ -289,11 +289,11 @@ class Network(torch.nn.Module):
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
-        # convert an int input to a dictionary
+        # Convert an int input to a dictionary.
         if type(input_time_dim) == int:
             input_time_dim = {k: input_time_dim for k in inpts.keys()}
 
-        # keep around a list of slices for each input
+        # Keep around a list of slices for each input.
         time_slices = {k: [slice(None)] * inpts[k].dim() for k in inpts.keys()}
 
         # Get input to all layers.
@@ -304,12 +304,11 @@ class Network(torch.nn.Module):
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    # grab the time slice for each input
+                    # Grab the time slice for each input.
                     t_slice = time_slices[l]
-                    # overwrite the None with a specific time
+                    # Overwrite the None with a specific time.
                     t_slice[input_time_dim[l]] = t
-                    # pull out that individual time slice and ensure the
-                    # memory is contiguous
+                    # Pull out that individual time slice and ensure the memory is contiguous.
                     self.layers[l].forward(x=inpts[l][t_slice].contiguous())
                 else:
                     self.layers[l].forward(x=inpts[l])
@@ -366,11 +365,13 @@ class Network(torch.nn.Module):
         for monitor in self.monitors:
             self.monitors[monitor].reset_()
 
-    def train(self, mode: bool=True):
+    def train(self, mode: bool = True) -> "torch.nn.Module.train":
+        # language=rst
         """Sets the node in training mode.
 
-        :param bool mode: Turn training on or off
-        :return: self as specified in `torch.nn.Module`
+        :param mode: Turn training on or off.
+
+        :return: ``self`` as specified in ``torch.nn.Module``.
         """
         self.learning = mode
         return super().train(mode)

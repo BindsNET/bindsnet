@@ -2,6 +2,7 @@ from functools import partial
 from itertools import product
 from typing import List
 
+import numpy as np
 import torch
 
 from bindsnet.encoding import Encoder
@@ -40,7 +41,7 @@ def place_cell_centers(state_bounds: List[List[float]], n: int) -> torch.Tensor:
 
 
 def place_cells(centers: torch.Tensor, width: torch.Tensor, state: torch.Tensor, time: int,
-                dt: float = 1.0, max_rate: float = 100.0, correction: float = 20.0, **kwargs) -> torch.Tensor:
+                dt: float = 1.0, max_rate: float = 100.0, correction: float = 2.0, **kwargs) -> torch.Tensor:
     # Number of steps.
     n = centers.shape[1]
     time = int(time / dt)
@@ -81,12 +82,12 @@ def select_binary(pipeline: EnvironmentPipeline, **kwargs) -> int:
 # Useful bounds based on termination requirements/common sense.
 n_obs = 4
 n_action = 2
-obs_bounds = [[-2.4, 2.4], [-10.0, 10.0], [-0.4189, 0.4189], [-20.0, 20.0]]  # X, V_cart, theta, V_pole.
+obs_bounds = [[-2.4, 2.4], [-2.0, 2.0], [-0.21, 0.21], [-5.0, 5.0]]  # X, V_cart, theta, V_pole.
 
 # Create partial function.
 n_place = 11
 centers = place_cell_centers(obs_bounds, n_place)  # Centers of place cells.
-width = torch.tensor([0.48, 2.0, 0.083, 4.0])  # Width of place cells per state dimension.
+width = torch.tensor([0.24, 0.2, 0.021, 0.5])  # Width of place cells per state dimension.
 place_cells_partial = partial(place_cells, centers, width, max_rate=100, correction=2)
 
 
@@ -99,15 +100,18 @@ class PlaceCellEncoder(Encoder):
 # Build network.
 network = Network(dt=10.0, reward_fn=MovingAvgRPE)
 
-# Get environment.
+# Get environment and ensure determinism.
 environment = GymEnvironment(
     "CartPole-v1",
     PlaceCellEncoder(time=int(network.dt), dt=network.dt),
 )
+environment.env.seed(42)
 environment.reset()
+torch.manual_seed(42)
+np.random.seed(42)
 
 # Layers of neurons.
-inpt = Input(n=n_place * n_obs, traces=True, traces_additive=True)
+inpt = Input(n=n_place ** n_obs, shape=[1, n_place ** n_obs], traces=True, traces_additive=True)
 outpt = SRM0Nodes(n=1, traces=True, reset=-70.0, rest=-70.0, thresh=-60.0, d_thresh=1.0, tc_decay=20.0, tc_trace=20.0,
                   traces_additive=True, refrac=0)
 
@@ -115,10 +119,10 @@ outpt = SRM0Nodes(n=1, traces=True, reset=-70.0, rest=-70.0, thresh=-60.0, d_thr
 conn = Connection(
     source=inpt,
     target=outpt,
-    wmin=-1.0,
-    wmax=1.0,
+    wmin=0.0,
+    wmax=2.0,
     update_rule=Rmax,
-    nu=5e-5,
+    nu=5e-4,
 )
 
 # Add all layers and connections to the network.
@@ -126,18 +130,20 @@ network.add_layer(inpt, name="X")
 network.add_layer(outpt, name="Y")
 network.add_connection(conn, source="X", target="Y")
 
+# Plotting configuration.
+plot_config = {"data_step": None, "data_length": 10, "reward_eps": 1, "reward_window": 100, "volts_type": "line"}
+
 # Build pipeline from specified components.
 pipeline = EnvironmentPipeline(
     network,
     environment,
+    time=network.dt,
     action_function=select_binary,
     output="Y",
-    num_episodes=10,
-    plot_interval=1,
-    plot_length=10,
-    plot_type="line",
-    reward_window=100,
+    num_episodes=2000,
+    plot_config=plot_config,
+    render_interval=1,
 )
 
 # Run environment simulation and network training.
-pipeline.train(ema_window=10.0)
+pipeline.train(ema_window=10.0, a_minus=0.0, a_plus=1.0)

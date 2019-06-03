@@ -1,25 +1,19 @@
-import time
-from typing import Callable, Optional, Tuple, Dict
 import itertools
+from typing import Callable, Optional, Tuple, Dict
 
-import matplotlib.pyplot as plt
-import pandas as pd
 import torch
 
+from .base_pipeline import BasePipeline
+from .pipeline_analysis import MatplotlibAnalyzer
 from ..environment import Environment
 from ..network import Network
-from ..network.monitors import Monitor
 from ..network.nodes import AbstractInput
-
-from .base_pipeline import BasePipeline
-from .pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
 
 
 class EnvironmentPipeline(BasePipeline):
     # language=rst
     """
-    Abstracts the interaction between network, environment (or dataset), and environment feedback
-    action.
+    Abstracts the interaction between ``Network``, ``Environment`` and environment feedback action.
     """
 
     def __init__(
@@ -39,11 +33,15 @@ class EnvironmentPipeline(BasePipeline):
 
         Keyword arguments:
 
-        :param int render_interval: Interval to render the environment.
+        :param int num_episodes: Number of episodes to train for. Defaults to 100.
         :param str output: String name of the layer from which to take output from.
+        :param int render_interval: Interval to render the environment.
         :param int reward_delay: How many iterations to delay delivery of reward.
+        :param int time: Time for which to run the network. Defaults to the network's timestep.
         """
         super().__init__(network, **kwargs)
+
+        self.episode = 0
 
         self.env = environment
         self.action_function = action_function
@@ -52,10 +50,11 @@ class EnvironmentPipeline(BasePipeline):
         self.reward_list = []
 
         # Setting kwargs.
+        self.num_episodes = kwargs.get("num_episodes", 100)
         self.output = kwargs.get("output", None)
         self.render_interval = kwargs.get("render_interval", None)
         self.reward_delay = kwargs.get("reward_delay", None)
-        self.num_episodes = kwargs.get("num_episodes", 100)
+        self.time = kwargs.get("time", int(network.dt))
 
         if self.reward_delay is not None:
             assert self.reward_delay > 0
@@ -75,21 +74,20 @@ class EnvironmentPipeline(BasePipeline):
         self.reward_plot = None
 
         self.first = True
-        self.analyzer = MatplotlibAnalyzer(**kwargs)
+        self.analyzer = MatplotlibAnalyzer(**self.plot_config)
 
-    def init_fn(self):
+    def init_fn(self) -> None:
         pass
 
     def train(self, **kwargs) -> None:
+        # language=rst
         """
-        Runs for the specified number of episodes from the Environment.
-        Each episode can be an arbitrary length.
+        Runs for the specified number of episodes. Each episode can be an arbitrary length.
         """
-
-        for self.episode in range(self.num_episodes):
+        while self.episode < self.num_episodes:
             self.reset_()
 
-            for step in itertools.count():
+            for _ in itertools.count():
                 batch = self.env_step()
 
                 self.step(batch, **kwargs)
@@ -97,20 +95,17 @@ class EnvironmentPipeline(BasePipeline):
                 if batch[2]:
                     break
 
-            print(
-                "Episode %d - accumulated reward %f"
-                % (self.episode, self.accumulated_reward)
-            )
+            print(f"Episode: {self.episode} - accumulated reward: {self.accumulated_reward:.2f}")
+            self.episode += 1
 
     def env_step(self) -> Tuple[torch.Tensor, float, bool, Dict]:
+        # language=rst
         """
-        Single step of the environment which includes rendering, getting
-        and performing the action, and accumulating/delaying rewards.
+        Single step of the environment which includes rendering, getting and performing the action,
+        and accumulating/delaying rewards.
 
-        :return: An OpenAI gym compatible return with modified reward
-        and info
+        :return: An OpenAI ``gym`` compatible return with modified reward and info.
         """
-
         # Render game.
         if (
             self.render_interval is not None
@@ -130,28 +125,27 @@ class EnvironmentPipeline(BasePipeline):
             self.rewards = torch.tensor([reward, *self.rewards[1:]]).float()
             reward = self.rewards[-1]
 
-        # Accumulate reward
+        # Accumulate reward.
         self.accumulated_reward += reward
 
         info["accumulated_reward"] = self.accumulated_reward
 
         return obs, reward, done, info
 
-    def step_(self, gym_batch, **kwargs) -> None:
+    def step_(self, gym_batch: Tuple[torch.Tensor, float, bool, Dict], **kwargs) -> None:
         # language=rst
         """
         Run a single iteration of the network and if it is done update
         the network and reward list
         """
-
         obs, reward, done, info = gym_batch
 
-        # place the observations into the inputs
+        # Place the observations into the inputs.
         inpts = {k: obs for k in self.inpts}
 
         # Run the network on the spike train-encoded inputs.
         self.network.run(
-            inpts=inpts, time=obs.shape[1], reward=reward, input_time_dim=1
+            inpts=inpts, time=self.time, reward=reward, input_time_dim=1, **kwargs
         )
 
         if done:
@@ -171,16 +165,22 @@ class EnvironmentPipeline(BasePipeline):
         self.accumulated_reward = 0.0
         self.step_count = 0
 
-    def plots(self, gym_batch, *args):
+    def plots(self, gym_batch: Tuple[torch.Tensor, float, bool, Dict], *args) -> None:
+        # language=rst
         """
-        Plots the encoded input, layer spikes, and layer voltages
+        Plot the encoded input, layer spikes, and layer voltages.
         """
-
         obs, reward, done, info = gym_batch
 
-        # self.analyzer.plot_obs(obs[0, ...].sum(0))
-        self.analyzer.plot_spikes(self.get_spike_data())
-        self.analyzer.plot_voltage(*self.get_voltage_data())
-        self.analyzer.plot_reward(self.reward_list)
+        for key, item in self.plot_config.items():
+            if key == "obs_step" and item is not None:
+                if self.step_count % item == 0:
+                    self.analyzer.plot_obs(obs[0, ...].sum(0))
+            elif key == "data_step" and item is not None:
+                if self.step_count % item == 0:
+                    self.analyzer.plot_data(self.get_spike_data(), *self.get_voltage_data())
+            elif key == "reward_eps" and item is not None:
+                if self.episode % item == 0 and done:
+                    self.analyzer.plot_reward(self.reward_list)
 
         self.analyzer.finalize_step()
