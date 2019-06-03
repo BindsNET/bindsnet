@@ -2,10 +2,14 @@ BindsNET User Manual
 ====================
 
 
+**Note**: Code enclosed with angle brackets (:code:`<example>`) refers to a placeholder value. Method arguments of the
+form :code:`arg: Type` denote type annotations.
+
 Creating a Network
 ------------------
 
-The :class:`bindsnet.network.Network` object is BindsNET's main offering. To create one:
+The :class:`bindsnet.network.Network` object is BindsNET's main offering. It is responsible for the coordination of
+simulation of all its constituent components: neurons, synapses, learning rules, etc. To create one:
 
 .. code-block:: python
 
@@ -44,15 +48,19 @@ To create a layer (or *population*) of nodes (in this case, leaky integrate-and-
 
     from bindsnet.network.nodes import LIFNodes
 
+    # Create a layer of 100 LIF neurons with shape (10, 10).
     layer = LIFNodes(
         n=100,
-        shape=(10, 10).
+        shape=(10, 10),
         ...
     )
 
 Each :py:mod:`bindsnet.network.nodes` object has many keyword arguments, but one of either :code:`n` (the number of
 nodes in the layer, or :code:`shape` (the arrangement of the layer, from which the number of nodes can be computed) is
-required.
+required. Other arguments for certain nodes objects include :code:`thresh` (scalar or tensor giving voltage threshold(s)
+for the layer), :code:`rest` (scalar or tensor giving resting voltage(s) for the layer), :code:`traces` (whether to
+keep track of "spike traces" for each neuron in the layer), and :code:`tc_decay` (scalar or tensor giving time
+constant(s) of the layer's neurons' voltage decay).
 
 To add a layer to the network, use the :code:`add_layer` function, and give it a name (a string) to call it by:
 
@@ -87,14 +95,23 @@ Connections can be added between different populations of neurons (a *projection
 
 .. code-block:: python
 
+    from bindsnet.network.nodes import Input, LIFNodes
     from bindsnet.network.topology import Connection
 
+    # Create two populations of neurons, one to act as the "source"
+    # population, and the other, the "target population".
+    source_layer = Input(
+        n=100
+    )
+    target_layer = LIFNodes(
+        n=1000
+    )
+    # Connect the two layers.
     connection = Connection(
-        source=[source population],
-        target=[target population],
+        source=source_layer,
+        target=target_layer,
         ...
     )
-
 
 Like nodes, each connection object has many keyword arguments, but both :code:`source` and :code:`target` are required.
 These must be objects that subclass `bindsnet.network.nodes.Nodes`. Other arguments include :code:`w` and :code:`b`
@@ -115,7 +132,8 @@ target populations as :code:`source` and :code:`target` arguments:
     )
 
 Such layers are kept in the dictionary attribute :code:`network.layers`, and can be accessed by the user; e.g., by
-:code:`network.connections['A', 'B']`.
+:code:`network.connections['A', 'B']`. The layers must be added to the network with the same names (respectively,
+:code:`A` and :code:`B`) in order for the connection to work properly.
 
 Custom connection objects can be implemented by sub-classing :py:class:`bindsnet.network.topology.AbstractConnection`, an
 abstract class with common logic for computing synapse outputs and updates. The functions :code:`compute` (for computing
@@ -126,7 +144,77 @@ weights based on pre-, post-synaptic activity and possibly other signals; e.g., 
 Specifying monitors
 *******************
 
+:py:class:`bindsnet.network.monitors.AbstractMonitor` objects can be used to record tensor-valued variables over the
+course of simulation in certain network components. To create a monitor to monitor a single component:
 
+.. code-block:: python
+
+    from bindsnet.network.monitors import Monitor
+
+    # Creating a monitor.
+    monitor = Monitor(
+        obj: Union[Nodes, AbstractConnection],
+        state_vars: Iterable[str],
+        time: Optional[int]
+    )
+
+The user must specify a :code:`Nodes` or :code:`AbstractConnection` object from which to record, attributes of that
+object to record (:code:`state_vars`), and, optionally, how many time steps the simulation(s) will last, in order to
+save time by pre-allocating memory.
+
+To add a monitor to the network (thereby enabling monitoring), use the :code:`add_monitor` function of the
+:py:class`bindsnet.network.Network` class:
+
+.. code-block:: python
+
+    network.add_monitor(
+        monitor=monitor,
+        name=<name>
+    )
+
+For example, if we have created a monitor to record from a population of :py:class:`bindsnet.network.nodes.LIFNodes`
+named :code:`'LIFNodes'`, and have specified :code:`state_vars=('s', 'v')` (recording both spikes and voltages), we
+might name the monitor object :code:`'LIFNodes_s_v'`.
+
+One can get the contents of a monitor by calling :code:`network.monitors[<name>].get(<state_var>)`, where
+:code:`<state_var>` is a member of the iterable passed in for the :code:`state_vars` argument. This returns a tensor of
+shape :code:`(time, n_1, ..., n_k)`, where :code:`(n_1, ..., n_k)` is the shape of the recorded state variable.
+
+The :py:class:`bindsnet.network.monitors.NetworkMonitor` is used to record from many network components at once. To
+create one:
+
+.. code-block:: python
+
+    from bindsnet.network.monitors import NetworkMonitor
+
+    network_monitor = NetworkMonitor(
+        network: Network,
+        layers: Optional[Iterable[str]],
+        connections: Optional[Iterable[Tuple[str, str]]],
+        state_vars: Optional[Iterable[str]],
+        time: Optional[int]
+    )
+
+The user must specify the network to record from, an iterable of names of layers (entries in :code:`network.layers`),
+an iterable of 2-tuples referring to connections (entries in :code:`network.connections`), an iterable of tensor-valued
+state variables to record during simulation (:code:`state_vars`), and, optionally, how many time steps the simulation(s)
+will last, in order to save time by pre-allocating memory.
+
+Similarly, one can get the contents of a network monitor by calling :code:`network.monitors[<name>].get()`. Note this
+function takes no arguments; it returns a dictionary mapping network components to a sub-dictionary mapping state
+variables to their tensor-valued recording.
+
+Applying learning rules
+***********************
+
+TODO.
+
+A note on component names
+*************************
+
+Names of components in a network are arbitrary, and need only be unique within their component group (:code:`layers`,
+:code:`connections`, and :code:`monitors`) in order to address them uniquely. We encourage our users to develop their
+own naming conventions, using whatever works best for them.
 
 Simulation Notes
 ----------------
@@ -136,9 +224,9 @@ time step. Other frameworks use event-driven simulation, where spikes can occur 
 multiples of :code:`dt`.
 
 During a simulation step, input to each layer is computed as the sum of all outputs from layers connecting to it
-(weighted by synapse weights) from the *previous* simulation time step. This model allows us to decouple network
-components and perform their simulation separately at the temporal granularity of chosen :code:`dt`, interacting only
-between simulation steps.
+(weighted by synapse weights) from the *previous* simulation time step (implemented by the :code:`get_inputs` method
+of the :py:class:`bindsnet.network.Network` class). This model allows us to decouple network components and perform
+their simulation separately at the temporal granularity of chosen :code:`dt`, interacting only between simulation steps.
 
 This is a strict departure from the computation of *deep neural networks* (DNNs), in which an ordering of layers is
 supposed, and layers' activations are computed *in sequence* from the shallowest to the deepest layer in a single time
