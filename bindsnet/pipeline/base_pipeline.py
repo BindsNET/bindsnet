@@ -1,4 +1,5 @@
 import torch
+from torch._six import container_abcs, string_classes
 
 from typing import Optional, Tuple, Dict, Any
 import time
@@ -7,6 +8,33 @@ from ..network import Network
 from ..network.monitors import Monitor
 
 from .pipeline_analysis import PipelineAnalyzer
+
+
+def recursive_to(item, device):
+    """
+    Recursively transfers everything contained in item to the target
+    device.
+
+    :param item: An individual tensor or container of tensors
+    :param device: torch.device pointing to cuda or cpu
+
+    :return: A version of item that has been sent to a device
+    """
+
+    if isinstance(item, torch.Tensor):
+        return item.to(device)
+    elif isinstance(item, string_classes):
+        return item
+    elif isinstance(item, container_abcs.Mapping):
+        return {key: recursive_to(item[key], device) for key in item}
+    elif isinstance(item, tuple) and hasattr(item, '_fields'):
+        return type(item)(*(recursive_to(i, device) for i in item))
+    elif isinstance(item, container_abcs.Sequence):
+        return [recursive_to(i, device) for i in item]
+    else:
+        raise NotImplementedError("Target type not supported [%s]" %
+                str(type(item)))
+
 
 
 class BasePipeline:
@@ -31,6 +59,7 @@ class BasePipeline:
         :param int plot_interval: Interval to update plots.
 
         :param int print_interval: Interval to print text output.
+        "param bool allow_gpu: Allows automatic transfer to the GPU
         """
         self.network = network
 
@@ -69,6 +98,15 @@ class BasePipeline:
 
         self.clock = time.time()
 
+        self.allow_gpu = kwargs.get("allow_gpu", True)
+
+        if torch.cuda.is_available() and self.allow_gpu:
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
+        self.network.to(self.device)
+
     def reset_(self) -> None:
         """
         Reset the pipeline.
@@ -77,7 +115,7 @@ class BasePipeline:
         self.network.reset_()
         self.step_count = 0
 
-    def step(self, batch, **kwargs) -> Any:
+    def step(self, batch) -> Any:
         """
         Single step of any pipeline at a high level.
 
@@ -86,12 +124,12 @@ class BasePipeline:
                       subclass of the BasePipeline.
 
         :return: The output from the subclass' step_ method which could
-                 be anything. Passed to plotting to accomodate this.
+                 be anything. Passed to plotting to accomadate this.
         """
 
-        self.step_count += 1
+        batch = recursive_to(batch, self.device)
 
-        net_out = self.step_(batch, **kwargs)
+        net_out = self.step_(batch)
 
         if (
             self.print_interval is not None
@@ -110,6 +148,8 @@ class BasePipeline:
 
         if self.test_interval is not None and self.step_count % self.test_interval == 0:
             self.test()
+
+        self.step_count += 1
 
         return net_out
 
@@ -145,7 +185,7 @@ class BasePipeline:
 
         return voltage_record, threshold_value
 
-    def step_(self, batch: Any, **kwargs) -> Any:
+    def step_(self, batch: Any) -> Any:
         """
         Perform a pass of the network given the input batch
 

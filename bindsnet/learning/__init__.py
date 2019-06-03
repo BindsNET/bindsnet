@@ -71,8 +71,8 @@ class LearningRule(ABC):
         if (
             self.connection.wmin != -np.inf or self.connection.wmax != np.inf
         ) and not isinstance(self, NoOp):
-            self.connection.w = torch.clamp(
-                self.connection.w, self.connection.wmin, self.connection.wmax
+            self.connection.w.clamp_(
+                self.connection.wmin, self.connection.wmax
             )
 
 

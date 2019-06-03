@@ -201,7 +201,7 @@ class PassThroughNodes(nodes.Nodes):
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
-        self.v = torch.zeros(self.shape)
+        self.register_buffer('v', torch.zeros(self.shape))
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst
@@ -218,7 +218,14 @@ class PassThroughNodes(nodes.Nodes):
         """
         Resets relevant state variables.
         """
-        self.s = torch.zeros(self.shape)
+        self.s.zero_()
+
+    def _compute_decays(self) -> None:
+        # language=rst
+        """
+        Sets the relevant decays
+        """
+        super()._compute_decays()
 
 
 class PermuteConnection(topology.AbstractConnection):
