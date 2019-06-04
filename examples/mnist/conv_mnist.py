@@ -159,7 +159,7 @@ for epoch in range(n_epochs):
         if gpu:
             inpts = {k:v.cuda() for k, v in inpts.items()}
         label = batch["label"]
-
+        
         # Run the network on the input.
         network.run(inpts=inpts, time=time, input_time_dim=1)
 
