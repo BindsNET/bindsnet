@@ -5,7 +5,11 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from ..analysis.plotting import plot_spikes, plot_voltages
+from .plotting import plot_spikes, plot_voltages
+
+from torchvision.utils import make_grid
+
+from tensorboardX import SummaryWriter
 
 
 class PipelineAnalyzer(ABC):
@@ -19,6 +23,22 @@ class PipelineAnalyzer(ABC):
         """
         Flush the output from the current step
         """
+        pass
+
+    @abstractmethod
+    def plot_obs(self, obs, tag="obs", step: int = None) -> None:
+        pass
+
+    @abstractmethod
+    def plot_reward(self, reward_list, reward_window: int = None, tag="reward", step: int = None) -> None:
+        pass
+
+    @abstractmethod
+    def plot_spikes(self, spike_record: Dict[str, torch.Tensor], tag="spike", step: int = None):
+        pass
+
+    @abstractmethod
+    def plot_voltage(self, voltage_record, threshold_value, tag="voltage", step: int = None):
         pass
 
 
@@ -37,7 +57,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         plt.ion()
         self.plots = {}
 
-    def plot_obs(self, obs, tag="obs") -> None:
+    def plot_obs(self, obs, tag="obs", step: int = None) -> None:
         """
         Pulls the observation off of torch and sets up for matplotlib
         plotting.
@@ -62,7 +82,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         else:
             obs_im.set_data(obs)
 
-    def plot_reward(self, reward_list, reward_window: int = None, tag="reward") -> None:
+    def plot_reward(self, reward_list, reward_window: int = None, tag="reward", step: int = None) -> None:
         # language=rst
         """
         Plot the accumulated reward for each episode.
@@ -104,7 +124,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax.relim()
             reward_ax.autoscale_view()
 
-    def plot_spikes(self, spike_record: Dict[str, torch.Tensor], tag="spike"):
+    def plot_spikes(self, spike_record: Dict[str, torch.Tensor], tag="spike", step: int = None):
         """
         Plots all spike records inside of spike_record. Keeps unique
         plots for all unique tags that are given.
@@ -118,7 +138,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             s_im, s_ax = self.plots[tag]
             self.plots[tag] = plot_spikes(spike_record, ims=s_im, axes=s_ax)
 
-    def plot_voltage(self, voltage_record, threshold_value, tag="voltage"):
+    def plot_voltage(self, voltage_record, threshold_value, tag="voltage", step: int = None):
         """
         Plots all voltage records and given thresholds. Keeps unique
         plots for all unique tags that are given.
@@ -142,7 +162,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
                 threshold=threshold_value,
             )
 
-    def plot_data(self, spike_record, voltage_record, threshold_value, tag="data"):
+    def plot_data(self, spike_record, voltage_record, threshold_value, tag="data", step: int = None):
         """
         Convience function that wraps plot_spikes and plot_voltage in a
         single call.
@@ -160,3 +180,39 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
     def finalize_step(self):
         plt.pause(1e-8)
         plt.show()
+
+
+class TensorboardAnalyzer(PipelineAnalyzer):
+    def __init__(self, summary_directory='./logs'):
+        self.writer = SummaryWriter(summary_directory)
+
+    def finalize_step(self) -> None:
+        """
+        Flush the output from the current step
+        """
+        pass
+
+    def plot_obs(self, obs, tag="obs", step: int = None) -> None:
+        """
+        """
+
+        pass
+
+    def plot_reward(self, reward_list, reward_window: int = None,
+            tag="reward", step: int = None) -> None:
+        pass
+
+    def plot_spikes(self, spike_record: Dict[str, torch.Tensor],
+            tag="spike", step: int = None) -> None:
+        for k, spikes in spike_record.items():
+            # shuffle spikes into Bx1x#NueronsxT
+            spikes = spikes.view(1, -1, spikes.shape[-1]).float()
+            spike_grid_img = make_grid(spikes, nrow=1, pad_value=0.5)
+
+            self.writer.add_image(tag+"_"+k, spike_grid_img, step)
+
+            print(spikes.shape,spike_grid_img.shape, spike_grid_img.sum())
+
+    def plot_voltage(self, voltage_record, threshold_value,
+            tag="voltage", step: int = None) -> None:
+        pass

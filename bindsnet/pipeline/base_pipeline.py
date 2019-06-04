@@ -7,8 +7,6 @@ import time
 from ..network import Network
 from ..network.monitors import Monitor
 
-from .pipeline_analysis import PipelineAnalyzer
-
 
 def recursive_to(item, device):
     """
