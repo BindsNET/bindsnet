@@ -1,5 +1,4 @@
 from typing import Optional, Dict
-import warnings
 
 import torch
 import torchvision
@@ -7,7 +6,7 @@ import torchvision
 from ..encoding import Encoder, NullEncoder
 
 
-def torchvision_dataset_wrapper_creator(ds_type):
+def create_torchvision_dataset_wrapper(ds_type):
     """ Creates wrapper classes for datasets that output (image, label)
     from __getitem__. This is all of the datasets inside of torchvision.
     """
@@ -15,7 +14,7 @@ def torchvision_dataset_wrapper_creator(ds_type):
     if type(ds_type) == str:
         ds_type = getattr(torchvision.datasets, ds_type)
 
-    class torchvision_dataset_wrapper(ds_type):
+    class TorchvisionDatasetWrapper(ds_type):
         __doc__ = (
             """BindsNET torchvision dataset wrapper for:
 
@@ -31,11 +30,12 @@ def torchvision_dataset_wrapper_creator(ds_type):
 
         def __init__(
             self,
-            image_encoder: Optional[Encoder],
-            label_encoder: Optional[Encoder],
+            image_encoder: Optional[Encoder] = None,
+            label_encoder: Optional[Encoder] = None,
             *args,
             **kwargs
         ):
+            # language=rst
             """
             Constructor for the BindsNET torchvision dataset wrapper.
             For details on the dataset you're interested in visit
@@ -75,14 +75,16 @@ def torchvision_dataset_wrapper_creator(ds_type):
 
             image, label = super().__getitem__(ind)
 
-            output = {"image": image, "label": label}
-
-            output["encoded_image"] = self.image_encoder(image)
-            output["encoded_label"] = self.label_encoder(label)
+            output = {
+                "image": image,
+                "label": label,
+                "encoded_image": self.image_encoder(image),
+                "encoded_label": self.label_encoder(label),
+            }
 
             return output
 
         def __len__(self):
             return super().__len__()
 
-    return torchvision_dataset_wrapper
+    return TorchvisionDatasetWrapper
