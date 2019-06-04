@@ -5,7 +5,7 @@ from torchvision import transforms
 
 # Define logistic regression model using PyTorch.
 from bindsnet.datasets import MNIST
-from bindsnet.datasets.spike_encoders import PoissonEncoder
+from bindsnet.encoding import PoissonEncoder
 
 from bindsnet.network import Network
 from bindsnet.pipeline import DataLoaderPipeline

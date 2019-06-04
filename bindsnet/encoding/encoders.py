@@ -1,15 +1,12 @@
 import torch
 from typing import Tuple, List, Dict
 
-from .. import encoding
-
-__all__ = ['Encoder', 'NullEncoder', 'SingleEncoder', 'RepeatEncoder',
-           'BernoulliEncoder', 'PoissonEncoder', 'RankOrderEncoder']
+from . import encodings
 
 
 class Encoder:
     """
-    Base class for spike encoding transforms.
+    Base class for spike encodings transforms.
 
     - Calls self.enc from the subclass and passes whatever arguments were
       provided. self.enc must be callable with torch.Tensor, *args, **kwargs
@@ -21,6 +18,7 @@ class Encoder:
 
     def __call__(self, img):
         return self.enc(img, *self.enc_args, **self.enc_kwargs)
+
 
 class NullEncoder(Encoder):
     """
@@ -36,6 +34,7 @@ class NullEncoder(Encoder):
     def __call__(self, img):
         return img
 
+
 class SingleEncoder(Encoder):
     def __init__(self, time: int, dt: float = 1.0, sparsity: float = 0.3, **kwargs):
         """
@@ -47,7 +46,7 @@ class SingleEncoder(Encoder):
         :param sparsity: Sparsity of the input representation. 0 for no spike and 1 for all spike.
         """
         super().__init__(time, dt=dt, sparsity=sparsity, **kwargs)
-        self.enc = encoding.single
+        self.enc = encodings.single
 
 
 class RepeatEncoder(Encoder):
@@ -60,7 +59,7 @@ class RepeatEncoder(Encoder):
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
-        self.enc = encoding.repeat
+        self.enc = encodings.repeat
 
 
 class BernoulliEncoder(Encoder):
@@ -77,7 +76,7 @@ class BernoulliEncoder(Encoder):
         :param float max_prob: Maximum probability of spike per Bernoulli trial.
         """
         super().__init__(time, dt=dt, **kwargs)
-        self.enc = encoding.bernoulli
+        self.enc = encodings.bernoulli
 
 
 class PoissonEncoder(Encoder):
@@ -90,7 +89,7 @@ class PoissonEncoder(Encoder):
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
-        self.enc = encoding.poisson
+        self.enc = encodings.poisson
 
 
 class RankOrderEncoder(Encoder):
@@ -103,4 +102,4 @@ class RankOrderEncoder(Encoder):
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
-        self.enc = encoding.rank_order
+        self.enc = encodings.rank_order

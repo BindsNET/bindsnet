@@ -2,10 +2,10 @@ import gym
 import torch
 import numpy as np
 
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Optional
 from abc import ABC, abstractmethod
 
-from ..datasets.spike_encoders import Encoder
+from ..encoding import Encoder, NullEncoder
 from ..datasets.preprocess import subsample, gray_scale, binary_image, crop
 
 
@@ -64,7 +64,7 @@ class GymEnvironment(Environment):
     A wrapper around the OpenAI ``gym`` environments.
     """
 
-    def __init__(self, name: str, encoder: Encoder, **kwargs) -> None:
+    def __init__(self, name: str, encoder: Encoder=NullEncoder(), **kwargs) -> None:
         # language=rst
         """
         Initializes the environment wrapper. This class makes the
@@ -89,6 +89,7 @@ class GymEnvironment(Environment):
         self.name = name
         self.env = gym.make(name)
         self.action_space = self.env.action_space
+
         self.encoder = encoder
 
         # Keyword arguments.
@@ -156,7 +157,8 @@ class GymEnvironment(Environment):
             self.obs = self.obs.unsqueeze(0)
 
         # the encoder will add time - now Tx...
-        self.obs = self.encoder(self.obs)
+        if self.encoder is not None:
+            self.obs = self.encoder(self.obs)
 
         # add the batch - now BxTx...
         self.obs = self.obs.unsqueeze(0)

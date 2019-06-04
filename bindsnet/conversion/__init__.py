@@ -201,7 +201,7 @@ class PassThroughNodes(nodes.Nodes):
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
-        self.v = torch.zeros(self.shape)
+        self.register_buffer('v', torch.zeros(self.shape))
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst
@@ -218,7 +218,14 @@ class PassThroughNodes(nodes.Nodes):
         """
         Resets relevant state variables.
         """
-        self.s = torch.zeros(self.shape)
+        self.s.zero_()
+
+    def _compute_decays(self) -> None:
+        # language=rst
+        """
+        Sets the relevant decays
+        """
+        super()._compute_decays()
 
 
 class PermuteConnection(topology.AbstractConnection):
@@ -434,8 +441,9 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
     """
     if isinstance(current, nn.Linear):
         layer = node_type(n=current.out_features, reset=0, thresh=1, refrac=0, **kwargs)
+        bias = current.bias if current.bias is not None else torch.zeros(layer.n)
         connection = topology.Connection(
-            source=prev, target=layer, w=current.weight.t(), b=current.bias
+            source=prev, target=layer, w=current.weight.t(), b=bias
         )
 
     elif isinstance(current, nn.Conv2d):
@@ -455,6 +463,7 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
         shape = (1, out_channels, int(width), int(height))
 
         layer = node_type(shape=shape, reset=0, thresh=1, refrac=0, **kwargs)
+        bias = current.bias if current.bias is not None else torch.zeros(layer.shape[1])
         connection = topology.Conv2dConnection(
             source=prev,
             target=layer,
@@ -463,7 +472,7 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
             padding=current.padding,
             dilation=current.dilation,
             w=current.weight,
-            b=current.bias,
+            b=bias,
         )
 
     elif isinstance(current, nn.MaxPool2d):

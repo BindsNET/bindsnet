@@ -8,11 +8,11 @@ from time import time as t
 from tqdm import tqdm
 
 import bindsnet.datasets
-from bindsnet.datasets.spike_encoders import PoissonEncoder
+from bindsnet.encoding import PoissonEncoder, NullEncoder
 
 from bindsnet.network import Network
 from bindsnet.learning import PostPre
-from bindsnet.network.nodes import DiehlAndCookNodes, Input
+from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Conv2dConnection, Connection
 from bindsnet.analysis.plotting import (
     plot_input,
@@ -54,7 +54,7 @@ dataset_type = getattr(bindsnet.datasets, args.dataset)
 dataset_path = os.path.join("..", "..", "data", args.dataset)
 train_dataset = dataset_type(
     PoissonEncoder(time=time, dt=dt),
-    None,
+    NullEncoder(),
     dataset_path,
     download=True,
     train=True,
@@ -67,7 +67,7 @@ train_dataloader = torch.utils.data.DataLoader(
 
 # Grab the shape of a single sample (not including batch)
 # So, TxCxHxW
-sample_shape = train_dataset[0][0].shape
+sample_shape = train_dataset[0]['encoded_image'].shape
 print(args.dataset, " has shape ", sample_shape)
 
 conv_size = int((sample_shape[-1] - kernel_size + 2 * padding) / stride) + 1
@@ -79,7 +79,7 @@ network = Network()
 # Make sure to include the batch dimension but not time
 input_layer = Input(shape=(1, *sample_shape[1:]), traces=True)
 
-conv_layer = DiehlAndCookNodes(
+conv_layer = LIFNodes(
     n=n_filters * conv_size * conv_size,
     shape=(1, n_filters, conv_size, conv_size),
     traces=True,

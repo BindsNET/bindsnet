@@ -4,7 +4,6 @@ import numpy as np
 import pickle as p
 
 from bindsnet.environment import GymEnvironment
-from bindsnet.datasets.spike_encoders import NullEncoder
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", type=int, default=1000000)
@@ -17,7 +16,7 @@ n = args.n
 render = args.render
 
 # Load SpaceInvaders environment.
-env = GymEnvironment("SpaceInvaders-v0", NullEncoder())
+env = GymEnvironment("SpaceInvaders-v0")
 env.reset()
 
 total = 0

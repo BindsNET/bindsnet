@@ -8,7 +8,7 @@ from time import time as t
 from tqdm import tqdm
 
 from bindsnet.datasets import MNIST
-from bindsnet.datasets.spike_encoders import PoissonEncoder
+from bindsnet.encoding import PoissonEncoder
 from bindsnet.network import Network
 from bindsnet.learning import PostPre
 from bindsnet.encoding import poisson_loader
@@ -62,7 +62,6 @@ plot = args.plot
 gpu = args.gpu
 
 if gpu:
-    torch.set_default_tensor_type("torch.cuda.FloatTensor")
     torch.cuda.manual_seed_all(seed)
 else:
     torch.manual_seed(seed)
@@ -114,6 +113,9 @@ network.add_connection(recurrent_conn, source="Y", target="Y")
 voltage_monitor = Monitor(network.layers["Y"], ["v"], time=time)
 network.add_monitor(voltage_monitor, name="output_voltage")
 
+if gpu:
+    network.to('cuda')
+
 # Load MNIST data.
 train_dataset = MNIST(
     PoissonEncoder(time=time, dt=dt),
@@ -146,13 +148,16 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=1, shuffle=True, num_workers=0
+        train_dataset, batch_size=1, shuffle=True, num_workers=4,
+        pin_memory=gpu
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
         # Get next input sample.
 
         inpts = {"X": batch["encoded_image"]}
+        if gpu:
+            inpts = {k:v.cuda() for k, v in inpts.items()}
         label = batch["label"]
 
         # Run the network on the input.

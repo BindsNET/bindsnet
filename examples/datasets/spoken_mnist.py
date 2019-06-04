@@ -6,7 +6,7 @@ from tqdm import tqdm
 from bindsnet.datasets import SpokenMNIST
 
 from bindsnet.network import Network
-from bindsnet.datasets.spike_encoders import PoissonEncoder
+from bindsnet.encoding import PoissonEncoder
 from bindsnet.network.nodes import DiehlAndCookNodes, RealInput
 from bindsnet.network.topology import Connection
 
