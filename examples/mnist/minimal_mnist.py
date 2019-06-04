@@ -19,7 +19,7 @@ network = DiehlAndCook2015(
 mnist = MNIST(
     PoissonEncoder(time=50, dt=1.0),
     None,
-    "../../data/MNIST",
+    root="../../data/MNIST",
     download=True,
     train=True,
     transform=transforms.Compose(
