@@ -5,7 +5,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from .plotting import plot_spikes, plot_voltages
+from .plotting import plot_spikes, plot_voltages, plot_conv2d_weights
+from ..utils import reshape_conv2d_weights
 
 from torchvision.utils import make_grid
 
@@ -39,6 +40,11 @@ class PipelineAnalyzer(ABC):
 
     @abstractmethod
     def plot_voltage(self, voltage_record, threshold_value, tag="voltage", step: int = None):
+        pass
+
+    @abstractmethod
+    def plot_conv2d_weights(self, weights: torch.Tensor, wmin:
+            float=0.0, wmax: float=1.0, tag: str="conv2d", step: int = 0):
         pass
 
 
@@ -177,7 +183,18 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         self.plot_spikes(spike_record, tag + "_s")
         self.plot_voltage(voltage_record, threshold_value, tag + "_v")
 
+    def plot_conv2d_weights(self, weights: torch.Tensor, wmin:
+            float=0.0, wmax: float=1.0, tag: str="conv2d", step: int = 0):
+
+        if tag not in self.plots:
+            self.plots[tag] = plot_conv2d_weights(weights, wmin, wmax)
+        else:
+            im = self.plots[tag]
+            plot_conv2d_weights(weights, wmin, wmax, im=im)
+
+
     def finalize_step(self):
+        plt.draw()
         plt.pause(1e-8)
         plt.show()
 
@@ -218,3 +235,10 @@ class TensorboardAnalyzer(PipelineAnalyzer):
             voltage_grid_img = make_grid(v, nrow=1, pad_value=0)
 
             self.writer.add_image(tag+"_"+str(k), voltage_grid_img, step)
+
+    def plot_conv2d_weights(self, weights: torch.Tensor, wmin:
+            float=0.0, wmax: float=1.0, tag: str="conv2d", step: int = 0):
+
+        reshaped = reshape_conv2d_weights(weights, wmin,
+                wmax).unsqueeze(0)
+        self.writer.add_image(tag, reshaped, step)

@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from ..network import Network
 from .base_pipeline import BasePipeline
-from ..analysis.pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
+from ..analysis.pipeline_analysis import PipelineAnalyzer
 
 
 class DataLoaderPipeline(BasePipeline):
