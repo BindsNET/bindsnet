@@ -31,11 +31,8 @@ def torchvision_dataset_wrapper_creator(ds_type):
 
         def __init__(
             self,
-            path,
-            train=True,
-            image_encoder: Optional[Encoder] = None,
-            label_encoder: Optional[Encoder] = None,
-            download=True,
+            image_encoder: Optional[Encoder],
+            label_encoder: Optional[Encoder],
             *args,
             **kwargs
         ):
@@ -50,7 +47,7 @@ def torchvision_dataset_wrapper_creator(ds_type):
             :param *args: Arguments for the original dataset
             :param **kwargs: Keyword arguments for the original dataset
             """
-            super().__init__(root=path, train=train, download=download)
+            super().__init__(*args, **kwargs)
 
             self.args = args
             self.kwargs = kwargs

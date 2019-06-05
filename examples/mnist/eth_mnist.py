@@ -4,9 +4,12 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
+from torchvision import transforms
+
 from time import time as t
 
 from bindsnet.datasets import MNIST
+from bindsnet.encoding import PoissonEncoder
 from bindsnet.encoding import poisson_loader
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
@@ -80,11 +83,26 @@ network.add_monitor(exc_voltage_monitor, name="exc_voltage")
 network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 
 # Load MNIST data.
-images, labels = MNIST(
-    path=os.path.join("..", "..", "data", "MNIST"), download=True
-).get_train()
-images = images.view(-1, 784)
-images *= intensity
+# images, labels
+dataset = MNIST(
+    None,
+    None,
+    root=os.path.join("..", "..", "data", "MNIST"),
+    download=True,
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+    ),
+)
+# .get_train()
+
+images = []
+lables = []
+
+for i in range(len(dataset)):
+    sample = dataset[i]
+    img_array.append(sample["image"])
+    lables.append(sample["label"])
+
 
 # Lazily encode data as Poisson spike trains.
 data_loader = poisson_loader(data=images, time=time, dt=dt)
