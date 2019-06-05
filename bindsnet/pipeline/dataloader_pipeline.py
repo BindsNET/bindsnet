@@ -138,9 +138,11 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         if self.pipeline_analyzer is not None:
             self.pipeline_analyzer.plot_obs(input_batch["encoded_image"][0,
                 ...].sum(0), step=self.step_count)
-            self.pipeline_analyzer.plot_spikes(self.get_spike_data(), self.step_count)
+
+            self.pipeline_analyzer.plot_spikes(self.get_spike_data(), step=self.step_count)
+
             vr, tv = self.get_voltage_data()
-            self.pipeline_analyzer.plot_voltage(vr, tv, self.step_count)
+            self.pipeline_analyzer.plot_voltage(vr, tv, step=self.step_count)
 
             self.pipeline_analyzer.finalize_step()
 

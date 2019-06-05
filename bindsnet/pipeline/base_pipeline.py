@@ -80,7 +80,7 @@ class BasePipeline:
                     Monitor(self.network.layers[l], "s", int(self.plot_length)),
                     name=f"{l}_spikes",
                 )
-                if "v" in self.network.layers[l].__dict__:
+                if hasattr(self.network.layers[l], 'v'):
                     self.network.add_monitor(
                         Monitor(self.network.layers[l], "v", int(self.plot_length)),
                         name=f"{l}_voltages",
@@ -176,9 +176,9 @@ class BasePipeline:
         voltage_record = {}
         threshold_value = {}
         for l in self.network.layers:
-            if "v" in self.network.layers[l].__dict__:
+            if hasattr(self.network.layers[l], 'v'):
                 voltage_record[l] = self.network.monitors[f"{l}_voltages"].get("v")
-            if "thresh" in self.network.layers[l].__dict__:
+            if hasattr(self.network.layers[l], 'thresh'):
                 threshold_value[l] = self.network.layers[l].thresh
 
         return voltage_record, threshold_value

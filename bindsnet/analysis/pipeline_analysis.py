@@ -188,31 +188,33 @@ class TensorboardAnalyzer(PipelineAnalyzer):
 
     def finalize_step(self) -> None:
         """
-        Flush the output from the current step
+        No-op for TensorboardAnalyzer
         """
         pass
 
     def plot_obs(self, obs, tag="obs", step: int = None) -> None:
-        """
-        """
-
-        pass
+        obs_grid = make_grid(obs.float(), nrow=4, normalize=True)
+        self.writer.add_image(tag, obs_grid, step)
 
     def plot_reward(self, reward_list, reward_window: int = None,
             tag="reward", step: int = None) -> None:
-        pass
+        self.writer.add_scalar(tag, reward_list[-1], step)
 
     def plot_spikes(self, spike_record: Dict[str, torch.Tensor],
             tag="spike", step: int = None) -> None:
         for k, spikes in spike_record.items():
-            # shuffle spikes into Bx1x#NueronsxT
-            spikes = spikes.view(1, -1, spikes.shape[-1]).float()
+            # shuffle spikes into 1x1x#NueronsxT
+            spikes = spikes.view(1, 1, -1, spikes.shape[-1]).float()
             spike_grid_img = make_grid(spikes, nrow=1, pad_value=0.5)
 
-            self.writer.add_image(tag+"_"+k, spike_grid_img, step)
+            self.writer.add_image(tag+"_"+str(k), spike_grid_img, step)
 
-            print(spikes.shape,spike_grid_img.shape, spike_grid_img.sum())
-
-    def plot_voltage(self, voltage_record, threshold_value,
+    def plot_voltage(self, voltage_record: Dict[str, torch.Tensor],
+            threshold_value: Dict[str, float],
             tag="voltage", step: int = None) -> None:
-        pass
+        for k, v in voltage_record.items():
+            # shuffle voltages into 1x1x#NueronsxT
+            v = v.view(1, 1, -1, v.shape[-1])
+            voltage_grid_img = make_grid(v, nrow=1, pad_value=0)
+
+            self.writer.add_image(tag+"_"+str(k), voltage_grid_img, step)
