@@ -31,8 +31,8 @@ def torchvision_dataset_wrapper_creator(ds_type):
 
         def __init__(
             self,
-            image_encoder: Optional[Encoder],
-            label_encoder: Optional[Encoder],
+            image_encoder: Optional[Encoder] = None,
+            label_encoder: Optional[Encoder] = None,
             *args,
             **kwargs
         ):
