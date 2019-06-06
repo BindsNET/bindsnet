@@ -14,10 +14,7 @@ from bindsnet.network import Network
 from bindsnet.learning import PostPre
 from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Conv2dConnection, Connection
-from bindsnet.analysis.pipeline_analysis import (
-        TensorboardAnalyzer,
-        MatplotlibAnalyzer,
-        )
+from bindsnet.analysis.pipeline_analysis import TensorboardAnalyzer, MatplotlibAnalyzer
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -57,8 +54,9 @@ train_dataset = dataset_type(
     dataset_path,
     download=True,
     train=True,
-    transform=transforms.Compose([transforms.ToTensor(),
-        transforms.Lambda(lambda x: x*128.)]),
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * 128.0)]
+    ),
 )
 
 train_dataloader = torch.utils.data.DataLoader(
@@ -67,7 +65,7 @@ train_dataloader = torch.utils.data.DataLoader(
 
 # Grab the shape of a single sample (not including batch)
 # So, TxCxHxW
-sample_shape = train_dataset[0]['encoded_image'].shape
+sample_shape = train_dataset[0]["encoded_image"].shape
 print(args.dataset, " has shape ", sample_shape)
 
 conv_size = int((sample_shape[-1] - kernel_size + 2 * padding) / stride) + 1
@@ -105,7 +103,7 @@ network.add_connection(conv_conn, source="X", target="Y")
 print("Begin training.\n")
 
 if args.tensorboard:
-    analyzer = TensorboardAnalyzer('logs/conv')
+    analyzer = TensorboardAnalyzer("logs/conv")
 else:
     analyzer = MatplotlibAnalyzer()
 
@@ -122,7 +120,6 @@ for step, batch in enumerate(tqdm(train_dataloader)):
 
     network.reset_()  # Reset state variables.
 
-    analyzer.plot_conv2d_weights(conv_conn.w, conv_conn.wmin,
-            conv_conn.wmax, step=step)
+    analyzer.plot_conv2d_weights(conv_conn.w, conv_conn.wmin, conv_conn.wmax, step=step)
 
     analyzer.finalize_step()

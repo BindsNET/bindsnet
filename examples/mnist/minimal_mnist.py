@@ -29,7 +29,8 @@ mnist = MNIST(
 )
 
 # Build pipeline from components.
-pipeline = TorchVisionDatasetPipeline(network, mnist,
-        TensorboardAnalyzer("logs/minimal_mnist"), plot_interval=100)
+pipeline = TorchVisionDatasetPipeline(
+    network, mnist, TensorboardAnalyzer("logs/minimal_mnist"), plot_interval=100
+)
 
 pipeline.train()

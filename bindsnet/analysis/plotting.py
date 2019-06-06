@@ -8,10 +8,7 @@ from torch.nn.modules.utils import _pair
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Tuple, List, Optional, Sized, Dict, Union
 
-from ..utils import (
-        reshape_locally_connected_weights,
-        reshape_conv2d_weights,
-        )
+from ..utils import reshape_locally_connected_weights, reshape_conv2d_weights
 
 plt.ion()
 
