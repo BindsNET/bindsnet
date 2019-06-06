@@ -90,18 +90,22 @@ dataset = MNIST(
     root=os.path.join("..", "..", "data", "MNIST"),
     download=True,
     transform=transforms.Compose(
-        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+        [
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x * intensity),
+            transforms.Lambda(lambda x: x.view(784)),
+        ]
     ),
 )
 # .get_train()
 
 images = []
-lables = []
+labels = []
 
 for i in range(len(dataset)):
     sample = dataset[i]
-    img_array.append(sample["image"])
-    lables.append(sample["label"])
+    images.append(sample["image"])
+    labels.append(sample["label"])
 
 
 # Lazily encode data as Poisson spike trains.
