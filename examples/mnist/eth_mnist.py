@@ -30,6 +30,7 @@ parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
+parser.add_argument("--n_workers", type=int, default=-1)
 parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=50.0)
 parser.add_argument("--time", type=int, default=350)
@@ -49,6 +50,7 @@ seed = args.seed
 n_neurons = args.n_neurons
 n_epochs = args.n_epochs
 n_test = args.n_test
+n_workers = args.n_workers
 exc = args.exc
 inh = args.inh
 time = args.time
@@ -61,14 +63,14 @@ plot = args.plot
 gpu = args.gpu
 
 # device = torch.device("cpu")
-n_workers = 0
 
 if gpu:
     # try:
     #    if not torch.cuda.is_available():
     #        raise Exception("Cuda Unavailable")
     # torch.set_default_tensor_type("torch.cuda.FloatTensor")
-    n_workers = 8
+    if n_workers == -1:
+        n_workers = 4 * torch.cuda.device_count()
     torch.cuda.manual_seed_all(seed)
     # torch.cuda.set_device("cuda")
     # except Exception:
@@ -76,6 +78,9 @@ if gpu:
     #    exit
 else:
     torch.manual_seed(seed)
+
+if n_workers == -1:
+    n_workers = 0
 
 if not train:
     update_interval = n_test
@@ -164,7 +169,7 @@ for epoch in range(n_epochs):
 
     # Create a dataloader to iterate and batch data
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=True, num_workers=n_workers, pin_memory=gpu
+        dataset, batch_size=1, shuffle=True, num_workers=int(n_workers), pin_memory=gpu
     )
 
     for step, batch in enumerate(tqdm(dataloader)):
