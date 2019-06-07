@@ -47,7 +47,7 @@ args = parser.parse_args()
 
 seed = args.seed
 n_neurons = args.n_neurons
-n_train = args.n_train
+n_epochs = args.n_epochs
 n_test = args.n_test
 exc = args.exc
 inh = args.inh
@@ -60,6 +60,7 @@ train = args.train
 plot = args.plot
 gpu = args.gpu
 
+# device = torch.device("cpu")
 n_workers = 0
 
 if gpu:
@@ -150,6 +151,7 @@ voltage_axes, voltage_ims = None, None
 
 # Train the network.
 print("\nBegin training.\n")
+start = t()
 
 for epoch in range(n_epochs):
 
@@ -166,20 +168,11 @@ for epoch in range(n_epochs):
     )
 
     for step, batch in enumerate(tqdm(dataloader)):
-
-        # sample = dataset[step]
-        if step > n_train:
-            break
-
         # Get next input sample.
         inpts = {"X": batch["encoded_image"]}
         if gpu:
             inpts = {k: v.cuda() for k, v in inpts.items()}
         labels.append(batch["label"])
-
-        #    if step % progress_interval == 0:
-        #        print("Progress: %d / %d (%.4f seconds)" % (step, n_train, t() - start))
-        #        start = t()
 
         if step % update_interval == 0 and step > 0:
 
@@ -190,41 +183,6 @@ for epoch in range(n_epochs):
             all_activity_pred = all_activity(spike_record, assignments, 10)
             proportion_pred = proportion_weighting(
                 spike_record, assignments, proportions, 10
-            )
-
-            # Compute network accuracy according to available classification strategies.
-            accuracy["all"].append(
-                100
-                * torch.sum(
-                    label_tensor[step - update_interval : step].long()
-                    == all_activity_pred
-                ).item()
-                / update_interval
-            )
-            accuracy["proportion"].append(
-                100
-                * torch.sum(
-                    label_tensor[step - update_interval : step].long()
-                    == proportion_pred
-                ).item()
-                / update_interval
-            )
-
-            print(
-                "\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)"
-                % (
-                    accuracy["all"][-1],
-                    np.mean(accuracy["all"]),
-                    np.max(accuracy["all"]),
-                )
-            )
-            print(
-                "Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n"
-                % (
-                    accuracy["proportion"][-1],
-                    np.mean(accuracy["proportion"]),
-                    np.max(accuracy["proportion"]),
-                )
             )
 
             # Assign labels to excitatory layer neurons.
@@ -272,5 +230,5 @@ for epoch in range(n_epochs):
 
         network.reset_()  # Reset state variables.
 
-print("Progress: %d / %d (%.4f seconds)\n" % (n_train, n_train, t() - start))
+# print("Progress: %d / %d (%.4f seconds)\n" % (n_train, n_train, t() - start))
 print("Training complete.\n")
