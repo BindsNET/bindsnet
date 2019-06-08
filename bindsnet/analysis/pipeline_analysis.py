@@ -380,8 +380,8 @@ class TensorboardAnalyzer(PipelineAnalyzer):
     def plot_conv2d_weights(
         self,
         weights: torch.Tensor,
-        wmin: float = 0.0,
-        wmax: float = 1.0,
+        wmin: float = np.finfo("float").min,
+        wmax: float = np.finfo("float").max,
         tag: str = "conv2d",
         step: int = 0,
     ) -> None:
@@ -396,4 +396,6 @@ class TensorboardAnalyzer(PipelineAnalyzer):
         :param step: The step of the pipeline.
         """
         reshaped = reshape_conv2d_weights(weights, wmin, wmax).unsqueeze(0)
+        reshaped.clamp_(wmin, wmax)
+
         self.writer.add_image(tag, reshaped, step)

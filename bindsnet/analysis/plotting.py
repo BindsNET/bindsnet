@@ -275,7 +275,7 @@ def plot_conv2d_weights(
     sqrt1 = int(np.ceil(np.sqrt(weights.size(0))))
     sqrt2 = int(np.ceil(np.sqrt(weights.size(1))))
     height, width = weights.size(2), weights.size(3)
-    reshaped = reshape_conv2d_weights(weights, wmin, wmax)
+    reshaped = reshape_conv2d_weights(weights)
 
     if not im:
         fig, ax = plt.subplots(figsize=figsize)

@@ -185,11 +185,7 @@ def reshape_locally_connected_weights(
         return square
 
 
-def reshape_conv2d_weights(
-    weights: torch.Tensor,
-    wmin: float = np.finfo("float").min,
-    wmax: float = np.finfo("float").max,
-) -> torch.Tensor:
+def reshape_conv2d_weights(weights: torch.Tensor) -> torch.Tensor:
     """
     Flattens a connection weight matrix of a Conv2dConnection
 
@@ -220,7 +216,5 @@ def reshape_conv2d_weights(
                             + (l % sqrt2) * width * sqrt1 : ((j % sqrt1) + 1) * width
                             + (l % sqrt2) * width * sqrt1,
                         ] = fltr
-
-    reshaped.clamp_(wmin, wmax)
 
     return reshaped
