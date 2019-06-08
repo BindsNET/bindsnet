@@ -186,7 +186,9 @@ def reshape_locally_connected_weights(
 
 
 def reshape_conv2d_weights(
-    weights: torch.Tensor, wmin: float = 0.0, wmax: float = 1.0
+    weights: torch.Tensor,
+    wmin: float = np.finfo("float").min,
+    wmax: float = np.finfo("float").max,
 ) -> torch.Tensor:
     """
     Flattens a connection weight matrix of a Conv2dConnection
