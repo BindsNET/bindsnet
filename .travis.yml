@@ -2,6 +2,6 @@ language: python
 python:
  - 3.6
 install:
- - pip install .
+ - pip install . --progress-bar off
 script:
  - python -m pytest test
