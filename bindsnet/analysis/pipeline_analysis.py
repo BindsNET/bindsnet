@@ -265,7 +265,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         :param step: The step of the pipeline.
         """
         if tag not in self.plots:
-            self.plots[tag] = plot_conv2d_weights(weights, wmin, wmax)
+            self.plots[tag] = plot_conv2d_weights(weights)
         else:
             im = self.plots[tag]
             plot_conv2d_weights(weights, wmin, wmax, im=im)
