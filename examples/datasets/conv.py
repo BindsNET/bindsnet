@@ -120,6 +120,6 @@ for step, batch in enumerate(tqdm(train_dataloader)):
 
     network.reset_()  # Reset state variables.
 
-    analyzer.plot_conv2d_weights(conv_conn.w, conv_conn.wmin, conv_conn.wmax, step=step)
+    analyzer.plot_conv2d_weights(conv_conn.w, step=step)
 
     analyzer.finalize_step()

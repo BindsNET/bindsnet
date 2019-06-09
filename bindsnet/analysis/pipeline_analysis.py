@@ -91,20 +91,13 @@ class PipelineAnalyzer(ABC):
 
     @abstractmethod
     def plot_conv2d_weights(
-        self,
-        weights: torch.Tensor,
-        wmin: float = 0.0,
-        wmax: float = 1.0,
-        tag: str = "conv2d",
-        step: int = 0,
+        self, weights: torch.Tensor, tag: str = "conv2d", step: int = 0
     ) -> None:
         # language=rst
         """
         Plot a connection weight matrix of a Conv2dConnection.
 
         :param weights: Weight matrix of Conv2dConnection object.
-        :param wmin: Minimum allowed weight value.
-        :param wmax: Maximum allowed weight value.
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
@@ -261,20 +254,13 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         self.plot_voltage(voltage_record, threshold_value, tag + "_v")
 
     def plot_conv2d_weights(
-        self,
-        weights: torch.Tensor,
-        wmin: float = 0.0,
-        wmax: float = 1.0,
-        tag: str = "conv2d",
-        step: int = 0,
+        self, weights: torch.Tensor, tag: str = "conv2d", step: int = 0
     ) -> None:
         # language=rst
         """
         Plot a connection weight matrix of a Conv2dConnection.
 
         :param weights: Weight matrix of Conv2dConnection object.
-        :param wmin: Minimum allowed weight value.
-        :param wmax: Maximum allowed weight value.
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
@@ -378,24 +364,19 @@ class TensorboardAnalyzer(PipelineAnalyzer):
             self.writer.add_image(tag + "_" + str(k), voltage_grid_img, step)
 
     def plot_conv2d_weights(
-        self,
-        weights: torch.Tensor,
-        wmin: float = np.finfo("float").min,
-        wmax: float = np.finfo("float").max,
-        tag: str = "conv2d",
-        step: int = 0,
+        self, weights: torch.Tensor, tag: str = "conv2d", step: int = 0
     ) -> None:
         # language=rst
         """
         Plot a connection weight matrix of a Conv2dConnection.
 
         :param weights: Weight matrix of Conv2dConnection object.
-        :param wmin: Minimum allowed weight value.
-        :param wmax: Maximum allowed weight value.
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
-        reshaped = reshape_conv2d_weights(weights, wmin, wmax).unsqueeze(0)
-        reshaped.clamp_(wmin, wmax)
+        reshaped = reshape_conv2d_weights(weights).unsqueeze(0)
+
+        reshaped -= reshaped.min()
+        reshaped /= reshaped.max()
 
         self.writer.add_image(tag, reshaped, step)
