@@ -36,6 +36,20 @@ class TestAnalyzer:
             conv_weights = torch.rand(4, 1, 8, 8)
             analyzer.plot_conv2d_weights(conv_weights)
 
+            rewards = [0, 0, 0, 0, 0]
+            analyzer.plot_reward(rewards)
+
+            # Monitors have time as last dimension
+            v = torch.rand(1, 1, 28, 28, 50)
+            voltage_dict = {"X": v}
+            threshold_dict = {"X": 0.75}
+            analyzer.plot_voltage(voltage_dict, threshold_dict)
+
+            # The monitors have time as last dimension
+            spikes = torch.rand(1, 1, 28, 28, 50) > 0.5
+            spike_dict = {"X": spikes}
+            analyzer.plot_spikes(spike_dict)
+
             analyzer.finalize_step()
 
         ta.writer.close()

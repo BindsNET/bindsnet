@@ -167,9 +167,9 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax, reward_im = None, None
 
         # Compute moving average
-        if self.reward_window is not None:
+        if reward_window is not None:
             # Ensure window size > 0 and < size of reward list
-            window = max(min(len(reward_list), self.reward_window), 0)
+            window = max(min(len(reward_list), reward_window), 0)
 
             # Fastest implementation of moving average
             reward_list_ = (
@@ -186,7 +186,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
             reward_ax.set_title("Accumulated reward")
             reward_ax.set_xlabel("Episode")
             reward_ax.set_ylabel("Reward")
-            (reward_plot,) = self.reward_ax.plot(reward_list_)
+            (reward_plot,) = reward_ax.plot(reward_list_)
 
             self.plots[tag] = reward_im, reward_ax
         else:
