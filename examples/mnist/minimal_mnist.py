@@ -2,6 +2,7 @@ from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.pipeline import TorchVisionDatasetPipeline
 from bindsnet.models import DiehlAndCook2015
+from bindsnet.analysis.pipeline_analysis import TensorboardAnalyzer
 from torchvision import transforms
 
 # Build Diehl & Cook 2015 network.
@@ -28,6 +29,8 @@ mnist = MNIST(
 )
 
 # Build pipeline from components.
-pipeline = TorchVisionDatasetPipeline(network, mnist)
+pipeline = TorchVisionDatasetPipeline(
+    network, mnist, TensorboardAnalyzer("logs/minimal_mnist"), plot_interval=100
+)
 
 pipeline.train()

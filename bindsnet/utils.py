@@ -183,3 +183,38 @@ def reshape_locally_connected_weights(
                             ]
 
         return square
+
+
+def reshape_conv2d_weights(weights: torch.Tensor) -> torch.Tensor:
+    """
+    Flattens a connection weight matrix of a Conv2dConnection
+
+    :param weights: Weight matrix of Conv2dConnection object.
+    :param wmin: Minimum allowed weight value.
+    :param wmax: Maximum allowed weight value.
+    """
+    sqrt1 = int(np.ceil(np.sqrt(weights.size(0))))
+    sqrt2 = int(np.ceil(np.sqrt(weights.size(1))))
+    height, width = weights.size(2), weights.size(3)
+    reshaped = torch.zeros(
+        sqrt1 * sqrt2 * weights.size(2), sqrt1 * sqrt2 * weights.size(3)
+    )
+
+    for i in range(sqrt1):
+        for j in range(sqrt1):
+            for k in range(sqrt2):
+                for l in range(sqrt2):
+                    if i * sqrt1 + j < weights.size(0) and k * sqrt2 + l < weights.size(
+                        1
+                    ):
+                        fltr = weights[i * sqrt1 + j, k * sqrt2 + l].view(height, width)
+                        reshaped[
+                            i * height
+                            + k * height * sqrt1 : (i + 1) * height
+                            + k * height * sqrt1,
+                            (j % sqrt1) * width
+                            + (l % sqrt2) * width * sqrt1 : ((j % sqrt1) + 1) * width
+                            + (l % sqrt2) * width * sqrt1,
+                        ] = fltr
+
+    return reshaped

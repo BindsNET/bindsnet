@@ -14,12 +14,7 @@ from bindsnet.network import Network
 from bindsnet.learning import PostPre
 from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Conv2dConnection, Connection
-from bindsnet.analysis.plotting import (
-    plot_input,
-    plot_spikes,
-    plot_conv2d_weights,
-    plot_voltages,
-)
+from bindsnet.analysis.pipeline_analysis import TensorboardAnalyzer, MatplotlibAnalyzer
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -31,6 +26,7 @@ parser.add_argument(
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--time", type=int, default=50)
 parser.add_argument("--dt", type=int, default=1.0)
+parser.add_argument("--tensorboard", dest="tensorboard", action="store_true")
 parser.set_defaults(plot=False, gpu=False, train=True)
 
 args = parser.parse_args()
@@ -58,7 +54,9 @@ train_dataset = dataset_type(
     dataset_path,
     download=True,
     train=True,
-    transform=transforms.Compose([transforms.ToTensor()]),
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * 128.0)]
+    ),
 )
 
 train_dataloader = torch.utils.data.DataLoader(
@@ -67,7 +65,7 @@ train_dataloader = torch.utils.data.DataLoader(
 
 # Grab the shape of a single sample (not including batch)
 # So, TxCxHxW
-sample_shape = train_dataset[0]['encoded_image'].shape
+sample_shape = train_dataset[0]["encoded_image"].shape
 print(args.dataset, " has shape ", sample_shape)
 
 conv_size = int((sample_shape[-1] - kernel_size + 2 * padding) / stride) + 1
@@ -104,6 +102,11 @@ network.add_connection(conv_conn, source="X", target="Y")
 # Train the network.
 print("Begin training.\n")
 
+if args.tensorboard:
+    analyzer = TensorboardAnalyzer("logs/conv")
+else:
+    analyzer = MatplotlibAnalyzer()
+
 for step, batch in enumerate(tqdm(train_dataloader)):
     # batch contains image, label, encoded_image since an image_encoder
     # was provided
@@ -116,3 +119,7 @@ for step, batch in enumerate(tqdm(train_dataloader)):
     network.run(inpts=inpts, time=time, input_time_dim=1)
 
     network.reset_()  # Reset state variables.
+
+    analyzer.plot_conv2d_weights(conv_conn.w, step=step)
+
+    analyzer.finalize_step()

@@ -12,7 +12,7 @@ from ..network.monitors import Monitor
 from ..network.nodes import AbstractInput
 
 from .base_pipeline import BasePipeline
-from .pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
+from ..analysis.pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
 
 
 class EnvironmentPipeline(BasePipeline):
