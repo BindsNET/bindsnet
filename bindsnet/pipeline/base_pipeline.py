@@ -7,8 +7,6 @@ import time
 from ..network import Network
 from ..network.monitors import Monitor
 
-from .pipeline_analysis import PipelineAnalyzer
-
 
 def recursive_to(item, device):
     """
@@ -27,14 +25,12 @@ def recursive_to(item, device):
         return item
     elif isinstance(item, container_abcs.Mapping):
         return {key: recursive_to(item[key], device) for key in item}
-    elif isinstance(item, tuple) and hasattr(item, '_fields'):
+    elif isinstance(item, tuple) and hasattr(item, "_fields"):
         return type(item)(*(recursive_to(i, device) for i in item))
     elif isinstance(item, container_abcs.Sequence):
         return [recursive_to(i, device) for i in item]
     else:
-        raise NotImplementedError("Target type not supported [%s]" %
-                str(type(item)))
-
+        raise NotImplementedError("Target type not supported [%s]" % str(type(item)))
 
 
 class BasePipeline:
@@ -82,7 +78,7 @@ class BasePipeline:
                     Monitor(self.network.layers[l], "s", int(self.plot_length)),
                     name=f"{l}_spikes",
                 )
-                if "v" in self.network.layers[l].__dict__:
+                if hasattr(self.network.layers[l], "v"):
                     self.network.add_monitor(
                         Monitor(self.network.layers[l], "v", int(self.plot_length)),
                         name=f"{l}_voltages",
@@ -101,9 +97,9 @@ class BasePipeline:
         self.allow_gpu = kwargs.get("allow_gpu", True)
 
         if torch.cuda.is_available() and self.allow_gpu:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
         else:
-            self.device = torch.device('cpu')
+            self.device = torch.device("cpu")
 
         self.network.to(self.device)
 
@@ -178,9 +174,9 @@ class BasePipeline:
         voltage_record = {}
         threshold_value = {}
         for l in self.network.layers:
-            if "v" in self.network.layers[l].__dict__:
+            if hasattr(self.network.layers[l], "v"):
                 voltage_record[l] = self.network.monitors[f"{l}_voltages"].get("v")
-            if "thresh" in self.network.layers[l].__dict__:
+            if hasattr(self.network.layers[l], "thresh"):
                 threshold_value[l] = self.network.layers[l].thresh
 
         return voltage_record, threshold_value

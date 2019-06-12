@@ -8,7 +8,7 @@ from torch.nn.modules.utils import _pair
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Tuple, List, Optional, Sized, Dict, Union
 
-from ..utils import reshape_locally_connected_weights
+from ..utils import reshape_locally_connected_weights, reshape_conv2d_weights
 
 plt.ion()
 
@@ -271,29 +271,11 @@ def plot_conv2d_weights(
     :param cmap: Matplotlib colormap.
     :return: Used for re-drawing the weights plot.
     """
+
     sqrt1 = int(np.ceil(np.sqrt(weights.size(0))))
     sqrt2 = int(np.ceil(np.sqrt(weights.size(1))))
     height, width = weights.size(2), weights.size(3)
-    reshaped = torch.zeros(
-        sqrt1 * sqrt2 * weights.size(2), sqrt1 * sqrt2 * weights.size(3)
-    )
-
-    for i in range(sqrt1):
-        for j in range(sqrt1):
-            for k in range(sqrt2):
-                for l in range(sqrt2):
-                    if i * sqrt1 + j < weights.size(0) and k * sqrt2 + l < weights.size(
-                        1
-                    ):
-                        fltr = weights[i * sqrt1 + j, k * sqrt2 + l].view(height, width)
-                        reshaped[
-                            i * height
-                            + k * height * sqrt1 : (i + 1) * height
-                            + k * height * sqrt1,
-                            (j % sqrt1) * width
-                            + (l % sqrt2) * width * sqrt1 : ((j % sqrt1) + 1) * width
-                            + (l % sqrt2) * width * sqrt1,
-                        ] = fltr
+    reshaped = reshape_conv2d_weights(weights)
 
     if not im:
         fig, ax = plt.subplots(figsize=figsize)
@@ -527,6 +509,7 @@ def plot_voltages(
     for key, val in voltages.items():
         if key not in n_neurons.keys():
             n_neurons[key] = (0, val.size(0))
+
     if not ims:
         fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
         ims = []
