@@ -35,7 +35,7 @@ parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=50.0)
 parser.add_argument("--time", type=int, default=350)
 parser.add_argument("--dt", type=int, default=1.0)
-parser.add_argument("--intensity", type=float, default=0.5)
+parser.add_argument("--intensity", type=float, default=128)
 parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--train", dest="train", action="store_true")
@@ -234,6 +234,7 @@ for epoch in range(n_epochs):
 
         # Optionally plot various simulation information.
         if plot:
+            image = batch["image"].view(28, 28)
             inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
             input_exc_weights = network.connections[("X", "Ae")].w
             square_weights = get_square_weights(
@@ -244,11 +245,7 @@ for epoch in range(n_epochs):
             voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
 
             inpt_axes, inpt_ims = plot_input(
-                images[step].view(28, 28),
-                inpt,
-                label=labels[step],
-                axes=inpt_axes,
-                ims=inpt_ims,
+                image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
             )
             spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(square_weights, im=weights_im)
