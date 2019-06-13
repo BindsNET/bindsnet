@@ -37,7 +37,7 @@ def recursive_to(item, device):
     elif isinstance(item, container_abcs.Sequence):
         return [recursive_to(i, device) for i in item]
     else:
-        raise NotImplementedError(f"Target type not supported for {type(item)}.")
+        raise NotImplementedError("Target type not supported [%s]" % str(type(item)))
 
 
 class BasePipeline:
@@ -72,17 +72,23 @@ class BasePipeline:
 
         # Handles plotting of all layer spikes and voltages.
         # This constructs monitors at every level.
-        self.plot_config = kwargs.get("plot_config", {"data_step": None, "data_length": 10})
+        self.plot_config = kwargs.get(
+            "plot_config", {"data_step": None, "data_length": 10}
+        )
 
         if self.plot_config["data_step"] is not None:
             for l in self.network.layers:
                 self.network.add_monitor(
-                    Monitor(self.network.layers[l], "s", self.plot_config["data_length"]),
+                    Monitor(
+                        self.network.layers[l], "s", self.plot_config["data_length"]
+                    ),
                     name=f"{l}_spikes",
                 )
                 if hasattr(self.network.layers[l], "v"):
                     self.network.add_monitor(
-                        Monitor(self.network.layers[l], "v", self.plot_config["data_length"]),
+                        Monitor(
+                            self.network.layers[l], "v", self.plot_config["data_length"]
+                        ),
                         name=f"{l}_voltages",
                     )
 
@@ -161,7 +167,9 @@ class BasePipeline:
             for l in self.network.layers
         }
 
-    def get_voltage_data(self) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+    def get_voltage_data(
+        self
+    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         # language=rst
         """
         Get the voltage data and threshold value from all applicable layers in the pipeline's network.

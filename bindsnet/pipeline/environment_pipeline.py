@@ -4,7 +4,7 @@ from typing import Callable, Optional, Tuple, Dict
 import torch
 
 from .base_pipeline import BasePipeline
-from .pipeline_analysis import MatplotlibAnalyzer
+from ..analysis.pipeline_analysis import MatplotlibAnalyzer
 from ..environment import Environment
 from ..network import Network
 from ..network.nodes import AbstractInput
@@ -21,7 +21,7 @@ class EnvironmentPipeline(BasePipeline):
         network: Network,
         environment: Environment,
         action_function: Optional[Callable] = None,
-        **kwargs
+        **kwargs,
     ):
         # language=rst
         """
@@ -95,7 +95,9 @@ class EnvironmentPipeline(BasePipeline):
                 if batch[2]:
                     break
 
-            print(f"Episode: {self.episode} - accumulated reward: {self.accumulated_reward:.2f}")
+            print(
+                f"Episode: {self.episode} - accumulated reward: {self.accumulated_reward:.2f}"
+            )
             self.episode += 1
 
     def env_step(self) -> Tuple[torch.Tensor, float, bool, Dict]:
@@ -132,7 +134,9 @@ class EnvironmentPipeline(BasePipeline):
 
         return obs, reward, done, info
 
-    def step_(self, gym_batch: Tuple[torch.Tensor, float, bool, Dict], **kwargs) -> None:
+    def step_(
+        self, gym_batch: Tuple[torch.Tensor, float, bool, Dict], **kwargs
+    ) -> None:
         # language=rst
         """
         Run a single iteration of the network and if it is done update
@@ -150,7 +154,11 @@ class EnvironmentPipeline(BasePipeline):
 
         if done:
             if self.network.reward_fn is not None:
-                self.network.reward_fn.update(accumulated_reward=self.accumulated_reward, steps=self.step_count, **kwargs)
+                self.network.reward_fn.update(
+                    accumulated_reward=self.accumulated_reward,
+                    steps=self.step_count,
+                    **kwargs,
+                )
             self.reward_list.append(self.accumulated_reward)
 
         return None
@@ -178,7 +186,9 @@ class EnvironmentPipeline(BasePipeline):
                     self.analyzer.plot_obs(obs[0, ...].sum(0))
             elif key == "data_step" and item is not None:
                 if self.step_count % item == 0:
-                    self.analyzer.plot_data(self.get_spike_data(), *self.get_voltage_data())
+                    self.analyzer.plot_data(
+                        self.get_spike_data(), *self.get_voltage_data()
+                    )
             elif key == "reward_eps" and item is not None:
                 if self.episode % item == 0 and done:
                     self.analyzer.plot_reward(self.reward_list)

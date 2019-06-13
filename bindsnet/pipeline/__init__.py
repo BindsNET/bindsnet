@@ -7,6 +7,5 @@ __all__ = [
     "EnvironmentPipeline",
     "DataLoaderPipeline",
     "TorchVisionDatasetPipeline",
-    "pipeline_analysis",
     "action",
 ]

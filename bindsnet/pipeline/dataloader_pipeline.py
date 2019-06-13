@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from ..network import Network
 from .base_pipeline import BasePipeline
-from .pipeline_analysis import PipelineAnalyzer, MatplotlibAnalyzer
+from ..analysis.pipeline_analysis import PipelineAnalyzer
 
 
 class DataLoaderPipeline(BasePipeline):
@@ -100,9 +100,10 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         :param str input_layer: Layer of the network to place input
         """
 
-        super().__init__(network, train_ds, pipeline_analyzer, **kwargs)
+        super().__init__(network, train_ds, None, **kwargs)
 
         self.input_layer = kwargs.get("input_layer", "X")
+        self.pipeline_analyzer = pipeline_analyzer
 
     def step_(self, batch: Dict[str, torch.Tensor]) -> None:
         """
@@ -134,11 +135,19 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         :param step_out: The output from the step_ function
         """
 
-        self.pipeline_analyzer.plot_obs(input_batch["encoded_image"][0, ...].sum(0))
-        self.pipeline_analyzer.plot_spikes(self.get_spike_data())
-        self.pipeline_analyzer.plot_voltage(*self.get_voltage_data())
+        if self.pipeline_analyzer is not None:
+            self.pipeline_analyzer.plot_obs(
+                input_batch["encoded_image"][0, ...].sum(0), step=self.step_count
+            )
 
-        self.pipeline_analyzer.finalize_step()
+            self.pipeline_analyzer.plot_spikes(
+                self.get_spike_data(), step=self.step_count
+            )
+
+            vr, tv = self.get_voltage_data()
+            self.pipeline_analyzer.plot_voltage(vr, tv, step=self.step_count)
+
+            self.pipeline_analyzer.finalize_step()
 
     def test_step(self):
         pass

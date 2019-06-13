@@ -1,31 +1,31 @@
-from .torchvision_wrapper import torchvision_dataset_wrapper_creator
-
-CIFAR10 = torchvision_dataset_wrapper_creator("CIFAR10")
-CIFAR100 = torchvision_dataset_wrapper_creator("CIFAR100")
-Cityscapes = torchvision_dataset_wrapper_creator("Cityscapes")
-CocoCaptions = torchvision_dataset_wrapper_creator("CocoCaptions")
-CocoDetection = torchvision_dataset_wrapper_creator("CocoDetection")
-DatasetFolder = torchvision_dataset_wrapper_creator("DatasetFolder")
-EMNIST = torchvision_dataset_wrapper_creator("EMNIST")
-FakeData = torchvision_dataset_wrapper_creator("FakeData")
-FashionMNIST = torchvision_dataset_wrapper_creator("FashionMNIST")
-Flickr30k = torchvision_dataset_wrapper_creator("Flickr30k")
-Flickr8k = torchvision_dataset_wrapper_creator("Flickr8k")
-ImageFolder = torchvision_dataset_wrapper_creator("ImageFolder")
-KMNIST = torchvision_dataset_wrapper_creator("KMNIST")
-LSUN = torchvision_dataset_wrapper_creator("LSUN")
-LSUNClass = torchvision_dataset_wrapper_creator("LSUNClass")
-MNIST = torchvision_dataset_wrapper_creator("MNIST")
-Omniglot = torchvision_dataset_wrapper_creator("Omniglot")
-PhotoTour = torchvision_dataset_wrapper_creator("PhotoTour")
-SBU = torchvision_dataset_wrapper_creator("SBU")
-SEMEION = torchvision_dataset_wrapper_creator("SEMEION")
-STL10 = torchvision_dataset_wrapper_creator("STL10")
-SVHN = torchvision_dataset_wrapper_creator("SVHN")
-VOCDetection = torchvision_dataset_wrapper_creator("VOCDetection")
-VOCSegmentation = torchvision_dataset_wrapper_creator("VOCSegmentation")
-
+from .torchvision_wrapper import create_torchvision_dataset_wrapper
 from .spoken_mnist import SpokenMNIST
+
+
+CIFAR10 = create_torchvision_dataset_wrapper("CIFAR10")
+CIFAR100 = create_torchvision_dataset_wrapper("CIFAR100")
+Cityscapes = create_torchvision_dataset_wrapper("Cityscapes")
+CocoCaptions = create_torchvision_dataset_wrapper("CocoCaptions")
+CocoDetection = create_torchvision_dataset_wrapper("CocoDetection")
+DatasetFolder = create_torchvision_dataset_wrapper("DatasetFolder")
+EMNIST = create_torchvision_dataset_wrapper("EMNIST")
+FakeData = create_torchvision_dataset_wrapper("FakeData")
+FashionMNIST = create_torchvision_dataset_wrapper("FashionMNIST")
+Flickr30k = create_torchvision_dataset_wrapper("Flickr30k")
+Flickr8k = create_torchvision_dataset_wrapper("Flickr8k")
+ImageFolder = create_torchvision_dataset_wrapper("ImageFolder")
+KMNIST = create_torchvision_dataset_wrapper("KMNIST")
+LSUN = create_torchvision_dataset_wrapper("LSUN")
+LSUNClass = create_torchvision_dataset_wrapper("LSUNClass")
+MNIST = create_torchvision_dataset_wrapper("MNIST")
+Omniglot = create_torchvision_dataset_wrapper("Omniglot")
+PhotoTour = create_torchvision_dataset_wrapper("PhotoTour")
+SBU = create_torchvision_dataset_wrapper("SBU")
+SEMEION = create_torchvision_dataset_wrapper("SEMEION")
+STL10 = create_torchvision_dataset_wrapper("STL10")
+SVHN = create_torchvision_dataset_wrapper("SVHN")
+VOCDetection = create_torchvision_dataset_wrapper("VOCDetection")
+VOCSegmentation = create_torchvision_dataset_wrapper("VOCSegmentation")
 
 __all__ = [
     "SpokenMNIST",
