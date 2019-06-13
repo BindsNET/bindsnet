@@ -81,7 +81,7 @@ class PipelineAnalyzer(ABC):
     def plot_voltages(
         self,
         voltage_record: Dict[str, torch.Tensor],
-        threshold_value: Optional[Dict[str, float]] = None,
+        thresholds: Optional[Dict[str, torch.Tensor]] = None,
         tag: str = "voltage",
         step: int = None,
     ) -> None:
@@ -92,7 +92,7 @@ class PipelineAnalyzer(ABC):
 
         :param voltage_record: Dictionary of voltages for neurons inside of networks
                                organized by the layer they correspond to.
-        :param threshold_value: Optional dictionary of threshold values for neurons.
+        :param thresholds: Optional dictionary of threshold values for neurons.
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
@@ -239,7 +239,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
     def plot_voltages(
         self,
         voltage_record: Dict[str, torch.Tensor],
-        threshold_value: Optional[Dict[str, float]] = None,
+        thresholds: Optional[Dict[str, torch.Tensor]] = None,
         tag: str = "voltage",
         step: int = None,
     ) -> None:
@@ -250,13 +250,13 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
 
         :param voltage_record: Dictionary of voltages for neurons inside of networks
                                organized by the layer they correspond to.
-        :param threshold_value: Optional dictionary of threshold values for neurons.
+        :param thresholds: Optional dictionary of threshold values for neurons.
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
         if tag not in self.plots:
             self.plots[tag] = plot_voltages(
-                voltage_record, plot_type=self.volts_type, threshold=threshold_value
+                voltage_record, plot_type=self.volts_type, thresholds=thresholds
             )
         else:
             v_im, v_ax = self.plots[tag]
@@ -265,7 +265,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
                 ims=v_im,
                 axes=v_ax,
                 plot_type=self.volts_type,
-                threshold=threshold_value,
+                thresholds=thresholds,
             )
 
     def plot_conv2d_weights(
@@ -371,7 +371,7 @@ class TensorboardAnalyzer(PipelineAnalyzer):
     def plot_voltages(
         self,
         voltage_record: Dict[str, torch.Tensor],
-        threshold_value: Optional[Dict[str, float]] = None,
+        thresholds: Optional[Dict[str, torch.Tensor]] = None,
         tag: str = "voltage",
         step: int = None,
     ) -> None:
@@ -382,7 +382,7 @@ class TensorboardAnalyzer(PipelineAnalyzer):
 
         :param voltage_record: Dictionary of voltages for neurons inside of networks
                                organized by the layer they correspond to.
-        :param threshold_value: Optional dictionary of threshold values for neurons.
+        :param thresholds: Optional dictionary of threshold values for neurons.
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """

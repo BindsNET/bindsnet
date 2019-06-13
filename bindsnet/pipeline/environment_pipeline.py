@@ -34,7 +34,7 @@ class EnvironmentPipeline(BasePipeline):
         Keyword arguments:
 
         :param int num_episodes: Number of episodes to train for. Defaults to 100.
-        :param str output: String name of the layer from which to take output from.
+        :param str output: String name of the layer from which to take output.
         :param int render_interval: Interval to render the environment.
         :param int reward_delay: How many iterations to delay delivery of reward.
         :param int time: Time for which to run the network. Defaults to the network's timestep.
@@ -82,17 +82,17 @@ class EnvironmentPipeline(BasePipeline):
     def train(self, **kwargs) -> None:
         # language=rst
         """
-        Runs for the specified number of episodes. Each episode can be an arbitrary length.
+        Trains for the specified number of episodes. Each episode can be of arbitrary length.
         """
         while self.episode < self.num_episodes:
             self.reset_()
 
             for _ in itertools.count():
-                batch = self.env_step()
+                obs, reward, done, info = self.env_step()
 
-                self.step(batch, **kwargs)
+                self.step((obs, reward, done, info), **kwargs)
 
-                if batch[2]:
+                if done:
                     break
 
             print(
@@ -106,7 +106,7 @@ class EnvironmentPipeline(BasePipeline):
         Single step of the environment which includes rendering, getting and performing the action,
         and accumulating/delaying rewards.
 
-        :return: An OpenAI ``gym`` compatible return with modified reward and info.
+        :return: An OpenAI ``gym`` compatible tuple with modified reward and info.
         """
         # Render game.
         if (
@@ -139,8 +139,10 @@ class EnvironmentPipeline(BasePipeline):
     ) -> None:
         # language=rst
         """
-        Run a single iteration of the network and if it is done update
-        the network and reward list
+        Run a single iteration of the network and update it and the
+        reward list when done.
+
+        :param gym_batch: An OpenAI ``gym`` compatible tuple.
         """
         obs, reward, done, info = gym_batch
 
@@ -161,8 +163,6 @@ class EnvironmentPipeline(BasePipeline):
                 )
             self.reward_list.append(self.accumulated_reward)
 
-        return None
-
     def reset_(self) -> None:
         # language=rst
         """
@@ -177,6 +177,8 @@ class EnvironmentPipeline(BasePipeline):
         # language=rst
         """
         Plot the encoded input, layer spikes, and layer voltages.
+
+        :param gym_batch: An OpenAI ``gym`` compatible tuple.
         """
         obs, reward, done, info = gym_batch
 
@@ -186,9 +188,8 @@ class EnvironmentPipeline(BasePipeline):
                     self.analyzer.plot_obs(obs[0, ...].sum(0))
             elif key == "data_step" and item is not None:
                 if self.step_count % item == 0:
-                    self.analyzer.plot_data(
-                        self.get_spike_data(), *self.get_voltage_data()
-                    )
+                    self.analyzer.plot_spikes(self.get_spike_data())
+                    self.analyzer.plot_voltages(*self.get_voltage_data())
             elif key == "reward_eps" and item is not None:
                 if self.episode % item == 0 and done:
                     self.analyzer.plot_reward(self.reward_list)

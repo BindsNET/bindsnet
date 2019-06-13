@@ -22,13 +22,7 @@ def recursive_to(item, device):
 
     if isinstance(item, torch.Tensor):
         return item.to(device)
-    elif isinstance(item, string_classes):
-        return item
-    elif isinstance(item, int):
-        return item
-    elif isinstance(item, float):
-        return item
-    elif isinstance(item, bool):
+    elif isinstance(item, (string_classes, int, float, bool)):
         return item
     elif isinstance(item, container_abcs.Mapping):
         return {key: recursive_to(item[key], device) for key in item}
@@ -37,7 +31,7 @@ def recursive_to(item, device):
     elif isinstance(item, container_abcs.Sequence):
         return [recursive_to(i, device) for i in item]
     else:
-        raise NotImplementedError("Target type not supported [%s]" % str(type(item)))
+        raise NotImplementedError(f"Target type {type(item)} not supported.")
 
 
 class BasePipeline:
@@ -57,10 +51,8 @@ class BasePipeline:
 
         :param int save_interval: How often to save the network to disk.
         :param str save_dir: Directory to save network object to.
-
         :param Dict[str, Any] plot_config: Dict containing the plot configuration. Includes length,
-                                          type (``"color"`` or ``"line"``), and interval per plot type.
-
+                                           type (``"color"`` or ``"line"``), and interval per plot type.
         :param int print_interval: Interval to print text output.
         :param bool allow_gpu: Allows automatic transfer to the GPU.
         """
@@ -109,7 +101,7 @@ class BasePipeline:
         else:
             self.device = torch.device("cpu")
 
-        # self.network.to(self.device)
+        self.network.to(self.device)
 
     def reset_(self) -> None:
         # language=rst
@@ -120,20 +112,22 @@ class BasePipeline:
         self.network.reset_()
         self.step_count = 0
 
-    def step(self, batch, **kwargs) -> Any:
+    def step(self, batch: Any, **kwargs) -> Any:
         # language=rst
         """
         Single step of any pipeline at a high level.
 
-        :param batch: A batch of inputs to be handed to the ``step_()`` function. Standard in subclasses of ``BasePipeline``.
+        :param batch: A batch of inputs to be handed to the ``step_()`` function.
+                      Standard in subclasses of ``BasePipeline``.
 
-        :return: The output from the subclass' ``step_()`` method which could be anything. Passed to plotting to accommodate this.
+        :return: The output from the subclass's ``step_()`` method, which could be anything.
+                 Passed to plotting to accommodate this.
         """
         self.step_count += 1
 
         batch = recursive_to(batch, self.device)
 
-        net_out = self.step_(batch, **kwargs)
+        step_out = self.step_(batch, **kwargs)
 
         if (
             self.print_interval is not None
@@ -145,7 +139,7 @@ class BasePipeline:
             self.clock = time.time()
 
         # if self.plot_interval is not None and self.step_count % self.plot_interval == 0:
-        self.plots(batch, net_out)
+        self.plots(batch, step_out)
 
         if self.save_interval is not None and self.step_count % self.save_interval == 0:
             self.network.save(self.save_dir)
@@ -153,7 +147,7 @@ class BasePipeline:
         if self.test_interval is not None and self.step_count % self.test_interval == 0:
             self.test()
 
-        return net_out
+        return step_out
 
     def get_spike_data(self) -> Dict[str, torch.Tensor]:
         # language=rst
@@ -191,7 +185,8 @@ class BasePipeline:
         """
         Perform a pass of the network given the input batch.
 
-        :param batch: The current batch. This could be anything as long as the subclass agrees upon the format in some way.
+        :param batch: The current batch. This could be anything as long as
+                      the subclass agrees upon the format in some way.
 
         :return: Any output that is need for recording purposes.
         """
@@ -200,7 +195,7 @@ class BasePipeline:
     def train(self) -> None:
         # language=rst
         """
-        A fully self contained training loop.
+        A fully self-contained training loop.
         """
         raise NotImplementedError("You need to provide a train method.")
 
@@ -214,16 +209,18 @@ class BasePipeline:
     def init_fn(self) -> None:
         # language=rst
         """
-        Place holder function for subclass specific actions that need to happen during the constructor of the ``BasePipeline``.
+        Placeholder function for subclass-specific actions that need to
+        happen during the construction of the ``BasePipeline``.
         """
         raise NotImplementedError("You need to provide an init_fn method.")
 
-    def plots(self, batch, step_output) -> None:
+    def plots(self, batch: Any, step_out: Any) -> None:
         # language=rst
         """
         Create any plots and logs for a step given the input batch and step output.
 
-        :param input_batch: The batch that was just passed into the network.
-        :param step_out: The output from the ``step_()`` function.
+        :param batch: The current batch. This could be anything as long as
+                      the subclass agrees upon the format in some way.
+        :param step_out: The output from the ``step_()`` method.
         """
         raise NotImplementedError("You need to provide a plots method.")

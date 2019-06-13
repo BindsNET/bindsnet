@@ -84,7 +84,7 @@ class Network(torch.nn.Module):
         self,
         dt: float = 1.0,
         learning: bool = True,
-        reward_fn: Type[Optional[AbstractReward]] = None,
+        reward_fn: Optional[Type[AbstractReward]] = None,
     ) -> None:
         # language=rst
         """
@@ -134,7 +134,7 @@ class Network(torch.nn.Module):
         :param target: Logical name of the connection's target layer.
         """
         self.connections[(source, target)] = connection
-        self.add_module(source+"_to_"+target, connection)
+        self.add_module(source + "_to_" + target, connection)
 
         connection.dt = self.dt
         connection.train(self.learning)
@@ -214,8 +214,7 @@ class Network(torch.nn.Module):
             target = self.connections[c].target
 
             if not c[1] in inpts:
-                inpts[c[1]] = torch.zeros(target.shape,
-                                          device=target.s.device)
+                inpts[c[1]] = torch.zeros(target.shape, device=target.s.device)
 
             # Add to input: source's spikes multiplied by connection weights.
             inpts[c[1]] += self.connections[c].compute(source.s)
@@ -365,7 +364,7 @@ class Network(torch.nn.Module):
         for monitor in self.monitors:
             self.monitors[monitor].reset_()
 
-    def train(self, mode: bool = True) -> "torch.nn.Module.train":
+    def train(self, mode: bool = True) -> "torch.nn.Module":
         # language=rst
         """Sets the node in training mode.
 
