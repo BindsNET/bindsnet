@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
 from torch.nn.modules.utils import _pair
+from matplotlib.collections import PathCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Tuple, List, Optional, Sized, Dict, Union
 
@@ -69,7 +70,7 @@ def plot_spikes(
     spikes: Dict[str, torch.Tensor],
     time: Optional[Tuple[int, int]] = None,
     n_neurons: Optional[Dict[str, Tuple[int, int]]] = None,
-    ims: Optional[List[AxesImage]] = None,
+    ims: Optional[List[PathCollection]] = None,
     axes: Optional[Union[Axes, List[Axes]]] = None,
     figsize: Tuple[float, float] = (8.0, 4.5),
 ) -> Tuple[List[AxesImage], List[Axes]]:
@@ -103,108 +104,67 @@ def plot_spikes(
 
     if ims is None:
         fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
-        ims = []
         if n_subplots == 1:
-            for datum in spikes.items():
-                ims.append(
-                    axes.imshow(
-                        spikes[datum[0]][
-                            n_neurons[datum[0]][0] : n_neurons[datum[0]][1],
-                            time[0] : time[1],
-                        ],
-                        cmap="binary",
-                    )
+            axes = [axes]
+
+        ims = []
+        for i, datum in enumerate(spikes.items()):
+            spikes = (
+                datum[1][
+                    n_neurons[datum[0]][0] : n_neurons[datum[0]][1], time[0] : time[1]
+                ]
+                .detach()
+                .clone()
+                .cpu()
+                .numpy()
+            )
+            ims.append(
+                axes[i].scatter(
+                    x=np.array(spikes.T.nonzero())[0],
+                    y=np.array(spikes.T.nonzero())[1],
+                    s=1,
                 )
-                args = (
-                    datum[0],
-                    n_neurons[datum[0]][0],
-                    n_neurons[datum[0]][1],
-                    time[0],
-                    time[1],
-                )
-                plt.title("%s spikes for neurons (%d - %d) from t = %d to %d " % args)
-                plt.xlabel("Simulation time")
-                plt.ylabel("Neuron index")
-                axes.set_aspect("auto")
-        else:
-            for i, datum in enumerate(spikes.items()):
-                ims.append(
-                    axes[i].imshow(
-                        datum[1]
-                        .detach()
-                        .clone()
-                        .cpu()
-                        .numpy()[
-                            n_neurons[datum[0]][0] : n_neurons[datum[0]][1],
-                            time[0] : time[1],
-                        ],
-                        cmap="binary",
-                    )
-                )
-                args = (
-                    datum[0],
-                    n_neurons[datum[0]][0],
-                    n_neurons[datum[0]][1],
-                    time[0],
-                    time[1],
-                )
-                axes[i].set_title(
-                    "%s spikes for neurons (%d - %d) from t = %d to %d " % args
-                )
-            for ax in axes:
-                ax.set_aspect("auto")
+            )
+            args = (
+                datum[0],
+                n_neurons[datum[0]][0],
+                n_neurons[datum[0]][1],
+                time[0],
+                time[1],
+            )
+            axes[i].set_title(
+                "%s spikes for neurons (%d - %d) from t = %d to %d " % args
+            )
+        for ax in axes:
+            ax.set_aspect("auto")
 
         plt.setp(
             axes, xticks=[], yticks=[], xlabel="Simulation time", ylabel="Neuron index"
         )
         plt.tight_layout()
     else:
-        if n_subplots == 1:
-            for datum in spikes.items():
-                ims[0].set_data(
-                    datum[1]
-                    .detach()
-                    .clone()
-                    .cpu()
-                    .numpy()[
-                        n_neurons[datum[0]][0] : n_neurons[datum[0]][1],
-                        time[0] : time[1],
-                    ]
-                )
-                ims[0].autoscale()
-                args = (
-                    datum[0],
-                    n_neurons[datum[0]][0],
-                    n_neurons[datum[0]][1],
-                    time[0],
-                    time[1],
-                )
-                axes.set_title(
-                    "%s spikes for neurons (%d - %d) from t = %d to %d " % args
-                )
-        else:
-            for i, datum in enumerate(spikes.items()):
-                ims[i].set_data(
-                    datum[1]
-                    .detach()
-                    .clone()
-                    .cpu()
-                    .numpy()[
-                        n_neurons[datum[0]][0] : n_neurons[datum[0]][1],
-                        time[0] : time[1],
-                    ]
-                )
-                ims[i].autoscale()
-                args = (
-                    datum[0],
-                    n_neurons[datum[0]][0],
-                    n_neurons[datum[0]][1],
-                    time[0],
-                    time[1],
-                )
-                axes[i].set_title(
-                    "%s spikes for neurons (%d - %d) from t = %d to %d " % args
-                )
+        for i, datum in enumerate(spikes.items()):
+            spikes = (
+                datum[1][
+                    n_neurons[datum[0]][0] : n_neurons[datum[0]][1], time[0] : time[1]
+                ]
+                .detach()
+                .clone()
+                .cpu()
+                .numpy()
+            )
+            ims[i].set_offsets(np.array(spikes.T.nonzero()).T)
+            # ims[i].autoscale()
+            args = (
+                datum[0],
+                n_neurons[datum[0]][0],
+                n_neurons[datum[0]][1],
+                time[0],
+                time[1],
+            )
+            axes[i].set_title(
+                "%s spikes for neurons (%d - %d) from t = %d to %d " % args
+            )
 
     plt.draw()
 

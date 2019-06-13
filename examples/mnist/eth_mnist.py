@@ -11,7 +11,6 @@ from time import time as t
 
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
-from bindsnet.encoding import poisson_loader
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_weights, get_square_assignments
@@ -33,6 +32,7 @@ parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_workers", type=int, default=-1)
 parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=50.0)
+parser.add_argument("--theta_plus", type=float, default=1)
 parser.add_argument("--time", type=int, default=350)
 parser.add_argument("--dt", type=int, default=1.0)
 parser.add_argument("--intensity", type=float, default=128)
@@ -53,6 +53,7 @@ n_test = args.n_test
 n_workers = args.n_workers
 exc = args.exc
 inh = args.inh
+theta_plus = args.theta_plus
 time = args.time
 dt = args.dt
 intensity = args.intensity
@@ -86,7 +87,7 @@ network = DiehlAndCook2015(
     inh=inh,
     dt=dt,
     norm=78.4,
-    theta_plus=1,
+    theta_plus=theta_plus,
     inpt_shape=(1, 1, 28, 28),
 )
 
@@ -101,11 +102,7 @@ dataset = MNIST(
     root=os.path.join("..", "..", "data", "MNIST"),
     download=True,
     transform=transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Lambda(lambda x: x * intensity),
-            # transforms.Lambda(lambda x: x.view(784)),
-        ]
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
     ),
 )
 
@@ -113,9 +110,9 @@ dataset = MNIST(
 spike_record = torch.zeros(update_interval, time, n_neurons)
 
 # Neuron assignments and spike proportions.
-assignments = -torch.ones_like(torch.Tensor(n_neurons))
-proportions = torch.zeros_like(torch.Tensor(n_neurons, 10))
-rates = torch.zeros_like(torch.Tensor(n_neurons, 10))
+assignments = -torch.ones(n_neurons)
+proportions = torch.zeros(n_neurons, 10)
+rates = torch.zeros(n_neurons, 10)
 
 # Sequence of accuracy estimates.
 accuracy = {"all": [], "proportion": []}
@@ -148,10 +145,7 @@ voltage_axes, voltage_ims = None, None
 print("\nBegin training.\n")
 start = t()
 
-
 for epoch in range(n_epochs):
-
-    # This is needed for my implementation, but I want to reformat this away
     labels = []
 
     if epoch % progress_interval == 0:
@@ -169,10 +163,8 @@ for epoch in range(n_epochs):
         inpts = {"X": batch["encoded_image"]}
         if gpu:
             inpts = {k: v.cuda() for k, v in inpts.items()}
-        labels.append(batch["label"])
 
         if step % update_interval == 0 and step > 0:
-
             # Convert the array of labels into a tensor
             label_tensor = torch.tensor(labels)
 
@@ -185,19 +177,13 @@ for epoch in range(n_epochs):
             # Compute network accuracy according to available classification strategies.
             accuracy["all"].append(
                 100
-                * torch.sum(
-                    label_tensor[step - update_interval : step].long()
-                    == all_activity_pred
-                ).item()
-                / update_interval
+                * torch.sum(label_tensor.long() == all_activity_pred).item()
+                / len(label_tensor)
             )
             accuracy["proportion"].append(
                 100
-                * torch.sum(
-                    label_tensor[step - update_interval : step].long()
-                    == proportion_pred
-                ).item()
-                / update_interval
+                * torch.sum(label_tensor.long() == proportion_pred).item()
+                / len(label_tensor)
             )
 
             print(
@@ -221,6 +207,10 @@ for epoch in range(n_epochs):
             assignments, proportions, rates = assign_labels(
                 spike_record, label_tensor[step - update_interval : step], 10, rates
             )
+
+            labels = []
+
+        labels.append(batch["label"])
 
         # Run the network on the input.
         network.run(inpts=inpts, time=time, input_time_dim=1)
@@ -259,5 +249,5 @@ for epoch in range(n_epochs):
 
         network.reset_()  # Reset state variables.
 
-print("Progress: %d / %d (%.4f seconds)\n" % (n_train, n_train, t() - start))
+print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
 print("Training complete.\n")
