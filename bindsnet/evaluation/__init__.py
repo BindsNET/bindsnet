@@ -1,7 +1,7 @@
-import torch
-
 from itertools import product
 from typing import Optional, Tuple, Dict
+
+import torch
 from sklearn.linear_model import LogisticRegression
 
 

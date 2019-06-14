@@ -1,12 +1,12 @@
-import gym
-import torch
-import numpy as np
-
-from typing import Tuple, Dict, Any, Optional
 from abc import ABC, abstractmethod
+from typing import Tuple, Dict, Any
 
-from ..encoding import Encoder, NullEncoder
+import gym
+import numpy as np
+import torch
+
 from ..datasets.preprocess import subsample, gray_scale, binary_image, crop
+from ..encoding import Encoder, NullEncoder
 
 
 class Environment(ABC):
@@ -68,23 +68,22 @@ class GymEnvironment(Environment):
         # language=rst
         """
         Initializes the environment wrapper. This class makes the
-        assumption that the OpenAI gym environment will provide an image
+        assumption that the OpenAI ``gym`` environment will provide an image
         of format HxW or CxHxW as an observation (we will add the C
         dimension to HxW tensors) or a 1D observation in which case no
         dimensions will be added.
 
-        :param name: The name of an OpenAI :code:`gym` environment.
+        :param name: The name of an OpenAI ``gym`` environment.
         :param encoder: Function to encode observations into spike trains.
 
         Keyword arguments:
 
-        :param max_prob: Maximum spiking probability.
-        :param clip_rewards: Whether or not to use :code:`np.sign` of rewards.
+        :param float max_prob: Maximum spiking probability.
+        :param bool clip_rewards: Whether or not to use ``np.sign`` of rewards.
 
         :param int history: Number of observations to keep track of.
         :param int delta: Step size to save observations in history.
-        :param bool add_channel_dim: Allows for the adding of the channel
-        dimension in 2D inputs
+        :param bool add_channel_dim: Allows for the adding of the channel dimension in 2D inputs.
         """
         self.name = name
         self.env = gym.make(name)
@@ -93,7 +92,7 @@ class GymEnvironment(Environment):
         self.encoder = encoder
 
         # Keyword arguments.
-        self.max_prob = kwargs.get("max_prob", 1)
+        self.max_prob = kwargs.get("max_prob", 1.0)
         self.clip_rewards = kwargs.get("clip_rewards", True)
 
         self.history_length = kwargs.get("history_length", None)
@@ -114,12 +113,12 @@ class GymEnvironment(Environment):
         self.obs = None
         self.reward = None
 
-        assert 0 < self.max_prob <= 1, "Maximum spiking probability must be in (0, 1]."
+        assert 0.0 < self.max_prob <= 1.0, "Maximum spiking probability must be in (0, 1]."
 
     def step(self, a: int) -> Tuple[torch.Tensor, float, bool, Dict[Any, Any]]:
         # language=rst
         """
-        Wrapper around the OpenAI Gym environment :code:`step()` function.
+        Wrapper around the OpenAI ``gym`` environment ``step()`` function.
 
         :param a: Action to take in the environment.
         :return: Observation, reward, done flag, and information dictionary.
@@ -133,34 +132,31 @@ class GymEnvironment(Environment):
         self.preprocess()
 
         # Add the raw observation from the gym environment into the info
-        # for debugging and display
+        # for debugging and display.
         info["gym_obs"] = self.obs
 
         # Store frame of history and encode the inputs.
         if len(self.history) > 0:
             self.update_history()
             self.update_index()
-            # add the delta observation into the info for debugging and
-            # display
+            # Add the delta observation into the info for debugging and display.
             info["delta_obs"] = self.obs
 
         # The new standard for images is BxTxCxHxW.
         # The gym environment doesn't follow exactly the same protocol.
         #
-        # 1D observations will be left as is before the encoder and will
-        # become BxTxL
+        # 1D observations will be left as is before the encoder and will become BxTxL.
         # 2D observations are assumed to be mono images will become BxTx1xHxW
         # 3D observations will become BxTxCxHxW
-
         if self.obs.dim() == 2 and self.add_channel_dim:
-            # we want CxHxW, it is currently HxW
+            # We want CxHxW, it is currently HxW.
             self.obs = self.obs.unsqueeze(0)
 
-        # the encoder will add time - now Tx...
+        # The encoder will add time - now Tx...
         if self.encoder is not None:
             self.obs = self.encoder(self.obs)
 
-        # add the batch - now BxTx...
+        # Add the batch - now BxTx...
         self.obs = self.obs.unsqueeze(0)
 
         self.episode_step_count += 1
@@ -171,7 +167,7 @@ class GymEnvironment(Environment):
     def reset(self) -> torch.Tensor:
         # language=rst
         """
-        Wrapper around the OpenAI Gym environment :code:`reset()` function.
+        Wrapper around the OpenAI ``gym`` environment ``reset()`` function.
 
         :return: Observation from the environment.
         """
@@ -188,21 +184,21 @@ class GymEnvironment(Environment):
     def render(self) -> None:
         # language=rst
         """
-        Wrapper around the OpenAI Gym environment :code:`render()` function.
+        Wrapper around the OpenAI ``gym`` environment ``render()`` function.
         """
         self.env.render()
 
     def close(self) -> None:
         # language=rst
         """
-        Wrapper around the OpenAI Gym environment :code:`close()` function.
+        Wrapper around the OpenAI ``gym`` environment ``close()`` function.
         """
         self.env.close()
 
     def preprocess(self) -> None:
         # language=rst
         """
-        Pre-processing step for an observation from a Gym environment.
+        Pre-processing step for an observation from a ``gym`` environment.
         """
         if self.name == "SpaceInvaders-v0":
             self.obs = subsample(gray_scale(self.obs), 84, 110)
@@ -211,26 +207,25 @@ class GymEnvironment(Environment):
         elif self.name == "BreakoutDeterministic-v4":
             self.obs = subsample(gray_scale(crop(self.obs, 34, 194, 0, 160)), 80, 80)
             self.obs = binary_image(self.obs)
-        else:  # Default pre-processing step
-            self.obs = subsample(gray_scale(self.obs), 84, 110)
-            self.obs = binary_image(self.obs)
+        else:  # Default pre-processing step.
+            pass
 
         self.obs = torch.from_numpy(self.obs).float()
 
     def update_history(self) -> None:
         # language=rst
         """
-        Updates the observations inside history by performing subtraction from  most recent observation and the sum of
+        Updates the observations inside history by performing subtraction from most recent observation and the sum of
         previous observations. If there are not enough observations to take a difference from, simply store the
         observation without any differencing.
         """
-        # Recording initial observations
+        # Recording initial observations.
         if self.episode_step_count < len(self.history) * self.delta:
-            # Store observation based on delta value
+            # Store observation based on delta value.
             if self.episode_step_count % self.delta == 0:
                 self.history[self.history_index] = self.obs
         else:
-            # Take difference between stored frames and current frame
+            # Take difference between stored frames and current frame.
             temp = torch.clamp(self.obs - sum(self.history.values()), 0, 1)
 
             # Store observation based on delta value.
@@ -245,9 +240,9 @@ class GymEnvironment(Environment):
     def update_index(self) -> None:
         # language=rst
         """
-        Updates the index to keep track of history. For example: history = 4, delta = 3 will produce self.history = {1,
-        4, 7, 10} and self.history_index will be updated according to self.delta and will wrap around the history
-        dictionary.
+        Updates the index to keep track of history. For example: ``history = 4``, ``delta = 3`` will produce
+        ``self.history = {1, 4, 7, 10}`` and ``self.history_index`` will be updated according to ``self.delta``
+        and will wrap around the history dictionary.
         """
         if self.episode_step_count % self.delta == 0:
             if self.history_index != max(self.history.keys()):
