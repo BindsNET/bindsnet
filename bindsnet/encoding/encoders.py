@@ -24,7 +24,7 @@ class NullEncoder(Encoder):
     """
     Pass through of the datum that was input.
     
-    WARNING - this is not a real enocder into spikes. Be careful with
+    WARNING - this is not a real encoder into spikes. Be careful with
     the usage of this class.
     """
 

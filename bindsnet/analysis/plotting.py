@@ -435,7 +435,7 @@ def plot_voltages(
     n_neurons: Optional[Dict[str, Tuple[int, int]]] = None,
     cmap: Optional[str] = "jet",
     plot_type: str = "color",
-    threshold: Dict[str, float] = None,
+    thresholds: Dict[str, torch.Tensor] = None,
     figsize: Tuple[float, float] = (8.0, 4.5),
 ) -> Tuple[List[AxesImage], List[Axes]]:
     # language=rst
@@ -450,7 +450,7 @@ def plot_voltages(
     :param cmap: Matplotlib colormap to use.
     :param figsize: Horizontal, vertical figure size in inches.
     :param plot_type: The way how to draw graph. 'color' for pcolormesh, 'line' for curved lines.
-    :param threshold: Threshold of each layer.
+    :param thresholds: Thresholds of the neurons in each layer.
     :return: ``ims, axes``: Used for re-drawing the plots.
     """
     n_subplots = len(voltages.keys())
@@ -490,9 +490,13 @@ def plot_voltages(
                         )
                     )
 
-                    if threshold is not None:
+                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
+                        []
+                    ):
                         ims.append(
-                            axes.axhline(y=threshold[v[0]], c="r", linestyle="--")
+                            axes.axhline(
+                                y=thresholds[v[0]].item(), c="r", linestyle="--"
+                            )
                         )
                 else:
                     ims.append(
@@ -525,9 +529,13 @@ def plot_voltages(
                             .T
                         )
                     )
-                    if threshold is not None:
+                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
+                        []
+                    ):
                         ims.append(
-                            axes[i].axhline(y=threshold[v[0]], c="r", linestyle="--")
+                            axes[i].axhline(
+                                y=thresholds[v[0]].item(), c="r", linestyle="--"
+                            )
                         )
                 else:
                     ims.append(
@@ -566,8 +574,10 @@ def plot_voltages(
                         ]
                         .T
                     )
-                    if threshold is not None:
-                        axes.axhline(y=threshold[v[0]], c="r", linestyle="--")
+                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
+                        []
+                    ):
+                        axes.axhline(y=thresholds[v[0]].item(), c="r", linestyle="--")
                 else:
                     axes.matshow(
                         v[1]
@@ -596,8 +606,12 @@ def plot_voltages(
                         ]
                         .T
                     )
-                    if threshold is not None:
-                        axes[i].axhline(y=threshold[v[0]], c="r", linestyle="--")
+                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
+                        []
+                    ):
+                        axes[i].axhline(
+                            y=thresholds[v[0]].item(), c="r", linestyle="--"
+                        )
                 else:
                     axes[i].matshow(
                         v[1]

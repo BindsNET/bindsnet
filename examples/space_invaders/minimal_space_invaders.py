@@ -38,19 +38,23 @@ network.add_connection(middle_out, source="Y", target="Z")
 # Load SpaceInvaders environment.
 environment = GymEnvironment(
     "SpaceInvaders-v0",
-    BernoulliEncoder(time=1, dt=network.dt),
+    BernoulliEncoder(time=int(network.dt), dt=network.dt),
     history_length=2,
     delta=4,
 )
 environment.reset()
 
+# Plotting configuration.
+plot_config = {"data_step": 1, "data_length": 10, "reward_eps": 1, "reward_window": 10, "volts_type": "line"}
+
 # Build pipeline from specified components.
 pipeline = EnvironmentPipeline(
     network,
     environment,
+    time=network.dt,
     action_function=select_multinomial,
     output="Z",
-    plot_interval=100,
+    plot_config=plot_config,
     render_interval=5,
 )
 
