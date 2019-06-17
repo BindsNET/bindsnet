@@ -205,7 +205,7 @@ for epoch in range(n_epochs):
 
             # Assign labels to excitatory layer neurons.
             assignments, proportions, rates = assign_labels(
-                spike_record, label_tensor[step - update_interval : step], 10, rates
+                spike_record, label_tensor, 10, rates
             )
 
             labels = []
