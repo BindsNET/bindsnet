@@ -1,5 +1,6 @@
 from .torchvision_wrapper import create_torchvision_dataset_wrapper
 from .spoken_mnist import SpokenMNIST
+from .davis import Davis
 
 
 CIFAR10 = create_torchvision_dataset_wrapper("CIFAR10")
@@ -28,6 +29,7 @@ VOCDetection = create_torchvision_dataset_wrapper("VOCDetection")
 VOCSegmentation = create_torchvision_dataset_wrapper("VOCSegmentation")
 
 __all__ = [
+    "Davis",
     "SpokenMNIST",
     "CIFAR10",
     "CIFAR100",
