@@ -111,14 +111,28 @@ class Davis(torch.utils.data.Dataset):
             self.sequences[seq]["masks"] = masks
 
         # Creates an enumeration for the sequences for __getitem__
-        self.enum_sequences = self.sequences.items()
+        self.enum_sequences = []
+        for seq in sequences_names:
+            self.enum_sequences.append(self.sequences[seq])
 
-    # Returns the number of sequences in the dataset
     def __len__(self):
+
+        """
+        calculates the number of sequences the dataset holds
+
+        :Returns the number of sequences in the dataset
+        """
+
         return len(self.sequences)
 
-    # Verifies that the correct dataset is downloaded; downloads if it isn't and download=True
     def _check_directories(self):
+
+        """
+        Verifies that the correct dataset is downloaded; downloads if it isn't and download=True
+
+        :Throws FileNotFoundError if the subset sequence, annotation or root folder is missing
+        """
+
         if not os.path.exists(self.root):
             if self.download:
                 self._download()
@@ -177,17 +191,18 @@ class Davis(torch.utils.data.Dataset):
         for seq in self.sequences:
             yield seq
 
-    # Downloads the dataset
     def _download(self):
+
+        """
+        Downloads the correct dataset based on the given parameters
+
+        Relies on self.tag to determine both the name of the folder created for the dataset and for the finding the correct download url. 
+        """
 
         os.makedirs(self.root)
 
         # Grabs the correct zip url based on parameters
-        zip_url = (
-            "https://data.vision.ee.ethz.ch/csergi/share/davis/DAVIS-2017-"
-            + self.tag
-            + ".zip"
-        )
+        zip_url = f"https://data.vision.ee.ethz.ch/csergi/share/davis/DAVIS-2017-{self.tag}.zip"
 
         print("\nDownloading Davis data set from " + zip_url + "\n")
 
@@ -213,10 +228,16 @@ class Davis(torch.utils.data.Dataset):
 
         print("\nDone!\n")
 
-    # Gets an item of the Dataset based on index
     def __getitem__(self, ind):
-        seq = self.enum_sequences(ind)
-        return {self.get_frames(seq)}
+        """
+        Gets an item of the Dataset based on index
+
+        :params ind: index of item to take from dataset
+
+        :Returns a sequence which contains a list of images and masks 
+        """
+        seq = self.enum_sequences[ind]
+        return seq
 
     # Simple progress indicator for the download of the dataset
     def progress(self, count, block_size, total_size):
@@ -233,22 +254,3 @@ class Davis(torch.utils.data.Dataset):
             % (percent, progress_size / (1024 * 1024), speed, duration)
         )
         sys.stdout.flush()
-
-
-if __name__ == "__main__":
-    from matplotlib import pyplot as plt
-
-    only_first_frame = True
-    subsets = ["train", "val"]
-
-    for s in subsets:
-        dataset = DAVIS(root=self.root, subset=s)
-        for seq in dataset.get_sequences():
-            g = dataset.get_frames(seq)
-            img, mask = next(g)
-            plt.subplot(2, 1, 1)
-            plt.title(seq)
-            plt.imshow(img)
-            plt.subplot(2, 1, 2)
-            plt.imshow(mask)
-            plt.show(block=True)
