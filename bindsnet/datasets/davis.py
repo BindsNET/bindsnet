@@ -116,7 +116,6 @@ class Davis(torch.utils.data.Dataset):
             self.enum_sequences.append(self.sequences[seq])
 
     def __len__(self):
-
         """
         calculates the number of sequences the dataset holds
 
@@ -126,7 +125,6 @@ class Davis(torch.utils.data.Dataset):
         return len(self.sequences)
 
     def _check_directories(self):
-
         """
         Verifies that the correct dataset is downloaded; downloads if it isn't and download=True
 
@@ -192,7 +190,6 @@ class Davis(torch.utils.data.Dataset):
             yield seq
 
     def _download(self):
-
         """
         Downloads the correct dataset based on the given parameters
 
