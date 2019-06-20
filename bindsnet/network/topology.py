@@ -160,21 +160,16 @@ class Connection(AbstractConnection):
         w = kwargs.get("w", None)
         if w is None:
             if self.wmin == -np.inf or self.wmax == np.inf:
-                w = torch.clamp(
-                    torch.rand(source.n, target.n), self.wmin, self.wmax
-                )
+                w = torch.clamp(torch.rand(source.n, target.n), self.wmin, self.wmax)
             else:
-                w = self.wmin + torch.rand(source.n, target.n) * (
-                    self.wmax - self.wmin
-                )
+                w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, False)
 
-        self.b = Parameter(kwargs.get("b",
-            torch.zeros(target.n)), False)
+        self.b = Parameter(kwargs.get("b", torch.zeros(target.n)), False)
 
         if self.norm_by_max_from_shadow_weights:
             self.shadow_w = self.w.clone().detach()
@@ -336,8 +331,7 @@ class Conv2dConnection(AbstractConnection):
 
         self.w = Parameter(w, False)
 
-        self.b = Parameter(kwargs.get("b",
-            torch.zeros(self.out_channels)), False)
+        self.b = Parameter(kwargs.get("b", torch.zeros(self.out_channels)), False)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -426,7 +420,7 @@ class MaxPool2dConnection(AbstractConnection):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
 
-        self.register_buffer('firing_rates', torch.ones(source.shape))
+        self.register_buffer("firing_rates", torch.ones(source.shape))
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -563,7 +557,7 @@ class LocallyConnectedConnection(AbstractConnection):
                         )
                         locations[k1, k2, c1, c2] = location
 
-        self.register_buffer('locations', locations.view(kernel_prod, conv_prod))
+        self.register_buffer("locations", locations.view(kernel_prod, conv_prod))
         w = kwargs.get("w", None)
 
         if w is None:
@@ -585,10 +579,9 @@ class LocallyConnectedConnection(AbstractConnection):
 
         self.w = Parameter(w, False)
 
-        self.register_buffer('mask', self.w == 0)
+        self.register_buffer("mask", self.w == 0)
 
-        self.b = Parameter(kwargs.get("b",
-            torch.zeros(target.n)), False)
+        self.b = Parameter(kwargs.get("b", torch.zeros(target.n)), False)
 
         if self.norm is not None:
             self.norm *= kernel_prod
@@ -681,9 +674,7 @@ class MeanFieldConnection(AbstractConnection):
             if self.wmin == -np.inf or self.wmax == np.inf:
                 w = torch.clamp((torch.randn(1)[0] + 1) / 10, self.wmin, self.wmax)
             else:
-                w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (
-                    self.wmax - self.wmin
-                )
+                w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (self.wmax - self.wmin)
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
                 w = torch.clamp(w, self.wmin, self.wmax)
@@ -786,9 +777,7 @@ class SparseConnection(AbstractConnection):
                 )
             w = torch.sparse.FloatTensor(i.nonzero().t(), v)
         elif w is not None and self.sparsity is None:
-            assert (
-                w.is_sparse
-            ), "Weight matrix is not sparse (see torch.sparse module)"
+            assert w.is_sparse, "Weight matrix is not sparse (see torch.sparse module)"
             if self.wmin != -np.inf or self.wmax != np.inf:
                 w = torch.clamp(w, self.wmin, self.wmax)
 

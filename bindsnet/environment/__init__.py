@@ -64,7 +64,7 @@ class GymEnvironment(Environment):
     A wrapper around the OpenAI ``gym`` environments.
     """
 
-    def __init__(self, name: str, encoder: Encoder=NullEncoder(), **kwargs) -> None:
+    def __init__(self, name: str, encoder: Encoder = NullEncoder(), **kwargs) -> None:
         # language=rst
         """
         Initializes the environment wrapper. This class makes the
@@ -113,7 +113,9 @@ class GymEnvironment(Environment):
         self.obs = None
         self.reward = None
 
-        assert 0.0 < self.max_prob <= 1.0, "Maximum spiking probability must be in (0, 1]."
+        assert (
+            0.0 < self.max_prob <= 1.0
+        ), "Maximum spiking probability must be in (0, 1]."
 
     def step(self, a: int) -> Tuple[torch.Tensor, float, bool, Dict[Any, Any]]:
         # language=rst

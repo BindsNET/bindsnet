@@ -3,7 +3,14 @@ import torch
 from bindsnet.network import Network
 from bindsnet.network.nodes import Input, LIFNodes, SRM0Nodes
 from bindsnet.network.topology import Connection, Conv2dConnection
-from bindsnet.learning import Hebbian, PostPre, WeightDependentPostPre, MSTDP, MSTDPET, Rmax
+from bindsnet.learning import (
+    Hebbian,
+    PostPre,
+    WeightDependentPostPre,
+    MSTDP,
+    MSTDPET,
+    Rmax,
+)
 
 
 class TestLearningRules:
@@ -226,22 +233,20 @@ class TestLearningRules:
     def test_rmax(self):
         # Connection test
         network = Network(dt=1.0)
-        network.add_layer(
-            Input(n=100, traces=True, traces_additive=True), name='input'
-        )
-        network.add_layer(
-            SRM0Nodes(n=100), name='output'
-        )
+        network.add_layer(Input(n=100, traces=True, traces_additive=True), name="input")
+        network.add_layer(SRM0Nodes(n=100), name="output")
         network.add_connection(
             Connection(
-                source=network.layers['input'],
-                target=network.layers['output'],
+                source=network.layers["input"],
+                target=network.layers["output"],
                 nu=1e-2,
-                update_rule=Rmax
-            ), source='input', target='output'
+                update_rule=Rmax,
+            ),
+            source="input",
+            target="output",
         )
         network.run(
-            inpts={'input': torch.bernoulli(torch.rand(250, 100)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
             time=250,
-            reward=1.
+            reward=1.0,
         )

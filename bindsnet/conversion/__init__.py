@@ -201,7 +201,7 @@ class PassThroughNodes(nodes.Nodes):
         """
         super().__init__(n, shape, traces, trace_tc, sum_input)
 
-        self.register_buffer('v', torch.zeros(self.shape))
+        self.register_buffer("v", torch.zeros(self.shape))
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst

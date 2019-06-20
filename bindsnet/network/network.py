@@ -273,7 +273,6 @@ class Network(torch.nn.Module):
             plt.title('Input spiking')
             plt.show()
         """
-
         # Parse keyword arguments.
         clamps = kwargs.get("clamp", {})
         unclamps = kwargs.get("unclamp", {})

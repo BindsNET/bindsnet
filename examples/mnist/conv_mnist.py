@@ -114,7 +114,7 @@ voltage_monitor = Monitor(network.layers["Y"], ["v"], time=time)
 network.add_monitor(voltage_monitor, name="output_voltage")
 
 if gpu:
-    network.to('cuda')
+    network.to("cuda")
 
 # Load MNIST data.
 train_dataset = MNIST(
@@ -148,8 +148,7 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=1, shuffle=True, num_workers=4,
-        pin_memory=gpu
+        train_dataset, batch_size=1, shuffle=True, num_workers=4, pin_memory=gpu
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
@@ -157,9 +156,9 @@ for epoch in range(n_epochs):
 
         inpts = {"X": batch["encoded_image"]}
         if gpu:
-            inpts = {k:v.cuda() for k, v in inpts.items()}
+            inpts = {k: v.cuda() for k, v in inpts.items()}
         label = batch["label"]
-        
+
         # Run the network on the input.
         network.run(inpts=inpts, time=time, input_time_dim=1)
 

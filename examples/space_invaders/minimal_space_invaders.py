@@ -45,7 +45,13 @@ environment = GymEnvironment(
 environment.reset()
 
 # Plotting configuration.
-plot_config = {"data_step": 1, "data_length": 10, "reward_eps": 1, "reward_window": 10, "volts_type": "line"}
+plot_config = {
+    "data_step": 1,
+    "data_length": 10,
+    "reward_eps": 1,
+    "reward_window": 10,
+    "volts_type": "line",
+}
 
 # Build pipeline from specified components.
 pipeline = EnvironmentPipeline(
