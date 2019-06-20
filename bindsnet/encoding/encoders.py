@@ -12,7 +12,7 @@ class Encoder:
       provided. self.enc must be callable with torch.Tensor, *args, **kwargs
     """
 
-    def __init__(self, *args: List, **kwargs: Dict) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         self.enc_args = args
         self.enc_kwargs = kwargs
 
@@ -29,7 +29,7 @@ class NullEncoder(Encoder):
     """
 
     def __init__(self):
-        pass
+        super().__init__()
 
     def __call__(self, img):
         return img
@@ -46,6 +46,7 @@ class SingleEncoder(Encoder):
         :param sparsity: Sparsity of the input representation. 0 for no spike and 1 for all spike.
         """
         super().__init__(time, dt=dt, sparsity=sparsity, **kwargs)
+
         self.enc = encodings.single
 
 
@@ -59,6 +60,7 @@ class RepeatEncoder(Encoder):
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
+
         self.enc = encodings.repeat
 
 
@@ -76,6 +78,7 @@ class BernoulliEncoder(Encoder):
         :param float max_prob: Maximum probability of spike per Bernoulli trial.
         """
         super().__init__(time, dt=dt, **kwargs)
+
         self.enc = encodings.bernoulli
 
 
@@ -89,6 +92,7 @@ class PoissonEncoder(Encoder):
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
+
         self.enc = encodings.poisson
 
 
@@ -102,4 +106,5 @@ class RankOrderEncoder(Encoder):
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
+
         self.enc = encodings.rank_order

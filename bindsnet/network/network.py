@@ -83,6 +83,7 @@ class Network(torch.nn.Module):
     def __init__(
         self,
         dt: float = 1.0,
+        batch_size: int = 1,
         learning: bool = True,
         reward_fn: Optional[Type[AbstractReward]] = None,
     ) -> None:
@@ -97,6 +98,8 @@ class Network(torch.nn.Module):
         super().__init__()
 
         self.dt = dt
+        self.batch_size = batch_size
+
         self.layers = {}
         self.connections = {}
         self.monitors = {}
@@ -214,7 +217,9 @@ class Network(torch.nn.Module):
             target = self.connections[c].target
 
             if not c[1] in inpts:
-                inpts[c[1]] = torch.zeros(target.shape, device=target.s.device)
+                inpts[c[1]] = torch.zeros(
+                    self.batch_size, *target.shape, device=target.s.device
+                )
 
             # Add to input: source's spikes multiplied by connection weights.
             inpts[c[1]] += self.connections[c].compute(source.s)

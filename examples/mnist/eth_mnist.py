@@ -27,6 +27,7 @@ from bindsnet.analysis.plotting import (
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
+parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_workers", type=int, default=-1)
@@ -48,6 +49,7 @@ args = parser.parse_args()
 
 seed = args.seed
 n_neurons = args.n_neurons
+batch_size = args.batch_size
 n_epochs = args.n_epochs
 n_test = args.n_test
 n_workers = args.n_workers
@@ -83,12 +85,13 @@ start_intensity = intensity
 network = DiehlAndCook2015(
     n_inpt=784,
     n_neurons=n_neurons,
+    batch_size=batch_size,
     exc=exc,
     inh=inh,
     dt=dt,
     norm=78.4,
     theta_plus=theta_plus,
-    inpt_shape=(1, 1, 28, 28),
+    inpt_shape=(1, 28, 28),
 )
 
 # Directs network to GPU
@@ -107,7 +110,7 @@ dataset = MNIST(
 )
 
 # Record spikes during the simulation.
-spike_record = torch.zeros(update_interval, time, n_neurons)
+spike_record = torch.zeros(update_interval, batch_size, time, n_neurons)
 
 # Neuron assignments and spike proportions.
 assignments = -torch.ones(n_neurons)
@@ -154,7 +157,11 @@ for epoch in range(n_epochs):
 
     # Create a dataloader to iterate and batch data
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=True, num_workers=n_workers, pin_memory=gpu
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=n_workers,
+        pin_memory=gpu,
     )
 
     for step, batch in enumerate(tqdm(dataloader)):
@@ -220,30 +227,30 @@ for epoch in range(n_epochs):
         inh_voltages = inh_voltage_monitor.get("v")
 
         # Add to spikes recording.
-        spike_record[step % update_interval] = spikes["Ae"].get("s").t()
+        spike_record[step % update_interval] = spikes["Ae"].get("s").permute((1, 0, 2))
 
         # Optionally plot various simulation information.
         if plot:
-            image = batch["image"].view(28, 28)
-            inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
+            # image = batch["image"].view(28, 28)
+            # inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
             input_exc_weights = network.connections[("X", "Ae")].w
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
             )
-            square_assignments = get_square_assignments(assignments, n_sqrt)
-            spikes_ = {layer: spikes[layer].get("s") for layer in spikes}
-            voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
-
-            inpt_axes, inpt_ims = plot_input(
-                image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
-            )
-            spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
+            # square_assignments = get_square_assignments(assignments, n_sqrt)
+            # spikes_ = {layer: spikes[layer].get("s") for layer in spikes}
+            # voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
+            #
+            # inpt_axes, inpt_ims = plot_input(
+            #     image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
+            # )
+            # spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(square_weights, im=weights_im)
-            assigns_im = plot_assignments(square_assignments, im=assigns_im)
-            perf_ax = plot_performance(accuracy, ax=perf_ax)
-            voltage_ims, voltage_axes = plot_voltages(
-                voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"
-            )
+            # assigns_im = plot_assignments(square_assignments, im=assigns_im)
+            # perf_ax = plot_performance(accuracy, ax=perf_ax)
+            # voltage_ims, voltage_axes = plot_voltages(
+            #     voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"
+            # )
 
             plt.pause(1e-8)
 

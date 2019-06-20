@@ -1,4 +1,4 @@
-from typing import Optional, Union, Iterable, Iterator
+from typing import Optional
 
 import torch
 import numpy as np

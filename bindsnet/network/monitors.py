@@ -60,6 +60,7 @@ class Monitor(AbstractMonitor):
         obj: Union[Nodes, AbstractConnection],
         state_vars: Iterable[str],
         time: Optional[int] = None,
+        batch_size: int = 1,
     ):
         # language=rst
         """
@@ -74,6 +75,7 @@ class Monitor(AbstractMonitor):
         self.obj = obj
         self.state_vars = state_vars
         self.time = time
+        self.batch_size = batch_size
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
@@ -84,10 +86,10 @@ class Monitor(AbstractMonitor):
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = self.recording = {
+            self.recording = {
                 v: torch.zeros(
-                    *getattr(self.obj, v).size(),
                     self.time,
+                    *getattr(self.obj, v).size(),
                     dtype=getattr(self.obj, v).dtype
                 )
                 for v in self.state_vars
@@ -111,16 +113,16 @@ class Monitor(AbstractMonitor):
         """
         if self.time is None:
             for v in self.state_vars:
-                data = getattr(self.obj, v).unsqueeze(-1)
+                data = getattr(self.obj, v).unsqueeze(0)
                 self.recording[v] = torch.cat(
-                    [self.recording[v].type(data.type()), data], -1
+                    [self.recording[v].type(data.type()), data], 0
                 )
         else:
             for v in self.state_vars:
                 # Remove the oldest data and concatenate new data
-                data = getattr(self.obj, v).unsqueeze(-1)
+                data = getattr(self.obj, v).unsqueeze(0)
                 self.recording[v] = torch.cat(
-                    [self.recording[v][..., 1:].type(data.type()), data], -1
+                    [self.recording[v][1:].type(data.type()), data], 0
                 )
 
     def reset_(self) -> None:
@@ -138,10 +140,10 @@ class Monitor(AbstractMonitor):
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = self.recording = {
+            self.recording = {
                 v: torch.zeros(
-                    *getattr(self.obj, v).size(),
                     self.time,
+                    *getattr(self.obj, v).size(),
                     dtype=getattr(self.obj, v).dtype
                 )
                 for v in self.state_vars

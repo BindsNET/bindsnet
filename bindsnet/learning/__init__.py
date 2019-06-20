@@ -159,18 +159,22 @@ class PostPre(LearningRule):
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
-        source_s = self.source.s.view(-1).float()
-        source_x = self.source.x.view(-1)
-        target_s = self.target.s.view(-1).float()
-        target_x = self.target.x.view(-1)
+        batch_size = self.source.batch_size
+
+        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+        source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
+        target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
 
         # Pre-synaptic update.
         if self.nu[0]:
-            self.connection.w -= self.nu[0] * torch.ger(source_s, target_x)
+            update = torch.sum(torch.bmm(source_s, target_x), dim=0)
+            self.connection.w -= self.nu[0] * update
 
         # Post-synaptic update.
         if self.nu[1]:
-            self.connection.w += self.nu[1] * torch.ger(source_x, target_s)
+            update = torch.sum(torch.bmm(source_x, target_s), dim=0)
+            self.connection.w += self.nu[1] * update
 
         super().update()
 
