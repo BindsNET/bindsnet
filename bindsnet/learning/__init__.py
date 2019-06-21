@@ -186,12 +186,13 @@ class PostPre(LearningRule):
         # Get convolutional layer parameters.
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
+        batch_size = self.source.batch_size
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        target_x = self.target.x.permute(1, 2, 3, 0).view(out_channels, -1)
+        target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
             self.source.s.float(),
             kernel_height,
@@ -199,16 +200,16 @@ class PostPre(LearningRule):
             padding=padding,
             stride=stride,
         )
-        target_s = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
+        target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = target_x @ source_s.t()
+            pre = torch.bmm(target_x, source_s.permute((0, 2, 1))).sum(0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
         if self.nu[1]:
-            post = target_s @ source_x.t()
+            post = torch.bmm(target_s, source_x.permute((0, 2, 1))).sum(0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()

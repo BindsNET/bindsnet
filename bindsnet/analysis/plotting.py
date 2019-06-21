@@ -78,7 +78,8 @@ def plot_spikes(
     """
     Plot spikes for any group(s) of neurons.
 
-    :param spikes: Mapping from layer names to spiking data.
+    :param spikes: Mapping from layer names to spiking data. Spike data has shape ``[time, n_1, ..., n_k]``, where
+                   ``[n_1, ..., n_k]`` is the shape of the recorded layer.
     :param time: Plot spiking activity of neurons in the given time range. Default is entire simulation time.
     :param n_neurons: Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
     :param ims: Used for re-drawing the plots.
@@ -90,17 +91,17 @@ def plot_spikes(
     if n_neurons is None:
         n_neurons = {}
 
-    spikes = {k: v.view(-1, v.size(-1)) for (k, v) in spikes.items()}
+    spikes = {k: v.view(v.size(0), -1) for (k, v) in spikes.items()}
     if time is None:
         # Set it for entire duration
         for key in spikes.keys():
-            time = (0, spikes[key].shape[1])
+            time = (0, spikes[key].shape[0])
             break
 
     # Use all neurons if no argument provided.
     for key, val in spikes.items():
         if key not in n_neurons.keys():
-            n_neurons[key] = (0, val.shape[0])
+            n_neurons[key] = (0, val.shape[1])
 
     if ims is None:
         fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
@@ -111,7 +112,7 @@ def plot_spikes(
         for i, datum in enumerate(spikes.items()):
             spikes = (
                 datum[1][
-                    n_neurons[datum[0]][0] : n_neurons[datum[0]][1], time[0] : time[1]
+                    time[0] : time[1], n_neurons[datum[0]][0] : n_neurons[datum[0]][1]
                 ]
                 .detach()
                 .clone()
@@ -120,8 +121,8 @@ def plot_spikes(
             )
             ims.append(
                 axes[i].scatter(
-                    x=np.array(spikes.T.nonzero())[0],
-                    y=np.array(spikes.T.nonzero())[1],
+                    x=np.array(spikes.nonzero()).T[:, 0],
+                    y=np.array(spikes.nonzero()).T[:, 1],
                     s=1,
                 )
             )
@@ -146,15 +147,14 @@ def plot_spikes(
         for i, datum in enumerate(spikes.items()):
             spikes = (
                 datum[1][
-                    n_neurons[datum[0]][0] : n_neurons[datum[0]][1], time[0] : time[1]
+                    time[0] : time[1], n_neurons[datum[0]][0] : n_neurons[datum[0]][1]
                 ]
                 .detach()
                 .clone()
                 .cpu()
                 .numpy()
             )
-            ims[i].set_offsets(np.array(spikes.T.nonzero()).T)
-            # ims[i].autoscale()
+            ims[i].set_offsets(np.array(spikes.nonzero()).T)
             args = (
                 datum[0],
                 n_neurons[datum[0]][0],
@@ -486,7 +486,6 @@ def plot_voltages(
                                 n_neurons[v[0]][0] : n_neurons[v[0]][1],
                                 time[0] : time[1],
                             ]
-                            .T
                         )
                     )
 
@@ -501,10 +500,13 @@ def plot_voltages(
                 else:
                     ims.append(
                         axes.pcolormesh(
-                            v[1][
+                            v[1]
+                            .cpu()
+                            .numpy()[
                                 n_neurons[v[0]][0] : n_neurons[v[0]][1],
                                 time[0] : time[1],
-                            ],
+                            ]
+                            .T,
                             cmap=cmap,
                         )
                     )
@@ -526,7 +528,6 @@ def plot_voltages(
                                 n_neurons[v[0]][0] : n_neurons[v[0]][1],
                                 time[0] : time[1],
                             ]
-                            .T
                         )
                     )
                     if thresholds is not None and thresholds[v[0]].size() == torch.Size(
@@ -545,7 +546,8 @@ def plot_voltages(
                             .numpy()[
                                 n_neurons[v[0]][0] : n_neurons[v[0]][1],
                                 time[0] : time[1],
-                            ],
+                            ]
+                            .T,
                             cmap=cmap,
                         )
                     )
@@ -572,7 +574,6 @@ def plot_voltages(
                         .numpy()[
                             n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
                         ]
-                        .T
                     )
                     if thresholds is not None and thresholds[v[0]].size() == torch.Size(
                         []
@@ -584,7 +585,8 @@ def plot_voltages(
                         .cpu()
                         .numpy()[
                             n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
-                        ],
+                        ]
+                        .T,
                         cmap=cmap,
                     )
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
@@ -604,7 +606,6 @@ def plot_voltages(
                         .numpy()[
                             n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
                         ]
-                        .T
                     )
                     if thresholds is not None and thresholds[v[0]].size() == torch.Size(
                         []
@@ -618,7 +619,8 @@ def plot_voltages(
                         .cpu()
                         .numpy()[
                             n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
-                        ],
+                        ]
+                        .T,
                         cmap=cmap,
                     )
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])

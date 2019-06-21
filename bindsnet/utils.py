@@ -28,9 +28,7 @@ def im2col_indices(
     :return: Input tensor reshaped to column-wise format.
     """
 
-    return F.unfold(
-        x, (kernel_height, kernel_width), padding=padding, stride=stride
-    ).squeeze()
+    return F.unfold(x, (kernel_height, kernel_width), padding=padding, stride=stride)
 
 
 def col2im_indices(

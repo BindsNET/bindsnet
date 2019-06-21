@@ -88,7 +88,6 @@ class DiehlAndCook2015(Network):
         self,
         n_inpt: int,
         n_neurons: int = 100,
-        batch_size: int = 1,
         exc: float = 22.5,
         inh: float = 17.5,
         dt: float = 1.0,
@@ -106,7 +105,6 @@ class DiehlAndCook2015(Network):
 
         :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of excitatory, inhibitory neurons.
-        :param batch_size: Mini-batch size.
         :param exc: Strength of synapse weights from excitatory to inhibitory layer.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
@@ -122,7 +120,6 @@ class DiehlAndCook2015(Network):
 
         self.n_inpt = n_inpt
         self.inpt_shape = inpt_shape
-        self.batch_size = batch_size
         self.n_neurons = n_neurons
         self.exc = exc
         self.inh = inh
@@ -130,15 +127,10 @@ class DiehlAndCook2015(Network):
 
         # Layers
         input_layer = Input(
-            n=self.n_inpt,
-            shape=self.inpt_shape,
-            batch_size=batch_size,
-            traces=True,
-            tc_trace=20.0,
+            n=self.n_inpt, shape=self.inpt_shape, traces=True, tc_trace=20.0
         )
         exc_layer = DiehlAndCookNodes(
             n=self.n_neurons,
-            batch_size=batch_size,
             traces=True,
             rest=-65.0,
             reset=-60.0,
@@ -151,7 +143,6 @@ class DiehlAndCook2015(Network):
         )
         inh_layer = LIFNodes(
             n=self.n_neurons,
-            batch_size=batch_size,
             traces=False,
             rest=-60.0,
             reset=-45.0,

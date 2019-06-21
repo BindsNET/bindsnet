@@ -3,38 +3,32 @@ import argparse
 import matplotlib.pyplot as plt
 from torchvision import transforms
 
-from time import time as t
 from tqdm import tqdm
+from time import time as t
 
 from bindsnet.datasets import MNIST
-from bindsnet.encoding import PoissonEncoder
 from bindsnet.network import Network
 from bindsnet.learning import PostPre
+from bindsnet.encoding import PoissonEncoder
 from bindsnet.network.monitors import Monitor
+from bindsnet.analysis.plotting import plot_conv2d_weights
 from bindsnet.network.nodes import DiehlAndCookNodes, Input
 from bindsnet.network.topology import Conv2dConnection, Connection
-from bindsnet.analysis.plotting import (
-    plot_input,
-    plot_spikes,
-    plot_conv2d_weights,
-    plot_voltages,
-)
 
 print()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_epochs", type=int, default=1)
-parser.add_argument("--n_test", type=int, default=10000)
+parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--kernel_size", type=int, default=16)
 parser.add_argument("--stride", type=int, default=4)
 parser.add_argument("--n_filters", type=int, default=25)
 parser.add_argument("--padding", type=int, default=0)
-parser.add_argument("--time", type=int, default=50)
+parser.add_argument("--time", type=int, default=100)
 parser.add_argument("--dt", type=int, default=1.0)
 parser.add_argument("--intensity", type=float, default=128.0)
 parser.add_argument("--progress_interval", type=int, default=10)
-parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
@@ -45,7 +39,7 @@ args = parser.parse_args()
 
 seed = args.seed
 n_epochs = args.n_epochs
-n_test = args.n_test
+batch_size = args.batch_size
 kernel_size = args.kernel_size
 stride = args.stride
 n_filters = args.n_filters
@@ -54,7 +48,6 @@ time = args.time
 dt = args.dt
 intensity = args.intensity
 progress_interval = args.progress_interval
-update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
@@ -63,9 +56,6 @@ if gpu:
     torch.cuda.manual_seed_all(seed)
 else:
     torch.manual_seed(seed)
-
-if not train:
-    update_interval = n_test
 
 conv_size = int((28 - kernel_size + 2 * padding) / stride) + 1
 per_class = int((n_filters * conv_size * conv_size) / 10)
@@ -87,7 +77,7 @@ conv_conn = Conv2dConnection(
     stride=stride,
     update_rule=PostPre,
     norm=0.4 * kernel_size ** 2,
-    nu=[1e-4, 1e-2],
+    nu=[0, 5e-2],
     wmax=1.0,
 )
 
@@ -140,13 +130,7 @@ for layer in set(network.layers) - {"X"}:
 print("Begin training.\n")
 start = t()
 
-inpt_axes = None
-inpt_ims = None
-spike_ims = None
-spike_axes = None
-weights1_im = None
-voltage_ims = None
-voltage_axes = None
+weights_im = None
 
 for epoch in range(n_epochs):
     if epoch % progress_interval == 0:
@@ -154,7 +138,11 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=1, shuffle=True, num_workers=4, pin_memory=gpu
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=4,
+        pin_memory=gpu,
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
@@ -170,26 +158,10 @@ for epoch in range(n_epochs):
 
         # Optionally plot various simulation information.
         if plot:
-            image = batch["image"].view(28, 28)
+            weights = conv_conn.w
+            weights_im = plot_conv2d_weights(weights, im=weights_im)
 
-            inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
-            weights1 = conv_conn.w
-            _spikes = {
-                "X": spikes["X"].get("s").view(time, -1),
-                "Y": spikes["Y"].get("s").view(time, -1),
-            }
-            _voltages = {"Y": voltages["Y"].get("v").view(time, -1)}
-
-            inpt_axes, inpt_ims = plot_input(
-                image, inpt, label=label, axes=inpt_axes, ims=inpt_ims
-            )
-            spike_ims, spike_axes = plot_spikes(_spikes, ims=spike_ims, axes=spike_axes)
-            weights1_im = plot_conv2d_weights(weights1, im=weights1_im)
-            voltage_ims, voltage_axes = plot_voltages(
-                _voltages, ims=voltage_ims, axes=voltage_axes
-            )
-
-            plt.pause(1)
+            plt.pause(1e-8)
 
         network.reset_()  # Reset state variables.
 

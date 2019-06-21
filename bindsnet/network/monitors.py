@@ -15,39 +15,6 @@ class AbstractMonitor(ABC):
     Abstract base class for state variable monitors.
     """
 
-    @abstractmethod
-    def __init__(self):
-        # language=rst
-        """
-        Abstract method stub for monitor constructor.
-        """
-        super().__init__()
-
-    @abstractmethod
-    def get(self):
-        # language=rst
-        """
-        Abstract method stub for retrieving monitored state recording.
-        :return: State variable recording.
-        """
-        pass
-
-    @abstractmethod
-    def record(self):
-        # language=rst
-        """
-        Abstract method stub for recording monitored state variables.
-        """
-        pass
-
-    @abstractmethod
-    def reset_(self):
-        # language=rst
-        """
-        Abstract method stub for resetting monitored state recording.
-        """
-        pass
-
 
 class Monitor(AbstractMonitor):
     # language=rst
@@ -101,7 +68,7 @@ class Monitor(AbstractMonitor):
         Return recording to user.
 
         :param var: State variable recording to return.
-        :return: Tensor of shape ``[n_1, ..., n_k, time]``, where ``[n_1, ..., n_k]`` is the shape of the recorded
+        :return: Tensor of shape ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is the shape of the recorded
                  state variable.
         """
         return self.recording[var]
@@ -115,14 +82,14 @@ class Monitor(AbstractMonitor):
             for v in self.state_vars:
                 data = getattr(self.obj, v).unsqueeze(0)
                 self.recording[v] = torch.cat(
-                    [self.recording[v].type(data.type()), data], 0
+                    (self.recording[v].type(data.type()), data), 0
                 )
         else:
             for v in self.state_vars:
                 # Remove the oldest data and concatenate new data
                 data = getattr(self.obj, v).unsqueeze(0)
                 self.recording[v] = torch.cat(
-                    [self.recording[v][1:].type(data.type()), data], 0
+                    (self.recording[v][1:].type(data.type()), data), 0
                 )
 
     def reset_(self) -> None:
@@ -130,7 +97,6 @@ class Monitor(AbstractMonitor):
         """
         Resets recordings to empty ``torch.Tensor``s.
         """
-
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
             self.recording = {

@@ -166,12 +166,12 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-    def _compute_decays(self) -> None:
+    def compute_decays(self) -> None:
         # language=rst
         """
         Sets the relevant decays.
         """
-        super()._compute_decays()
+        super().compute_decays()
 
 
 class PassThroughNodes(nodes.Nodes):
@@ -220,12 +220,12 @@ class PassThroughNodes(nodes.Nodes):
         """
         self.s.zero_()
 
-    def _compute_decays(self) -> None:
+    def compute_decays(self) -> None:
         # language=rst
         """
         Sets the relevant decays
         """
-        super()._compute_decays()
+        super().compute_decays()
 
 
 class PermuteConnection(topology.AbstractConnection):

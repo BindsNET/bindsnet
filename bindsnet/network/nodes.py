@@ -6,7 +6,7 @@ from typing import Iterable, Optional, Union
 import torch
 
 
-class Nodes(ABC, torch.nn.Module):
+class Nodes(torch.nn.Module):
     # language=rst
     """
     Abstract base class for groups of neurons.
@@ -16,7 +16,6 @@ class Nodes(ABC, torch.nn.Module):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -31,7 +30,6 @@ class Nodes(ABC, torch.nn.Module):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record decaying spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -59,21 +57,16 @@ class Nodes(ABC, torch.nn.Module):
             mul, self.shape
         ), "No. of neurons and shape do not match"
 
-        self.batch_size = batch_size  # Mini-batch size.
         self.traces = traces  # Whether to record synaptic traces.
         self.traces_additive = (
             traces_additive
         )  # Whether to record spike traces additively.
-        self.register_buffer(
-            "s", torch.zeros(self.batch_size, *self.shape, dtype=torch.uint8)
-        )  # Spike occurrences.
+        self.register_buffer("s", torch.ByteTensor())  # Spike occurrences.
 
         self.sum_input = sum_input  # Whether to sum all inputs.
 
         if self.traces:
-            self.register_buffer(
-                "x", torch.zeros(self.batch_size, *self.shape)
-            )  # Firing traces.
+            self.register_buffer("x", torch.Tensor())  # Firing traces.
             self.register_buffer(
                 "tc_trace", torch.tensor(tc_trace)
             )  # Time constant of spike trace decay.
@@ -83,12 +76,10 @@ class Nodes(ABC, torch.nn.Module):
                 )  # Scaling factor for spike trace.
             self.register_buffer(
                 "trace_decay", torch.empty_like(self.tc_trace)
-            )  # Set in _compute_decays.
+            )  # Set in compute_decays.
 
         if self.sum_input:
-            self.register_buffer(
-                "summed", torch.zeros(self.batch_size, *self.shape)
-            )  # Summed inputs.
+            self.register_buffer("summed", torch.FloatTensor())  # Summed inputs.
 
         self.dt = None
         self.learning = learning
@@ -114,7 +105,6 @@ class Nodes(ABC, torch.nn.Module):
             # Add current input to running sum.
             self.summed += x.float()
 
-    @abstractmethod
     def reset_(self) -> None:
         # language=rst
         """
@@ -123,24 +113,42 @@ class Nodes(ABC, torch.nn.Module):
         self.s.zero_()
 
         if self.traces:
-            self.x.zero_()  # Firing traces.
+            self.x.zero_()  # Spike traces.
 
         if self.sum_input:
             self.summed.zero_()  # Summed inputs.
 
-    @abstractmethod
-    def _compute_decays(self) -> None:
+    def compute_decays(self, dt) -> None:
         # language=rst
         """
         Abstract base class method for setting decays.
         """
+        self.dt = dt
         if self.traces:
             self.trace_decay = torch.exp(
                 -self.dt / self.tc_trace
             )  # Spike trace decay (per timestep).
 
-    def train(self, mode: bool = True):
-        """Sets the node in training mode.
+    def set_batch_size(self, batch_size) -> None:
+        # language=rst
+        """
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
+        """
+        self.batch_size = batch_size
+        self.s = torch.zeros(batch_size, *self.shape)
+
+        if self.traces:
+            self.x = torch.zeros(batch_size, *self.shape)
+
+        if self.sum_input:
+            self.summed = torch.zeros(batch_size, *self.shape)
+
+    def train(self, mode: bool = True) -> "Nodes":
+        # language=rst
+        """
+        Sets the layer in training mode.
 
         :param bool mode: Turn training on or off
         :return: self as specified in `torch.nn.Module`
@@ -166,7 +174,6 @@ class Input(Nodes, AbstractInput):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -180,7 +187,6 @@ class Input(Nodes, AbstractInput):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record decaying spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -190,7 +196,6 @@ class Input(Nodes, AbstractInput):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -217,13 +222,6 @@ class Input(Nodes, AbstractInput):
         """
         super().reset_()
 
-    def _compute_decays(self) -> None:
-        # language=rst
-        """
-        Sets the relevant decays.
-        """
-        super()._compute_decays()
-
 
 class RealInput(Nodes, AbstractInput):
     # language=rst
@@ -235,7 +233,6 @@ class RealInput(Nodes, AbstractInput):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -249,7 +246,6 @@ class RealInput(Nodes, AbstractInput):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record decaying spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -259,7 +255,6 @@ class RealInput(Nodes, AbstractInput):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -286,13 +281,6 @@ class RealInput(Nodes, AbstractInput):
         """
         super().reset_()
 
-    def _compute_decays(self) -> None:
-        # language=rst
-        """
-        Sets the relevant decays.
-        """
-        super()._compute_decays()
-
 
 class McCullochPitts(Nodes):
     # language=rst
@@ -305,7 +293,6 @@ class McCullochPitts(Nodes):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -320,7 +307,6 @@ class McCullochPitts(Nodes):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -331,7 +317,6 @@ class McCullochPitts(Nodes):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -340,9 +325,7 @@ class McCullochPitts(Nodes):
         )
 
         self.thresh = thresh  # Spike threshold voltage.
-        self.register_buffer(
-            "v", torch.zeros(self.batch_size, *self.shape, dtype=torch.float)
-        )  # Neuron voltages.
+        self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst
@@ -363,12 +346,15 @@ class McCullochPitts(Nodes):
         """
         super().reset_()
 
-    def _compute_decays(self) -> None:
+    def set_batch_size(self, batch_size) -> None:
         # language=rst
         """
-        Sets the relevant decays.
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
         """
-        super()._compute_decays()
+        super().set_batch_size(batch_size=batch_size)
+        self.v = torch.zeros(batch_size, *self.shape)
 
 
 class IFNodes(Nodes):
@@ -381,7 +367,6 @@ class IFNodes(Nodes):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -399,7 +384,6 @@ class IFNodes(Nodes):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -413,7 +397,6 @@ class IFNodes(Nodes):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -426,11 +409,9 @@ class IFNodes(Nodes):
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
+        self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
         self.register_buffer(
-            "v", self.reset * torch.ones(self.batch_size, *self.shape)
-        )  # Neuron voltages.
-        self.register_buffer(
-            "refrac_count", torch.zeros(self.batch_size, *self.shape)
+            "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
 
         self.lbound = lbound  # Lower bound of voltage.
@@ -472,12 +453,16 @@ class IFNodes(Nodes):
         self.v.fill_(self.reset)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
-    def _compute_decays(self) -> None:
+    def set_batch_size(self, batch_size) -> None:
         # language=rst
         """
-        Sets the relevant decays.
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
         """
-        super()._compute_decays()
+        super().set_batch_size(batch_size=batch_size)
+        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.refrac_count = torch.zeros_like(self.v)
 
 
 class LIFNodes(Nodes):
@@ -491,7 +476,6 @@ class LIFNodes(Nodes):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -511,7 +495,6 @@ class LIFNodes(Nodes):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -527,7 +510,6 @@ class LIFNodes(Nodes):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -545,13 +527,11 @@ class LIFNodes(Nodes):
             "tc_decay", torch.tensor(tc_decay)
         )  # Time constant of neuron voltage decay.
         self.register_buffer(
-            "decay", torch.zeros(self.batch_size, *self.shape)
-        )  # Set in _compute_decays.
+            "decay", torch.zeros(*self.shape)
+        )  # Set in compute_decays.
+        self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
         self.register_buffer(
-            "v", self.rest * torch.ones(self.batch_size, *self.shape)
-        )  # Neuron voltages.
-        self.register_buffer(
-            "refrac_count", torch.zeros(self.batch_size, *self.shape)
+            "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
 
         self.lbound = lbound  # Lower bound of voltage.
@@ -596,15 +576,26 @@ class LIFNodes(Nodes):
         self.v.fill_(self.rest)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
-    def _compute_decays(self) -> None:
+    def compute_decays(self, dt) -> None:
         # language=rst
         """
         Sets the relevant decays.
         """
-        super()._compute_decays()
+        super().compute_decays(dt=dt)
         self.decay = torch.exp(
             -self.dt / self.tc_decay
         )  # Neuron voltage decay (per timestep).
+
+    def set_batch_size(self, batch_size) -> None:
+        # language=rst
+        """
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
+        """
+        super().set_batch_size(batch_size=batch_size)
+        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.refrac_count = torch.zeros_like(self.v)
 
 
 class CurrentLIFNodes(Nodes):
@@ -619,7 +610,6 @@ class CurrentLIFNodes(Nodes):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -639,7 +629,6 @@ class CurrentLIFNodes(Nodes):
         Instantiates a layer of synaptic input current-based LIF neurons.
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -656,7 +645,6 @@ class CurrentLIFNodes(Nodes):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -675,22 +663,18 @@ class CurrentLIFNodes(Nodes):
         )  # Time constant of neuron voltage decay.
         self.register_buffer(
             "decay", torch.empty_like(self.tc_decay)
-        )  # Set in _compute_decays.
+        )  # Set in compute_decays.
         self.register_buffer(
             "tc_i_decay", torch.tensor(tc_i_decay)
         )  # Time constant of synaptic input current decay.
         self.register_buffer(
             "i_decay", torch.empty_like(self.tc_i_decay)
-        )  # Set in _compute_decays.
+        )  # Set in compute_decays.
 
+        self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
+        self.register_buffer("i", torch.FloatTensor())  # Synaptic input currents.
         self.register_buffer(
-            "v", self.rest * torch.ones(self.batch_size, *self.shape)
-        )  # Neuron voltages.
-        self.register_buffer(
-            "i", torch.zeros(self.batch_size, *self.shape)
-        )  # Synaptic input currents.
-        self.register_buffer(
-            "refrac_count", torch.zeros(self.batch_size, *self.shape)
+            "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
 
         self.lbound = lbound  # Lower bound of voltage.
@@ -738,18 +722,30 @@ class CurrentLIFNodes(Nodes):
         self.i.zero_()  # Synaptic input currents.
         self.refrac_count.zero_()  # Refractory period counters.
 
-    def _compute_decays(self) -> None:
+    def compute_decays(self, dt) -> None:
         # language=rst
         """
         Sets the relevant decays.
         """
-        super()._compute_decays()
+        super().compute_decays(dt=dt)
         self.decay = torch.exp(
             -self.dt / self.tc_decay
         )  # Neuron voltage decay (per timestep).
         self.i_decay = torch.exp(
             -self.dt / self.tc_i_decay
         )  # Synaptic input current decay (per timestep).
+
+    def set_batch_size(self, batch_size) -> None:
+        # language=rst
+        """
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
+        """
+        super().set_batch_size(batch_size=batch_size)
+        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.i = torch.zeros_like(self.v)
+        self.refrac_count = torch.zeros_like(self.v)
 
 
 class AdaptiveLIFNodes(Nodes):
@@ -763,7 +759,6 @@ class AdaptiveLIFNodes(Nodes):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -785,7 +780,6 @@ class AdaptiveLIFNodes(Nodes):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -803,7 +797,6 @@ class AdaptiveLIFNodes(Nodes):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -822,7 +815,7 @@ class AdaptiveLIFNodes(Nodes):
         )  # Time constant of neuron voltage decay.
         self.register_buffer(
             "decay", torch.empty_like(self.tc_decay)
-        )  # Set in _compute_decays.
+        )  # Set in compute_decays.
         self.register_buffer(
             "theta_plus", torch.tensor(theta_plus)
         )  # Constant threshold increase on spike.
@@ -831,16 +824,12 @@ class AdaptiveLIFNodes(Nodes):
         )  # Time constant of adaptive threshold decay.
         self.register_buffer(
             "theta_decay", torch.empty_like(self.tc_theta_decay)
-        )  # Set in _compute_decays.
+        )  # Set in compute_decays.
 
+        self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
+        self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
         self.register_buffer(
-            "v", self.rest * torch.ones(self.batch_size, *self.shape)
-        )  # Neuron voltages.
-        self.register_buffer(
-            "theta", torch.zeros(self.batch_size, *self.shape)
-        )  # Adaptive thresholds.
-        self.register_buffer(
-            "refrac_count", torch.zeros(self.batch_size, *self.shape)
+            "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
         self.lbound = lbound  # Lower bound of voltage.
 
@@ -888,18 +877,29 @@ class AdaptiveLIFNodes(Nodes):
         self.v.fill_(self.rest)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
-    def _compute_decays(self) -> None:
+    def compute_decays(self, dt) -> None:
         # language=rst
         """
         Sets the relevant decays.
         """
-        super()._compute_decays()
+        super().compute_decays(dt=dt)
         self.decay = torch.exp(
             -self.dt / self.tc_decay
         )  # Neuron voltage decay (per timestep).
         self.theta_decay = torch.exp(
             -self.dt / self.tc_theta_decay
         )  # Adaptive threshold decay (per timestep).
+
+    def set_batch_size(self, batch_size) -> None:
+        # language=rst
+        """
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
+        """
+        super().set_batch_size(batch_size=batch_size)
+        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.refrac_count = torch.zeros_like(self.v)
 
 
 class DiehlAndCookNodes(Nodes):
@@ -913,7 +913,6 @@ class DiehlAndCookNodes(Nodes):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -936,7 +935,6 @@ class DiehlAndCookNodes(Nodes):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -955,7 +953,6 @@ class DiehlAndCookNodes(Nodes):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -974,7 +971,7 @@ class DiehlAndCookNodes(Nodes):
         )  # Time constant of neuron voltage decay.
         self.register_buffer(
             "decay", torch.empty_like(self.tc_decay)
-        )  # Set in _compute_decays.
+        )  # Set in compute_decays.
         self.register_buffer(
             "theta_plus", torch.tensor(theta_plus)
         )  # Constant threshold increase on spike.
@@ -983,13 +980,11 @@ class DiehlAndCookNodes(Nodes):
         )  # Time constant of adaptive threshold decay.
         self.register_buffer(
             "theta_decay", torch.empty_like(self.tc_theta_decay)
-        )  # Set in _compute_decays.
-        self.register_buffer(
-            "v", self.rest * torch.ones(self.batch_size, *self.shape)
-        )  # Neuron voltages.
+        )  # Set in compute_decays.
+        self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
         self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
         self.register_buffer(
-            "refrac_count", torch.zeros(self.batch_size, *self.shape)
+            "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
 
         self.lbound = lbound  # Lower bound of voltage.
@@ -1046,18 +1041,29 @@ class DiehlAndCookNodes(Nodes):
         self.v.fill_(self.rest)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
-    def _compute_decays(self) -> None:
+    def compute_decays(self, dt) -> None:
         # language=rst
         """
         Sets the relevant decays.
         """
-        super()._compute_decays()
+        super().compute_decays(dt=dt)
         self.decay = torch.exp(
             -self.dt / self.tc_decay
         )  # Neuron voltage decay (per timestep).
         self.theta_decay = torch.exp(
             -self.dt / self.tc_theta_decay
         )  # Adaptive threshold decay (per timestep).
+
+    def set_batch_size(self, batch_size) -> None:
+        # language=rst
+        """
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
+        """
+        super().set_batch_size(batch_size=batch_size)
+        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.refrac_count = torch.zeros_like(self.v)
 
 
 class IzhikevichNodes(Nodes):
@@ -1070,7 +1076,6 @@ class IzhikevichNodes(Nodes):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -1088,7 +1093,6 @@ class IzhikevichNodes(Nodes):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -1102,7 +1106,6 @@ class IzhikevichNodes(Nodes):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -1219,12 +1222,17 @@ class IzhikevichNodes(Nodes):
         self.v.fill_(self.rest)  # Neuron voltages.
         self.u = self.b * self.v  # Neuron recovery.
 
-    def _compute_decays(self) -> None:
+    def set_batch_size(self, batch_size) -> None:
         # language=rst
         """
-        Sets the relevant decays.
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
         """
-        super()._compute_decays()
+        super().set_batch_size(batch_size=batch_size)
+        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.u = self.b * self.v
+        self.refrac_count = torch.zeros_like(self.v)
 
 
 class SRM0Nodes(Nodes):
@@ -1238,7 +1246,6 @@ class SRM0Nodes(Nodes):
         self,
         n: Optional[int] = None,
         shape: Optional[Iterable[int]] = None,
-        batch_size: int = 1,
         traces: bool = False,
         traces_additive: bool = False,
         tc_trace: Union[float, torch.Tensor] = 20.0,
@@ -1261,7 +1268,6 @@ class SRM0Nodes(Nodes):
 
         :param n: The number of neurons in the layer.
         :param shape: The dimensionality of the layer.
-        :param batch_size: Size of mini-batches input to layer.
         :param traces: Whether to record spike traces.
         :param traces_additive: Whether to record spike traces additively.
         :param tc_trace: Time constant of spike trace decay.
@@ -1280,7 +1286,6 @@ class SRM0Nodes(Nodes):
         super().__init__(
             n=n,
             shape=shape,
-            batch_size=batch_size,
             traces=traces,
             traces_additive=traces_additive,
             tc_trace=tc_trace,
@@ -1297,7 +1302,7 @@ class SRM0Nodes(Nodes):
         self.register_buffer(
             "tc_decay", torch.tensor(tc_decay)
         )  # Time constant of neuron voltage decay.
-        self.register_buffer("decay", torch.tensor(tc_decay))  # Set in _compute_decays.
+        self.register_buffer("decay", torch.tensor(tc_decay))  # Set in compute_decays.
         self.register_buffer(
             "eps_0", torch.tensor(eps_0)
         )  # Scaling factor for pre-synaptic spike contributions.
@@ -1307,11 +1312,9 @@ class SRM0Nodes(Nodes):
         self.register_buffer(
             "d_thresh", torch.tensor(d_thresh)
         )  # Width of the threshold region.
+        self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
         self.register_buffer(
-            "v", self.rest * torch.ones(self.batch_size, *self.shape)
-        )  # Neuron voltages.
-        self.register_buffer(
-            "refrac_count", torch.zeros(self.batch_size, *self.shape)
+            "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
 
         self.lbound = lbound  # Lower bound of voltage.
@@ -1361,12 +1364,23 @@ class SRM0Nodes(Nodes):
         self.v.fill_(self.rest)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
-    def _compute_decays(self) -> None:
+    def compute_decays(self, dt) -> None:
         # language=rst
         """
         Sets the relevant decays.
         """
-        super()._compute_decays()
+        super().compute_decays(dt=dt)
         self.decay = torch.exp(
             -self.dt / self.tc_decay
         )  # Neuron voltage decay (per timestep).
+
+    def set_batch_size(self, batch_size) -> None:
+        # language=rst
+        """
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
+        """
+        super().set_batch_size(batch_size=batch_size)
+        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.refrac_count = torch.zeros_like(self.v)
