@@ -168,12 +168,12 @@ class PostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0]:
-            update = torch.sum(torch.bmm(source_s, target_x), dim=0)
+            update = torch.bmm(source_s, target_x).sum(dim=0)
             self.connection.w -= self.nu[0] * update
 
         # Post-synaptic update.
         if self.nu[1]:
-            update = torch.sum(torch.bmm(source_x, target_s), dim=0)
+            update = torch.bmm(source_x, target_s).sum(dim=0)
             self.connection.w += self.nu[1] * update
 
         super().update()
@@ -204,12 +204,12 @@ class PostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = torch.bmm(target_x, source_s.permute((0, 2, 1))).sum(0)
+            pre = torch.bmm(target_x, source_s.permute((0, 2, 1))).sum(dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
         if self.nu[1]:
-            post = torch.bmm(target_s, source_x.permute((0, 2, 1))).sum(0)
+            post = torch.bmm(target_s, source_x.permute((0, 2, 1))).sum(dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -264,28 +264,24 @@ class WeightDependentPostPre(LearningRule):
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
-        source_s = self.source.s.view(-1).float()
-        source_x = self.source.x.view(-1)
-        target_s = self.target.s.view(-1).float()
-        target_x = self.target.x.view(-1)
+        batch_size = self.source.batch_size
+
+        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+        source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
+        target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
 
         update = 0
 
         # Pre-synaptic update.
         if self.nu[0]:
-            update -= (
-                self.nu[0]
-                * torch.ger(source_s, target_x)
-                * (self.connection.w - self.wmin)
-            )
+            outer_product = torch.bmm(source_s, target_x).sum(dim=0)
+            update -= self.nu[0] * outer_product * (self.connection.w - self.wmin)
 
         # Post-synaptic update.
         if self.nu[1]:
-            update += (
-                self.nu[1]
-                * torch.ger(source_x, target_s)
-                * (self.wmax - self.connection.w)
-            )
+            outer_product = torch.bmm(source_x, target_s).sum(dim=0)
+            update += self.nu[1] * outer_product * (self.wmax - self.connection.w)
 
         self.connection.w += update
 
@@ -304,12 +300,13 @@ class WeightDependentPostPre(LearningRule):
             kernel_width,
         ) = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
+        batch_size = self.source.batch_size
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-        target_x = self.target.x.permute(1, 2, 3, 0).view(out_channels, -1)
+        target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
             self.source.s.float(),
             kernel_height,
@@ -317,13 +314,13 @@ class WeightDependentPostPre(LearningRule):
             padding=padding,
             stride=stride,
         )
-        target_s = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
+        target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         update = 0
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = target_x @ source_s.t()
+            pre = torch.bmm(target_x, source_s.permute((0, 2, 1))).sum(dim=0)
             update -= (
                 self.nu[0]
                 * pre.view(self.connection.w.size())
@@ -332,7 +329,7 @@ class WeightDependentPostPre(LearningRule):
 
         # Post-synaptic update.
         if self.nu[1]:
-            post = target_s @ source_x.t()
+            post = torch.bmm(target_s, source_x.permute((0, 2, 1))).sum(dim=0)
             update += (
                 self.nu[1]
                 * post.view(self.connection.w.size())
@@ -387,15 +384,20 @@ class Hebbian(LearningRule):
         """
         Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
         """
-        source_s = self.source.s.view(-1).float()
-        source_x = self.source.x.view(-1)
-        target_s = self.target.s.view(-1).float()
-        target_x = self.target.x.view(-1)
+        batch_size = self.source.batch_size
+
+        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+        source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
+        target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
 
         # Pre-synaptic update.
-        self.connection.w += self.nu[0] * torch.ger(source_s, target_x)
+        update = torch.bmm(source_s, target_x).sum(dim=0)
+        self.connection.w += self.nu[0] * update
+
         # Post-synaptic update.
-        self.connection.w += self.nu[1] * torch.ger(source_x, target_s)
+        update = torch.bmm(source_x, target_s).sum(dim=0)
+        self.connection.w += self.nu[1] * update
 
         super().update()
 
@@ -406,13 +408,13 @@ class Hebbian(LearningRule):
         """
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
+        batch_size = self.source.batch_size
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
             self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
-
-        target_x = self.target.x.permute(1, 2, 3, 0).view(out_channels, -1)
+        target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
             self.source.s.float(),
             kernel_height,
@@ -420,14 +422,14 @@ class Hebbian(LearningRule):
             padding=padding,
             stride=stride,
         )
-        target_s = self.target.s.permute(1, 2, 3, 0).view(out_channels, -1).float()
+        target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Pre-synaptic update.
-        pre = target_x @ source_s.t()
+        pre = torch.bmm(target_x, source_s).sum(dim=0)
         self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = target_s @ source_x.t()
+        post = torch.bmm(target_s, source_x).sum(dim=0)
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -493,9 +495,11 @@ class MSTDP(LearningRule):
         if not hasattr(self, "eligibility"):
             self.eligibility = torch.zeros(*self.connection.w.shape)
 
+        batch_size = self.source.batch_size
+
         # Reshape pre- and post-synaptic spikes.
-        source_s = self.source.s.view(-1).float()
-        target_s = self.target.s.view(-1).float()
+        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
@@ -505,11 +509,13 @@ class MSTDP(LearningRule):
         # Compute weight update based on the point eligibility value of the past timestep.
         self.connection.w += self.nu[0] * reward * self.eligibility
 
+        print(a_plus, source_s.shape)
+
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
+        self.p_plus += a_plus * source_s.sum(dim=0)
         self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
+        self.p_minus += a_minus * target_s.sum(dim=0)
 
         # Calculate point eligibility value.
         self.eligibility = torch.ger(self.p_plus, target_s) + torch.ger(

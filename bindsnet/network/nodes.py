@@ -461,7 +461,7 @@ class IFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.v = self.reset * torch.ones(batch_size, *self.shape)
         self.refrac_count = torch.zeros_like(self.v)
 
 

@@ -285,9 +285,8 @@ class Network(torch.nn.Module):
         injects_v = kwargs.get("injects_v", {})
 
         # Compute reward.
-        reward = None
         if self.reward_fn is not None:
-            reward = self.reward_fn.compute(**kwargs)
+            kwargs["reward"] = self.reward_fn.compute(**kwargs)
 
         # Dynamic setting of batch size.
         if inpts != {}:
@@ -342,10 +341,7 @@ class Network(torch.nn.Module):
             # Run synapse updates.
             for c in self.connections:
                 self.connections[c].update(
-                    mask=masks.get(c, None),
-                    learning=self.learning,
-                    reward=reward,
-                    **kwargs,
+                    mask=masks.get(c, None), learning=self.learning, **kwargs
                 )
 
             # Get input to all layers.

@@ -25,11 +25,11 @@ class TestMonitor:
     _if_mon = Monitor(_if, state_vars=["s", "v"])
     network.add_monitor(_if_mon, name="Y")
 
-    network.run(inpts={"X": torch.bernoulli(torch.rand(100, inpt.n))}, time=100)
+    network.run(inpts={"X": torch.bernoulli(torch.rand(1, 100, inpt.n))}, time=100)
 
-    assert inpt_mon.get("s").size() == torch.Size([inpt.n, 100])
-    assert _if_mon.get("s").size() == torch.Size([_if.n, 100])
-    assert _if_mon.get("v").size() == torch.Size([_if.n, 100])
+    assert inpt_mon.get("s").size() == torch.Size([100, 1, inpt.n])
+    assert _if_mon.get("s").size() == torch.Size([100, 1, _if.n])
+    assert _if_mon.get("v").size() == torch.Size([100, 1, _if.n])
 
     del network.monitors["X"], network.monitors["Y"]
 
@@ -38,11 +38,11 @@ class TestMonitor:
     _if_mon = Monitor(_if, state_vars=["s", "v"], time=500)
     network.add_monitor(_if_mon, name="Y")
 
-    network.run(inpts={"X": torch.bernoulli(torch.rand(500, inpt.n))}, time=500)
+    network.run(inpts={"X": torch.bernoulli(torch.rand(1, 500, inpt.n))}, time=500)
 
-    assert inpt_mon.get("s").size() == torch.Size([inpt.n, 500])
-    assert _if_mon.get("s").size() == torch.Size([_if.n, 500])
-    assert _if_mon.get("v").size() == torch.Size([_if.n, 500])
+    assert inpt_mon.get("s").size() == torch.Size([500, 1, inpt.n])
+    assert _if_mon.get("s").size() == torch.Size([500, 1, _if.n])
+    assert _if_mon.get("v").size() == torch.Size([500, 1, _if.n])
 
 
 class TestNetworkMonitor:
@@ -62,23 +62,23 @@ class TestNetworkMonitor:
     mon = NetworkMonitor(network, state_vars=["s", "v", "w"])
     network.add_monitor(mon, name="monitor")
 
-    network.run(inpts={"X": torch.bernoulli(torch.rand(50, inpt.n))}, time=50)
+    network.run(inpts={"X": torch.bernoulli(torch.rand(1, 50, inpt.n))}, time=50)
 
     recording = mon.get()
 
-    assert recording["X"]["s"].size() == torch.Size([inpt.n, 50])
-    assert recording["Y"]["s"].size() == torch.Size([_if.n, 50])
-    assert recording["Y"]["s"].size() == torch.Size([_if.n, 50])
+    assert recording["X"]["s"].size() == torch.Size([50, 1, inpt.n])
+    assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
+    assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
 
     del network.monitors["monitor"]
 
     mon = NetworkMonitor(network, state_vars=["s", "v", "w"], time=50)
     network.add_monitor(mon, name="monitor")
 
-    network.run(inpts={"X": torch.bernoulli(torch.rand(50, inpt.n))}, time=50)
+    network.run(inpts={"X": torch.bernoulli(torch.rand(1, 50, inpt.n))}, time=50)
 
     recording = mon.get()
 
-    assert recording["X"]["s"].size() == torch.Size([inpt.n, 50])
-    assert recording["Y"]["s"].size() == torch.Size([_if.n, 50])
-    assert recording["Y"]["s"].size() == torch.Size([_if.n, 50])
+    assert recording["X"]["s"].size() == torch.Size([50, 1, inpt.n])
+    assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
+    assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])

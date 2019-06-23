@@ -175,13 +175,13 @@ class NetworkMonitor(AbstractMonitor):
                 for l in self.layers:
                     if hasattr(self.network.layers[l], v):
                         self.recording[l][v] = torch.zeros(
-                            *getattr(self.network.layers[l], v).size(), self.time
+                            self.time, *getattr(self.network.layers[l], v).size()
                         )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
                         self.recording[c][v] = torch.zeros(
-                            *getattr(self.network.connections[c], v).size(), self.time
+                            self.time, *getattr(self.network.connections[c], v).size()
                         )
 
     def get(self) -> Dict[str, Dict[str, Union[Nodes, AbstractConnection]]]:
@@ -202,29 +202,33 @@ class NetworkMonitor(AbstractMonitor):
             for v in self.state_vars:
                 for l in self.layers:
                     if hasattr(self.network.layers[l], v):
-                        data = getattr(self.network.layers[l], v).unsqueeze(-1).float()
+                        data = getattr(self.network.layers[l], v).unsqueeze(0).float()
                         self.recording[l][v] = torch.cat(
-                            [self.recording[l][v], data], -1
+                            (self.recording[l][v], data), 0
                         )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
-                        data = getattr(self.network.connections[c], v).unsqueeze(-1)
+                        data = getattr(self.network.connections[c], v).unsqueeze(0)
                         self.recording[c][v] = torch.cat(
-                            [self.recording[c][v], data], -1
+                            (self.recording[c][v], data), 0
                         )
 
         else:
             for v in self.state_vars:
                 for l in self.layers:
                     if hasattr(self.network.layers[l], v):
-                        data = getattr(self.network.layers[l], v).float()
-                        self.recording[l][v][..., self.i % self.time] = data
+                        data = getattr(self.network.layers[l], v).float().unsqueeze(0)
+                        self.recording[l][v] = torch.cat(
+                            (self.recording[l][v][1:].type(data.type()), data), 0
+                        )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
-                        data = getattr(self.network.connections[c], v)
-                        self.recording[c][v][..., self.i % self.time] = data
+                        data = getattr(self.network.connections[c], v).unsqueeze(0)
+                        self.recording[c][v] = torch.cat(
+                            (self.recording[c][v][1:].type(data.type()), data), 0
+                        )
 
             self.i += 1
 
@@ -292,11 +296,11 @@ class NetworkMonitor(AbstractMonitor):
                 for l in self.layers:
                     if hasattr(self.network.layers[l], v):
                         self.recording[l][v] = torch.zeros(
-                            self.network.layers[l].n, self.time
+                            self.time, *getattr(self.network.layers[l], v).size()
                         )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
                         self.recording[c][v] = torch.zeros(
-                            *self.network.connections[c].w.size(), self.time
+                            self.time, *getattr(self.network.layers[c], v).size()
                         )

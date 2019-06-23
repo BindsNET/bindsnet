@@ -24,6 +24,7 @@ from bindsnet.analysis.plotting import (
     plot_voltages,
 )
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
