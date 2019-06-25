@@ -137,13 +137,15 @@ class Nodes(torch.nn.Module):
         :param batch_size: Mini-batch size.
         """
         self.batch_size = batch_size
-        self.s = torch.zeros(batch_size, *self.shape)
+        self.s = torch.zeros(batch_size, *self.shape, device=self.s.device)
 
         if self.traces:
-            self.x = torch.zeros(batch_size, *self.shape)
+            self.x = torch.zeros(batch_size, *self.shape, device=self.x.device)
 
         if self.sum_input:
-            self.summed = torch.zeros(batch_size, *self.shape)
+            self.summed = torch.zeros(
+                batch_size, *self.shape, device=self.summed.device
+            )
 
     def train(self, mode: bool = True) -> "Nodes":
         # language=rst
@@ -354,7 +356,7 @@ class McCullochPitts(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.zeros(batch_size, *self.shape)
+        self.v = torch.zeros(batch_size, *self.shape, device=self.v.device)
 
 
 class IFNodes(Nodes):
@@ -461,8 +463,8 @@ class IFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.reset * torch.ones(batch_size, *self.shape)
-        self.refrac_count = torch.zeros_like(self.v)
+        self.v = self.reset * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class LIFNodes(Nodes):
@@ -594,8 +596,8 @@ class LIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(batch_size, *self.shape)
-        self.refrac_count = torch.zeros_like(self.v)
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class CurrentLIFNodes(Nodes):
@@ -743,9 +745,9 @@ class CurrentLIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(batch_size, *self.shape)
-        self.i = torch.zeros_like(self.v)
-        self.refrac_count = torch.zeros_like(self.v)
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.i = torch.zeros_like(self.v, device=self.i.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class AdaptiveLIFNodes(Nodes):
@@ -898,8 +900,8 @@ class AdaptiveLIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(batch_size, *self.shape)
-        self.refrac_count = torch.zeros_like(self.v)
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class DiehlAndCookNodes(Nodes):
@@ -1062,8 +1064,8 @@ class DiehlAndCookNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(batch_size, *self.shape)
-        self.refrac_count = torch.zeros_like(self.v)
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class IzhikevichNodes(Nodes):
@@ -1230,9 +1232,9 @@ class IzhikevichNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(batch_size, *self.shape)
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
         self.u = self.b * self.v
-        self.refrac_count = torch.zeros_like(self.v)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class SRM0Nodes(Nodes):
@@ -1382,5 +1384,5 @@ class SRM0Nodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(batch_size, *self.shape)
-        self.refrac_count = torch.zeros_like(self.v)
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)

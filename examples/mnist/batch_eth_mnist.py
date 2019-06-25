@@ -61,7 +61,7 @@ gpu = args.gpu
 update_interval = update_steps * batch_size
 
 # Sets up Gpu use
-if gpu:
+if gpu and torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
 else:
     torch.manual_seed(seed)
