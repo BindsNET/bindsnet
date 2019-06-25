@@ -292,7 +292,9 @@ class Network(torch.nn.Module):
         # Dynamic setting of batch size.
         if inpts != {}:
             for key in inpts:
-                if len(inpts[key].size()) == 2:
+                if len(inpts[key].size()) == 1:
+                    inpts[key] = inpts[key].unsqueeze(0).unsqueeze(0)
+                elif len(inpts[key].size()) == 2:
                     inpts[key] = inpts[key].unsqueeze(0)
 
             for key in inpts:
