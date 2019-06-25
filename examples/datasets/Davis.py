@@ -24,9 +24,38 @@ from bindsnet.analysis.plotting import (
     plot_voltages,
 )
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--width", type=int, default=600)
+parser.add_argument("--height", type=int, default=480)
+parser.add_argument("--n_neurons", type=int, default=100)
+parser.add_argument("--n_epochs", type=int, default=1)
+parser.add_argument("--n_test", type=int, default=10000)
+parser.add_argument("--n_workers", type=int, default=-1)
+parser.add_argument("--exc", type=float, default=22.5)
+parser.add_argument("--inh", type=float, default=120)
+parser.add_argument("--theta_plus", type=float, default=0.05)
+parser.add_argument("--time", type=int, default=250)
+parser.add_argument("--dt", type=int, default=1.0)
+parser.add_argument("--intensity", type=float, default=128)
+parser.add_argument("--progress_interval", type=int, default=10)
+parser.add_argument("--update_interval", type=int, default=250)
+parser.add_argument("--train", dest="train", action="store_true")
+parser.add_argument("--test", dest="train", action="store_false")
+parser.add_argument("--plot", dest="plot", action="store_true")
+parser.add_argument("--gpu", dest="gpu", action="store_true")
+parser.set_defaults(plot=False, gpu=False, train=True)
+
+args = parser.parse_args()
+
+size = (args.width, args.height)
+
 # Create Sequence Dataset
 seq_dataset = Davis(
-    root="../../data/Davis", task="semi-supervised", subset="test-dev", download=True
+    root="../../data/Davis",
+    task="semi-supervised",
+    subset="test-dev",
+    download=True,
+    size=size,
 )
 
 # Create a dataloader to iterate sequences
@@ -38,8 +67,7 @@ seqs = []
 
 for step, batch in enumerate(seq_dataloader):
 
-    seqs.append(tuple((batch["images"], batch["masks"])))
-    print(len(seqs))
+    seqs.append(((batch["images"], batch["masks"])))
 
 fig = plt.figure()
 
@@ -48,10 +76,9 @@ for images, masks in seqs:
         img = mpimg.imread(images[i][0], "JPG")
         plt.subplot(211)
         imgplot = plt.imshow(img)
-        if not type(masks[i][0]) == torch.Tensor:
+        if type(masks[i][0]) != torch.Tensor:
             mask = mpimg.imread(masks[i][0], "JPG")
             plt.subplot(212)
             plt.imshow(mask)
         plt.show()
-        time.sleep(0.05)
         plt.pause(1e-8)
