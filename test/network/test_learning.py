@@ -54,7 +54,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(250, 1, 10, 10)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(1, 250, 1, 10, 10)).byte()},
             time=250,
         )
 
@@ -94,7 +94,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(250, 1, 10, 10)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(1, 250, 1, 10, 10)).byte()},
             time=250,
         )
 
@@ -138,7 +138,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(250, 1, 10, 10)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(1, 250, 1, 10, 10)).byte()},
             time=250,
         )
 
@@ -181,7 +181,7 @@ class TestLearningRules:
         )
 
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(250, 1, 10, 10)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(1, 250, 1, 10, 10)).byte()},
             time=250,
             reward=1.0,
         )
@@ -225,7 +225,7 @@ class TestLearningRules:
         )
 
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(1, 250, 1, 10, 10)).byte()},
             time=250,
             reward=1.0,
         )
@@ -246,7 +246,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(1, 250, 100)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
             time=250,
             reward=1.0,
         )

@@ -27,7 +27,6 @@ def im2col_indices(
     :param stride: Amount to stride over image by per convolution.
     :return: Input tensor reshaped to column-wise format.
     """
-
     return F.unfold(x, (kernel_height, kernel_width), padding=padding, stride=stride)
 
 
@@ -51,7 +50,6 @@ def col2im_indices(
     :param stride: Amount to stride over image by per convolution.
     :return: Image tensor in original image shape.
     """
-
     return F.fold(
         cols, x_shape, (kernel_height, kernel_width), padding=padding, stride=stride
     )
@@ -72,7 +70,7 @@ def get_square_weights(
     if isinstance(side, int):
         side = (side, side)
 
-    square_weights = torch.zeros_like(torch.Tensor(side[0] * n_sqrt, side[1] * n_sqrt))
+    square_weights = torch.zeros(side[0] * n_sqrt, side[1] * n_sqrt)
     for i in range(n_sqrt):
         for j in range(n_sqrt):
             n = i * n_sqrt + j
@@ -97,7 +95,7 @@ def get_square_assignments(assignments: Tensor, n_sqrt: int) -> Tensor:
     :param n_sqrt: Square root of no. of assignments.
     :return: Reshaped square matrix of assignments.
     """
-    square_assignments = -1 * torch.ones_like(torch.Tensor(n_sqrt, n_sqrt))
+    square_assignments = torch.mul(torch.ones(n_sqrt, n_sqrt), -1.0)
     for i in range(n_sqrt):
         for j in range(n_sqrt):
             n = i * n_sqrt + j
@@ -184,6 +182,7 @@ def reshape_locally_connected_weights(
 
 
 def reshape_conv2d_weights(weights: torch.Tensor) -> torch.Tensor:
+    # language=rst
     """
     Flattens a connection weight matrix of a Conv2dConnection
 
