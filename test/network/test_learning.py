@@ -34,7 +34,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(1, 250, 100)).byte()}, time=250
+            inpts={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
         )
 
         # Conv2dConnection test
@@ -74,7 +74,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(1, 250, 100)).byte()}, time=250
+            inpts={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
         )
 
         # Conv2dConnection test
@@ -94,7 +94,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(1, 250, 1, 10, 10)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(250, 1, 10, 10)).byte()},
             time=250,
         )
 
@@ -116,7 +116,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(1, 250, 100)).byte()}, time=250
+            inpts={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
         )
 
         # Conv2dConnection test
@@ -138,7 +138,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(1, 250, 1, 10, 10)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(250, 1, 10, 10)).byte()},
             time=250,
         )
 
@@ -158,15 +158,15 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(1, 250, 100)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
             time=250,
             reward=1.0,
         )
 
         # Conv2dConnection test
         network = Network(dt=1.0)
-        network.add_layer(Input(shape=[1, 1, 10, 10]), name="input")
-        network.add_layer(LIFNodes(shape=[1, 32, 8, 8]), name="output")
+        network.add_layer(Input(shape=[1, 10, 10]), name="input")
+        network.add_layer(LIFNodes(shape=[32, 8, 8]), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],
@@ -181,7 +181,7 @@ class TestLearningRules:
         )
 
         network.run(
-            inpts={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
+            inpts={"input": torch.bernoulli(torch.rand(250, 1, 10, 10)).byte()},
             time=250,
             reward=1.0,
         )
@@ -209,8 +209,8 @@ class TestLearningRules:
 
         # Conv2dConnection test
         network = Network(dt=1.0)
-        network.add_layer(Input(shape=[1, 1, 10, 10]), name="input")
-        network.add_layer(LIFNodes(shape=[1, 32, 8, 8]), name="output")
+        network.add_layer(Input(shape=[1, 10, 10]), name="input")
+        network.add_layer(LIFNodes(shape=[32, 8, 8]), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],

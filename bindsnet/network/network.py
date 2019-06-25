@@ -231,7 +231,8 @@ class Network(torch.nn.Module):
         """
         Simulate network for given inputs and time.
 
-        :param inpts: Dictionary of ``Tensor``s of shape ``[time, n_input]``.
+        :param inpts: Dictionary of ``Tensor``s of shape ``[time, *input_shape]`` or
+                      ``[batch_size, time, *input_shape]``.
         :param time: Simulation time.
 
         Keyword arguments:
@@ -290,6 +291,10 @@ class Network(torch.nn.Module):
 
         # Dynamic setting of batch size.
         if inpts != {}:
+            for key in inpts:
+                if len(inpts[key].size()) == 2:
+                    inpts[key] = inpts[key].unsqueeze(0)
+
             for key in inpts:
                 if inpts[key].size(0) != self.batch_size:
                     self.batch_size = inpts[key].size(0)
