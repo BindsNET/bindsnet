@@ -1024,9 +1024,13 @@ class DiehlAndCookNodes(Nodes):
         # Choose only a single neuron to spike.
         if self.one_spike:
             if self.s.any():
-                ind = torch.multinomial(self.s.float().view(-1), 1)
+                _any = self.s.view(self.batch_size, -1).any(1)
+                ind = torch.multinomial(
+                    self.s.float().view(self.batch_size, -1)[_any], 1
+                )
+                _any = _any.nonzero()
                 self.s.zero_()
-                self.s.view(-1)[ind] = 1
+                self.s.view(self.batch_size, -1)[_any, ind] = 1
 
         # Voltage clipping to lower bound.
         if self.lbound is not None:

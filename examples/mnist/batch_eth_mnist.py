@@ -221,11 +221,12 @@ for epoch in range(n_epochs):
         network.run(inpts=inpts, time=time, input_time_dim=1)
 
         # Add to spikes recording.
+        s = spikes["Ae"].get("s").permute((1, 0, 2))
         spike_record[
             (step * batch_size)
             % update_interval : (step * batch_size % update_interval)
-            + batch_size
-        ] = (spikes["Ae"].get("s").permute((1, 0, 2)))
+            + s.size(0)
+        ] = s
 
         # Get voltage recording.
         exc_voltages = exc_voltage_monitor.get("v")
