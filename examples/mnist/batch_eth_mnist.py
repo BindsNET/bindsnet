@@ -11,6 +11,7 @@ from time import time as t
 
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
+from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_weights
@@ -23,6 +24,7 @@ parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_workers", type=int, default=-1)
+parser.add_argument("--update_steps", type=int, default=256)
 parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=120)
 parser.add_argument("--theta_plus", type=float, default=0.05)
@@ -44,6 +46,7 @@ batch_size = args.batch_size
 n_epochs = args.n_epochs
 n_test = args.n_test
 n_workers = args.n_workers
+update_steps = args.update_steps
 exc = args.exc
 inh = args.inh
 theta_plus = args.theta_plus
@@ -54,6 +57,8 @@ progress_interval = args.progress_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
+
+update_interval = update_steps * batch_size
 
 # Sets up Gpu use
 if gpu:
@@ -128,6 +133,8 @@ assigns_im = None
 perf_ax = None
 voltage_axes, voltage_ims = None, None
 
+spike_record = torch.zeros(update_interval, time, n_neurons)
+
 # Train the network.
 print("\nBegin training.\n")
 start = t()
@@ -154,10 +161,71 @@ for epoch in range(n_epochs):
         if gpu:
             inpts = {k: v.cuda() for k, v in inpts.items()}
 
-        labels.append(batch["label"])
+        if step % update_steps == 0 and step > 0:
+            # Convert the array of labels into a tensor
+            label_tensor = torch.tensor(labels)
+
+            # Get network predictions.
+            all_activity_pred = all_activity(
+                spikes=spike_record, assignments=assignments, n_labels=n_classes
+            )
+            proportion_pred = proportion_weighting(
+                spikes=spike_record,
+                assignments=assignments,
+                proportions=proportions,
+                n_labels=n_classes,
+            )
+
+            # Compute network accuracy according to available classification strategies.
+            accuracy["all"].append(
+                100
+                * torch.sum(label_tensor.long() == all_activity_pred).item()
+                / len(label_tensor)
+            )
+            accuracy["proportion"].append(
+                100
+                * torch.sum(label_tensor.long() == proportion_pred).item()
+                / len(label_tensor)
+            )
+
+            print(
+                "\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)"
+                % (
+                    accuracy["all"][-1],
+                    np.mean(accuracy["all"]),
+                    np.max(accuracy["all"]),
+                )
+            )
+            print(
+                "Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n"
+                % (
+                    accuracy["proportion"][-1],
+                    np.mean(accuracy["proportion"]),
+                    np.max(accuracy["proportion"]),
+                )
+            )
+
+            # Assign labels to excitatory layer neurons.
+            assignments, proportions, rates = assign_labels(
+                spikes=spike_record,
+                labels=label_tensor,
+                n_labels=n_classes,
+                rates=rates,
+            )
+
+            labels = []
+
+        labels.extend(batch["label"].tolist())
 
         # Run the network on the input.
         network.run(inpts=inpts, time=time, input_time_dim=1)
+
+        # Add to spikes recording.
+        spike_record[
+            (step * batch_size)
+            % update_interval : (step * batch_size % update_interval)
+            + batch_size
+        ] = (spikes["Ae"].get("s").permute((1, 0, 2)))
 
         # Get voltage recording.
         exc_voltages = exc_voltage_monitor.get("v")
