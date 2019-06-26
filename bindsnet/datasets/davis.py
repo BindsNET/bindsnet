@@ -63,7 +63,7 @@ class Davis(torch.utils.data.Dataset):
         self.size = size
 
         # Sets the boolean converted if the size of the images must be scaled down
-        self.converted = not (self.size == (600, 480))
+        self.converted = not self.size == (600, 480)
 
         # Sets a tag for naming the folder containing the dataset
         self.tag = ""
@@ -143,16 +143,14 @@ class Davis(torch.utils.data.Dataset):
         """
         Calculates the number of sequences the dataset holds
 
-        :Returns the number of sequences in the dataset
+        :return: the number of sequences in the dataset
         """
-
         return len(self.sequences)
 
     def _convert_sequences(self):
         """
-        Creates a new root for the dataset to be converted and placed into, then copies each image and mask into the given size and stores correctly
+        Creates a new root for the dataset to be converted and placed into, then copies each image and mask into the given size and stores correctly.
         """
-
         os.makedirs(os.path.join(self.converted_imagesets_path, f"{self.subset}.txt"))
         os.makedirs(self.converted_img_path)
         os.makedirs(self.converted_mask_path)
@@ -189,9 +187,9 @@ class Davis(torch.utils.data.Dataset):
 
     def _check_directories(self):
         """
-        Verifies that the correct dataset is downloaded; downloads if it isn't and download=True
+        Verifies that the correct dataset is downloaded; downloads if it isn't and download=True.
 
-        :Throws FileNotFoundError if the subset sequence, annotation or root folder is missing
+        :raises: FileNotFoundError if the subset sequence, annotation or root folder is missing.
         """
         if not os.path.exists(self.root):
             if self.download:
@@ -298,9 +296,9 @@ class Davis(torch.utils.data.Dataset):
         """
         Gets an item of the Dataset based on index
 
-        :params ind: index of item to take from dataset
+        :param ind: index of item to take from dataset
 
-        :Returns a sequence which contains a list of images and masks 
+        :return: a sequence which contains a list of images and masks 
         """
         seq = self.enum_sequences[ind]
         return seq

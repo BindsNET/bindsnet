@@ -53,7 +53,7 @@ size = (args.width, args.height)
 seq_dataset = Davis(
     root="../../data/Davis",
     task="semi-supervised",
-    subset="test-dev",
+    subset="train",
     download=True,
     size=size,
 )
