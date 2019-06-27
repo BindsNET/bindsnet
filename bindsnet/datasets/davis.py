@@ -5,10 +5,12 @@ import shutil
 import zipfile
 import sys
 import time
+import shutil
 
-from glob import glob
-from collections import defaultdict
 from PIL import Image
+from glob import glob
+from tqdm import tqdm
+from collections import defaultdict
 from typing import Optional, Tuple, List, Iterable
 from urllib.request import urlretrieve
 
@@ -29,6 +31,7 @@ class Davis(torch.utils.data.Dataset):
         subset="train",
         sequences="all",
         resolution="480p",
+        size=(600, 480),
         codalab=False,
         download=False,
         num_samples: int = -1,
@@ -57,6 +60,10 @@ class Davis(torch.utils.data.Dataset):
         self.task = task
         self.subset = subset
         self.resolution = resolution
+        self.size = size
+
+        # Sets the boolean converted if the size of the images must be scaled down
+        self.converted = not self.size == (600, 480)
 
         # Sets a tag for naming the folder containing the dataset
         self.tag = ""
@@ -68,7 +75,10 @@ class Davis(torch.utils.data.Dataset):
             self.tag += self.subset
         self.tag += "-" + self.resolution
 
-        # Make a unique path for a given instance of davis
+        # Makes a unique path for a given instance of davis
+        self.converted_root = os.path.join(
+            root, self.tag + "-" + str(self.size[0]) + "x" + str(self.size[1])
+        )
         self.root = os.path.join(root, self.tag)
         self.download = download
         self.num_samples = num_samples
@@ -86,8 +96,17 @@ class Davis(torch.utils.data.Dataset):
         )
         self.imagesets_path = os.path.join(self.root, "ImageSets", year)
 
-        # Check if Davis is installed and download it if necessary
-        self._check_directories()
+        # Makes a converted path for scaled images
+        if self.converted:
+            self.converted_img_path = os.path.join(
+                self.converted_root, "JPEGImages", resolution
+            )
+            self.converted_mask_path = os.path.join(
+                self.converted_root, annotations_folder, resolution
+            )
+            self.converted_imagesets_path = os.path.join(
+                self.converted_root, "ImageSets", year
+            )
 
         # Sets seqence_names to the relevant sequences
         if sequences == "all":
@@ -95,13 +114,18 @@ class Davis(torch.utils.data.Dataset):
                 os.path.join(self.imagesets_path, f"{self.subset}.txt"), "r"
             ) as f:
                 tmp = f.readlines()
-            sequences_names = [x.strip() for x in tmp]
+            self.sequences_names = [x.strip() for x in tmp]
         else:
-            sequences_names = sequences if isinstance(sequences, list) else [sequences]
+            self.sequences_names = (
+                sequences if isinstance(sequences, list) else [sequences]
+            )
         self.sequences = defaultdict(dict)
 
-        # Sets the images and masks for each sequence
-        for seq in sequences_names:
+        # Check if Davis is installed and download it if necessary
+        self._check_directories()
+
+        # Sets the images and masks for each sequence resizing for the given size
+        for seq in self.sequences_names:
             images = np.sort(glob(os.path.join(self.img_path, seq, "*.jpg"))).tolist()
             if len(images) == 0 and not codalab:
                 raise FileNotFoundError(f"Images for sequence {seq} not found.")
@@ -112,25 +136,61 @@ class Davis(torch.utils.data.Dataset):
 
         # Creates an enumeration for the sequences for __getitem__
         self.enum_sequences = []
-        for seq in sequences_names:
+        for seq in self.sequences_names:
             self.enum_sequences.append(self.sequences[seq])
 
     def __len__(self):
         """
-        calculates the number of sequences the dataset holds
+        Calculates the number of sequences the dataset holds
 
-        :Returns the number of sequences in the dataset
+        :return: the number of sequences in the dataset
         """
-
         return len(self.sequences)
+
+    def _convert_sequences(self):
+        """
+        Creates a new root for the dataset to be converted and placed into, then copies each image and mask into the given size and stores correctly.
+        """
+        os.makedirs(os.path.join(self.converted_imagesets_path, f"{self.subset}.txt"))
+        os.makedirs(self.converted_img_path)
+        os.makedirs(self.converted_mask_path)
+
+        shutil.copy(
+            os.path.join(self.imagesets_path, f"{self.subset}.txt"),
+            os.path.join(self.converted_imagesets_path, f"{self.subset}.txt"),
+        )
+
+        print("Converting sequences to size: {0}".format(self.size))
+        for seq in tqdm(self.sequences_names):
+            os.makedirs(os.path.join(self.converted_img_path, seq))
+            os.makedirs(os.path.join(self.converted_mask_path, seq))
+            images = np.sort(glob(os.path.join(self.img_path, seq, "*.jpg"))).tolist()
+            if len(images) == 0 and not codalab:
+                raise FileNotFoundError(f"Images for sequence {seq} not found.")
+            for ind, img in enumerate(images):
+                im = Image.open(img)
+                im.thumbnail(self.size, Image.ANTIALIAS)
+                im.save(
+                    os.path.join(
+                        self.converted_img_path, seq, str(ind).zfill(5) + ".jpg"
+                    )
+                )
+            masks = np.sort(glob(os.path.join(self.mask_path, seq, "*.png"))).tolist()
+            for ind, msk in enumerate(masks):
+                im = Image.open(msk)
+                im.thumbnail(self.size, Image.ANTIALIAS)
+                im.convert("RGB").save(
+                    os.path.join(
+                        self.converted_mask_path, seq, str(ind).zfill(5) + ".png"
+                    )
+                )
 
     def _check_directories(self):
         """
-        Verifies that the correct dataset is downloaded; downloads if it isn't and download=True
+        Verifies that the correct dataset is downloaded; downloads if it isn't and download=True.
 
-        :Throws FileNotFoundError if the subset sequence, annotation or root folder is missing
+        :raises: FileNotFoundError if the subset sequence, annotation or root folder is missing.
         """
-
         if not os.path.exists(self.root):
             if self.download:
                 self._download()
@@ -147,6 +207,12 @@ class Davis(torch.utils.data.Dataset):
             raise FileNotFoundError(
                 f"Annotations folder for the {self.task} task not found, download it from {self.DATASET_WEB}"
             )
+        if self.converted:
+            if not os.path.exists(self.converted_img_path):
+                self._convert_sequences()
+            self.img_path = self.converted_img_path
+            self.mask_path = self.converted_mask_path
+            self.imagesets_path = self.converted_imagesets_path
 
     def get_frames(self, sequence):
         for img, msk in zip(
@@ -216,6 +282,7 @@ class Davis(torch.utils.data.Dataset):
 
         temp_folder = os.path.join(self.root, "DAVIS\\")
 
+        # Deletes an unnecessary containing folder "DAVIS" which comes with every download
         for file in os.listdir(temp_folder):
             shutil.move(temp_folder + file, self.root)
         cwd = os.getcwd()
@@ -229,9 +296,9 @@ class Davis(torch.utils.data.Dataset):
         """
         Gets an item of the Dataset based on index
 
-        :params ind: index of item to take from dataset
+        :param ind: index of item to take from dataset
 
-        :Returns a sequence which contains a list of images and masks 
+        :return: a sequence which contains a list of images and masks 
         """
         seq = self.enum_sequences[ind]
         return seq
