@@ -82,3 +82,8 @@ class TestNetworkMonitor:
     assert recording["X"]["s"].size() == torch.Size([50, 1, inpt.n])
     assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
     assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
+
+
+if __name__ == "__main__":
+    tm = TestMonitor()
+    tnm = TestNetworkMonitor()

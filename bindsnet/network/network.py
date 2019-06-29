@@ -292,13 +292,21 @@ class Network(torch.nn.Module):
         # Dynamic setting of batch size.
         if inpts != {}:
             for key in inpts:
+                # goal shape is [time, batch, n_0, ...]
+
                 if len(inpts[key].size()) == 1:
+                    # current shape is [n_0, ...]
+                    # unsqueeze twice to make [1, 1, n_0, ...]
                     inpts[key] = inpts[key].unsqueeze(0).unsqueeze(0)
                 elif len(inpts[key].size()) == 2:
-                    inpts[key] = inpts[key].unsqueeze(0)
+                    # current shape is [time, n_0, ...]
+                    # unsqueeze dim 1 so that we have
+                    # [time, 1, n_0, ...]
+                    inpts[key] = inpts[key].unsqueeze(1)
 
             for key in inpts:
-                if inpts[key].size(0) != self.batch_size:
+                # batch dimension is 1, grab this and use for batch size
+                if inpts[key].size(1) != self.batch_size:
                     self.batch_size = inpts[key].size(1)
 
                     for l in self.layers:
@@ -320,6 +328,7 @@ class Network(torch.nn.Module):
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
+                    # shape is [time, batch, n_0, ...]
                     self.layers[l].forward(x=inpts[l][t, ...])
                 else:
                     self.layers[l].forward(x=inpts[l])
