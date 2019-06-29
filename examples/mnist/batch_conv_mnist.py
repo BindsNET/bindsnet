@@ -6,7 +6,7 @@ from torchvision import transforms
 from tqdm import tqdm
 from time import time as t
 
-from bindsnet.datasets import MNIST
+from bindsnet.datasets import MNIST, time_aware_collate
 from bindsnet.network import Network
 from bindsnet.learning import PostPre
 from bindsnet.encoding import PoissonEncoder
@@ -143,6 +143,7 @@ for epoch in range(n_epochs):
         shuffle=True,
         num_workers=4,
         pin_memory=gpu,
+        collate_fn=time_aware_collate,
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
@@ -154,7 +155,7 @@ for epoch in range(n_epochs):
         label = batch["label"]
 
         # Run the network on the input.
-        network.run(inpts=inpts, time=time, input_time_dim=1)
+        network.run(inpts=inpts, time=time, input_time_dim=0)
 
         # Optionally plot various simulation information.
         if plot:

@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from time import time as t
 
-from bindsnet.datasets import MNIST
+from bindsnet.datasets import MNIST, time_aware_collate
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
 from bindsnet.models import DiehlAndCook2015
@@ -153,6 +153,7 @@ for epoch in range(n_epochs):
         shuffle=True,
         num_workers=n_workers,
         pin_memory=gpu,
+        collate_fn=time_aware_collate,
     )
 
     for step, batch in enumerate(tqdm(dataloader)):

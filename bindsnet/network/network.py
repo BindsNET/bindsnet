@@ -299,7 +299,7 @@ class Network(torch.nn.Module):
 
             for key in inpts:
                 if inpts[key].size(0) != self.batch_size:
-                    self.batch_size = inpts[key].size(0)
+                    self.batch_size = inpts[key].size(1)
 
                     for l in self.layers:
                         self.layers[l].set_batch_size(self.batch_size)
@@ -320,7 +320,7 @@ class Network(torch.nn.Module):
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    self.layers[l].forward(x=inpts[l][:, t])
+                    self.layers[l].forward(x=inpts[l][t, ...])
                 else:
                     self.layers[l].forward(x=inpts[l])
 
