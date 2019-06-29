@@ -3,6 +3,7 @@ from .spoken_mnist import SpokenMNIST
 from .davis import Davis
 
 from .collate import time_aware_collate
+from .dataloader import DataLoader
 
 
 CIFAR10 = create_torchvision_dataset_wrapper("CIFAR10")

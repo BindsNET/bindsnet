@@ -6,7 +6,7 @@ from torchvision import transforms
 from tqdm import tqdm
 from time import time as t
 
-from bindsnet.datasets import MNIST, time_aware_collate
+from bindsnet.datasets import MNIST, DataLoader
 from bindsnet.network import Network
 from bindsnet.learning import PostPre
 from bindsnet.encoding import PoissonEncoder
@@ -137,13 +137,12 @@ for epoch in range(n_epochs):
         print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
         start = t()
 
-    train_dataloader = torch.utils.data.DataLoader(
+    train_dataloader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=4,
         pin_memory=gpu,
-        collate_fn=time_aware_collate,
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
