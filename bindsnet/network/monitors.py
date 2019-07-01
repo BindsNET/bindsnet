@@ -15,39 +15,6 @@ class AbstractMonitor(ABC):
     Abstract base class for state variable monitors.
     """
 
-    @abstractmethod
-    def __init__(self):
-        # language=rst
-        """
-        Abstract method stub for monitor constructor.
-        """
-        super().__init__()
-
-    @abstractmethod
-    def get(self):
-        # language=rst
-        """
-        Abstract method stub for retrieving monitored state recording.
-        :return: State variable recording.
-        """
-        pass
-
-    @abstractmethod
-    def record(self):
-        # language=rst
-        """
-        Abstract method stub for recording monitored state variables.
-        """
-        pass
-
-    @abstractmethod
-    def reset_(self):
-        # language=rst
-        """
-        Abstract method stub for resetting monitored state recording.
-        """
-        pass
-
 
 class Monitor(AbstractMonitor):
     # language=rst
@@ -60,6 +27,7 @@ class Monitor(AbstractMonitor):
         obj: Union[Nodes, AbstractConnection],
         state_vars: Iterable[str],
         time: Optional[int] = None,
+        batch_size: int = 1,
     ):
         # language=rst
         """
@@ -74,6 +42,7 @@ class Monitor(AbstractMonitor):
         self.obj = obj
         self.state_vars = state_vars
         self.time = time
+        self.batch_size = batch_size
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
@@ -84,10 +53,10 @@ class Monitor(AbstractMonitor):
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = self.recording = {
+            self.recording = {
                 v: torch.zeros(
-                    *getattr(self.obj, v).size(),
                     self.time,
+                    *getattr(self.obj, v).size(),
                     dtype=getattr(self.obj, v).dtype
                 )
                 for v in self.state_vars
@@ -99,7 +68,7 @@ class Monitor(AbstractMonitor):
         Return recording to user.
 
         :param var: State variable recording to return.
-        :return: Tensor of shape ``[n_1, ..., n_k, time]``, where ``[n_1, ..., n_k]`` is the shape of the recorded
+        :return: Tensor of shape ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is the shape of the recorded
                  state variable.
         """
         return self.recording[var]
@@ -111,16 +80,16 @@ class Monitor(AbstractMonitor):
         """
         if self.time is None:
             for v in self.state_vars:
-                data = getattr(self.obj, v).unsqueeze(-1)
+                data = getattr(self.obj, v).unsqueeze(0)
                 self.recording[v] = torch.cat(
-                    [self.recording[v].type(data.type()), data], -1
+                    (self.recording[v].type(data.type()), data), 0
                 )
         else:
             for v in self.state_vars:
                 # Remove the oldest data and concatenate new data
-                data = getattr(self.obj, v).unsqueeze(-1)
+                data = getattr(self.obj, v).unsqueeze(0)
                 self.recording[v] = torch.cat(
-                    [self.recording[v][..., 1:].type(data.type()), data], -1
+                    (self.recording[v][1:].type(data.type()), data), 0
                 )
 
     def reset_(self) -> None:
@@ -128,7 +97,6 @@ class Monitor(AbstractMonitor):
         """
         Resets recordings to empty ``torch.Tensor``s.
         """
-
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
             self.recording = {
@@ -138,10 +106,10 @@ class Monitor(AbstractMonitor):
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
-            self.recording = self.recording = {
+            self.recording = {
                 v: torch.zeros(
-                    *getattr(self.obj, v).size(),
                     self.time,
+                    *getattr(self.obj, v).size(),
                     dtype=getattr(self.obj, v).dtype
                 )
                 for v in self.state_vars
@@ -207,13 +175,13 @@ class NetworkMonitor(AbstractMonitor):
                 for l in self.layers:
                     if hasattr(self.network.layers[l], v):
                         self.recording[l][v] = torch.zeros(
-                            *getattr(self.network.layers[l], v).size(), self.time
+                            self.time, *getattr(self.network.layers[l], v).size()
                         )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
                         self.recording[c][v] = torch.zeros(
-                            *getattr(self.network.connections[c], v).size(), self.time
+                            self.time, *getattr(self.network.connections[c], v).size()
                         )
 
     def get(self) -> Dict[str, Dict[str, Union[Nodes, AbstractConnection]]]:
@@ -234,29 +202,33 @@ class NetworkMonitor(AbstractMonitor):
             for v in self.state_vars:
                 for l in self.layers:
                     if hasattr(self.network.layers[l], v):
-                        data = getattr(self.network.layers[l], v).unsqueeze(-1).float()
+                        data = getattr(self.network.layers[l], v).unsqueeze(0).float()
                         self.recording[l][v] = torch.cat(
-                            [self.recording[l][v], data], -1
+                            (self.recording[l][v], data), 0
                         )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
-                        data = getattr(self.network.connections[c], v).unsqueeze(-1)
+                        data = getattr(self.network.connections[c], v).unsqueeze(0)
                         self.recording[c][v] = torch.cat(
-                            [self.recording[c][v], data], -1
+                            (self.recording[c][v], data), 0
                         )
 
         else:
             for v in self.state_vars:
                 for l in self.layers:
                     if hasattr(self.network.layers[l], v):
-                        data = getattr(self.network.layers[l], v).float()
-                        self.recording[l][v][..., self.i % self.time] = data
+                        data = getattr(self.network.layers[l], v).float().unsqueeze(0)
+                        self.recording[l][v] = torch.cat(
+                            (self.recording[l][v][1:].type(data.type()), data), 0
+                        )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
-                        data = getattr(self.network.connections[c], v)
-                        self.recording[c][v][..., self.i % self.time] = data
+                        data = getattr(self.network.connections[c], v).unsqueeze(0)
+                        self.recording[c][v] = torch.cat(
+                            (self.recording[c][v][1:].type(data.type()), data), 0
+                        )
 
             self.i += 1
 
@@ -324,11 +296,11 @@ class NetworkMonitor(AbstractMonitor):
                 for l in self.layers:
                     if hasattr(self.network.layers[l], v):
                         self.recording[l][v] = torch.zeros(
-                            self.network.layers[l].n, self.time
+                            self.time, *getattr(self.network.layers[l], v).size()
                         )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
                         self.recording[c][v] = torch.zeros(
-                            *self.network.connections[c].w.size(), self.time
+                            self.time, *getattr(self.network.layers[c], v).size()
                         )

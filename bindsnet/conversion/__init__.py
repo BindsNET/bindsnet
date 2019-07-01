@@ -82,7 +82,7 @@ class FeatureExtractor(nn.Module):
 class SubtractiveResetIFNodes(nodes.Nodes):
     # language=rst
     """
-    Layer of `integrate-and-fire (IF) neurons <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_ with using reset by
+    Layer of `integrate-and-fire (IF) neurons <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_ using reset by
     subtraction.
     """
 
@@ -166,13 +166,6 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         self.v = self.reset * torch.ones(self.shape)  # Neuron voltages.
         self.refrac_count = torch.zeros(self.shape)  # Refractory period counters.
 
-    def _compute_decays(self) -> None:
-        # language=rst
-        """
-        Sets the relevant decays.
-        """
-        super()._compute_decays()
-
 
 class PassThroughNodes(nodes.Nodes):
     # language=rst
@@ -219,13 +212,6 @@ class PassThroughNodes(nodes.Nodes):
         Resets relevant state variables.
         """
         self.s.zero_()
-
-    def _compute_decays(self) -> None:
-        # language=rst
-        """
-        Sets the relevant decays
-        """
-        super()._compute_decays()
 
 
 class PermuteConnection(topology.AbstractConnection):
@@ -274,27 +260,6 @@ class PermuteConnection(topology.AbstractConnection):
         """
         return s.permute(self.dims).float()
 
-    def update(self, **kwargs) -> None:
-        # language=rst
-        """
-        Dummy definition of abstract method ``update``.
-        """
-        pass
-
-    def normalize(self) -> None:
-        # language=rst
-        """
-        Dummy definition of abstract method ``normalize``.
-        """
-        pass
-
-    def reset_(self) -> None:
-        # language=rst
-        """
-        Dummy definition of abstract method ``reset_``.
-        """
-        pass
-
 
 class ConstantPad2dConnection(topology.AbstractConnection):
     # language=rst
@@ -342,27 +307,6 @@ class ConstantPad2dConnection(topology.AbstractConnection):
         :return: Padding input.
         """
         return F.pad(s, self.padding).float()
-
-    def update(self, **kwargs) -> None:
-        # language=rst
-        """
-        Dummy definition of abstract method ``update``.
-        """
-        pass
-
-    def normalize(self) -> None:
-        # language=rst
-        """
-        Dummy definition of abstract method ``normalize``.
-        """
-        pass
-
-    def reset_(self) -> None:
-        # language=rst
-        """
-        Dummy definition of abstract method ``reset_``.
-        """
-        pass
 
 
 def data_based_normalization(
@@ -550,6 +494,7 @@ def ann_to_snn(
     :param input_shape: Shape of input data.
     :param data: Data to use to perform data-based weight normalization of shape ``[n_examples, ...]``.
     :param percentile: Percentile (in ``[0, 100]``) of activations to scale by in data-based normalization scheme.
+    :param node_type: Class of ``Nodes`` to use in replacing ``torch.nn.Linear`` layers in original ANN.
     :return: Spiking neural network implemented in PyTorch.
     """
     if isinstance(ann, str):

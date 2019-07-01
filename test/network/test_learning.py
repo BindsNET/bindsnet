@@ -39,8 +39,8 @@ class TestLearningRules:
 
         # Conv2dConnection test
         network = Network(dt=1.0)
-        network.add_layer(Input(shape=[1, 1, 10, 10], traces=True), name="input")
-        network.add_layer(LIFNodes(shape=[1, 32, 8, 8], traces=True), name="output")
+        network.add_layer(Input(shape=[1, 10, 10], traces=True), name="input")
+        network.add_layer(LIFNodes(shape=[32, 8, 8], traces=True), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],
@@ -53,6 +53,7 @@ class TestLearningRules:
             source="input",
             target="output",
         )
+        # shape is [time, batch, channels, height, width]
         network.run(
             inpts={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
             time=250,
@@ -79,8 +80,8 @@ class TestLearningRules:
 
         # Conv2dConnection test
         network = Network(dt=1.0)
-        network.add_layer(Input(shape=[1, 1, 10, 10], traces=True), name="input")
-        network.add_layer(LIFNodes(shape=[1, 32, 8, 8], traces=True), name="output")
+        network.add_layer(Input(shape=[1, 10, 10], traces=True), name="input")
+        network.add_layer(LIFNodes(shape=[32, 8, 8], traces=True), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],
@@ -121,8 +122,8 @@ class TestLearningRules:
 
         # Conv2dConnection test
         network = Network(dt=1.0)
-        network.add_layer(Input(shape=[1, 1, 10, 10], traces=True), name="input")
-        network.add_layer(LIFNodes(shape=[1, 32, 8, 8], traces=True), name="output")
+        network.add_layer(Input(shape=[1, 10, 10], traces=True), name="input")
+        network.add_layer(LIFNodes(shape=[32, 8, 8], traces=True), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],
@@ -165,8 +166,8 @@ class TestLearningRules:
 
         # Conv2dConnection test
         network = Network(dt=1.0)
-        network.add_layer(Input(shape=[1, 1, 10, 10]), name="input")
-        network.add_layer(LIFNodes(shape=[1, 32, 8, 8]), name="output")
+        network.add_layer(Input(shape=[1, 10, 10]), name="input")
+        network.add_layer(LIFNodes(shape=[32, 8, 8]), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],
@@ -209,8 +210,8 @@ class TestLearningRules:
 
         # Conv2dConnection test
         network = Network(dt=1.0)
-        network.add_layer(Input(shape=[1, 1, 10, 10]), name="input")
-        network.add_layer(LIFNodes(shape=[1, 32, 8, 8]), name="output")
+        network.add_layer(Input(shape=[1, 10, 10]), name="input")
+        network.add_layer(LIFNodes(shape=[32, 8, 8]), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],

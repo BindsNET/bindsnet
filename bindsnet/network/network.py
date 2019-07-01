@@ -83,6 +83,7 @@ class Network(torch.nn.Module):
     def __init__(
         self,
         dt: float = 1.0,
+        batch_size: int = 1,
         learning: bool = True,
         reward_fn: Optional[Type[AbstractReward]] = None,
     ) -> None:
@@ -97,6 +98,8 @@ class Network(torch.nn.Module):
         super().__init__()
 
         self.dt = dt
+        self.batch_size = batch_size
+
         self.layers = {}
         self.connections = {}
         self.monitors = {}
@@ -119,8 +122,8 @@ class Network(torch.nn.Module):
         self.add_module(name, layer)
 
         layer.train(self.learning)
-        layer.dt = self.dt
-        layer._compute_decays()
+        layer.compute_decays(self.dt)
+        layer.set_batch_size(self.batch_size)
 
     def add_connection(
         self, connection: AbstractConnection, source: str, target: str
@@ -214,7 +217,9 @@ class Network(torch.nn.Module):
             target = self.connections[c].target
 
             if not c[1] in inpts:
-                inpts[c[1]] = torch.zeros(target.shape, device=target.s.device)
+                inpts[c[1]] = torch.zeros(
+                    self.batch_size, *target.shape, device=target.s.device
+                )
 
             # Add to input: source's spikes multiplied by connection weights.
             inpts[c[1]] += self.connections[c].compute(source.s)
@@ -226,7 +231,8 @@ class Network(torch.nn.Module):
         """
         Simulate network for given inputs and time.
 
-        :param inpts: Dictionary of ``Tensor``s of shape ``[time, n_input]``.
+        :param inpts: Dictionary of ``Tensor``s of shape ``[time, *input_shape]`` or
+                      ``[batch_size, time, *input_shape]``.
         :param time: Simulation time.
 
         Keyword arguments:
@@ -278,21 +284,41 @@ class Network(torch.nn.Module):
         unclamps = kwargs.get("unclamp", {})
         masks = kwargs.get("masks", {})
         injects_v = kwargs.get("injects_v", {})
-        input_time_dim = kwargs.get("input_time_dim", 0)
 
         # Compute reward.
         if self.reward_fn is not None:
             kwargs["reward"] = self.reward_fn.compute(**kwargs)
 
+        # Dynamic setting of batch size.
+        if inpts != {}:
+            for key in inpts:
+                # goal shape is [time, batch, n_0, ...]
+
+                if len(inpts[key].size()) == 1:
+                    # current shape is [n_0, ...]
+                    # unsqueeze twice to make [1, 1, n_0, ...]
+                    inpts[key] = inpts[key].unsqueeze(0).unsqueeze(0)
+                elif len(inpts[key].size()) == 2:
+                    # current shape is [time, n_0, ...]
+                    # unsqueeze dim 1 so that we have
+                    # [time, 1, n_0, ...]
+                    inpts[key] = inpts[key].unsqueeze(1)
+
+            for key in inpts:
+                # batch dimension is 1, grab this and use for batch size
+                if inpts[key].size(1) != self.batch_size:
+                    self.batch_size = inpts[key].size(1)
+
+                    for l in self.layers:
+                        self.layers[l].set_batch_size(self.batch_size)
+
+                    for m in self.monitors:
+                        self.monitors[m].reset_()
+
+                break
+
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
-
-        # Convert an int input to a dictionary.
-        if type(input_time_dim) == int:
-            input_time_dim = {k: input_time_dim for k in inpts.keys()}
-
-        # Keep around a list of slices for each input.
-        time_slices = {k: [slice(None)] * inpts[k].dim() for k in inpts.keys()}
 
         # Get input to all layers.
         inpts.update(self.get_inputs())
@@ -302,12 +328,8 @@ class Network(torch.nn.Module):
             for l in self.layers:
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
-                    # Grab the time slice for each input.
-                    t_slice = time_slices[l]
-                    # Overwrite the None with a specific time.
-                    t_slice[input_time_dim[l]] = t
-                    # Pull out that individual time slice and ensure the memory is contiguous.
-                    self.layers[l].forward(x=inpts[l][t_slice].contiguous())
+                    # shape is [time, batch, n_0, ...]
+                    self.layers[l].forward(x=inpts[l][t, ...])
                 else:
                     self.layers[l].forward(x=inpts[l])
 

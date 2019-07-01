@@ -184,8 +184,8 @@ class Connection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
         """
         # Compute multiplication of spike activations by connection weights and add bias.
-        post = s.float().view(-1) @ self.w + self.b
-        return post.view(*self.target.shape)
+        post = s.float().view(s.size(0), -1) @ self.w + self.b
+        return post.view(s.size(0), *self.target.shape)
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -282,14 +282,14 @@ class Conv2dConnection(AbstractConnection):
         self.dilation = _pair(dilation)
 
         self.in_channels, input_height, input_width = (
+            source.shape[0],
             source.shape[1],
             source.shape[2],
-            source.shape[3],
         )
         self.out_channels, output_height, output_width = (
+            target.shape[0],
             target.shape[1],
             target.shape[2],
-            target.shape[3],
         )
 
         width = (
@@ -307,9 +307,9 @@ class Conv2dConnection(AbstractConnection):
         )
 
         assert (
-            target.shape[1] == shape[1]
-            and target.shape[2] == shape[2]
-            and target.shape[3] == shape[3]
+            target.shape[0] == shape[1]
+            and target.shape[1] == shape[2]
+            and target.shape[2] == shape[3]
         ), error
 
         w = kwargs.get("w", None)

@@ -25,8 +25,8 @@ class TestConnection:
         args = [[], [3], [3], [3, 1, 1], [], []]
         kwargs = [{}, {}, {}, {}, {}, {"sparsity": 0.9}]
         for conn_type, args, kwargs in zip(connection_types, args, kwargs):
-            l_a = LIFNodes(shape=[1, 1, 28, 28])
-            l_b = LIFNodes(shape=[1, 1, 26, 26])
+            l_a = LIFNodes(shape=[1, 28, 28])
+            l_b = LIFNodes(shape=[1, 26, 26])
             connection = conn_type(l_a, l_b, *args, **kwargs)
 
             connection.to(torch.device("cuda:0"))

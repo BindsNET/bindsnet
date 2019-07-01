@@ -1,5 +1,6 @@
 import torch
 
+from bindsnet.network import Network
 from bindsnet.network.nodes import (
     Nodes,
     Input,
@@ -17,16 +18,13 @@ class TestNodes:
     """
 
     def test_init(self):
-        for nodes in [
-            Input,
-            McCullochPitts,
-            IFNodes,
-            LIFNodes,
-            AdaptiveLIFNodes,
-            SRM0Nodes,
-        ]:
+        network = Network()
+        for i, nodes in enumerate(
+            [Input, McCullochPitts, IFNodes, LIFNodes, AdaptiveLIFNodes, SRM0Nodes]
+        ):
             for n in [1, 100, 10000]:
                 layer = nodes(n)
+                network.add_layer(layer=layer, name=f"{i}_{n}")
 
                 assert layer.n == n
                 assert (layer.s.float() == torch.zeros(n)).all()
@@ -35,6 +33,7 @@ class TestNodes:
                     assert (layer.v == layer.rest * torch.ones(n)).all()
 
                 layer = nodes(n, traces=True, tc_trace=1e5)
+                network.add_layer(layer=layer, name=f"{i}_traces_{n}")
 
                 assert layer.n == n
                 assert layer.tc_trace == 1e5
@@ -50,6 +49,7 @@ class TestNodes:
                 layer = nodes(
                     n, rest=0.0, reset=-10.0, thresh=10.0, refrac=3, tc_decay=1.5e3
                 )
+                network.add_layer(layer=layer, name=f"{i}_params_{n}")
 
                 assert layer.rest == 0.0
                 assert layer.reset == -10.0
