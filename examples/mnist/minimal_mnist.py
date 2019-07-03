@@ -13,7 +13,7 @@ network = DiehlAndCook2015(
     inh=17.5,
     dt=1.0,
     norm=78.4,
-    inpt_shape=(1, 1, 28, 28),
+    inpt_shape=(1, 28, 28),
 )
 
 # Specify dataset
@@ -28,9 +28,22 @@ mnist = MNIST(
     ),
 )
 
+# Plotting configuration.
+plot_config = {
+    "data_step": 1,
+    "data_length": 10,
+    "reward_eps": 1,
+    "reward_window": 10,
+    "volts_type": "line",
+}
+
 # Build pipeline from components.
 pipeline = TorchVisionDatasetPipeline(
-    network, mnist, TensorboardAnalyzer("logs/minimal_mnist"), plot_interval=100
+    network,
+    mnist,
+    TensorboardAnalyzer("logs/minimal_mnist"),
+    plot_config=plot_config,
+    batch_size=64,
 )
 
 pipeline.train()
