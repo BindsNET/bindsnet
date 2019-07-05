@@ -4,10 +4,12 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 
-from time import time as t
+from torchvision import transforms
+from tqdm import tqdm
+
 
 from bindsnet.datasets import MNIST
-from bindsnet.encoding import poisson_loader
+from bindsnet.encoding import PoissonEncoder
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_assignments, get_square_weights
@@ -24,7 +26,7 @@ from bindsnet.analysis.plotting import (
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
-parser.add_argument("--n_train", type=int, default=50000)
+parser.add_argument("--n_train", type=int, default=5000)
 parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_clamp", type=int, default=1)
 parser.add_argument("--exc", type=float, default=22.5)
@@ -38,7 +40,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=False, gpu=False, train=True)
+parser.set_defaults(plot=True, gpu=False, train=True)
 
 args = parser.parse_args()
 
@@ -71,9 +73,16 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
 per_class = int(n_neurons / 10)
 
-# Build network.
+# Build Diehl & Cook 2015 network.
 network = DiehlAndCook2015(
-    n_inpt=784, n_neurons=n_neurons, exc=exc, inh=inh, dt=dt, nu=[0, 1e-2], norm=78.4
+    n_inpt=784,
+    n_neurons=n_neurons,
+    exc=exc,
+    inh=inh,
+    dt=dt,
+    norm=78.4,
+    nu=[0, 1e-2],
+    inpt_shape=(1, 28, 28),
 )
 
 # Voltage recording for excitatory and inhibitory layers.
@@ -83,17 +92,20 @@ network.add_monitor(exc_voltage_monitor, name="exc_voltage")
 network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 
 # Load MNIST data.
-images, labels = MNIST(
-    path=os.path.join("..", "..", "data", "MNIST"), download=True
-).get_train()
-images = images.view(-1, 784)
-images *= intensity
-if gpu:
-    images = images.to("cuda")
-    labels = labels.to("cuda")
+dataset = MNIST(
+    PoissonEncoder(time=time, dt=dt),
+    None,
+    root=os.path.join("..", "..", "data", "MNIST"),
+    download=True,
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+    ),
+)
 
-# Lazily encode data as Poisson spike trains.
-data_loader = poisson_loader(data=images, time=time, dt=dt)
+# Create a dataloader to iterate and batch data
+dataloader = torch.utils.data.DataLoader(
+    dataset, batch_size=1, shuffle=True, num_workers=0, pin_memory=gpu
+)
 
 # Record spikes during the simulation.
 spike_record = torch.zeros(update_interval, time, n_neurons)
@@ -113,12 +125,14 @@ for layer in set(network.layers) - {"X"}:
 
 # Train the network.
 print("Begin training.\n")
-start = t()
 
-for i in range(n_train):
-    if i % progress_interval == 0:
-        print("Progress: %d / %d (%.4f seconds)" % (i, n_train, t() - start))
-        start = t()
+pbar = tqdm(enumerate(dataloader))
+for (i, dataPoint) in pbar:
+    if i > n_train:
+        break
+    image = dataPoint["encoded_image"]
+    label = dataPoint["label"]
+    pbar.set_description_str("Train progress: (%d / %d)" % (i, n_train))
 
     if i % update_interval == 0 and i > 0:
         # Get network predictions.
@@ -129,18 +143,10 @@ for i in range(n_train):
 
         # Compute network accuracy according to available classification strategies.
         accuracy["all"].append(
-            100
-            * torch.sum(
-                labels[i - update_interval : i].long() == all_activity_pred
-            ).item()
-            / update_interval
+            100 * torch.sum(label.long() == all_activity_pred).item() / update_interval
         )
         accuracy["proportion"].append(
-            100
-            * torch.sum(
-                labels[i - update_interval : i].long() == proportion_pred
-            ).item()
-            / update_interval
+            100 * torch.sum(label.long() == proportion_pred).item() / update_interval
         )
 
         print(
@@ -157,17 +163,12 @@ for i in range(n_train):
         )
 
         # Assign labels to excitatory layer neurons.
-        assignments, proportions, rates = assign_labels(
-            spike_record, labels[i - update_interval : i], 10, rates
-        )
-
-    # Get next input sample.
-    sample = next(data_loader)
-    inpts = {"X": sample}
+        assignments, proportions, rates = assign_labels(spike_record, label, 10, rates)
 
     # Run the network on the input.
     choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
-    clamp = {"Ae": per_class * labels[i].long() + torch.Tensor(choice).long()}
+    clamp = {"Ae": per_class * label.long() + torch.Tensor(choice).long()}
+    inpts = {"X": image.view(time, 1, 28, 28)}
     network.run(inpts=inpts, time=time, clamp=clamp)
 
     # Get voltage recording.
@@ -175,7 +176,7 @@ for i in range(n_train):
     inh_voltages = inh_voltage_monitor.get("v")
 
     # Add to spikes recording.
-    spike_record[i % update_interval] = spikes["Ae"].get("s").t()
+    spike_record[i % update_interval] = spikes["Ae"].get("s").view(50, n_neurons)
 
     # Optionally plot various simulation information.
     if plot:
@@ -189,7 +190,7 @@ for i in range(n_train):
 
         if i == 0:
             inpt_axes, inpt_ims = plot_input(
-                images[i].view(28, 28), inpt, label=labels[i]
+                image.sum(1).view(28, 28), inpt, label=label
             )
             spike_ims, spike_axes = plot_spikes(
                 {layer: spikes[layer].get("s") for layer in spikes}
@@ -201,9 +202,9 @@ for i in range(n_train):
 
         else:
             inpt_axes, inpt_ims = plot_input(
-                images[i].view(28, 28),
+                image.sum(1).view(28, 28),
                 inpt,
-                label=labels[i],
+                label=label,
                 axes=inpt_axes,
                 ims=inpt_ims,
             )
@@ -223,5 +224,5 @@ for i in range(n_train):
 
     network.reset_()  # Reset state variables.
 
-print("Progress: %d / %d (%.4f seconds)\n" % (n_train, n_train, t() - start))
+print("Progress: %d / %d \n" % (n_train, n_train))
 print("Training complete.\n")
