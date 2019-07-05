@@ -337,9 +337,9 @@ class Network(torch.nn.Module):
                 clamp = clamps.get(l, None)
                 if clamp is not None:
                     if clamp.ndimension() == 1:
-                        self.layers[l].s[0, clamp] = 1
+                        self.layers[l].s[:, clamp] = 1
                     else:
-                        self.layers[l].s[0, clamp[t]] = 1
+                        self.layers[l].s[:, clamp[t]] = 1
 
                 # Clamp neurons not to spike.
                 unclamp = unclamps.get(l, None)

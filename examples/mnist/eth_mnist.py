@@ -233,7 +233,27 @@ for epoch in range(n_epochs):
 
         # Optionally plot various simulation information.
         if plot:
+            image = batch["image"].view(28, 28)
+            inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
+            input_exc_weights = network.connections[("X", "Ae")].w
+            square_weights = get_square_weights(
+                input_exc_weights.view(784, n_neurons), n_sqrt, 28
+            )
+            square_assignments = get_square_assignments(assignments, n_sqrt)
+            spikes_ = {layer: spikes[layer].get("s") for layer in spikes}
+            voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
+            #
+            inpt_axes, inpt_ims = plot_input(
+                image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
+            )
+            spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
+            weights_im = plot_weights(square_weights, im=weights_im)
+            assigns_im = plot_assignments(square_assignments, im=assigns_im)
             perf_ax = plot_performance(accuracy, ax=perf_ax)
+            voltage_ims, voltage_axes = plot_voltages(
+                voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"
+            )
+
             plt.pause(1e-8)
 
         network.reset_()  # Reset state variables.
