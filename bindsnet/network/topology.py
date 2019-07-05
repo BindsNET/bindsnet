@@ -168,7 +168,6 @@ class Connection(AbstractConnection):
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, False)
-
         self.b = Parameter(kwargs.get("b", torch.zeros(target.n)), False)
 
         if self.norm_by_max_from_shadow_weights:
