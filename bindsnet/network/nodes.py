@@ -326,7 +326,9 @@ class McCullochPitts(Nodes):
             sum_input=sum_input,
         )
 
-        self.thresh = thresh  # Spike threshold voltage.
+        self.register_buffer(
+            "thresh", torch.tensor(thresh, dtype=torch.float)
+        )  # Spike threshold voltage.
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
 
     def forward(self, x: torch.Tensor) -> None:
@@ -406,8 +408,12 @@ class IFNodes(Nodes):
             sum_input=sum_input,
         )
 
-        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
-        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
+        self.register_buffer(
+            "reset", torch.tensor(reset, dtype=torch.float)
+        )  # Post-spike reset voltage.
+        self.register_buffer(
+            "thresh", torch.tensor(thresh, dtype=torch.float)
+        )  # Spike threshold voltage.
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
@@ -519,9 +525,15 @@ class LIFNodes(Nodes):
             sum_input=sum_input,
         )
 
-        self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
-        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
-        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
+        self.register_buffer(
+            "rest", torch.tensor(rest, dtype=torch.float)
+        )  # Rest voltage.
+        self.register_buffer(
+            "reset", torch.tensor(reset, dtype=torch.float)
+        )  # Post-spike reset voltage.
+        self.register_buffer(
+            "thresh", torch.tensor(thresh, dtype=torch.float)
+        )  # Spike threshold voltage.
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
