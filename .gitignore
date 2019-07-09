@@ -124,3 +124,6 @@ results/
 
 benchmark/
 figures/
+
+# Analyzer log default directory.
+logs/

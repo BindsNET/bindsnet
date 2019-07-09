@@ -27,9 +27,9 @@ class TestMonitor:
 
     network.run(inpts={"X": torch.bernoulli(torch.rand(100, inpt.n))}, time=100)
 
-    assert inpt_mon.get("s").size() == torch.Size([inpt.n, 100])
-    assert _if_mon.get("s").size() == torch.Size([_if.n, 100])
-    assert _if_mon.get("v").size() == torch.Size([_if.n, 100])
+    assert inpt_mon.get("s").size() == torch.Size([100, 1, inpt.n])
+    assert _if_mon.get("s").size() == torch.Size([100, 1, _if.n])
+    assert _if_mon.get("v").size() == torch.Size([100, 1, _if.n])
 
     del network.monitors["X"], network.monitors["Y"]
 
@@ -40,9 +40,9 @@ class TestMonitor:
 
     network.run(inpts={"X": torch.bernoulli(torch.rand(500, inpt.n))}, time=500)
 
-    assert inpt_mon.get("s").size() == torch.Size([inpt.n, 500])
-    assert _if_mon.get("s").size() == torch.Size([_if.n, 500])
-    assert _if_mon.get("v").size() == torch.Size([_if.n, 500])
+    assert inpt_mon.get("s").size() == torch.Size([500, 1, inpt.n])
+    assert _if_mon.get("s").size() == torch.Size([500, 1, _if.n])
+    assert _if_mon.get("v").size() == torch.Size([500, 1, _if.n])
 
 
 class TestNetworkMonitor:
@@ -66,9 +66,9 @@ class TestNetworkMonitor:
 
     recording = mon.get()
 
-    assert recording["X"]["s"].size() == torch.Size([inpt.n, 50])
-    assert recording["Y"]["s"].size() == torch.Size([_if.n, 50])
-    assert recording["Y"]["s"].size() == torch.Size([_if.n, 50])
+    assert recording["X"]["s"].size() == torch.Size([50, 1, inpt.n])
+    assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
+    assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
 
     del network.monitors["monitor"]
 
@@ -79,6 +79,11 @@ class TestNetworkMonitor:
 
     recording = mon.get()
 
-    assert recording["X"]["s"].size() == torch.Size([inpt.n, 50])
-    assert recording["Y"]["s"].size() == torch.Size([_if.n, 50])
-    assert recording["Y"]["s"].size() == torch.Size([_if.n, 50])
+    assert recording["X"]["s"].size() == torch.Size([50, 1, inpt.n])
+    assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
+    assert recording["Y"]["s"].size() == torch.Size([50, 1, _if.n])
+
+
+if __name__ == "__main__":
+    tm = TestMonitor()
+    tnm = TestNetworkMonitor()

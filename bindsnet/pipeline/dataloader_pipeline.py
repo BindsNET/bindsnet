@@ -1,12 +1,13 @@
 from typing import Optional, Dict
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from ..network import Network
 from .base_pipeline import BasePipeline
 from ..analysis.pipeline_analysis import PipelineAnalyzer
+from ..datasets import DataLoader
 
 
 class DataLoaderPipeline(BasePipeline):
@@ -41,7 +42,7 @@ class DataLoaderPipeline(BasePipeline):
         self.num_epochs = kwargs.get("num_epochs", 10)
         self.batch_size = kwargs.get("batch_size", 1)
         self.num_workers = kwargs.get("num_workers", 0)
-        self.pin_memory = kwargs.get("pin_memory", False)
+        self.pin_memory = kwargs.get("pin_memory", True)
         self.shuffle = kwargs.get("shuffle", True)
 
     def train(self) -> None:
@@ -116,7 +117,7 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         """
         self.network.reset_()
         inpts = {self.input_layer: batch["encoded_image"]}
-        self.network.run(inpts, time=batch["encoded_image"].shape[1], input_time_dim=1)
+        self.network.run(inpts, time=batch["encoded_image"].shape[0])
 
     def init_fn(self) -> None:
         pass
