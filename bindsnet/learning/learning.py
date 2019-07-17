@@ -34,7 +34,7 @@ class LearningRule(ABC):
 
         :param connection: An ``AbstractConnection`` object.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reduction parameter updates along the minibatch dimension.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         # Connection parameters.
@@ -98,7 +98,7 @@ class NoOp(LearningRule):
 
         :param connection: An ``AbstractConnection`` object which this learning rule will have no effect on.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reduction parameter updates along the minibatch dimension.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
@@ -138,7 +138,7 @@ class PostPre(LearningRule):
 
         :param connection: An ``AbstractConnection`` object whose weights the ``PostPre`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reduction parameter updates along the minibatch dimension.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
@@ -249,7 +249,7 @@ class WeightDependentPostPre(LearningRule):
         :param connection: An ``AbstractConnection`` object whose weights the ``WeightDependentPostPre`` learning rule will
                            modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reduction parameter updates along the minibatch dimension.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
@@ -383,7 +383,7 @@ class Hebbian(LearningRule):
 
         :param connection: An ``AbstractConnection`` object whose weights the ``Hebbian`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reduction parameter updates along the minibatch dimension.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
@@ -483,7 +483,7 @@ class MSTDP(LearningRule):
 
         :param connection: An ``AbstractConnection`` object whose weights the ``MSTDP`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reduction parameter updates along the minibatch dimension.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
@@ -645,7 +645,7 @@ class MSTDPET(LearningRule):
 
         :param connection: An ``AbstractConnection`` object whose weights the ``MSTDPET`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reduction parameter updates along the minibatch dimension.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
@@ -819,7 +819,7 @@ class Rmax(LearningRule):
 
         :param connection: An ``AbstractConnection`` object whose weights the ``R-max`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reduction parameter updates along the minibatch dimension.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
 
         Keyword arguments:
