@@ -25,6 +25,7 @@ class TwoLayerNetwork(Network):
         wmin: float = 0.0,
         wmax: float = 1.0,
         nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
+        reduction: Optional[callable] = None,
         norm: float = 78.4,
     ) -> None:
         # language=rst
@@ -35,6 +36,7 @@ class TwoLayerNetwork(Network):
         :param n_neurons: Number of neurons in the ``LIFNodes`` population.
         :param dt: Simulation time step.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param wmin: Minimum allowed weight on ``Input`` to ``LIFNodes`` synapses.
         :param wmax: Maximum allowed weight on ``Input`` to ``LIFNodes`` synapses.
         :param norm: ``Input`` to ``LIFNodes`` layer connection weights normalization constant.
@@ -68,6 +70,7 @@ class TwoLayerNetwork(Network):
                 w=w,
                 update_rule=PostPre,
                 nu=nu,
+                reduction=reduction,
                 wmin=wmin,
                 wmax=wmax,
                 norm=norm,
@@ -92,6 +95,7 @@ class DiehlAndCook2015(Network):
         inh: float = 17.5,
         dt: float = 1.0,
         nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
+        reduction: Optional[callable] = None,
         wmin: float = 0.0,
         wmax: float = 1.0,
         norm: float = 78.4,
@@ -109,6 +113,7 @@ class DiehlAndCook2015(Network):
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
@@ -160,6 +165,7 @@ class DiehlAndCook2015(Network):
             w=w,
             update_rule=PostPre,
             nu=nu,
+            reduction=reduction,
             wmin=wmin,
             wmax=wmax,
             norm=norm,
@@ -200,6 +206,7 @@ class DiehlAndCook2015v2(Network):
         inh: float = 17.5,
         dt: float = 1.0,
         nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
+        reduction: Optional[callable] = None,
         wmin: Optional[float] = 0.0,
         wmax: Optional[float] = 1.0,
         norm: float = 78.4,
@@ -215,6 +222,7 @@ class DiehlAndCook2015v2(Network):
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
@@ -252,6 +260,7 @@ class DiehlAndCook2015v2(Network):
             w=w,
             update_rule=PostPre,
             nu=nu,
+            reduction=reduction,
             wmin=wmin,
             wmax=wmax,
             norm=norm,
@@ -287,6 +296,7 @@ class IncreasingInhibitionNetwork(Network):
         max_inhib: float = 100.0,
         dt: float = 1.0,
         nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
+        reduction: Optional[callable] = None,
         wmin: float = 0.0,
         wmax: float = 1.0,
         norm: float = 78.4,
@@ -302,6 +312,7 @@ class IncreasingInhibitionNetwork(Network):
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
         :param norm: Input to excitatory layer connection weights normalization constant.
@@ -341,6 +352,7 @@ class IncreasingInhibitionNetwork(Network):
             w=w,
             update_rule=PostPre,
             nu=nu,
+            reduction=reduction,
             wmin=wmin,
             wmax=wmax,
             norm=norm,
@@ -384,6 +396,7 @@ class LocallyConnectedNetwork(Network):
         inh: float = 25.0,
         dt: float = 1.0,
         nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
+        reduction: Optional[callable] = None,
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         wmin: float = 0.0,
@@ -404,6 +417,7 @@ class LocallyConnectedNetwork(Network):
         :param inh: Strength of synapse weights from output layer back onto itself.
         :param dt: Simulation time step.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param wmin: Minimum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
         :param wmax: Maximum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
@@ -461,6 +475,7 @@ class LocallyConnectedNetwork(Network):
             stride=stride,
             n_filters=n_filters,
             nu=nu,
+            reduction=reduction,
             update_rule=PostPre,
             wmin=wmin,
             wmax=wmax,
