@@ -27,6 +27,7 @@ parser.add_argument("--n_filters", type=int, default=25)
 parser.add_argument("--padding", type=int, default=0)
 parser.add_argument("--time", type=int, default=100)
 parser.add_argument("--dt", type=int, default=1.0)
+parser.add_argument("--lr", type=float, default=0.01)
 parser.add_argument("--intensity", type=float, default=128.0)
 parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--train", dest="train", action="store_true")
@@ -46,6 +47,7 @@ n_filters = args.n_filters
 padding = args.padding
 time = args.time
 dt = args.dt
+lr = args.lr
 intensity = args.intensity
 progress_interval = args.progress_interval
 train = args.train
@@ -77,7 +79,8 @@ conv_conn = Conv2dConnection(
     stride=stride,
     update_rule=PostPre,
     norm=0.4 * kernel_size ** 2,
-    nu=[0, 5e-2],
+    nu=[0, lr],
+    reduction=torch.mean,
     wmax=1.0,
 )
 
