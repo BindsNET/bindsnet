@@ -329,7 +329,6 @@ class Conv2dConnection(AbstractConnection):
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, False)
-
         self.b = Parameter(kwargs.get("b", torch.zeros(self.out_channels)), False)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
@@ -571,7 +570,7 @@ class LocallyConnectedConnection(AbstractConnection):
                         else:
                             w[
                                 self.locations[k, c], f * conv_prod + c
-                            ] = self.wmin + np.random.rand() * (self.wmax - wmin)
+                            ] = self.wmin + np.random.rand() * (self.wmax - self.wmin)
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
                 w = torch.clamp(w, self.wmin, self.wmax)
@@ -595,10 +594,12 @@ class LocallyConnectedConnection(AbstractConnection):
         """
         # Compute multiplication of pre-activations by connection weights.
         if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
-            return s.float().view(-1) @ self.w + self.b
+            return s.float().view(s.size(0), -1) @ self.w + self.b
         else:
             a_post = (
-                s.float().view(-1) @ self.w.view(self.source.n, self.target.n) + self.b
+                s.float().view(s.size(0), -1)
+                @ self.w.view(self.source.n, self.target.n)
+                + self.b
             )
             return a_post.view(*self.target.shape)
 
@@ -622,9 +623,8 @@ class LocallyConnectedConnection(AbstractConnection):
         Normalize weights so each target neuron has sum of connection weights equal to ``self.norm``.
         """
         if self.norm is not None:
-            self.w = self.w.view(self.source.n, self.target.n)
-            self.w *= self.norm / self.w.sum(0).view(1, -1)
-            self.w = self.w.view(*self.source.shape, *self.target.shape)
+            w = self.w.view(self.source.n, self.target.n)
+            w *= self.norm / self.w.sum(0).view(1, -1)
 
     def reset_(self) -> None:
         # language=rst
