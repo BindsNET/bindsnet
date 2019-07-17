@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from .learning import learning
-
 __all__ = [
     "utils",
     "network",
