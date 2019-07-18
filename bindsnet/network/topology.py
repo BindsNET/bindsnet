@@ -637,6 +637,84 @@ class LocallyConnectedConnection(AbstractConnection):
         super().reset_()
 
 
+class MeanFieldConnection(AbstractConnection):
+    # language=rst
+    """
+    A connection between one or two populations of neurons which computes a summary of the pre-synaptic population to
+    use as weighted input to the post-synaptic population.
+    """
+
+    def __init__(
+        self,
+        source: Nodes,
+        target: Nodes,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        weight_decay: float = 0.0,
+        **kwargs
+    ) -> None:
+        # language=rst
+        """
+        Instantiates a :code:`MeanFieldConnection` object.
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param nu: Learning rate for both pre- and post-synaptic events.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+        Keyword arguments:
+        :param LearningRule update_rule: Modifies connection parameters according to some rule.
+        :param torch.Tensor w: Strengths of synapses.
+        :param float wmin: Minimum allowed value on the connection weights.
+        :param float wmax: Maximum allowed value on the connection weights.
+        :param float norm: Total weight per target neuron normalization constant.
+        """
+        super().__init__(source, target, nu, weight_decay, **kwargs)
+
+        w = kwargs.get("w", None)
+        if w is None:
+            if self.wmin == -np.inf or self.wmax == np.inf:
+                w = torch.clamp((torch.randn(1)[0] + 1) / 10, self.wmin, self.wmax)
+            else:
+                w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (self.wmax - self.wmin)
+        else:
+            if self.wmin != -np.inf or self.wmax != np.inf:
+                w = torch.clamp(w, self.wmin, self.wmax)
+
+        self.w = Parameter(w, False)
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Compute pre-activations given spikes using layer weights.
+        :param s: Incoming spikes.
+        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
+        """
+        # Compute multiplication of mean-field pre-activation by connection weights.
+        return s.float().mean() * self.w
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Compute connection's update rule.
+        """
+        super().update(**kwargs)
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Normalize weights so each target neuron has sum of connection weights equal to ``self.norm``.
+        """
+        if self.norm is not None:
+            self.w = self.w.view(1, self.target.n)
+            self.w *= self.norm / self.w.sum()
+            self.w = self.w.view(1, *self.target.shape)
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Contains resetting logic for the connection.
+        """
+        super().reset_()
+
+
 class SparseConnection(AbstractConnection):
     # language=rst
     """
