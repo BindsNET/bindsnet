@@ -30,32 +30,3 @@ STL10 = create_torchvision_dataset_wrapper("STL10")
 SVHN = create_torchvision_dataset_wrapper("SVHN")
 VOCDetection = create_torchvision_dataset_wrapper("VOCDetection")
 VOCSegmentation = create_torchvision_dataset_wrapper("VOCSegmentation")
-
-__all__ = [
-    "Davis",
-    "SpokenMNIST",
-    "CIFAR10",
-    "CIFAR100",
-    "Cityscapes",
-    "CocoCaptions",
-    "CocoDetection",
-    "DatasetFolder",
-    "EMNIST",
-    "FakeData",
-    "FashionMNIST",
-    "Flickr30k",
-    "Flickr8k",
-    "ImageFolder",
-    "KMNIST",
-    "LSUN",
-    "LSUNClass",
-    "MNIST",
-    "Omniglot",
-    "PhotoTour",
-    "SBU",
-    "SEMEION",
-    "STL10",
-    "SVHN",
-    "VOCDetection",
-    "VOCSegmentation",
-]
