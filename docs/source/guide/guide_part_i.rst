@@ -4,11 +4,6 @@
 Part I: Creating and Adding Network Components
 ==============================================
 
-.. note::
-
-    Code enclosed in angle brackets (:code:`<example>`) refers to a placeholder value. Method arguments of the form
-    :code:`arg: Type` denote type annotations.
-
 Creating a Network
 ------------------
 
@@ -58,11 +53,7 @@ To create a layer (or *population*) of nodes (in this case, leaky integrate-and-
     from bindsnet.network.nodes import LIFNodes
 
     # Create a layer of 100 LIF neurons with shape (10, 10).
-    layer = LIFNodes(
-        n=100,
-        shape=(10, 10),
-        ...
-    )
+    layer = LIFNodes(n=100, shape=(10, 10))
 
 Each :py:mod:`bindsnet.network.nodes` object has many keyword arguments, but one of either :code:`n` (the number of
 nodes in the layer, or :code:`shape` (the arrangement of the layer, from which the number of nodes can be computed) is
@@ -76,8 +67,7 @@ To add a layer to the network, use the :code:`add_layer` function, and give it a
 .. code-block:: python
 
     network.add_layer(
-        layer=layer,
-        name='LIF population'
+        layer=layer, name='LIF population'
     )
 
 Such layers are kept in the dictionary attribute :code:`network.layers`, and can be accessed by the user; e.g., by
@@ -109,17 +99,12 @@ Connections can be added between different populations of neurons (a *projection
 
     # Create two populations of neurons, one to act as the "source"
     # population, and the other, the "target population".
-    source_layer = Input(
-        n=100
-    )
-    target_layer = LIFNodes(
-        n=1000
-    )
+    source_layer = Input(n=100)
+    target_layer = LIFNodes(n=1000)
+
     # Connect the two layers.
     connection = Connection(
-        source=source_layer,
-        target=target_layer,
-        ...
+        source=source_layer, target=target_layer
     )
 
 Like nodes, each connection object has many keyword arguments, but both :code:`source` and :code:`target` are required.
@@ -135,9 +120,7 @@ target populations as :code:`source` and :code:`target` arguments:
 .. code-block:: python
 
     network.add_connection(
-        connection=connection,
-        source='A'
-        target='B'
+        connection=connection, source='A', target='B'
     )
 
 Such layers are kept in the dictionary attribute :code:`network.layers`, and can be accessed by the user; e.g., by
@@ -164,7 +147,7 @@ course of simulation in certain network components. To create a monitor to monit
     monitor = Monitor(
         obj: Union[Nodes, AbstractConnection],
         state_vars: Iterable[str],
-        time: Optional[int]
+        time: Optional[int],
     )
 
 The user must specify a :code:`Nodes` or :code:`AbstractConnection` object from which to record, attributes of that
@@ -176,10 +159,7 @@ To add a monitor to the network (thereby enabling monitoring), use the :code:`ad
 
 .. code-block:: python
 
-    network.add_monitor(
-        monitor=monitor,
-        name=<name>
-    )
+    network.add_monitor(monitor=monitor, name=<name>)
 
 For example, if we have created a monitor to record from a population of :py:class:`bindsnet.network.nodes.LIFNodes`
 named :code:`'LIFNodes'`, and have specified :code:`state_vars=('s', 'v')` (recording both spikes and voltages), we
@@ -201,7 +181,7 @@ create one:
         layers: Optional[Iterable[str]],
         connections: Optional[Iterable[Tuple[str, str]]],
         state_vars: Optional[Iterable[str]],
-        time: Optional[int]
+        time: Optional[int],
     )
 
 The user must specify the network to record from, an iterable of names of layers (entries in :code:`network.layers`),
