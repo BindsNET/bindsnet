@@ -9,7 +9,7 @@ from ..network.topology import (
     AbstractConnection,
     Connection,
     Conv2dConnection,
-    LocallyConnectedConnection,
+    LocalConnection,
 )
 from ..utils import im2col_indices
 
@@ -55,7 +55,7 @@ class LearningRule(ABC):
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
-            reduction = torch.sum
+            reduction = torch.mean
 
         self.reduction = reduction
 
@@ -153,7 +153,7 @@ class PostPre(LearningRule):
             self.source.traces and self.target.traces
         ), "Both pre- and post-synaptic nodes must record spike traces."
 
-        if isinstance(connection, (Connection, LocallyConnectedConnection)):
+        if isinstance(connection, (Connection, LocalConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
@@ -268,7 +268,7 @@ class WeightDependentPostPre(LearningRule):
         self.wmin = connection.wmin
         self.wmax = connection.wmax
 
-        if isinstance(connection, (Connection, LocallyConnectedConnection)):
+        if isinstance(connection, (Connection, LocalConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
@@ -398,7 +398,7 @@ class Hebbian(LearningRule):
             self.source.traces and self.target.traces
         ), "Both pre- and post-synaptic nodes must record spike traces."
 
-        if isinstance(connection, (Connection, LocallyConnectedConnection)):
+        if isinstance(connection, (Connection, LocalConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
@@ -499,7 +499,7 @@ class MSTDP(LearningRule):
             **kwargs
         )
 
-        if isinstance(connection, (Connection, LocallyConnectedConnection)):
+        if isinstance(connection, (Connection, LocalConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
@@ -662,7 +662,7 @@ class MSTDPET(LearningRule):
             **kwargs
         )
 
-        if isinstance(connection, (Connection, LocallyConnectedConnection)):
+        if isinstance(connection, (Connection, LocalConnection)):
             self.update = self._connection_update
         elif isinstance(connection, Conv2dConnection):
             self.update = self._conv2d_connection_update
@@ -845,7 +845,7 @@ class Rmax(LearningRule):
             self.target, SRM0Nodes
         ), "R-max needs stochastically firing neurons, use SRM0Nodes."
 
-        if isinstance(connection, (Connection, LocallyConnectedConnection)):
+        if isinstance(connection, (Connection, LocalConnection)):
             self.update = self._connection_update
         else:
             raise NotImplementedError(

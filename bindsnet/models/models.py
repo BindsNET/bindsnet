@@ -8,7 +8,7 @@ from torch.nn.modules.utils import _pair
 from ..learning import PostPre
 from ..network import Network
 from ..network.nodes import Input, RealInput, LIFNodes, DiehlAndCookNodes
-from ..network.topology import Connection, LocallyConnectedConnection
+from ..network.topology import Connection, LocalConnection
 
 
 class TwoLayerNetwork(Network):
@@ -473,7 +473,7 @@ class LocallyConnectedNetwork(Network):
             theta_plus=theta_plus,
             tc_theta_decay=tc_theta_decay,
         )
-        input_output_conn = LocallyConnectedConnection(
+        input_output_conn = LocalConnection(
             input_layer,
             output_layer,
             kernel_size=kernel_size,

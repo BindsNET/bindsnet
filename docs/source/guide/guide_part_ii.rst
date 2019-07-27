@@ -3,11 +3,6 @@
 Part II: Creating and Adding Learning Rules
 ===========================================
 
-.. note::
-
-    Code enclosed in angle brackets (:code:`<example>`) refers to a placeholder value. Method arguments of the form
-    :code:`arg: Type` denote type annotations.
-
 What is considered a learning rule?
 -----------------------------------
 
@@ -40,4 +35,43 @@ compared to the two- and three-factor rules mentioned above.
 Creating a learning rule in BindsNET
 ------------------------------------
 
+At present, learning rules are attached to specific :code:`Connection` objects. For
+example, to create a connection with a STDP learning rule on the synapses:
 
+.. code-block:: python
+
+    from bindsnet.network.nodes import Input, LIFNodes
+    from bindsnet.network.topology import Connection
+    from bindsnet.learning import PostPre
+
+    # Create two populations of neurons, one to act as the "source"
+    # population, and the other, the "target population".
+    # Neurons involved in certain learning rules must record synaptic
+    # traces, a vector of short-term memories of the last emitted spikes.
+    source_layer = Input(n=100, traces=True)
+    target_layer = LIFNodes(n=1000, traces=True)
+
+    # Connect the two layers.
+    connection = Connection(
+        source=source_layer, target=target_layer, update_rule=PostPre, nu=(1e-4, 1e-2)
+    )
+
+The connection may be added to a :code:`Network` instance as usual. The :code:`Connection` object
+takes arguments :code:`update_rule`, of type :code:`bindsnet.learning.LearningRule`, as well
+as :code:`nu`, a 2-tuple specifying pre- and post-synaptic learning rates; i.e., multiplicative
+factors which modulate how quickly synapse weights change.
+
+Learning rules also accept arguments :code:`reduction`, which specifies how parameter updates are
+aggregated across the batch dimension, and :code:`weight_decay`, which specifies the time constant
+of the rate of decay of synapse weights to zero. By default, parameter updates are averaged across
+the batch dimension, and there is no weight decay.
+
+Other supported learning rules include :code:`Hebbian`, :code:`WeightDependentPostPre`,
+:code:`MSTDP` (reward-modulated STDP), and :code:`MSTDPET` (reward-modulated STDP with
+eligibility traces).
+
+Custom learning rules can be implemented by subclassing :code:`bindsnet.learning.LearningRule`
+and providing implementations for the types of :code:`AbstractConnection` objects intended to be used.
+For example, the :code:`Connection` and :code:`LocalConnection` objects rely on the implementation
+of a private method, :code:`_connection_update`, whereas the :code:`Conv2dConnection` object
+uses the :code:`_conv2d_connection_update` version.

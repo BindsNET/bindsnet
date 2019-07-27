@@ -18,7 +18,7 @@ class TestConnection:
             Connection,
             Conv2dConnection,
             MaxPool2dConnection,
-            LocallyConnectedConnection,
+            LocalConnection,
             MeanFieldConnection,
             SparseConnection,
         ]
