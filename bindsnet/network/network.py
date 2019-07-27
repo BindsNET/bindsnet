@@ -246,8 +246,6 @@ class Network(torch.nn.Module):
         :param Union[float, torch.Tensor] reward: Scalar value used in reward-modulated learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
                                                      weights to clamp to zero.
-        :param Union[int, Dict[str, int]] input_time_dim: Dimension for slicing in time for inputs. Can vary 
-                                                          for each individual input using a dictionary.
 
         **Example:**
 
@@ -337,9 +335,9 @@ class Network(torch.nn.Module):
                 clamp = clamps.get(l, None)
                 if clamp is not None:
                     if clamp.ndimension() == 1:
-                        self.layers[l].s[clamp] = 1
+                        self.layers[l].s[:, clamp] = 1
                     else:
-                        self.layers[l].s[clamp[t]] = 1
+                        self.layers[l].s[:, clamp[t]] = 1
 
                 # Clamp neurons not to spike.
                 unclamp = unclamps.get(l, None)

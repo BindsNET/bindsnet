@@ -8,14 +8,3 @@ from .learning import (
     MSTDPET,
     Rmax,
 )
-
-__all__ = [
-    "LearningRule",
-    "NoOp",
-    "PostPre",
-    "WeightDependentPostPre",
-    "Hebbian",
-    "MSTDP",
-    "MSTDPET",
-    "Rmax",
-]

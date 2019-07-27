@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 import argparse
@@ -27,26 +28,27 @@ from bindsnet.utils import get_square_weights
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
-parser.add_argument("--n_neurons", type=int, default=100)
-parser.add_argument("--n_epochs", type=int, default=500)
+parser.add_argument("--n_neurons", type=int, default=500)
+parser.add_argument("--n_epochs", type=int, default=100)
+parser.add_argument("--examples", type=int, default=500)
 parser.add_argument("--n_workers", type=int, default=-1)
 parser.add_argument("--time", type=int, default=250)
 parser.add_argument("--dt", type=int, default=1.0)
-parser.add_argument("--intensity", type=float, default=128)
+parser.add_argument("--intensity", type=float, default=64)
 parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=False, gpu=False, train=True)
+parser.add_argument("--device_id", type=int, default=0)
+parser.set_defaults(plot=True, gpu=True, train=True)
 
 args = parser.parse_args()
 
 seed = args.seed
 n_neurons = args.n_neurons
 n_epochs = args.n_epochs
+examples = args.examples
 n_workers = args.n_workers
-exc = args.exc
-inh = args.inh
 time = args.time
 dt = args.dt
 intensity = args.intensity
@@ -55,20 +57,26 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
+device_id = args.device_id
+
+np.random.seed(seed)
+torch.cuda.manual_seed_all(seed)
+torch.manual_seed(seed)
 
 # Sets up Gpu use
-if gpu:
-    torch.cuda.manual_seed_all(seed)
+if gpu and torch.cuda.is_available():
+    torch.cuda.set_device(device_id)
+    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
     torch.manual_seed(seed)
 
 
 network = Network(dt=dt)
-inpt = Input(784, shape=(1, 1, 28, 28))
+inpt = Input(784, shape=(1, 28, 28))
 network.add_layer(inpt, name="I")
-output = LIFNodes(n_neurons, thresh=-52 + torch.randn(n_neurons))
+output = LIFNodes(n_neurons, thresh=-52 + np.random.randn(n_neurons).astype(float))
 network.add_layer(output, name="O")
-C1 = Connection(source=inpt, target=output, w=torch.randn(inpt.n, output.n))
+C1 = Connection(source=inpt, target=output, w=0.5 * torch.randn(inpt.n, output.n))
 C2 = Connection(source=output, target=output, w=0.5 * torch.randn(output.n, output.n))
 
 network.add_connection(C1, source="I", target="O")
@@ -113,123 +121,126 @@ dataloader = torch.utils.data.DataLoader(
 )
 
 # Run training data on reservoir computer and store (spikes per neuron, label) per example.
-n_iters = n_epochs
+n_iters = examples
 training_pairs = []
 pbar = tqdm(enumerate(dataloader))
-i = 0
-for (step, dataPoint) in pbar:
-    datum = dataPoint["encoded_image"]
-    label = dataPoint["label"]
-    pbar.set_description("Train progress: (%d / %d)" % (i, n_iters))
-
-    network.run(inpts={"I": datum}, time=time, input_time_dim=1)
-    training_pairs.append([spikes["O"].get("s").sum(-1), label])
-
-    inpt_axes, inpt_ims = plot_input(
-        dataPoint["image"].view(28, 28),
-        datum.view(time, 784).sum(0).view(28, 28),
-        label=label,
-        axes=inpt_axes,
-        ims=inpt_ims,
-    )
-    spike_ims, spike_axes = plot_spikes(
-        {layer: spikes[layer].get("s").view(-1, time) for layer in spikes},
-        axes=spike_axes,
-        ims=spike_ims,
-    )
-    voltage_ims, voltage_axes = plot_voltages(
-        {layer: voltages[layer].get("v").view(-1, time) for layer in voltages},
-        ims=voltage_ims,
-        axes=voltage_axes,
-    )
-    weights_im = plot_weights(
-        get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2
-    )
-    weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
-
-    plt.pause(1e-8)
-    network.reset_()
-
+for (i, dataPoint) in pbar:
     if i > n_iters:
         break
+    datum = dataPoint["encoded_image"].view(time, 1, 1, 28, 28).to(device_id)
+    label = dataPoint["label"]
+    pbar.set_description_str("Train progress: (%d / %d)" % (i, n_iters))
 
-    i += 1
+    network.run(inpts={"I": datum}, time=time, input_time_dim=1)
+    training_pairs.append([spikes["O"].get("s").sum(0), label])
+
+    if plot:
+
+        inpt_axes, inpt_ims = plot_input(
+            dataPoint["image"].view(28, 28),
+            datum.view(time, 784).sum(0).view(28, 28),
+            label=label,
+            axes=inpt_axes,
+            ims=inpt_ims,
+        )
+        spike_ims, spike_axes = plot_spikes(
+            {layer: spikes[layer].get("s").view(-1, time) for layer in spikes},
+            axes=spike_axes,
+            ims=spike_ims,
+        )
+        voltage_ims, voltage_axes = plot_voltages(
+            {layer: voltages[layer].get("v").view(-1, time) for layer in voltages},
+            ims=voltage_ims,
+            axes=voltage_axes,
+        )
+        weights_im = plot_weights(
+            get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2
+        )
+        weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
+
+        plt.pause(1e-8)
+    network.reset_()
 
 
 # Define logistic regression model using PyTorch.
-class LogisticRegression(nn.Module):
+class NN(nn.Module):
     def __init__(self, input_size, num_classes):
-        super(LogisticRegression, self).__init__()
-        self.linear = nn.Linear(input_size, num_classes)
+        super(NN, self).__init__()
+        # h = int(input_size/2)
+        self.linear_1 = nn.Linear(input_size, num_classes)
+        # self.linear_1 = nn.Linear(input_size, h)
+        # self.linear_2 = nn.Linear(h, num_classes)
 
     def forward(self, x):
-        out = self.linear(x.float())
+        out = torch.sigmoid(self.linear_1(x.float().view(-1)))
+        # out = torch.sigmoid(self.linear_2(out))
         return out
 
 
 # Create and train logistic regression model on reservoir outputs.
-model = LogisticRegression(n_neurons, 10)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+model = NN(n_neurons, 10).to(device_id)
+criterion = torch.nn.MSELoss(reduction="sum")
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
 
 # Training the Model
 print("\n Training the read out")
-pbar = tqdm(enumerate(range(10)))
-for epoch in pbar:
-    for i, (s, label) in enumerate(training_pairs):
+pbar = tqdm(enumerate(range(n_epochs)))
+for epoch, _ in pbar:
+    avg_loss = 0
+    for i, (s, l) in enumerate(training_pairs):
         # Forward + Backward + Optimize
         optimizer.zero_grad()
         outputs = model(s)
-        loss = criterion(outputs.unsqueeze(0), label.long())
+        label = torch.zeros(1, 1, 10).float().to(device_id)
+        label[0, 0, l] = 1.0
+        loss = criterion(outputs.view(1, 1, -1), label)
+        avg_loss += loss.data
         loss.backward()
         optimizer.step()
 
-        if (i + 1) % 100 == 0:
-            pbar.set_description(
-                "Epoch: [%d/%d], Step: [%d/%d], Loss: %.4f"
-                % (epoch + 1, 10, i + 1, len(training_pairs), loss.data[0])
-            )
+    pbar.set_description_str(
+        "Epoch: %d/%d, Loss: %.4f"
+        % (epoch + 1, n_epochs, avg_loss / len(training_pairs))
+    )
 
-n_iters = n_epochs
+n_iters = examples
 test_pairs = []
 pbar = tqdm(enumerate(dataloader))
-i = 0
-for (step, dataPoint) in pbar:
-    datum = dataPoint["encoded_image"]
-    label = dataPoint["label"]
-    pbar.set_description("Train progress: (%d / %d)" % (i, n_iters))
-
-    network.run(inpts={"I": datum}, time=250, input_time_dim=1)
-    test_pairs.append([spikes["O"].get("s").sum(-1), label])
-
-    inpt_axes, inpt_ims = plot_input(
-        dataPoint["image"].view(28, 28),
-        datum.view(time, 784).sum(0).view(28, 28),
-        label=label,
-        axes=inpt_axes,
-        ims=inpt_ims,
-    )
-    spike_ims, spike_axes = plot_spikes(
-        {layer: spikes[layer].get("s").view(-1, 250) for layer in spikes},
-        axes=spike_axes,
-        ims=spike_ims,
-    )
-    voltage_ims, voltage_axes = plot_voltages(
-        {layer: voltages[layer].get("v").view(-1, 250) for layer in voltages},
-        ims=voltage_ims,
-        axes=voltage_axes,
-    )
-    weights_im = plot_weights(
-        get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2
-    )
-    weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
-
-    plt.pause(1e-8)
-    network.reset_()
-
+for (i, dataPoint) in pbar:
     if i > n_iters:
         break
-    i += 1
+    datum = dataPoint["encoded_image"].view(time, 1, 1, 28, 28).to(device_id)
+    label = dataPoint["label"]
+    pbar.set_description_str("Testing progress: (%d / %d)" % (i, n_iters))
+
+    network.run(inpts={"I": datum}, time=250, input_time_dim=1)
+    test_pairs.append([spikes["O"].get("s").sum(0), label])
+
+    if plot:
+        inpt_axes, inpt_ims = plot_input(
+            dataPoint["image"].view(28, 28),
+            datum.view(time, 784).sum(0).view(28, 28),
+            label=label,
+            axes=inpt_axes,
+            ims=inpt_ims,
+        )
+        spike_ims, spike_axes = plot_spikes(
+            {layer: spikes[layer].get("s").view(-1, 250) for layer in spikes},
+            axes=spike_axes,
+            ims=spike_ims,
+        )
+        voltage_ims, voltage_axes = plot_voltages(
+            {layer: voltages[layer].get("v").view(-1, 250) for layer in voltages},
+            ims=voltage_ims,
+            axes=voltage_axes,
+        )
+        weights_im = plot_weights(
+            get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2
+        )
+        weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
+
+        plt.pause(1e-8)
+    network.reset_()
 
 # Test the Model
 correct, total = 0, 0
@@ -237,7 +248,7 @@ for s, label in test_pairs:
     outputs = model(s)
     _, predicted = torch.max(outputs.data.unsqueeze(0), 1)
     total += 1
-    correct += int(predicted == label.long())
+    correct += int(predicted == label.long().to(device_id))
 
 print(
     "\n Accuracy of the model on %d test images: %.2f %%"

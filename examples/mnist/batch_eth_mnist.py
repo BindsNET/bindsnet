@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from time import time as t
 
+from bindsnet import ROOT_DIR
 from bindsnet.datasets import MNIST, DataLoader
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
@@ -81,6 +82,7 @@ network = DiehlAndCook2015(
     inh=inh,
     dt=dt,
     norm=78.4,
+    nu=(1e-4, 1e-2),
     theta_plus=theta_plus,
     inpt_shape=(1, 28, 28),
 )
@@ -93,7 +95,7 @@ if gpu:
 dataset = MNIST(
     PoissonEncoder(time=time, dt=dt),
     None,
-    root=os.path.join("..", "..", "data", "MNIST"),
+    root=os.path.join(ROOT_DIR, "data", "MNIST"),
     download=True,
     transform=transforms.Compose(
         [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]

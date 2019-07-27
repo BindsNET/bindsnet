@@ -326,7 +326,9 @@ class McCullochPitts(Nodes):
             sum_input=sum_input,
         )
 
-        self.thresh = thresh  # Spike threshold voltage.
+        self.register_buffer(
+            "thresh", torch.tensor(thresh, dtype=torch.float)
+        )  # Spike threshold voltage.
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
 
     def forward(self, x: torch.Tensor) -> None:
@@ -406,8 +408,12 @@ class IFNodes(Nodes):
             sum_input=sum_input,
         )
 
-        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
-        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
+        self.register_buffer(
+            "reset", torch.tensor(reset, dtype=torch.float)
+        )  # Post-spike reset voltage.
+        self.register_buffer(
+            "thresh", torch.tensor(thresh, dtype=torch.float)
+        )  # Spike threshold voltage.
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
@@ -519,9 +525,15 @@ class LIFNodes(Nodes):
             sum_input=sum_input,
         )
 
-        self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
-        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
-        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
+        self.register_buffer(
+            "rest", torch.tensor(rest, dtype=torch.float)
+        )  # Rest voltage.
+        self.register_buffer(
+            "reset", torch.tensor(reset, dtype=torch.float)
+        )  # Post-spike reset voltage.
+        self.register_buffer(
+            "thresh", torch.tensor(thresh, dtype=torch.float)
+        )  # Spike threshold voltage.
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
@@ -1206,7 +1218,7 @@ class IzhikevichNodes(Nodes):
 
         # Add inter-columnar input.
         if self.s.any():
-            x += self.S[:, self.s].sum(dim=1)
+            x += torch.cat([self.S[:, self.s[i]].sum(dim=1)[None] for i in range(self.s.shape[0])], dim=0)
 
         # Apply v and u updates.
         self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
@@ -1238,7 +1250,6 @@ class IzhikevichNodes(Nodes):
         super().set_batch_size(batch_size=batch_size)
         self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
         self.u = self.b * self.v
-        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class SRM0Nodes(Nodes):
