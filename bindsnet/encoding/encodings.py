@@ -37,7 +37,7 @@ def repeat(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.T
     :return: Tensor of shape ``[time, n_1, ..., n_k]`` of repeated data along the 0th dimension.
     """
     time = int(time / dt)
-    return datum.repeat([time, *torch.ones(len(datum.shape))])
+    return datum.repeat([time, *([1] * len(datum.shape))])
 
 
 def bernoulli(

@@ -181,9 +181,10 @@ class Connection(AbstractConnection):
         Compute pre-activations given spikes using connection weights.
 
         :param s: Incoming spikes.
-        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
+        :return: Incoming spikes multiplied by synaptic weights (with or without
+                 decaying spike activation).
         """
-        # Compute multiplication of spike activations by connection weights and add bias.
+        # Compute multiplication of spike activations by weights and add bias.
         post = s.float().view(s.size(0), -1) @ self.w + self.b
         return post.view(s.size(0), *self.target.shape)
 
@@ -197,7 +198,8 @@ class Connection(AbstractConnection):
     def normalize(self) -> None:
         # language=rst
         """
-        Normalize weights so each target neuron has sum of connection weights equal to ``self.norm``.
+        Normalize weights so each target neuron has sum of connection weights equal to
+        ``self.norm``.
         """
         if self.norm is not None:
             w_abs_sum = self.w.abs().sum(0).unsqueeze(0)

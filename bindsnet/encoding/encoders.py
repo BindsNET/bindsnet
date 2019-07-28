@@ -38,7 +38,7 @@ class SingleEncoder(Encoder):
         Creates a callable SingleEncoder which encodes as defined in
         :code:`bindsnet.encodings.single`
 
-        :param time: Length of Single spike train per input variable.
+        :param time: Length of single spike train per input variable.
         :param dt: Simulation time step.
         :param sparsity: Sparsity of the input representation. 0 for no spike and 1 for all spike.
         """
@@ -53,7 +53,7 @@ class RepeatEncoder(Encoder):
         Creates a callable RepeatEncoder which encodes as defined in
         :code:`bindsnet.encodings.repeat`
 
-        :param time: Length of Repeat spike train per input variable.
+        :param time: Length of repeat spike train per input variable.
         :param dt: Simulation time step.
         """
         super().__init__(time, dt=dt, **kwargs)
