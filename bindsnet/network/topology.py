@@ -467,7 +467,7 @@ class MaxPool2dConnection(AbstractConnection):
         self.firing_rates = torch.zeros(self.source.shape)
 
 
-class LocallyConnectedConnection(AbstractConnection):
+class LocalConnection(AbstractConnection):
     # language=rst
     """
     Specifies a locally connected connection between one or two populations of neurons.
@@ -487,7 +487,7 @@ class LocallyConnectedConnection(AbstractConnection):
     ) -> None:
         # language=rst
         """
-        Instantiates a ``LocallyConnectedConnection`` object. Source population should be two-dimensional.
+        Instantiates a ``LocalConnection`` object. Source population should be two-dimensional.
 
         Neurons in the post-synaptic population are ordered by receptive field; that is, if there are ``n_conv`` neurons
         in each post-synaptic patch, then the first ``n_conv`` neurons in the post-synaptic population correspond to the

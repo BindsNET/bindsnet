@@ -514,7 +514,12 @@ def plot_voltages(
                 args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
                 plt.title("%s voltages for neurons (%d - %d) from t = %d to %d " % args)
                 plt.xlabel("Time (ms)")
-                plt.ylabel("Neuron index")
+
+                if plot_type == "line":
+                    plt.ylabel("Voltage")
+                else:
+                    plt.ylabel("Neuron index")
+
                 axes.set_aspect("auto")
 
         else:  # Plot each layer at a time
@@ -559,7 +564,11 @@ def plot_voltages(
             for ax in axes:
                 ax.set_aspect("auto")
 
-        plt.setp(axes, xlabel="Simulation time", ylabel="Neuron index")
+        if plot_type == "color":
+            plt.setp(axes, xlabel="Simulation time", ylabel="Neuron index")
+        elif plot_type == "line":
+            plt.setp(axes, xlabel="Simulation time", ylabel="Voltage")
+
         plt.tight_layout()
 
     else:

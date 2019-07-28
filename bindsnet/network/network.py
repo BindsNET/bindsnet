@@ -201,7 +201,7 @@ class Network(torch.nn.Module):
         virtual_file.seek(0)
         return torch.load(virtual_file)
 
-    def get_inputs(self) -> Dict[str, torch.Tensor]:
+    def _get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
         """
         Fetches outputs from network layers to use as input to downstream layers.
@@ -319,7 +319,7 @@ class Network(torch.nn.Module):
         timesteps = int(time / self.dt)
 
         # Get input to all layers.
-        inpts.update(self.get_inputs())
+        inpts.update(self._get_inputs())
 
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
@@ -359,7 +359,7 @@ class Network(torch.nn.Module):
                 )
 
             # Get input to all layers.
-            inpts.update(self.get_inputs())
+            inpts.update(self._get_inputs())
 
             # Record state variables of interest.
             for m in self.monitors:

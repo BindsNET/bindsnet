@@ -1,7 +1,21 @@
-Installing from source
-======================
+Installation
+============
 
-On \*nix systems, issue one of the following in a Bash shell:
+
+Pip install
+-----------
+
+Issue:
+
+.. code-block:: bash
+
+        pip install -U bindsnet
+
+
+Installing from source
+----------------------
+
+On \*nix systems, issue one of the following in a shell:
 
 .. code-block:: bash
 	
@@ -16,3 +30,14 @@ Change directory into :code:`bindsnet` and issue one of the following:
 	pip install -e .  # Editable mode (package code can be edited without reinstall)
 
 This will install :code:`bindsnet` and all its dependencies.
+
+
+Running the tests
+-----------------
+
+If BindsNET is installed from source, install :code:`pytest` and issue the following from BindsNET's installation directory:
+
+.. code-block:: bash
+
+        python -m pytest test
+
