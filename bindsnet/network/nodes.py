@@ -1218,7 +1218,10 @@ class IzhikevichNodes(Nodes):
 
         # Add inter-columnar input.
         if self.s.any():
-            x += torch.cat([self.S[:, self.s[i]].sum(dim=1)[None] for i in range(self.s.shape[0])], dim=0)
+            x += torch.cat(
+                [self.S[:, self.s[i]].sum(dim=1)[None] for i in range(self.s.shape[0])],
+                dim=0,
+            )
 
         # Apply v and u updates.
         self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)

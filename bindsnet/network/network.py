@@ -291,7 +291,6 @@ class Network(torch.nn.Module):
         if inpts != {}:
             for key in inpts:
                 # goal shape is [time, batch, n_0, ...]
-
                 if len(inpts[key].size()) == 1:
                     # current shape is [n_0, ...]
                     # unsqueeze twice to make [1, 1, n_0, ...]
