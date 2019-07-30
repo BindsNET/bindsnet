@@ -201,7 +201,7 @@ class Network(torch.nn.Module):
         virtual_file.seek(0)
         return torch.load(virtual_file)
 
-    def get_inputs(self) -> Dict[str, torch.Tensor]:
+    def _get_inputs(self) -> Dict[str, torch.Tensor]:
         # language=rst
         """
         Fetches outputs from network layers to use as input to downstream layers.
@@ -246,8 +246,6 @@ class Network(torch.nn.Module):
         :param Union[float, torch.Tensor] reward: Scalar value used in reward-modulated learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
                                                      weights to clamp to zero.
-        :param Union[int, Dict[str, int]] input_time_dim: Dimension for slicing in time for inputs. Can vary 
-                                                          for each individual input using a dictionary.
 
         **Example:**
 
@@ -293,7 +291,6 @@ class Network(torch.nn.Module):
         if inpts != {}:
             for key in inpts:
                 # goal shape is [time, batch, n_0, ...]
-
                 if len(inpts[key].size()) == 1:
                     # current shape is [n_0, ...]
                     # unsqueeze twice to make [1, 1, n_0, ...]
@@ -321,7 +318,7 @@ class Network(torch.nn.Module):
         timesteps = int(time / self.dt)
 
         # Get input to all layers.
-        inpts.update(self.get_inputs())
+        inpts.update(self._get_inputs())
 
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
@@ -361,7 +358,7 @@ class Network(torch.nn.Module):
                 )
 
             # Get input to all layers.
-            inpts.update(self.get_inputs())
+            inpts.update(self._get_inputs())
 
             # Record state variables of interest.
             for m in self.monitors:
