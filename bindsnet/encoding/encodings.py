@@ -37,7 +37,7 @@ def repeat(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.T
     :return: Tensor of shape ``[time, n_1, ..., n_k]`` of repeated data along the 0th dimension.
     """
     time = int(time / dt)
-    return datum.repeat([time, *torch.ones(len(datum.shape))])
+    return datum.repeat([time, *([1] * len(datum.shape))])
 
 
 def bernoulli(
@@ -112,17 +112,17 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
     # Create Poisson distribution and sample inter-spike intervals
     # (incrementing by 1 to avoid zero intervals).
     dist = torch.distributions.Poisson(rate=rate)
-    intervals = dist.sample(sample_shape=torch.Size([time]))
+    intervals = dist.sample(sample_shape=torch.Size([time + 1]))
     intervals[:, datum != 0] += (intervals[:, datum != 0] == 0).float()
 
     # Calculate spike times by cumulatively summing over time dimension.
     times = torch.cumsum(intervals, dim=0).long()
-    times[times >= time] = 0
+    times[times >= time + 1] = 0
 
     # Create tensor of spikes.
-    spikes = torch.zeros(time, size).byte()
+    spikes = torch.zeros(time + 1, size).byte()
     spikes[times, torch.arange(size)] = 1
-    spikes[0] = 0
+    spikes = spikes[1:]
 
     return spikes.view(time, *shape)
 
