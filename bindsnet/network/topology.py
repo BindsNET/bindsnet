@@ -469,6 +469,87 @@ class MaxPool2dConnection(AbstractConnection):
         self.firing_rates = torch.zeros(self.source.shape)
 
 
+class AdaptiveAvgPool2dConnection(AbstractConnection):
+    # language=rst
+    """
+    Performs an average pooling of input spike activity. 
+    """
+
+    def __init__(
+        self,
+        source: Nodes,
+        target: Nodes,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+        **kwargs
+    ) -> None:
+        # language=rst
+        """
+        Instantiates a ``MaxPool2dConnection`` object.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param kernel_size: Horizontal and vertical size of convolutional kernels.
+        :param stride: Horizontal and vertical stride for convolution.
+        :param padding: Horizontal and vertical padding for convolution.
+        :param dilation: Horizontal and vertical dilation for convolution.
+
+        Keyword arguments:
+
+        :param decay: Decay rate of online estimates of average firing activity.
+        """
+        super().__init__(source, target, None, None, 0.0, **kwargs)
+
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
+        self.shape = target.shape
+
+        self.register_buffer("firing_rates", torch.ones(source.shape))
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Compute avg-pool pre-activations given spikes using online firing rate estimates.
+
+        :param s: Incoming spikes.
+        :return: Incoming spikes multiplied by synaptic weights (with or without decaying spike activation).
+        """
+
+        self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
+
+        F.adaptive_avg_pool2d(s, self.shape)
+
+        return torch._C._nn.adaptive_avg_pool2d(s, self.shape)
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Compute connection's update rule.
+        """
+        super().update(**kwargs)
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        No weights -> no normalization.
+        """
+        pass
+
+    def reset_(self) -> None:
+        # language=rst
+        """
+        Contains resetting logic for the connection.
+        """
+        super().reset_()
+
+        self.firing_rates = torch.zeros(self.source.shape)
+
+
 class LocalConnection(AbstractConnection):
     # language=rst
     """

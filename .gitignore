@@ -127,3 +127,6 @@ figures/
 
 # Analyzer log default directory.
 logs/
+
+#Benchmarks
+examples/saved_checkpoints
