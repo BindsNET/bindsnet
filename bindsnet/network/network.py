@@ -243,7 +243,7 @@ class Network(torch.nn.Module):
         :param time: Simulation time.
         :param one_step: Whether to run the network in "feed-forward" mode, where inputs
             propagate all the way through the network in a single simulation time step.
-            Layers are updated in the order they are added to the network (Python 3.6+).
+            Layers are updated in the order they are added to the network.
 
         Keyword arguments:
 
@@ -344,7 +344,7 @@ class Network(torch.nn.Module):
                     self.layers[l].forward(x=inpts[l][t])
                 else:
                     if one_step:
-                        # Get input to this layer.
+                        # Get input to this layer (one-step mode).
                         inpts.update(self._get_inputs(layers=[l]))
 
                     self.layers[l].forward(x=inpts[l])
