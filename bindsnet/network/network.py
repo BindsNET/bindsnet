@@ -1,5 +1,5 @@
 import tempfile
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, Iterable
 
 import torch
 
@@ -201,32 +201,39 @@ class Network(torch.nn.Module):
         virtual_file.seek(0)
         return torch.load(virtual_file)
 
-    def _get_inputs(self) -> Dict[str, torch.Tensor]:
+    def _get_inputs(self, layers: Iterable = None) -> Dict[str, torch.Tensor]:
         # language=rst
         """
         Fetches outputs from network layers to use as input to downstream layers.
 
+        :param layers: Layers to update inputs for. Defaults to all network layers.
         :return: Inputs to all layers for the current iteration.
         """
         inpts = {}
 
+        if layers is None:
+            layers = self.layers
+
         # Loop over network connections.
         for c in self.connections:
-            # Fetch source and target populations.
-            source = self.connections[c].source
-            target = self.connections[c].target
+            if c[1] in layers:
+                # Fetch source and target populations.
+                source = self.connections[c].source
+                target = self.connections[c].target
 
-            if not c[1] in inpts:
-                inpts[c[1]] = torch.zeros(
-                    self.batch_size, *target.shape, device=target.s.device
-                )
+                if not c[1] in inpts:
+                    inpts[c[1]] = torch.zeros(
+                        self.batch_size, *target.shape, device=target.s.device
+                    )
 
-            # Add to input: source's spikes multiplied by connection weights.
-            inpts[c[1]] += self.connections[c].compute(source.s)
+                # Add to input: source's spikes multiplied by connection weights.
+                inpts[c[1]] += self.connections[c].compute(source.s)
 
         return inpts
 
-    def run(self, inpts: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
+    def run(
+        self, inpts: Dict[str, torch.Tensor], time: int, one_step=False, **kwargs
+    ) -> None:
         # language=rst
         """
         Simulate network for given inputs and time.
@@ -234,18 +241,25 @@ class Network(torch.nn.Module):
         :param inpts: Dictionary of ``Tensor``s of shape ``[time, *input_shape]`` or
                       ``[batch_size, time, *input_shape]``.
         :param time: Simulation time.
+        :param one_step: Whether to run the network in "feed-forward" mode, where inputs
+            propagate all the way through the network in a single simulation time step.
+            Layers are updated in the order they are added to the network.
 
         Keyword arguments:
 
-        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to boolean masks if neurons should be clamped to
-                                              spiking. The ``Tensor``s have shape ``[n_neurons]``.
-        :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks if neurons should be clamped
-                                                to not spiking. The ``Tensor``s should have shape ``[n_neurons]``.
-        :param Dict[str, torch.Tensor] injects_v: Mapping of layer names to boolean masks if neurons should be added
-                                                  voltage. The ``Tensor``s should have shape ``[n_neurons]``.
-        :param Union[float, torch.Tensor] reward: Scalar value used in reward-modulated learning.
-        :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to boolean masks determining which
-                                                     weights to clamp to zero.
+        :param Dict[str, torch.Tensor] clamp: Mapping of layer names to boolean masks if
+            neurons should be clamped to spiking. The ``Tensor``s have shape
+            ``[n_neurons]`` or ``[time, n_neurons]``.
+        :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks
+            if neurons should be clamped to not spiking. The ``Tensor``s should have
+            shape ``[n_neurons]`` or ``[time, n_neurons]``.
+        :param Dict[str, torch.Tensor] injects_v: Mapping of layer names to boolean
+            masks if neurons should be added voltage. The ``Tensor``s should have shape
+            ``[n_neurons]`` or ``[time, n_neurons]``.
+        :param Union[float, torch.Tensor] reward: Scalar value used in reward-modulated
+            learning.
+        :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to
+            boolean masks determining which weights to clamp to zero.
 
         **Example:**
 
@@ -317,8 +331,9 @@ class Network(torch.nn.Module):
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
-        # Get input to all layers.
-        inpts.update(self._get_inputs())
+        # Get input to all layers (synchronous mode).
+        if not one_step:
+            inpts.update(self._get_inputs())
 
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
@@ -326,8 +341,12 @@ class Network(torch.nn.Module):
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
                     # shape is [time, batch, n_0, ...]
-                    self.layers[l].forward(x=inpts[l][t, ...])
+                    self.layers[l].forward(x=inpts[l][t])
                 else:
+                    if one_step:
+                        # Get input to this layer (one-step mode).
+                        inpts.update(self._get_inputs(layers=[l]))
+
                     self.layers[l].forward(x=inpts[l])
 
                 # Clamp neurons to spike.
@@ -349,7 +368,10 @@ class Network(torch.nn.Module):
                 # Inject voltage to neurons.
                 inject_v = injects_v.get(l, None)
                 if inject_v is not None:
-                    self.layers[l].v += inject_v
+                    if inject_v.ndimension() == 1:
+                        self.layers[l].v += inject_v
+                    else:
+                        self.layers[l].v += inject_v[t]
 
             # Run synapse updates.
             for c in self.connections:
