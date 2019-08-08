@@ -246,10 +246,12 @@ class WeightDependentPostPre(LearningRule):
         """
         Constructor for ``WeightDependentPostPre`` learning rule.
 
-        :param connection: An ``AbstractConnection`` object whose weights the ``WeightDependentPostPre`` learning rule will
-                           modify.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reducing parameter updates along the minibatch dimension.
+        :param connection: An ``AbstractConnection`` object whose weights the
+            ``WeightDependentPostPre`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
+            respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch
+            dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
         super().__init__(
