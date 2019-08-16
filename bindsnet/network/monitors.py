@@ -46,10 +46,7 @@ class Monitor(AbstractMonitor):
 
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
-            self.recording = {
-                v: torch.tensor([], dtype=getattr(self.obj, v).dtype)
-                for v in self.state_vars
-            }
+            self.recording = {v: [] for v in self.state_vars}
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
@@ -71,7 +68,10 @@ class Monitor(AbstractMonitor):
         :return: Tensor of shape ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is the shape of the recorded
                  state variable.
         """
-        return self.recording[var]
+        if self.time is None:
+            return torch.cat(self.recording[var], 0)
+        else:
+            return self.recording[var]
 
     def record(self) -> None:
         # language=rst
@@ -81,9 +81,7 @@ class Monitor(AbstractMonitor):
         if self.time is None:
             for v in self.state_vars:
                 data = getattr(self.obj, v).unsqueeze(0)
-                self.recording[v] = torch.cat(
-                    (self.recording[v].type(data.type()), data), 0
-                )
+                self.recording[v].append(data.detach())
         else:
             for v in self.state_vars:
                 # Remove the oldest data and concatenate new data
@@ -99,10 +97,7 @@ class Monitor(AbstractMonitor):
         """
         # If no simulation time is specified, specify 0-dimensional recordings.
         if self.time is None:
-            self.recording = {
-                v: torch.tensor([], dtype=getattr(self.obj, v).dtype)
-                for v in self.state_vars
-            }
+            self.recording = {v: [] for v in self.state_vars}
 
         # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
