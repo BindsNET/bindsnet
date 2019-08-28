@@ -10,6 +10,7 @@ import time
 import warnings
 import cv2
 import random
+import math
 
 from PIL import Image
 from glob import glob
@@ -17,13 +18,11 @@ from tqdm import tqdm
 from collections import defaultdict
 from typing import Optional, Tuple, List, Iterable
 from urllib.request import urlretrieve
+from torchvision import transforms
 import xml.etree.ElementTree as ET
 from torch.utils.data import Dataset
 
 warnings.filterwarnings("ignore")
-
-import warnings
-
 
 class ALOV300(torch.utils.data.Dataset):
     SUBSET_OPTIONS = ["train", "val", "test-dev", "test-challenge"]
@@ -323,13 +322,6 @@ class ALOV300(torch.utils.data.Dataset):
 
 
 """ Below is the implementation of necessary preprocessing for the dataset """
-
-
-import math
-from torchvision import transforms
-
-warnings.filterwarnings("ignore")
-
 
 class Rescale(object):
     """Rescale image and bounding box.
