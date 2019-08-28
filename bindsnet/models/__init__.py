@@ -4,5 +4,4 @@ from .models import (
     DiehlAndCook2015v2,
     IncreasingInhibitionNetwork,
     LocallyConnectedNetwork,
-    GoNet,
 )
