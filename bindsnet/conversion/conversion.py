@@ -471,18 +471,6 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
             decay=1,
         )
 
-        # elif isinstance(current, nn.AdaptiveAvgPool2d):
-        # layer = PassThroughNodes(shape=shape)
-        # connection = topology.AdaptiveAvgPool2dConnection(
-        #     source=prev,
-        #     target=layer,
-        #     kernel_size=current.kernel_size,
-        #     stride=current.stride,
-        #     padding=current.padding,
-        #     dilation=current.dilation,
-        #     decay=1,
-        # )
-
     elif isinstance(current, Permute):
         layer = PassThroughNodes(
             shape=[
