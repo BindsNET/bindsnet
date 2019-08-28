@@ -25,10 +25,7 @@ from torch.utils.data import Dataset
 warnings.filterwarnings("ignore")
 
 class ALOV300(torch.utils.data.Dataset):
-    SUBSET_OPTIONS = ["train", "val", "test-dev", "test-challenge"]
-    TASKS = ["semi-supervised", "unsupervised"]
-    RESOLUTION_OPTIONS = ["480p", "Full-Resolution"]
-    DATASET_WEB = "https://davischallenge.org/davis2017/code.html"
+    DATASET_WEB = "http://alov300pp.joomlafree.it/dataset-resources.html"
     VOID_LABEL = 255
 
     def __init__(
@@ -41,13 +38,10 @@ class ALOV300(torch.utils.data.Dataset):
         num_samples: int = -1,
     ):
         """
-        Class to read the DAVIS dataset
+        Class to read the ALOV dataset
         
-        :param root: Path to the DAVIS folder that contains JPEGImages, Annotations, etc. folders.
-        :param task: Task to load the annotations, choose between semi-supervised or unsupervised.
-        :param subset: Set to load the annotations
-        :param sequences: Sequences to consider, 'all' to use all the sequences in a set.
-        :param resolution: Specify the resolution to use the dataset, choose between '480' and 'Full-Resolution'
+        :param root: Path to the ALOV folder that contains JPEGImages, Annotations, etc. folders.
+        :param input_size: The input size of network that is using this data, for rescaling
         :param download: Specify whether to download the dataset if it is not present
         :param num_samples: Number of samples to pass to the batch
         """
