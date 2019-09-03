@@ -44,20 +44,8 @@ class Monitor(AbstractMonitor):
         self.time = time
         self.batch_size = batch_size
 
-        # If no simulation time is specified, specify 0-dimensional recordings.
-        if self.time is None:
-            self.recording = {v: [] for v in self.state_vars}
-
-        # If simulation time is specified, pre-allocate recordings in memory for speed.
-        else:
-            self.recording = {
-                v: torch.zeros(
-                    self.time,
-                    *getattr(self.obj, v).size(),
-                    dtype=getattr(self.obj, v).dtype
-                )
-                for v in self.state_vars
-            }
+        # Deal with time later, the same underlying list is used
+        self.recording = {v: [] for v in self.state_vars}
 
     def get(self, var: str) -> torch.Tensor:
         # language=rst
@@ -68,47 +56,29 @@ class Monitor(AbstractMonitor):
         :return: Tensor of shape ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is the shape of the recorded
                  state variable.
         """
-        if self.time is None:
-            return torch.cat(self.recording[var], 0)
-        else:
-            return self.recording[var]
+        return torch.cat(self.recording[var], 0)
 
     def record(self) -> None:
         # language=rst
         """
         Appends the current value of the recorded state variables to the recording.
         """
-        if self.time is None:
+        for v in self.state_vars:
+            data = getattr(self.obj, v).unsqueeze(0)
+            self.recording[v].append(data.detach().clone())
+
+        # remove the oldest element (first in the list)
+        if self.time is not None:
             for v in self.state_vars:
-                data = getattr(self.obj, v).unsqueeze(0)
-                self.recording[v].append(data.detach())
-        else:
-            for v in self.state_vars:
-                # Remove the oldest data and concatenate new data
-                data = getattr(self.obj, v).unsqueeze(0)
-                self.recording[v] = torch.cat(
-                    (self.recording[v][1:].type(data.type()), data), 0
-                )
+                if len(self.recording[v]) > self.time:
+                    self.recording[v].pop(0)
 
     def reset_(self) -> None:
         # language=rst
         """
         Resets recordings to empty ``torch.Tensor``s.
         """
-        # If no simulation time is specified, specify 0-dimensional recordings.
-        if self.time is None:
-            self.recording = {v: [] for v in self.state_vars}
-
-        # If simulation time is specified, pre-allocate recordings in memory for speed.
-        else:
-            self.recording = {
-                v: torch.zeros(
-                    self.time,
-                    *getattr(self.obj, v).size(),
-                    dtype=getattr(self.obj, v).dtype
-                )
-                for v in self.state_vars
-            }
+        self.recording = {v: [] for v in self.state_vars}
 
 
 class NetworkMonitor(AbstractMonitor):
