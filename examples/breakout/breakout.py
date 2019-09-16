@@ -47,7 +47,8 @@ pipeline = EnvironmentPipeline(
 for i in range(100):
     total_reward = 0
     pipeline.reset_()
-    while True:
+    is_done = False
+    while not is_done:
         # Broken until select_softmax is implemented.
         result = pipeline.env_step()
         pipeline.step(result)
@@ -56,6 +57,4 @@ for i in range(100):
         total_reward += reward
 
         is_done = result[2]
-        if is_done:
-            break
     print(f"Episode \"{i}\" total reward:{total_reward}")
