@@ -123,8 +123,8 @@ try:
         result = pipeline.env_step()
         pipeline.step(result)
 
-        isDone = result[2]
-        if isDone:
+        is_done = result[2]
+        if is_done:
             pipeline.reset_()
 
         i += 1
