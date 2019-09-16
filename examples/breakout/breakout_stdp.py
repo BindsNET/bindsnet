@@ -1,7 +1,5 @@
-import torch
-
 from bindsnet.network import Network
-from bindsnet.pipeline import Pipeline
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.learning import MSTDP
 from bindsnet.encoding import bernoulli
 from bindsnet.network.topology import Connection
@@ -36,12 +34,12 @@ network.add_layer(out, name="Output Layer")
 network.add_connection(inpt_middle, source="Input Layer", target="Hidden Layer")
 network.add_connection(middle_out, source="Hidden Layer", target="Output Layer")
 
-# Load SpaceInvaders environment.
+# Load the Breakout environment.
 environment = GymEnvironment("BreakoutDeterministic-v4")
 environment.reset()
 
 # Build pipeline from specified components.
-pipeline = Pipeline(
+environment_pipeline = EnvironmentPipeline(
     network,
     environment,
     encoding=bernoulli,
@@ -55,30 +53,29 @@ pipeline = Pipeline(
 )
 
 
-# Train agent for 100 episodes.
+def run_pipeline(pipeline, episode_count):
+    for i in range(episode_count):
+        total_reward = 0
+        pipeline.reset_()
+        while True:
+            # Broken until select_softmax is implemented.
+            result = pipeline.env_step()
+            pipeline.step(result)
+
+            reward = result[1]
+            total_reward += reward
+
+            is_done = result[2]
+            if is_done:
+                break
+        print(f"Episode \"{i}\" total reward:{total_reward}")
+
+
 print("Training: ")
-for i in range(100):
-    pipeline.reset_()
-    # initialize episode reward
-    reward = 0
-    while True:
-        pipeline.step()
-        reward += pipeline.reward
-        if pipeline.done:
-            break
-    print("Episode " + str(i) + " reward:", reward)
+run_pipeline(environment_pipeline, episode_count=100)
 
 # stop MSTDP
-pipeline.network.learning = False
+environment_pipeline.network.learning = False
 
 print("Testing: ")
-for i in range(100):
-    pipeline.reset_()
-    # initialize episode reward
-    reward = 0
-    while True:
-        pipeline.step()
-        reward += pipeline.reward
-        if pipeline.done:
-            break
-    print("Episode " + str(i) + " reward:", reward)
+run_pipeline(environment_pipeline, episode_count=100)
