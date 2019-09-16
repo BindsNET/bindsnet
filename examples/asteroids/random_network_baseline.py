@@ -93,7 +93,7 @@ for layer in layers:
     if layer in voltages:
         network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
-# Load SpaceInvaders environment.
+# Load the Asteroids environment.
 environment = GymEnvironment("Asteroids-v0")
 environment.reset()
 
