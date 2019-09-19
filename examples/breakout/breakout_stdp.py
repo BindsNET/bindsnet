@@ -67,7 +67,7 @@ def run_pipeline(pipeline, episode_count):
             total_reward += reward
 
             is_done = result[2]
-        print(f"Episode \"{i}\" total reward:{total_reward}")
+        print(f"Episode {i} total reward:{total_reward}")
 
 
 print("Training: ")
