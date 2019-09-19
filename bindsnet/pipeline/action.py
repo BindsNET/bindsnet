@@ -26,7 +26,7 @@ def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
 
     assert (
         output.n % action_space.n == 0
-    ), "Output layer size not divisible by size of action space."
+    ), f"Output layer size of {output.n} is not divisible by action space size of {action_space.n}."
 
     pop_size = int(output.n / action_space.n)
     spikes = output.s

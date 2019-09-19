@@ -43,9 +43,9 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(shape=(160, 3), traces=True)  # Input layer
+inpt = Input(shape=(80, 80), traces=True)  # Input layer
 exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=14, refrac=0, traces=True)  # Readout layer
+readout = LIFNodes(n=16, refrac=0, traces=True)  # Readout layer
 layers = {"X": inpt, "E": exc, "R": readout}
 
 # Connections between layers.
@@ -93,8 +93,8 @@ for layer in layers:
     if layer in voltages:
         network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
-# Load the Asteroids environment.
-environment = GymEnvironment("Asteroids-v0")
+# Load the Breakout environment.
+environment = GymEnvironment("BreakoutDeterministic-v4")
 environment.reset()
 
 pipeline = EnvironmentPipeline(
