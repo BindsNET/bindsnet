@@ -26,7 +26,7 @@ def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
 
     assert (
         output.n % action_space.n == 0
-    ), "Output layer size not divisible by size of action space."
+    ), f"Output layer size of {output.n} is not divisible by action space size of {action_space.n}."
 
     pop_size = int(output.n / action_space.n)
     spikes = output.s
@@ -66,11 +66,11 @@ def select_softmax(pipeline: EnvironmentPipeline, **kwargs) -> int:
 
     assert (
         pipeline.network.layers[output].n == pipeline.env.action_space.n
-    ), "Output layer size not equal to size of action space."
+    ), "Output layer size is not equal to the size of the action space."
 
     assert hasattr(
         pipeline, "spike_record"
-    ), "EnvironmentPipeline has not attribute named: spike_record."
+    ), "EnvironmentPipeline is missing the attribute: spike_record."
 
     # Sum of previous iterations' spikes (Not yet implemented)
     spikes = torch.sum(pipeline.spike_record[output], dim=1)

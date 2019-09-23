@@ -3,7 +3,7 @@ import argparse
 
 from bindsnet.network import Network
 from bindsnet.learning import Hebbian
-from bindsnet.pipeline import Pipeline
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.encoding import bernoulli
 from bindsnet.network.monitors import Monitor
 from bindsnet.environment import GymEnvironment
@@ -43,9 +43,9 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(shape=(110, 84), traces=True)  # Input layer
+inpt = Input(shape=(80, 80), traces=True)  # Input layer
 exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
-readout = LIFNodes(n=14, refrac=0, traces=True)  # Readout layer
+readout = LIFNodes(n=16, refrac=0, traces=True)  # Readout layer
 layers = {"X": inpt, "E": exc, "R": readout}
 
 # Connections between layers.
@@ -93,11 +93,11 @@ for layer in layers:
     if layer in voltages:
         network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
-# Load SpaceInvaders environment.
-environment = GymEnvironment("Asteroids-v0")
+# Load the Breakout environment.
+environment = GymEnvironment("BreakoutDeterministic-v4")
 environment.reset()
 
-pipeline = Pipeline(
+pipeline = EnvironmentPipeline(
     network,
     environment,
     encoding=bernoulli,
@@ -120,9 +120,11 @@ avg_lengths = []
 i = 0
 try:
     while i < n:
-        pipeline.step()
+        result = pipeline.env_step()
+        pipeline.step(result)
 
-        if pipeline.done:
+        is_done = result[2]
+        if is_done:
             pipeline.reset_()
 
         i += 1

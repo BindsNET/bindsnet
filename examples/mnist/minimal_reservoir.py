@@ -9,7 +9,6 @@ from bindsnet.encoding import PoissonEncoder
 
 from bindsnet.network import Network
 from bindsnet.pipeline import DataLoaderPipeline
-from bindsnet.network.monitors import Monitor
 from bindsnet.network.topology import Connection
 from bindsnet.network.nodes import LIFNodes, Input
 
