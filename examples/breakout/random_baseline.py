@@ -1,7 +1,6 @@
 import os
 import argparse
 import numpy as np
-import pickle as p
 
 from bindsnet.environment import GymEnvironment
 
@@ -15,8 +14,8 @@ args = parser.parse_args()
 n = args.n
 render = args.render
 
-# Load SpaceInvaders environment.
-env = GymEnvironment("SpaceInvaders-v0")
+# Load Breakout environment.
+env = GymEnvironment("BreakoutDeterministic-v4")
 env.reset()
 
 total = 0
@@ -31,7 +30,7 @@ while i < n:
         env.render()
 
     # Select random action.
-    a = np.random.choice(6)
+    a = np.random.choice(4)
 
     # Step environment with random action.
     obs, reward, done, info = env.step(a)
@@ -72,9 +71,3 @@ while i < n:
         k += 1
 
     i += 1
-
-save = (total, rewards, avg_rewards, lengths, avg_lengths)
-p.dump(
-    save,
-    open(os.path.join("..", "..", "results", "SI_random_baseline_%d.pt" % n), "wb"),
-)
