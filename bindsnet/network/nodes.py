@@ -82,6 +82,8 @@ class Nodes(torch.nn.Module):
             self.register_buffer("summed", torch.FloatTensor())  # Summed inputs.
 
         self.dt = None
+        self.batch_size = None
+        self.trace_decay = None
         self.learning = learning
 
     @abstractmethod

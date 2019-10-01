@@ -13,7 +13,8 @@ from ..network.nodes import AbstractInput
 class EnvironmentPipeline(BasePipeline):
     # language=rst
     """
-    Abstracts the interaction between ``Network``, ``Environment`` and environment feedback action.
+    Abstracts the interaction between ``Network``, ``Environment``, and environment
+    feedback action.
     """
 
     def __init__(
@@ -29,7 +30,8 @@ class EnvironmentPipeline(BasePipeline):
 
         :param network: Arbitrary network object.
         :param environment: Arbitrary environment.
-        :param action_function: Function to convert network outputs into environment inputs.
+        :param action_function: Function to convert network outputs into environment
+            inputs.
 
         Keyword arguments:
 
@@ -37,7 +39,8 @@ class EnvironmentPipeline(BasePipeline):
         :param str output: String name of the layer from which to take output.
         :param int render_interval: Interval to render the environment.
         :param int reward_delay: How many iterations to delay delivery of reward.
-        :param int time: Time for which to run the network. Defaults to the network's timestep.
+        :param int time: Time for which to run the network. Defaults to the network's
+            timestep.
         """
         super().__init__(network, **kwargs)
 
@@ -82,7 +85,8 @@ class EnvironmentPipeline(BasePipeline):
     def train(self, **kwargs) -> None:
         # language=rst
         """
-        Trains for the specified number of episodes. Each episode can be of arbitrary length.
+        Trains for the specified number of episodes. Each episode can be of arbitrary
+        length.
         """
         while self.episode < self.num_episodes:
             self.reset_()
@@ -96,15 +100,16 @@ class EnvironmentPipeline(BasePipeline):
                     break
 
             print(
-                f"Episode: {self.episode} - accumulated reward: {self.accumulated_reward:.2f}"
+                f"Episode: {self.episode} - "
+                f"accumulated reward: {self.accumulated_reward:.2f}"
             )
             self.episode += 1
 
     def env_step(self) -> Tuple[torch.Tensor, float, bool, Dict]:
         # language=rst
         """
-        Single step of the environment which includes rendering, getting and performing the action,
-        and accumulating/delaying rewards.
+        Single step of the environment which includes rendering, getting and performing
+        the action, and accumulating/delaying rewards.
 
         :return: An OpenAI ``gym`` compatible tuple with modified reward and info.
         """
@@ -139,8 +144,8 @@ class EnvironmentPipeline(BasePipeline):
     ) -> None:
         # language=rst
         """
-        Run a single iteration of the network and update it and the
-        reward list when done.
+        Run a single iteration of the network and update it and the reward list when
+        done.
 
         :param gym_batch: An OpenAI ``gym`` compatible tuple.
         """

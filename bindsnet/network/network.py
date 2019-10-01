@@ -16,7 +16,8 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
 
     :param file_name: Path to serialized network object on disk.
     :param map_location: One of ``"cpu"`` or ``"cuda"``. Defaults to ``"cpu"``.
-    :param learning: Whether to load with learning enabled. Default loads value from disk.
+    :param learning: Whether to load with learning enabled. Default loads value from
+        disk.
     """
     network = torch.load(open(file_name, "rb"), map_location=map_location)
     if learning is not None and "learning" in vars(network):
@@ -28,8 +29,8 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
 class Network(torch.nn.Module):
     # language=rst
     """
-    Most important object of the ``bindsnet`` package. Responsible for the simulation and interaction of nodes and
-    connections.
+    Central object of the ``bindsnet`` package. Responsible for the simulation and
+    interaction of nodes and connections.
 
     **Example:**
 
@@ -93,7 +94,8 @@ class Network(torch.nn.Module):
 
         :param dt: Simulation timestep.
         :param learning: Whether to allow connection updates. True by default.
-        :param reward_fn: Optional class allowing for modification of reward in case of reward-modulated learning.
+        :param reward_fn: Optional class allowing for modification of reward in case of
+            reward-modulated learning.
         """
         super().__init__()
 
@@ -103,6 +105,7 @@ class Network(torch.nn.Module):
         self.layers = {}
         self.connections = {}
         self.monitors = {}
+
         self.train(learning)
 
         if reward_fn is not None:
@@ -406,7 +409,8 @@ class Network(torch.nn.Module):
 
     def train(self, mode: bool = True) -> "torch.nn.Module":
         # language=rst
-        """Sets the node in training mode.
+        """
+        Sets the node in training mode.
 
         :param mode: Turn training on or off.
 
