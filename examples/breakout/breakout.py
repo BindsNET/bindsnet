@@ -49,7 +49,6 @@ for i in range(100):
     pipeline.reset_()
     is_done = False
     while not is_done:
-        # Broken until select_softmax is implemented.
         result = pipeline.env_step()
         pipeline.step(result)
 
