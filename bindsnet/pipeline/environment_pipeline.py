@@ -8,6 +8,7 @@ from ..analysis.pipeline_analysis import MatplotlibAnalyzer
 from ..environment import Environment
 from ..network import Network
 from ..network.nodes import AbstractInput
+from ..network.monitors import Monitor
 
 
 class EnvironmentPipeline(BasePipeline):
@@ -78,6 +79,15 @@ class EnvironmentPipeline(BasePipeline):
 
         self.first = True
         self.analyzer = MatplotlibAnalyzer(**self.plot_config)
+
+        if self.output is not None:
+            self.network.add_monitor(
+                Monitor(self.network.layers[self.output], ["s"]), self.output
+            )
+
+            self.spike_record = {
+                self.output: torch.zeros((self.time, self.env.action_space.n))
+            }
 
     def init_fn(self) -> None:
         pass
@@ -152,12 +162,16 @@ class EnvironmentPipeline(BasePipeline):
         obs, reward, done, info = gym_batch
 
         # Place the observations into the inputs.
-        inputs = {k: obs for k in self.inputs}
+        obs_shape = [1] * len(obs.shape[1:])
+        inpts = {k: obs.repeat(self.time, *obs_shape) for k in self.inpts}
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(
-            inputs=inputs, time=self.time, reward=reward, input_time_dim=1, **kwargs
-        )
+        self.network.run(inputs=inputs, time=self.time, reward=reward, **kwargs)
+
+        if self.output is not None:
+            self.spike_record[self.output] = (
+                self.network.monitors[self.output].get("s").float()
+            )
 
         if done:
             if self.network.reward_fn is not None:

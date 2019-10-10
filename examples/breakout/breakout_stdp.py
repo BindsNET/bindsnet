@@ -59,7 +59,6 @@ def run_pipeline(pipeline, episode_count):
         pipeline.reset_state_variables()
         is_done = False
         while not is_done:
-            # Broken until select_softmax is implemented.
             result = pipeline.env_step()
             pipeline.step(result)
 
