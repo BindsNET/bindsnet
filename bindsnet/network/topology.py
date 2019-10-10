@@ -106,7 +106,7 @@ class AbstractConnection(ABC, Module):
             self.w.masked_fill_(mask, 0)
 
     @abstractmethod
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Contains resetting logic for the connection.
@@ -196,12 +196,12 @@ class Connection(AbstractConnection):
             w_abs_sum[w_abs_sum == 0] = 1.0
             self.w *= self.norm / w_abs_sum
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super().reset_state_variables()
 
 
 class Conv2dConnection(AbstractConnection):
@@ -348,12 +348,12 @@ class Conv2dConnection(AbstractConnection):
             for fltr in range(w.size(0)):
                 w[fltr] *= self.norm / w[fltr].sum(0)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super().reset_state_variables()
 
 
 class MaxPool2dConnection(AbstractConnection):
@@ -435,12 +435,12 @@ class MaxPool2dConnection(AbstractConnection):
         """
         pass
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super().reset_state_variables()
 
         self.firing_rates = torch.zeros(self.source.shape)
 
@@ -614,12 +614,12 @@ class LocalConnection(AbstractConnection):
             w = self.w.view(self.source.n, self.target.n)
             w *= self.norm / self.w.sum(0).view(1, -1)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super().reset_state_variables()
 
 
 class MeanFieldConnection(AbstractConnection):
@@ -696,12 +696,12 @@ class MeanFieldConnection(AbstractConnection):
             self.w *= self.norm / self.w.sum()
             self.w = self.w.view(1, *self.target.shape)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super().reset_state_variables()
 
 
 class SparseConnection(AbstractConnection):
@@ -800,9 +800,9 @@ class SparseConnection(AbstractConnection):
         """
         pass
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Contains resetting logic for the connection.
         """
-        super().reset_()
+        super().reset_state_variables()

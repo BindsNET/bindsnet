@@ -116,9 +116,9 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         :param batch: A dictionary of the current batch. Includes image, label and
             encoded versions.
         """
-        self.network.reset_()
-        inpts = {self.input_layer: batch["encoded_image"]}
-        self.network.run(inpts, time=batch["encoded_image"].shape[0])
+        self.network.reset_state_variables()
+        inputs = {self.input_layer: batch["encoded_image"]}
+        self.network.run(inputs, time=batch["encoded_image"].shape[0])
 
     def init_fn(self) -> None:
         pass

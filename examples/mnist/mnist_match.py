@@ -112,10 +112,10 @@ for i in range(iters):
         for j in np.random.choice(range(n)[lbls[i] :: 10], clamped, replace=False):
             target_rates[j] = target_rate
 
-    inpts = {"X": next(loader).view(1, 784)}
+    inputs = {"X": next(loader).view(1, 784)}
     kwargs = {"reward": reward, "a_plus": a_plus, "a_minus": a_minus}
 
-    network.run(inpts, 1, **kwargs)
+    network.run(inputs, 1, **kwargs)
 
     spikes = {
         layer: spike_monitors[layer].get("s").view(-1) for layer in spike_monitors
@@ -173,7 +173,7 @@ for i in range(iters):
         )
 
     for m in spike_monitors:
-        spike_monitors[m].reset_()
+        spike_monitors[m].reset_state_variables()
 
     if plot:
         if i == 0:

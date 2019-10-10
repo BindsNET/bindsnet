@@ -100,12 +100,12 @@ class BasePipeline:
 
         self.network.to(self.device)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Reset the pipeline.
         """
-        self.network.reset_()
+        self.network.reset_state_variables()
         self.step_count = 0
 
     def step(self, batch: Any, **kwargs) -> Any:

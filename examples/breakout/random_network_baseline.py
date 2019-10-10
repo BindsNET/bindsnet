@@ -125,7 +125,7 @@ try:
 
         is_done = result[2]
         if is_done:
-            pipeline.reset_()
+            pipeline.reset_state_variables()
 
         i += 1
 

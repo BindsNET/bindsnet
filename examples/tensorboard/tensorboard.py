@@ -112,13 +112,13 @@ for step, batch in enumerate(tqdm(train_dataloader)):
     # was provided
 
     # batch["encoded_image"] is in BxTxCxHxW format
-    inpts = {"X": batch["encoded_image"]}
+    inputs = {"X": batch["encoded_image"]}
 
     # Run the network on the input.
     # Specify the location of the time dimension
-    network.run(inpts=inpts, time=time, input_time_dim=1)
+    network.run(inputs=inputs, time=time, input_time_dim=1)
 
-    network.reset_()  # Reset state variables.
+    network.reset_state_variables()  # Reset state variables.
 
     analyzer.plot_conv2d_weights(conv_conn.w, step=step)
 

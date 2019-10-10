@@ -173,12 +173,12 @@ class SubtractiveResetIFNodes(nodes.Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.reset)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
@@ -238,12 +238,12 @@ class PassThroughNodes(nodes.Nodes):
         """
         Runs a single simulation step.
 
-        :param inpts: Inputs to the layer.
+        :param inputs: Inputs to the layer.
         :param dt: Simulation time step.
         """
         self.s = x
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.

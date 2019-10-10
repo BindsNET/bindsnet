@@ -64,7 +64,7 @@ class EnvironmentPipeline(BasePipeline):
             self.rewards = torch.zeros(self.reward_delay)
 
         # Set up for multiple layers of input layers.
-        self.inpts = [
+        self.inputs = [
             name
             for name, layer in network.layers.items()
             if isinstance(layer, AbstractInput)
@@ -89,7 +89,7 @@ class EnvironmentPipeline(BasePipeline):
         length.
         """
         while self.episode < self.num_episodes:
-            self.reset_()
+            self.reset_state_variables()
 
             for _ in itertools.count():
                 obs, reward, done, info = self.env_step()
@@ -152,11 +152,11 @@ class EnvironmentPipeline(BasePipeline):
         obs, reward, done, info = gym_batch
 
         # Place the observations into the inputs.
-        inpts = {k: obs for k in self.inpts}
+        inputs = {k: obs for k in self.inputs}
 
         # Run the network on the spike train-encoded inputs.
         self.network.run(
-            inpts=inpts, time=self.time, reward=reward, input_time_dim=1, **kwargs
+            inputs=inputs, time=self.time, reward=reward, input_time_dim=1, **kwargs
         )
 
         if done:
@@ -168,13 +168,13 @@ class EnvironmentPipeline(BasePipeline):
                 )
             self.reward_list.append(self.accumulated_reward)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Reset the pipeline.
         """
         self.env.reset()
-        self.network.reset_()
+        self.network.reset_state_variables()
         self.accumulated_reward = 0.0
         self.step_count = 0
 

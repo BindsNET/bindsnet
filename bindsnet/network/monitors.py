@@ -74,7 +74,7 @@ class Monitor(AbstractMonitor):
                 if len(self.recording[v]) > self.time:
                     self.recording[v].pop(0)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets recordings to empty ``torch.Tensor``s.
@@ -236,7 +236,7 @@ class NetworkMonitor(AbstractMonitor):
             with open(path, "wb") as f:
                 torch.save(self.recording, f)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets recordings to empty ``torch.Tensors``.

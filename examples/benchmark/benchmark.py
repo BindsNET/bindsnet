@@ -51,7 +51,7 @@ def BindsNET_cpu(n_neurons, time):
     )
 
     data = {"X": poisson(datum=torch.rand(n_neurons), time=time)}
-    network.run(inpts=data, time=time)
+    network.run(inputs=data, time=time)
 
     return t() - t0, t() - t1
 
@@ -74,7 +74,7 @@ def BindsNET_gpu(n_neurons, time):
         )
 
         data = {"X": poisson(datum=torch.rand(n_neurons), time=time)}
-        network.run(inpts=data, time=time)
+        network.run(inputs=data, time=time)
 
         return t() - t0, t() - t1
 

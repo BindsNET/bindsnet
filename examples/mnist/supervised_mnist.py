@@ -168,8 +168,8 @@ for (i, dataPoint) in pbar:
     # Run the network on the input.
     choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
     clamp = {"Ae": per_class * label.long() + torch.Tensor(choice).long()}
-    inpts = {"X": image.view(time, 1, 28, 28)}
-    network.run(inpts=inpts, time=time, clamp=clamp)
+    inputs = {"X": image.view(time, 1, 28, 28)}
+    network.run(inputs=inputs, time=time, clamp=clamp)
 
     # Get voltage recording.
     exc_voltages = exc_voltage_monitor.get("v")
@@ -180,7 +180,7 @@ for (i, dataPoint) in pbar:
 
     # Optionally plot various simulation information.
     if plot:
-        inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
+        inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
         input_exc_weights = network.connections[("X", "Ae")].w
         square_weights = get_square_weights(
             input_exc_weights.view(784, n_neurons), n_sqrt, 28
@@ -222,7 +222,7 @@ for (i, dataPoint) in pbar:
 
         plt.pause(1e-8)
 
-    network.reset_()  # Reset state variables.
+    network.reset_state_variables()  # Reset state variables.
 
 print("Progress: %d / %d \n" % (n_train, n_train))
 print("Training complete.\n")

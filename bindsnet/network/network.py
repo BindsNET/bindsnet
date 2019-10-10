@@ -64,8 +64,8 @@ class Network(torch.nn.Module):
         train = encoding.poisson(datum=data, time=5000)  # Encode input as 5000ms Poisson spike trains.
 
         # Simulate network on generated spike trains.
-        inpts = {'X' : train}  # Create inputs mapping.
-        network.run(inpts=inpts, time=5000)  # Run network simulation.
+        inputs = {'X' : train}  # Create inputs mapping.
+        network.run(inputs=inputs, time=5000)  # Run network simulation.
 
         # Plot spikes of input and output layers.
         spikes = {'X' : M1.get('s'), 'Y' : M2.get('s')}
@@ -212,7 +212,7 @@ class Network(torch.nn.Module):
         :param layers: Layers to update inputs for. Defaults to all network layers.
         :return: Inputs to all layers for the current iteration.
         """
-        inpts = {}
+        inputs = {}
 
         if layers is None:
             layers = self.layers
@@ -224,24 +224,24 @@ class Network(torch.nn.Module):
                 source = self.connections[c].source
                 target = self.connections[c].target
 
-                if not c[1] in inpts:
-                    inpts[c[1]] = torch.zeros(
+                if not c[1] in inputs:
+                    inputs[c[1]] = torch.zeros(
                         self.batch_size, *target.shape, device=target.s.device
                     )
 
                 # Add to input: source's spikes multiplied by connection weights.
-                inpts[c[1]] += self.connections[c].compute(source.s)
+                inputs[c[1]] += self.connections[c].compute(source.s)
 
-        return inpts
+        return inputs
 
     def run(
-        self, inpts: Dict[str, torch.Tensor], time: int, one_step=False, **kwargs
+        self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, **kwargs
     ) -> None:
         # language=rst
         """
         Simulate network for given inputs and time.
 
-        :param inpts: Dictionary of ``Tensor``s of shape ``[time, *input_shape]`` or
+        :param inputs: Dictionary of ``Tensor``s of shape ``[time, *input_shape]`` or
                       ``[batch_size, time, *input_shape]``.
         :param time: Simulation time.
         :param one_step: Whether to run the network in "feed-forward" mode, where inputs
@@ -284,7 +284,7 @@ class Network(torch.nn.Module):
             spikes = torch.bernoulli(0.5 * torch.rand(500, 500))
 
             # Run network simulation.
-            network.run(inpts={'I' : spikes}, time=500)
+            network.run(inputs={'I' : spikes}, time=500)
 
             # Look at input spiking activity.
             spikes = network.monitors['I'].get('s')
@@ -305,29 +305,29 @@ class Network(torch.nn.Module):
             kwargs["reward"] = self.reward_fn.compute(**kwargs)
 
         # Dynamic setting of batch size.
-        if inpts != {}:
-            for key in inpts:
+        if inputs != {}:
+            for key in inputs:
                 # goal shape is [time, batch, n_0, ...]
-                if len(inpts[key].size()) == 1:
+                if len(inputs[key].size()) == 1:
                     # current shape is [n_0, ...]
                     # unsqueeze twice to make [1, 1, n_0, ...]
-                    inpts[key] = inpts[key].unsqueeze(0).unsqueeze(0)
-                elif len(inpts[key].size()) == 2:
+                    inputs[key] = inputs[key].unsqueeze(0).unsqueeze(0)
+                elif len(inputs[key].size()) == 2:
                     # current shape is [time, n_0, ...]
                     # unsqueeze dim 1 so that we have
                     # [time, 1, n_0, ...]
-                    inpts[key] = inpts[key].unsqueeze(1)
+                    inputs[key] = inputs[key].unsqueeze(1)
 
-            for key in inpts:
+            for key in inputs:
                 # batch dimension is 1, grab this and use for batch size
-                if inpts[key].size(1) != self.batch_size:
-                    self.batch_size = inpts[key].size(1)
+                if inputs[key].size(1) != self.batch_size:
+                    self.batch_size = inputs[key].size(1)
 
                     for l in self.layers:
                         self.layers[l].set_batch_size(self.batch_size)
 
                     for m in self.monitors:
-                        self.monitors[m].reset_()
+                        self.monitors[m].reset_state_variables()
 
                 break
 
@@ -336,7 +336,7 @@ class Network(torch.nn.Module):
 
         # Get input to all layers (synchronous mode).
         if not one_step:
-            inpts.update(self._get_inputs())
+            inputs.update(self._get_inputs())
 
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
@@ -344,13 +344,13 @@ class Network(torch.nn.Module):
                 # Update each layer of nodes.
                 if isinstance(self.layers[l], AbstractInput):
                     # shape is [time, batch, n_0, ...]
-                    self.layers[l].forward(x=inpts[l][t])
+                    self.layers[l].forward(x=inputs[l][t])
                 else:
                     if one_step:
                         # Get input to this layer (one-step mode).
-                        inpts.update(self._get_inputs(layers=[l]))
+                        inputs.update(self._get_inputs(layers=[l]))
 
-                    self.layers[l].forward(x=inpts[l])
+                    self.layers[l].forward(x=inputs[l])
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
@@ -383,7 +383,7 @@ class Network(torch.nn.Module):
                 )
 
             # Get input to all layers.
-            inpts.update(self._get_inputs())
+            inputs.update(self._get_inputs())
 
             # Record state variables of interest.
             for m in self.monitors:
@@ -393,19 +393,19 @@ class Network(torch.nn.Module):
         for c in self.connections:
             self.connections[c].normalize()
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Reset state variables of objects in network.
         """
         for layer in self.layers:
-            self.layers[layer].reset_()
+            self.layers[layer].reset_state_variables()
 
         for connection in self.connections:
-            self.connections[connection].reset_()
+            self.connections[connection].reset_state_variables()
 
         for monitor in self.monitors:
-            self.monitors[monitor].reset_()
+            self.monitors[monitor].reset_state_variables()
 
     def train(self, mode: bool = True) -> "torch.nn.Module":
         # language=rst

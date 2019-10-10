@@ -107,7 +107,7 @@ class Nodes(torch.nn.Module):
             # Add current input to running sum.
             self.summed += x.float()
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Abstract base class method for resetting state variables.
@@ -219,12 +219,12 @@ class Input(Nodes, AbstractInput):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
 
 
 class RealInput(Nodes, AbstractInput):
@@ -278,12 +278,12 @@ class RealInput(Nodes, AbstractInput):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
 
 
 class McCullochPitts(Nodes):
@@ -345,12 +345,12 @@ class McCullochPitts(Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
 
     def set_batch_size(self, batch_size) -> None:
         # language=rst
@@ -454,12 +454,12 @@ class IFNodes(Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.reset)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
@@ -583,12 +583,12 @@ class LIFNodes(Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.rest)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
@@ -728,12 +728,12 @@ class CurrentLIFNodes(Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.rest)  # Neuron voltages.
         self.i.zero_()  # Synaptic input currents.
         self.refrac_count.zero_()  # Refractory period counters.
@@ -884,12 +884,12 @@ class AdaptiveLIFNodes(Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.rest)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
@@ -1052,12 +1052,12 @@ class DiehlAndCookNodes(Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.rest)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
@@ -1236,12 +1236,12 @@ class IzhikevichNodes(Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.rest)  # Neuron voltages.
         self.u = self.b * self.v  # Neuron recovery.
 
@@ -1377,12 +1377,12 @@ class SRM0Nodes(Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.rest)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
