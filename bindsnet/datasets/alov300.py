@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import shutil
 import zipfile
+import warnings
 import sys
 import time
 import cv2
@@ -21,6 +22,8 @@ from urllib.request import urlretrieve
 from torchvision import transforms
 import xml.etree.ElementTree as ET
 from torch.utils.data import Dataset
+
+warnings.filterwarnings("ignore")
 
 class ALOV300(torch.utils.data.Dataset):
     DATASET_WEB = "http://alov300pp.joomlafree.it/dataset-resources.html"
