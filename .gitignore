@@ -110,6 +110,9 @@ lsm/
 # Results from network monitoring test.
 results/
 
+# Results from network monitoring test.
+examples/saved_checkpoints
+
 # pytest cache
 .pytest_cache/
 
