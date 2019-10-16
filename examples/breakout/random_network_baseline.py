@@ -1,40 +1,35 @@
 import torch
 import argparse
-import matplotlib.pyplot as plt
 
-from bindsnet.environment import GymEnvironment
-from bindsnet.encoding import BernoulliEncoder
-from bindsnet.learning import MSTDPET
 from bindsnet.network import Network
-from bindsnet.network.monitors import Monitor
-from bindsnet.network.nodes import LIFNodes, Input
-from bindsnet.network.topology import Connection
+from bindsnet.learning import Hebbian
 from bindsnet.pipeline import EnvironmentPipeline
+from bindsnet.encoding import bernoulli
+from bindsnet.network.monitors import Monitor
+from bindsnet.environment import GymEnvironment
+from bindsnet.network.topology import Connection
+from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.pipeline.action import select_multinomial
-from bindsnet.analysis.plotting import plot_weights
-
 
 parser = argparse.ArgumentParser()
+parser.add_argument("-n", type=int, default=1000000)
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
 parser.add_argument("--dt", type=float, default=1.0)
-parser.add_argument("--a_plus", type=int, default=1)
-parser.add_argument("--a_minus", type=int, default=-0.5)
-parser.add_argument("--render_interval", type=int, default=None)
-parser.add_argument("--plot_interval", type=int, default=None)
-parser.add_argument("--print_interval", type=int, default=None)
+parser.add_argument("--plot_interval", type=int, default=10)
+parser.add_argument("--render_interval", type=int, default=10)
+parser.add_argument("--print_interval", type=int, default=100)
 parser.add_argument("--gpu", dest="gpu", action="store_true")
 parser.set_defaults(plot=False, render=False, gpu=False)
 
 args = parser.parse_args()
 
+n = args.n
 seed = args.seed
 n_neurons = args.n_neurons
 dt = args.dt
-a_plus = args.a_plus
-a_minus = args.a_minus
-render_interval = args.render_interval
 plot_interval = args.plot_interval
+render_interval = args.render_interval
 print_interval = args.print_interval
 gpu = args.gpu
 
@@ -48,32 +43,30 @@ else:
 network = Network(dt=dt)
 
 # Layers of neurons.
-inpt = Input(n=6552, shape=[78, 84], traces=True)  # Input layer
-exc = LIFNodes(
-    n=n_neurons, refrac=0, traces=True, thresh=-52.0 + torch.randn(n_neurons)
-)  # Excitatory layer
-readout = LIFNodes(n=60, refrac=0, traces=True, thresh=-40.0)  # Readout layer
+inpt = Input(shape=(80, 80), traces=True)  # Input layer
+exc = LIFNodes(n=n_neurons, refrac=0, traces=True)  # Excitatory layer
+readout = LIFNodes(n=16, refrac=0, traces=True)  # Readout layer
 layers = {"X": inpt, "E": exc, "R": readout}
 
 # Connections between layers.
 # Input -> excitatory.
+w = 0.01 * torch.rand(layers["X"].n, layers["E"].n)
 input_exc_conn = Connection(
     source=layers["X"],
     target=layers["E"],
-    w=torch.rand(layers["X"].n, layers["E"].n),
-    wmax=1e-2,
+    w=0.01 * torch.rand(layers["X"].n, layers["E"].n),
+    wmax=0.02,
+    norm=0.01 * layers["X"].n,
 )
 
 # Excitatory -> readout.
 exc_readout_conn = Connection(
     source=layers["E"],
     target=layers["R"],
-    w=torch.rand(layers["E"].n, layers["R"].n),
-    wmin=-0.5,
-    wmax=0.5,
-    update_rule=MSTDPET,
-    nu=1e-4,
-    norm=0.15 * layers["E"].n,
+    w=0.01 * torch.rand(layers["E"].n, layers["R"].n),
+    update_rule=Hebbian,
+    nu=[1e-2, 1e-2],
+    norm=0.5 * layers["E"].n,
 )
 
 # Spike recordings for all layers.
@@ -100,30 +93,41 @@ for layer in layers:
     if layer in voltages:
         network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
-
-# Load SpaceInvaders environment.
-environment = GymEnvironment(
-    "SpaceInvaders-v0",
-    BernoulliEncoder(time=1, dt=network.dt),
-    history_length=2,
-    delta=4,
-)
+# Load the Breakout environment.
+environment = GymEnvironment("BreakoutDeterministic-v4")
 environment.reset()
 
-# Build pipeline from specified components.
 pipeline = EnvironmentPipeline(
     network,
     environment,
-    action_function=select_multinomial,
-    output="R",
+    encoding=bernoulli,
+    time=1,
+    history=5,
+    delta=10,
     plot_interval=plot_interval,
     print_interval=print_interval,
     render_interval=render_interval,
+    action_function=select_multinomial,
+    output="R",
 )
 
+total = 0
+rewards = []
+avg_rewards = []
+lengths = []
+avg_lengths = []
 
+i = 0
 try:
-    pipeline.train()
+    while i < n:
+        result = pipeline.env_step()
+        pipeline.step(result)
+
+        is_done = result[2]
+        if is_done:
+            pipeline.reset_()
+
+        i += 1
+
 except KeyboardInterrupt:
-    plt.close("all")
     environment.close()
