@@ -206,7 +206,9 @@ class PassThroughNodes(nodes.Nodes):
         n: Optional[int] = None,
         shape: Optional[Sequence[int]] = None,
         traces: bool = False,
-        trace_tc: Union[float, torch.Tensor] = 5e-2,
+        traces_additive: bool = False,
+        tc_trace: Union[float, torch.Tensor] = 20.0,
+        trace_scale: Union[float, torch.Tensor] = 1.0,
         sum_input: bool = False,
     ) -> None:
         # language=rst
@@ -219,8 +221,15 @@ class PassThroughNodes(nodes.Nodes):
         :param trace_tc: Time constant of spike trace decay.
         :param sum_input: Whether to sum all inputs.
         """
-        super().__init__(n, shape, traces, trace_tc, sum_input)
-
+        super().__init__(
+            n=n,
+            shape=shape,
+            traces=traces,
+            traces_additive=traces_additive,
+            tc_trace=tc_trace,
+            trace_scale=trace_scale,
+            sum_input=sum_input,
+        )
         self.register_buffer("v", torch.zeros(self.shape))
 
     def forward(self, x: torch.Tensor) -> None:
@@ -401,17 +410,27 @@ def data_based_normalization(
     return ann
 
 
-def _ann_to_snn_helper(prev, current, node_type, **kwargs):
+def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
     # language=rst
     """
     Helper function for main ``ann_to_snn`` method.
 
     :param prev: Previous PyTorch module in artificial neural network.
     :param current: Current PyTorch module in artificial neural network.
-    :return: Spiking neural network layer and connection corresponding to ``prev`` and ``current`` PyTorch modules.
+    :param node_type: Type of ``bindsnet.network.nodes`` to use.
+    :param last: Whether this connection and layer is the last to be converted.
+    :return: Spiking neural network layer and connection corresponding to ``prev`` and
+             ``current`` PyTorch modules.
     """
     if isinstance(current, nn.Linear):
-        layer = node_type(n=current.out_features, reset=0, thresh=1, refrac=0, **kwargs)
+        layer = node_type(
+            n=current.out_features,
+            reset=0,
+            thresh=1,
+            refrac=0,
+            sum_input=last,
+            **kwargs,
+        )
         bias = current.bias if current.bias is not None else torch.zeros(layer.n)
         connection = topology.Connection(
             source=prev, target=layer, w=current.weight.t(), b=bias
@@ -433,7 +452,9 @@ def _ann_to_snn_helper(prev, current, node_type, **kwargs):
         ) / current.stride[1] + 1
         shape = (1, out_channels, int(width), int(height))
 
-        layer = node_type(shape=shape, reset=0, thresh=1, refrac=0, **kwargs)
+        layer = node_type(
+            shape=shape, reset=0, thresh=1, refrac=0, sum_input=last, **kwargs
+        )
         bias = current.bias if current.bias is not None else torch.zeros(layer.shape[1])
         connection = topology.Conv2dConnection(
             source=prev,
@@ -570,7 +591,9 @@ def ann_to_snn(
         prev = layer
 
     current = children[-1]
-    layer, connection = _ann_to_snn_helper(prev, current, node_type, **kwargs)
+    layer, connection = _ann_to_snn_helper(
+        prev, current, node_type, last=True, **kwargs
+    )
 
     i += 1
 

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 with open("README.md") as f:
     long_description = f.read()
 
-version = "0.2.4"
+version = "0.2.5"
 
 setup(
     name="bindsnet",
@@ -21,8 +21,8 @@ setup(
     % version,
     install_requires=[
         "numpy>=1.14.2",
-        "torch>=1.1.0",
-        "torchvision>=0.3.0",
+        "torch>=1.2.0",
+        "torchvision>=0.4.0",
         "tensorboardX>=1.7",
         "tqdm>=4.19.9",
         "matplotlib>=2.1.0",
