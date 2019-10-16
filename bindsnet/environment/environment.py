@@ -83,7 +83,8 @@ class GymEnvironment(Environment):
 
         :param int history: Number of observations to keep track of.
         :param int delta: Step size to save observations in history.
-        :param bool add_channel_dim: Allows for the adding of the channel dimension in 2D inputs.
+        :param bool add_channel_dim: Allows for the adding of the channel dimension in
+            2D inputs.
         """
         self.name = name
         self.env = gym.make(name)
@@ -217,9 +218,10 @@ class GymEnvironment(Environment):
     def update_history(self) -> None:
         # language=rst
         """
-        Updates the observations inside history by performing subtraction from most recent observation and the sum of
-        previous observations. If there are not enough observations to take a difference from, simply store the
-        observation without any differencing.
+        Updates the observations inside history by performing subtraction from most
+        recent observation and the sum of previous observations. If there are not enough
+        observations to take a difference from, simply store the observation without any
+        differencing.
         """
         # Recording initial observations.
         if self.episode_step_count < len(self.history) * self.delta:
@@ -242,9 +244,10 @@ class GymEnvironment(Environment):
     def update_index(self) -> None:
         # language=rst
         """
-        Updates the index to keep track of history. For example: ``history = 4``, ``delta = 3`` will produce
-        ``self.history = {1, 4, 7, 10}`` and ``self.history_index`` will be updated according to ``self.delta``
-        and will wrap around the history dictionary.
+        Updates the index to keep track of history. For example: ``history = 4``,
+        ``delta = 3`` will produce ``self.history = {1, 4, 7, 10}`` and
+        ``self.history_index`` will be updated according to ``self.delta`` and will wrap
+        around the history dictionary.
         """
         if self.episode_step_count % self.delta == 0:
             if self.history_index != max(self.history.keys()):

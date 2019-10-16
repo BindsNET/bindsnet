@@ -46,7 +46,7 @@ pipeline = EnvironmentPipeline(
 # Run environment simulation for 100 episodes.
 for i in range(100):
     total_reward = 0
-    pipeline.reset_()
+    pipeline.reset_state_variables()
     is_done = False
     while not is_done:
         result = pipeline.env_step()

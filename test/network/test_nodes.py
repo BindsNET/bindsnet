@@ -84,7 +84,7 @@ class TestNodes:
                 assert d == torch.device("cuda:0")
 
             print("Reset layer")
-            layer.reset_()
+            layer.reset_state_variables()
             layer_tensors = [
                 k for k, v in layer.state_dict().items() if isinstance(v, torch.Tensor)
             ]

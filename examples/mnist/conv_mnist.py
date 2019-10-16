@@ -160,19 +160,19 @@ for epoch in range(n_epochs):
     for step, batch in enumerate(tqdm(train_dataloader)):
         # Get next input sample.
 
-        inpts = {"X": batch["encoded_image"]}
+        inputs = {"X": batch["encoded_image"]}
         if gpu:
-            inpts = {k: v.cuda() for k, v in inpts.items()}
+            inputs = {k: v.cuda() for k, v in inputs.items()}
         label = batch["label"]
 
         # Run the network on the input.
-        network.run(inpts=inpts, time=time, input_time_dim=1)
+        network.run(inputs=inputs, time=time, input_time_dim=1)
 
         # Optionally plot various simulation information.
         if plot:
             image = batch["image"].view(28, 28)
 
-            inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
+            inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
             weights1 = conv_conn.w
             _spikes = {
                 "X": spikes["X"].get("s").view(time, -1),
@@ -191,7 +191,7 @@ for epoch in range(n_epochs):
 
             plt.pause(1)
 
-        network.reset_()  # Reset state variables.
+        network.reset_state_variables()  # Reset state variables.
 
 print("Progress: %d / %d (%.4f seconds)\n" % (n_epochs, n_epochs, t() - start))
 print("Training complete.\n")

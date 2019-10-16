@@ -13,7 +13,8 @@ def bernoulli_loader(
 ) -> Iterator[torch.Tensor]:
     # language=rst
     """
-    Lazily invokes ``bindsnet.encoding.bernoulli`` to iteratively encode a sequence of data.
+    Lazily invokes ``bindsnet.encoding.bernoulli`` to iteratively encode a sequence of
+    data.
 
     :param data: Tensor of shape ``[n_samples, n_1, ..., n_k]``.
     :param time: Length of Bernoulli spike train per input variable.
@@ -40,7 +41,8 @@ def poisson_loader(
 ) -> Iterator[torch.Tensor]:
     # language=rst
     """
-    Lazily invokes ``bindsnet.encoding.poisson`` to iteratively encode a sequence of data.
+    Lazily invokes ``bindsnet.encoding.poisson`` to iteratively encode a sequence of
+    data.
 
     :param data: Tensor of shape ``[n_samples, n_1, ..., n_k]``.
     :param time: Length of Poisson spike train per input variable.
@@ -60,7 +62,8 @@ def rank_order_loader(
 ) -> Iterator[torch.Tensor]:
     # language=rst
     """
-    Lazily invokes ``bindsnet.encoding.rank_order`` to iteratively encode a sequence of data.
+    Lazily invokes ``bindsnet.encoding.rank_order`` to iteratively encode a sequence of
+    data.
 
     :param data: Tensor of shape ``[n_samples, n_1, ..., n_k]``.
     :param time: Length of rank order-encoded spike train per input variable.

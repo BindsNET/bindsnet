@@ -86,7 +86,7 @@ added to the network.
 
 Custom nodes objects can be implemented by sub-classing :py:class:`bindsnet.network.nodes.Nodes`, an abstract class with
 common logic for neuron simulation. The functions :code:`forward(self, x: torch.Tensor)` (computes effects of input
-data on neuron population; e.g., voltage changes, spike occurrences, etc.), :code:`reset_(self)` (resets neuron state
+data on neuron population; e.g., voltage changes, spike occurrences, etc.), :code:`reset_state_variables(self)` (resets neuron state
 variables to default values), and :code:`_compute_decays(self)` must be implemented, as they are included as abstract
 functions of :py:class:`bindsnet.network.nodes.Nodes`.
 
@@ -143,7 +143,7 @@ Custom connection objects can be implemented by sub-classing :py:class:`bindsnet
 abstract class with common logic for computing synapse outputs and updates. This includes functions :code:`compute` (for computing
 input to downstream layer as a function of spikes and connection weights), :code:`update` (for updating connection
 weights based on pre-, post-synaptic activity and possibly other signals; e.g., reward prediction error),
-:code:`normalize` (for ensuring weights incident to post-synaptic neurons sum to a pre-specified value), and :code:`reset_`
+:code:`normalize` (for ensuring weights incident to post-synaptic neurons sum to a pre-specified value), and :code:`reset_state_variables`
 (for re-initializing stateful variables for the start of a new simulation).
 
 Specifying monitors
@@ -180,7 +180,7 @@ object to record (:code:`state_vars`), and, optionally, how many time steps the 
 save time by pre-allocating memory.
 
 To add a monitor to the network (thereby enabling monitoring), use the :code:`add_monitor` function of the
-:py:class`bindsnet.network.Network` class:
+:py:class:`bindsnet.network.Network` class:
 
 .. code-block:: python
 
@@ -230,7 +230,7 @@ Running Simulations
 -------------------
 
 After building up a :code:`Network` object, the next step is to run a simulation. Here, the function
-:code:`Network.run` comes into play. It takes arguments :code:`inpts` (a dictionary mapping names of
+:code:`Network.run` comes into play. It takes arguments :code:`inputs` (a dictionary mapping names of
 layers subclassing :code:`AbstractInput` to input data of shape :code:`[time, batch_size, *input_shape]`,
 where :code:`input_shape` is the shape of the neuron population to which the data is passed), :code:`time`
 (the number of simulation timesteps, generally thought of as milliseconds), and a number of keyword
@@ -307,10 +307,10 @@ two-layer, input-output spiking neural network.
 
     # Create input spike data, where each spike is distributed according to Bernoulli(0.1).
     input_data = torch.bernoulli(0.1 * torch.ones(time, source_layer.n)).byte()
-    inpts = {"A": input_data}
+    inputs = {"A": input_data}
 
     # Simulate network on input data.
-    network.run(inpts=inpts, time=time)
+    network.run(inputs=inputs, time=time)
 
     # Retrieve and plot simulation spike, voltage data from monitors.
     spikes = {

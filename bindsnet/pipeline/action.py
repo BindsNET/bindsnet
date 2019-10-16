@@ -9,8 +9,10 @@ def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
     """
     Selects an action probabilistically based on spiking activity from a network layer.
 
-    :param pipeline: EnvironmentPipeline with environment that has an integer action space.
-    :return: Action sampled from multinomial over activity of similarly-sized output layer.
+    :param pipeline: EnvironmentPipeline with environment that has an integer action
+        space.
+    :return: Action sampled from multinomial over activity of similarly-sized output
+        layer.
 
     Keyword arguments:
 
@@ -36,7 +38,7 @@ def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
     if _sum == 0:
         action = np.random.choice(pipeline.env.action_space.n)
     else:
-        pop_spikes = torch.Tensor(
+        pop_spikes = torch.tensor(
             [
                 spikes[(i * pop_size) : (i * pop_size) + pop_size].sum()
                 for i in range(action_space.n)
@@ -52,7 +54,8 @@ def select_softmax(pipeline: EnvironmentPipeline, **kwargs) -> int:
     """
     Selects an action using softmax function based on spiking from a network layer.
 
-    :param pipeline: EnvironmentPipeline with environment that has an integer action space and spike_record set.
+    :param pipeline: EnvironmentPipeline with environment that has an integer action
+        space and :code:`spike_record` set.
     :return: Action sampled from softmax over activity of similarly-sized output layer.
 
     Keyword arguments:
@@ -82,7 +85,8 @@ def select_random(pipeline: EnvironmentPipeline, **kwargs) -> int:
     """
     Selects an action randomly from the action space.
 
-    :param pipeline: EnvironmentPipeline with environment that has an integer action space.
+    :param pipeline: EnvironmentPipeline with environment that has an integer action
+        space.
     :return: Action randomly sampled over size of pipeline's action space.
     """
     # Choose action randomly from the action space.

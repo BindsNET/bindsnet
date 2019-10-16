@@ -159,9 +159,9 @@ for epoch in range(n_epochs):
 
     for step, batch in enumerate(tqdm(dataloader)):
         # Get next input sample.
-        inpts = {"X": batch["encoded_image"]}
+        inputs = {"X": batch["encoded_image"]}
         if gpu:
-            inpts = {k: v.cuda() for k, v in inpts.items()}
+            inputs = {k: v.cuda() for k, v in inputs.items()}
 
         if step % update_steps == 0 and step > 0:
             # Convert the array of labels into a tensor
@@ -220,7 +220,7 @@ for epoch in range(n_epochs):
         labels.extend(batch["label"].tolist())
 
         # Run the network on the input.
-        network.run(inpts=inpts, time=time, input_time_dim=1)
+        network.run(inputs=inputs, time=time, input_time_dim=1)
 
         # Add to spikes recording.
         s = spikes["Ae"].get("s").permute((1, 0, 2))
@@ -240,7 +240,7 @@ for epoch in range(n_epochs):
         # Optionally plot various simulation information.
         if plot:
             # image = batch["image"].view(28, 28)
-            # inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
+            # inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
             input_exc_weights = network.connections[("X", "Ae")].w
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
@@ -264,7 +264,7 @@ for epoch in range(n_epochs):
 
             plt.pause(1e-8)
 
-        network.reset_()  # Reset state variables.
+        network.reset_state_variables()  # Reset state variables.
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")

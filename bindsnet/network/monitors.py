@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Union, Optional, Iterable, Dict
 
 from .nodes import Nodes
@@ -34,7 +34,8 @@ class Monitor(AbstractMonitor):
         Constructs a ``Monitor`` object.
 
         :param obj: An object to record state variables from during network simulation.
-        :param state_vars: Iterable of strings indicating names of state variables to record.
+        :param state_vars: Iterable of strings indicating names of state variables to
+            record.
         :param time: If not ``None``, pre-allocate memory for state variable recording.
         """
         super().__init__()
@@ -53,8 +54,8 @@ class Monitor(AbstractMonitor):
         Return recording to user.
 
         :param var: State variable recording to return.
-        :return: Tensor of shape ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is the shape of the recorded
-                 state variable.
+        :return: Tensor of shape ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is
+            the shape of the recorded state variable.
         """
         return torch.cat(self.recording[var], 0)
 
@@ -73,7 +74,7 @@ class Monitor(AbstractMonitor):
                 if len(self.recording[v]) > self.time:
                     self.recording[v].pop(0)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets recordings to empty ``torch.Tensor``s.
@@ -102,7 +103,8 @@ class NetworkMonitor(AbstractMonitor):
         :param network: Network to record state variables from.
         :param layers: Layers to record state variables from.
         :param connections: Connections to record state variables from.
-        :param state_vars: List of strings indicating names of state variables to record.
+        :param state_vars: List of strings indicating names of state variables to
+            record.
         :param time: If not ``None``, pre-allocate memory for state variable recording.
         """
         super().__init__()
@@ -154,7 +156,8 @@ class NetworkMonitor(AbstractMonitor):
         """
         Return entire recording to user.
 
-        :return: Dictionary of dictionary of all layers' and connections' recorded state variables.
+        :return: Dictionary of dictionary of all layers' and connections' recorded
+            state variables.
         """
         return self.recording
 
@@ -233,7 +236,7 @@ class NetworkMonitor(AbstractMonitor):
             with open(path, "wb") as f:
                 torch.save(self.recording, f)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets recordings to empty ``torch.Tensors``.
