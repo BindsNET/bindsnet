@@ -1,11 +1,7 @@
 import cv2
 import math
-import warnings
 import numpy as np
 from torchvision import transforms
-
-warnings.filterwarnings("ignore")
-
 
 def gray_scale(image: np.ndarray) -> np.ndarray:
     # language=rst
