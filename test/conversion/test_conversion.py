@@ -26,7 +26,7 @@ class FullyConnectedNetwork(nn.Module):
 
 def test_conversion():
     ann = FullyConnectedNetwork()
-    snn = ann_to_snn(ann, input_shape=(28, 28))
+    snn = ann_to_snn(ann, input_shape=(784,))
 
 
 def main():

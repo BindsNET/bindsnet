@@ -242,7 +242,7 @@ class Network(torch.nn.Module):
         Simulate network for given inputs and time.
 
         :param inputs: Dictionary of ``Tensor``s of shape ``[time, *input_shape]`` or
-                      ``[batch_size, time, *input_shape]``.
+                      ``[time, batch_size, *input_shape]``.
         :param time: Simulation time.
         :param one_step: Whether to run the network in "feed-forward" mode, where inputs
             propagate all the way through the network in a single simulation time step.
