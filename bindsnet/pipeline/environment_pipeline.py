@@ -163,7 +163,7 @@ class EnvironmentPipeline(BasePipeline):
 
         # Place the observations into the inputs.
         obs_shape = [1] * len(obs.shape[1:])
-        inpts = {k: obs.repeat(self.time, *obs_shape) for k in self.inpts}
+        inputs = {k: obs.repeat(self.time, *obs_shape) for k in self.inputs}
 
         # Run the network on the spike train-encoded inputs.
         self.network.run(inputs=inputs, time=self.time, reward=reward, **kwargs)
