@@ -68,7 +68,7 @@ def bernoulli(
     assert (datum >= 0).all(), "Inputs must be non-negative"
 
     shape, size = datum.shape, datum.numel()
-    datum = datum.view(-1)
+    datum = datum.flatten()
 
     if time is not None:
         time = int(time / dt)
@@ -105,7 +105,7 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
 
     # Get shape and size of data.
     shape, size = datum.shape, datum.numel()
-    datum = datum.view(-1)
+    datum = datum.flatten()
     time = int(time / dt)
 
     # Compute firing rates in seconds as function of data intensity,
@@ -147,7 +147,7 @@ def rank_order(
     assert (datum >= 0).all(), "Inputs must be non-negative"
 
     shape, size = datum.shape, datum.numel()
-    datum = datum.view(-1)
+    datum = datum.flatten()
     time = int(time / dt)
 
     # Create spike times in order of decreasing intensity.
