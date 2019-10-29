@@ -4,9 +4,9 @@ import os
 import numpy as np
 import torch
 import zipfile
+import warnings
 import sys
 import time
-import warnings
 import cv2
 import bindsnet.datasets.preprocess
 
@@ -19,8 +19,8 @@ from torch.utils.data import Dataset
 
 warnings.filterwarnings("ignore")
 
-
 class ALOV300(Dataset):
+
     DATASET_WEB = "http://alov300pp.joomlafree.it/dataset-resources.html"
     VOID_LABEL = 255
 

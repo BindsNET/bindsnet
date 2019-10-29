@@ -6,7 +6,7 @@ BindsNET is a spiking neural network simulation library geared towards the devel
 
 This package is used as part of ongoing research on applying SNNs to machine learning (ML) and reinforcement learning (RL) problems in the [Biologically Inspired Neural & Dynamical Systems (BINDS) lab](http://binds.cs.umass.edu/).
 
-Check out the [BindsNET experiments repository](https://github.com/djsaunde/bindsnet_experiments) for a collection of experiments, accompanying bash scripts for dispatching on [CICS](https://www.cics.umass.edu/) clusters, functions for the analysis of results, plots of experiment outcomes, and more.
+Check out the [BindsNET experiments repository](https://github.com/djsaunde/bindsnet_experiments) for a collection of experiments, accompanying bash scripts for dispatching on [CICS](https://www.cics.umass.edu/) clusters, functions for the analysis of results, plots of experiment outcomes, and more. Documentation for the package can be found [here](https://bindsnet-docs.readthedocs.io).
 
 [![Build Status](https://travis-ci.com/Hananel-Hazan/bindsnet.svg?token=trym5Uzx1rs9Ez2yENEF&branch=master)](https://travis-ci.com/Hananel-Hazan/bindsnet)
 [![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
