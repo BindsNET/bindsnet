@@ -21,7 +21,8 @@ class AbstractReward(ABC):
     def update(self, **kwargs) -> None:
         # language=rst
         """
-        Updates internal variables needed to modify reward. Usually called once per episode.
+        Updates internal variables needed to modify reward. Usually called once per
+        episode.
         """
         pass
 
@@ -29,7 +30,8 @@ class AbstractReward(ABC):
 class MovingAvgRPE(AbstractReward):
     # language=rst
     """
-    Computes reward prediction error (RPE) based on an exponential moving average (EMA) of past rewards.
+    Computes reward prediction error (RPE) based on an exponential moving average (EMA)
+    of past rewards.
     """
 
     def __init__(self, **kwargs) -> None:
@@ -65,7 +67,8 @@ class MovingAvgRPE(AbstractReward):
 
         Keyword arguments:
 
-        :param Union[float, torch.Tensor] accumulated_reward: Reward accumulated over one episode.
+        :param Union[float, torch.Tensor] accumulated_reward: Reward accumulated over
+            one episode.
         :param int steps: Steps in that episode.
         :param float ema_window: Width of the averaging window.
         """

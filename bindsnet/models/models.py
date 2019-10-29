@@ -16,7 +16,8 @@ from ..network.topology import Connection, LocalConnection
 class TwoLayerNetwork(Network):
     # language=rst
     """
-    Implements an ``Input`` instance connected to a ``LIFNodes`` instance with a fully-connected ``Connection``.
+    Implements an ``Input`` instance connected to a ``LIFNodes`` instance with a
+    fully-connected ``Connection``.
     """
 
     def __init__(
@@ -37,11 +38,14 @@ class TwoLayerNetwork(Network):
         :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param n_neurons: Number of neurons in the ``LIFNodes`` population.
         :param dt: Simulation time step.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reducing parameter updates along the minibatch dimension.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
+            respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch
+            dimension.
         :param wmin: Minimum allowed weight on ``Input`` to ``LIFNodes`` synapses.
         :param wmax: Maximum allowed weight on ``Input`` to ``LIFNodes`` synapses.
-        :param norm: ``Input`` to ``LIFNodes`` layer connection weights normalization constant.
+        :param norm: ``Input`` to ``LIFNodes`` layer connection weights normalization
+            constant.
         """
         super().__init__(dt=dt)
 
@@ -114,13 +118,18 @@ class DiehlAndCook2015(Network):
         :param exc: Strength of synapse weights from excitatory to inhibitory layer.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reducing parameter updates along the minibatch dimension.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
+            respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch
+            dimension.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
-        :param norm: Input to excitatory layer connection weights normalization constant.
-        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
-        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        :param norm: Input to excitatory layer connection weights normalization
+            constant.
+        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane
+            threshold potential.
+        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold
+            potential decay.
         :param inpt_shape: The dimensionality of the input layer.
         """
         super().__init__(dt=dt)
@@ -197,8 +206,9 @@ class DiehlAndCook2015v2(Network):
     # language=rst
     """
     Slightly modifies the spiking neural network architecture from `(Diehl & Cook 2015)
-    <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_ by removing the inhibitory layer and
-    replacing it with a recurrent inhibitory connection in the output layer (what used to be the excitatory layer).
+    <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_ by removing
+    the inhibitory layer and replacing it with a recurrent inhibitory connection in the
+    output layer (what used to be the excitatory layer).
     """
 
     def __init__(
@@ -224,13 +234,18 @@ class DiehlAndCook2015v2(Network):
         :param n_neurons: Number of excitatory, inhibitory neurons.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reducing parameter updates along the minibatch dimension.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
+            respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch
+            dimension.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
-        :param norm: Input to excitatory layer connection weights normalization constant.
-        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
-        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        :param norm: Input to excitatory layer connection weights normalization
+            constant.
+        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane
+            threshold potential.
+        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold
+            potential decay.
         :param inpt_shape: The dimensionality of the input layer.
         """
         super().__init__(dt=dt)
@@ -291,8 +306,8 @@ class DiehlAndCook2015v2(Network):
 class IncreasingInhibitionNetwork(Network):
     # language=rst
     """
-    Implements the inhibitory layer structure of the spiking neural network architecture from `(Hazan et al. 2018)
-    <https://arxiv.org/abs/1807.09374>`_
+    Implements the inhibitory layer structure of the spiking neural network architecture
+    from `(Hazan et al. 2018) <https://arxiv.org/abs/1807.09374>`_
     """
 
     def __init__(
@@ -318,13 +333,18 @@ class IncreasingInhibitionNetwork(Network):
         :param n_neurons: Number of excitatory, inhibitory neurons.
         :param inh: Strength of synapse weights from inhibitory to excitatory layer.
         :param dt: Simulation time step.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reducing parameter updates along the minibatch dimension.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
+            respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch
+            dimension.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
-        :param norm: Input to excitatory layer connection weights normalization constant.
-        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
-        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
+        :param norm: Input to excitatory layer connection weights normalization
+            constant.
+        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane
+            threshold potential.
+        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold
+            potential decay.
         """
         super().__init__(dt=dt)
 
@@ -389,8 +409,9 @@ class IncreasingInhibitionNetwork(Network):
 class LocallyConnectedNetwork(Network):
     # language=rst
     """
-    Defines a two-layer network in which the input layer is "locally connected" to the output layer, and the output
-    layer is recurrently inhibited connected such that neurons with the same input receptive field inhibit each other.
+    Defines a two-layer network in which the input layer is "locally connected" to the
+    output layer, and the output layer is recurrently inhibited connected such that
+    neurons with the same input receptive field inhibit each other.
     """
 
     def __init__(
@@ -413,24 +434,34 @@ class LocallyConnectedNetwork(Network):
     ) -> None:
         # language=rst
         """
-        Constructor for class ``LocallyConnectedNetwork``. Uses ``DiehlAndCookNodes`` to avoid multiple spikes per
-        timestep in the output layer population.
+        Constructor for class ``LocallyConnectedNetwork``. Uses ``DiehlAndCookNodes`` to
+        avoid multiple spikes per timestep in the output layer population.
 
         :param n_inpt: Number of input neurons. Matches the 1D size of the input data.
         :param input_shape: Two-dimensional shape of input population.
         :param kernel_size: Size of input windows. Integer or two-tuple of integers.
-        :param stride: Length of horizontal, vertical stride across input space. Integer or two-tuple of integers.
-        :param n_filters: Number of locally connected filters per input region. Integer or two-tuple of integers.
+        :param stride: Length of horizontal, vertical stride across input space. Integer
+            or two-tuple of integers.
+        :param n_filters: Number of locally connected filters per input region. Integer
+            or two-tuple of integers.
         :param inh: Strength of synapse weights from output layer back onto itself.
         :param dt: Simulation time step.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively.
-        :param reduction: Method for reducing parameter updates along the minibatch dimension.
-        :param wmin: Minimum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
-        :param wmax: Maximum allowed weight on ``Input`` to ``DiehlAndCookNodes`` synapses.
-        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane threshold potential.
-        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold potential decay.
-        :param norm: ``Input`` to ``DiehlAndCookNodes`` layer connection weights normalization constant.
-        :param real: Whether to use real-valued (non-spiking) input (implemented as a "clamp").
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
+            respectively.
+        :param reduction: Method for reducing parameter updates along the minibatch
+            dimension.
+        :param wmin: Minimum allowed weight on ``Input`` to ``DiehlAndCookNodes``
+            synapses.
+        :param wmax: Maximum allowed weight on ``Input`` to ``DiehlAndCookNodes``
+            synapses.
+        :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane
+            threshold potential.
+        :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold
+            potential decay.
+        :param norm: ``Input`` to ``DiehlAndCookNodes`` layer connection weights
+            normalization constant.
+        :param real: Whether to use real-valued (non-spiking) input (implemented as a
+            "clamp").
         """
         super().__init__(dt=dt)
 

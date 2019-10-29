@@ -1,20 +1,16 @@
 import os
-import numpy as np
-import torch
-import shutil
-import zipfile
 import sys
 import time
 import shutil
-
-from PIL import Image
+import zipfile
 from glob import glob
-from tqdm import tqdm
 from collections import defaultdict
-from typing import Optional, Tuple, List, Iterable
 from urllib.request import urlretrieve
 
-import warnings
+import torch
+import numpy as np
+from PIL import Image
+from tqdm import tqdm
 
 
 class Davis(torch.utils.data.Dataset):
@@ -36,13 +32,18 @@ class Davis(torch.utils.data.Dataset):
         download=False,
         num_samples: int = -1,
     ):
+        # language=rst
         """
         Class to read the DAVIS dataset
-        :param root: Path to the DAVIS folder that contains JPEGImages, Annotations, etc. folders.
-        :param task: Task to load the annotations, choose between semi-supervised or unsupervised.
+        :param root: Path to the DAVIS folder that contains JPEGImages, Annotations,
+            etc. folders.
+        :param task: Task to load the annotations, choose between semi-supervised or
+            unsupervised.
         :param subset: Set to load the annotations
-        :param sequences: Sequences to consider, 'all' to use all the sequences in a set.
-        :param resolution: Specify the resolution to use the dataset, choose between '480' and 'Full-Resolution'
+        :param sequences: Sequences to consider, 'all' to use all the sequences in a
+            set.
+        :param resolution: Specify the resolution to use the dataset, choose between
+            '480' and 'Full-Resolution'
         :param download: Specify whether to download the dataset if it is not present
         :param num_samples: Number of samples to pass to the batch
         """
@@ -54,13 +55,14 @@ class Davis(torch.utils.data.Dataset):
             raise ValueError(f"The only tasks that are supported are {self.TASKS}")
         if resolution not in self.RESOLUTION_OPTIONS:
             raise ValueError(
-                f"You may only choose one of these resolutions: {self.RESOLUTION_OPTIONS}"
+                f"You may only use one of these resolutions: {self.RESOLUTION_OPTIONS}"
             )
 
         self.task = task
         self.subset = subset
         self.resolution = resolution
         self.size = size
+        self.codalab = codalab
 
         # Sets the boolean converted if the size of the images must be scaled down
         self.converted = not self.size == (600, 480)
@@ -127,7 +129,7 @@ class Davis(torch.utils.data.Dataset):
         # Sets the images and masks for each sequence resizing for the given size
         for seq in self.sequences_names:
             images = np.sort(glob(os.path.join(self.img_path, seq, "*.jpg"))).tolist()
-            if len(images) == 0 and not codalab:
+            if len(images) == 0 and not self.codalab:
                 raise FileNotFoundError(f"Images for sequence {seq} not found.")
             self.sequences[seq]["images"] = images
             masks = np.sort(glob(os.path.join(self.mask_path, seq, "*.png"))).tolist()
@@ -140,16 +142,19 @@ class Davis(torch.utils.data.Dataset):
             self.enum_sequences.append(self.sequences[seq])
 
     def __len__(self):
+        # language=rst
         """
-        Calculates the number of sequences the dataset holds
+        Calculates the number of sequences the dataset holds.
 
-        :return: the number of sequences in the dataset
+        :return: The number of sequences in the dataset.
         """
         return len(self.sequences)
 
     def _convert_sequences(self):
+        # language=rst
         """
-        Creates a new root for the dataset to be converted and placed into, then copies each image and mask into the given size and stores correctly.
+        Creates a new root for the dataset to be converted and placed into,
+        then copies each image and mask into the given size and stores correctly.
         """
         os.makedirs(os.path.join(self.converted_imagesets_path, f"{self.subset}.txt"))
         os.makedirs(self.converted_img_path)
@@ -165,7 +170,7 @@ class Davis(torch.utils.data.Dataset):
             os.makedirs(os.path.join(self.converted_img_path, seq))
             os.makedirs(os.path.join(self.converted_mask_path, seq))
             images = np.sort(glob(os.path.join(self.img_path, seq, "*.jpg"))).tolist()
-            if len(images) == 0 and not codalab:
+            if len(images) == 0 and not self.codalab:
                 raise FileNotFoundError(f"Images for sequence {seq} not found.")
             for ind, img in enumerate(images):
                 im = Image.open(img)
@@ -186,26 +191,31 @@ class Davis(torch.utils.data.Dataset):
                 )
 
     def _check_directories(self):
+        # language=rst
         """
-        Verifies that the correct dataset is downloaded; downloads if it isn't and download=True.
+        Verifies that the correct dataset is downloaded; downloads if it isn't and
+        ``download=True``.
 
-        :raises: FileNotFoundError if the subset sequence, annotation or root folder is missing.
+        :raises: FileNotFoundError if the subset sequence, annotation or root folder is
+            missing.
         """
         if not os.path.exists(self.root):
             if self.download:
                 self._download()
             else:
                 raise FileNotFoundError(
-                    f"DAVIS not found in the specified directory, download it from {self.DATASET_WEB} or add download=True to your call"
+                    f"DAVIS not found in the specified directory, download it from "
+                    f"{self.DATASET_WEB} or add download=True to your call"
                 )
         if not os.path.exists(os.path.join(self.imagesets_path, f"{self.subset}.txt")):
             raise FileNotFoundError(
-                f"Subset sequences list for {self.subset} not found, download the missing subset "
-                f"for the {self.task} task from {self.DATASET_WEB}"
+                f"Subset sequences list for {self.subset} not found, download the "
+                f"missing subset for the {self.task} task from {self.DATASET_WEB}"
             )
         if self.subset in ["train", "val"] and not os.path.exists(self.mask_path):
             raise FileNotFoundError(
-                f"Annotations folder for the {self.task} task not found, download it from {self.DATASET_WEB}"
+                f"Annotations folder for the {self.task} task not found, "
+                f"download it from {self.DATASET_WEB}"
             )
         if self.converted:
             if not os.path.exists(self.converted_img_path):
@@ -256,12 +266,13 @@ class Davis(torch.utils.data.Dataset):
             yield seq
 
     def _download(self):
+        # language=rst
         """
-        Downloads the correct dataset based on the given parameters
+        Downloads the correct dataset based on the given parameters.
 
-        Relies on self.tag to determine both the name of the folder created for the dataset and for the finding the correct download url. 
+        Relies on ``self.tag`` to determine both the name of the folder created for the
+        dataset and for the finding the correct download url.
         """
-
         os.makedirs(self.root)
 
         # Grabs the correct zip url based on parameters
@@ -293,18 +304,22 @@ class Davis(torch.utils.data.Dataset):
         print("\nDone!\n")
 
     def __getitem__(self, ind):
+        # language=rst
         """
-        Gets an item of the Dataset based on index
+        Gets an item of the ``Dataset`` based on index.
 
-        :param ind: index of item to take from dataset
-
-        :return: a sequence which contains a list of images and masks 
+        :param ind: Index of item to take from dataset.
+        :return: A sequence which contains a list of images and masks.
         """
         seq = self.enum_sequences[ind]
         return seq
 
-    # Simple progress indicator for the download of the dataset
-    def progress(self, count, block_size, total_size):
+    @staticmethod
+    def progress(count, block_size, total_size):
+        # language=rst
+        """
+        Simple progress indicator for the download of the dataset.
+        """
         global start_time
         if count == 0:
             start_time = time.time()

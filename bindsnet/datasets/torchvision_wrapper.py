@@ -7,10 +7,11 @@ from ..encoding import Encoder, NullEncoder
 
 
 def create_torchvision_dataset_wrapper(ds_type):
-    """ Creates wrapper classes for datasets that output (image, label)
-    from __getitem__. This is all of the datasets inside of torchvision.
+    # language=rst
     """
-
+    Creates wrapper classes for datasets that output ``(image, label)`` from
+    ``__getitem__``. This applies to all of the datasets inside of ``torchvision``.
+    """
     if type(ds_type) == str:
         ds_type = getattr(torchvision.datasets, ds_type)
 
@@ -63,16 +64,14 @@ def create_torchvision_dataset_wrapper(ds_type):
             self.label_encoder = label_encoder
 
         def __getitem__(self, ind: int) -> Dict[str, torch.Tensor]:
+            # language=rst
             """
-            Utilizes the torchvision.dataset parent class to grab the
-            data, then encodes using the supplied encoders.
+            Utilizes the ``torchvision.dataset`` parent class to grab the data, then
+            encodes using the supplied encoders.
 
-            :param int ind: Index to grab data at
-
-            :return: The relevant data and encoded data from the
-            requested index.
+            :param int ind: Index to grab data at.
+            :return: The relevant data and encoded data from the requested index.
             """
-
             image, label = super().__getitem__(ind)
 
             output = {

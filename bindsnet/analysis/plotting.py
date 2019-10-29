@@ -78,10 +78,13 @@ def plot_spikes(
     """
     Plot spikes for any group(s) of neurons.
 
-    :param spikes: Mapping from layer names to spiking data. Spike data has shape ``[time, n_1, ..., n_k]``, where
-                   ``[n_1, ..., n_k]`` is the shape of the recorded layer.
-    :param time: Plot spiking activity of neurons in the given time range. Default is entire simulation time.
-    :param n_neurons: Plot spiking activity of neurons in the given range of neurons. Default is all neurons.
+    :param spikes: Mapping from layer names to spiking data. Spike data has shape
+        ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is the shape of the
+        recorded layer.
+    :param time: Plot spiking activity of neurons in the given time range. Default is
+        entire simulation time.
+    :param n_neurons: Plot spiking activity of neurons in the given range of neurons.
+        Default is all neurons.
     :param ims: Used for re-drawing the plots.
     :param axes: Used for re-drawing the plots.
     :param figsize: Horizontal, vertical figure size in inches.
@@ -281,19 +284,21 @@ def plot_locally_connected_weights(
 ) -> AxesImage:
     # language=rst
     """
-    Plot a connection weight matrix of a :code:`Connection` with `locally connected structure
-    <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
+    Plot a connection weight matrix of a :code:`Connection` with `locally connected
+    structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
 
     :param weights: Weight matrix of Conv2dConnection object.
     :param n_filters: No. of convolution kernels in use.
     :param kernel_size: Side length(s) of 2D convolution kernels.
     :param conv_size: Side length(s) of 2D convolution population.
-    :param locations: Indices of input receptive fields for convolution population neurons.
+    :param locations: Indices of input receptive fields for convolution population
+        neurons.
     :param input_sqrt: Side length(s) of 2D input data.
     :param wmin: Minimum allowed weight value.
     :param wmax: Maximum allowed weight value.
     :param im: Used for re-drawing the weights plot.
-    :param lines: Whether or not to draw horizontal and vertical lines separating input regions.
+    :param lines: Whether or not to draw horizontal and vertical lines separating input
+        regions.
     :param figsize: Horizontal, vertical figure size in inches.
     :param cmap: Matplotlib colormap.
     :return: Used for re-drawing the weights plot.
@@ -445,11 +450,14 @@ def plot_voltages(
     :param voltages: Contains voltage data by neuron layers.
     :param ims: Used for re-drawing the plots.
     :param axes: Used for re-drawing the plots.
-    :param time: Plot voltages of neurons in given time range. Default is entire simulation time.
-    :param n_neurons: Plot voltages of neurons in given range of neurons. Default is all neurons.
+    :param time: Plot voltages of neurons in given time range. Default is entire
+        simulation time.
+    :param n_neurons: Plot voltages of neurons in given range of neurons. Default is all
+        neurons.
     :param cmap: Matplotlib colormap to use.
     :param figsize: Horizontal, vertical figure size in inches.
-    :param plot_type: The way how to draw graph. 'color' for pcolormesh, 'line' for curved lines.
+    :param plot_type: The way how to draw graph. 'color' for pcolormesh, 'line' for
+        curved lines.
     :param thresholds: Thresholds of the neurons in each layer.
     :return: ``ims, axes``: Used for re-drawing the plots.
     """

@@ -56,7 +56,7 @@ environment_pipeline = EnvironmentPipeline(
 def run_pipeline(pipeline, episode_count):
     for i in range(episode_count):
         total_reward = 0
-        pipeline.reset_()
+        pipeline.reset_state_variables()
         is_done = False
         while not is_done:
             result = pipeline.env_step()

@@ -82,8 +82,8 @@ class FeatureExtractor(nn.Module):
 class SubtractiveResetIFNodes(nodes.Nodes):
     # language=rst
     """
-    Layer of `integrate-and-fire (IF) neurons <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_ using reset by
-    subtraction.
+    Layer of `integrate-and-fire (IF) neurons
+    <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>` using reset by subtraction.
     """
 
     def __init__(
@@ -173,12 +173,12 @@ class SubtractiveResetIFNodes(nodes.Nodes):
 
         super().forward(x)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
-        super().reset_()
+        super().reset_state_variables()
         self.v.fill_(self.reset)  # Neuron voltages.
         self.refrac_count.zero_()  # Refractory period counters.
 
@@ -197,7 +197,8 @@ class SubtractiveResetIFNodes(nodes.Nodes):
 class PassThroughNodes(nodes.Nodes):
     # language=rst
     """
-    Layer of `integrate-and-fire (IF) neurons <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_ with using reset by
+    Layer of `integrate-and-fire (IF) neurons
+    <http://neuronaldynamics.epfl.ch/online/Ch1.S3.html>`_ with using reset by
     subtraction.
     """
 
@@ -237,12 +238,12 @@ class PassThroughNodes(nodes.Nodes):
         """
         Runs a single simulation step.
 
-        :param inpts: Inputs to the layer.
+        :param inputs: Inputs to the layer.
         :param dt: Simulation time step.
         """
         self.s = x
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
@@ -253,7 +254,8 @@ class PassThroughNodes(nodes.Nodes):
 class PermuteConnection(topology.AbstractConnection):
     # language=rst
     """
-    Special-purpose connection for emulating the custom ``Permute`` module in spiking neural networks.
+    Special-purpose connection for emulating the custom ``Permute`` module in spiking
+    neural networks.
     """
 
     def __init__(
@@ -277,7 +279,8 @@ class PermuteConnection(topology.AbstractConnection):
 
         Keyword arguments:
 
-        :param function update_rule: Modifies connection parameters according to some rule.
+        :param function update_rule: Modifies connection parameters according to some
+            rule.
         :param float wmin: The minimum value on the connection weights.
         :param float wmax: The maximum value on the connection weights.
         :param float norm: Total weight per target neuron normalization.
@@ -300,7 +303,8 @@ class PermuteConnection(topology.AbstractConnection):
 class ConstantPad2dConnection(topology.AbstractConnection):
     # language=rst
     """
-    Special-purpose connection for emulating the ``ConstantPad2d`` PyTorch module in spiking neural networks.
+    Special-purpose connection for emulating the ``ConstantPad2d`` PyTorch module in
+        spiking neural networks.
     """
 
     def __init__(
@@ -324,7 +328,8 @@ class ConstantPad2dConnection(topology.AbstractConnection):
 
         Keyword arguments:
 
-        :param function update_rule: Modifies connection parameters according to some rule.
+        :param function update_rule: Modifies connection parameters according to some
+            rule.
         :param float wmin: The minimum value on the connection weights.
         :param float wmax: The maximum value on the connection weights.
         :param float norm: Total weight per target neuron normalization.
@@ -350,13 +355,17 @@ def data_based_normalization(
 ):
     # language=rst
     """
-    Use a dataset to rescale ANN weights and biases such that that the max ReLU activation is less than 1.
+    Use a dataset to rescale ANN weights and biases such that that the max ReLU
+    activation is less than 1.
 
-    :param ann: Artificial neural network implemented in PyTorch. Accepts either ``torch.nn.Module`` or path to network
-                saved using ``torch.save()``.
-    :param data: Data to use to perform data-based weight normalization``[n_examples, ...]``.
-    :param percentile: Percentile (in ``[0, 100]``) of activations to scale by in data-based normalization scheme.
-    :return: Artificial neural network with rescaled weights and biases according to activations on the dataset.
+    :param ann: Artificial neural network implemented in PyTorch. Accepts either
+        ``torch.nn.Module`` or path to network saved using ``torch.save()``.
+    :param data: Data to use to perform data-based weight normalization of shape
+        ``[n_examples, ...]``.
+    :param percentile: Percentile (in ``[0, 100]``) of activations to scale by in
+        data-based normalization scheme.
+    :return: Artificial neural network with rescaled weights and biases according to
+        activations on the dataset.
     """
     if isinstance(ann, str):
         ann = torch.load(ann)
@@ -420,7 +429,7 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
     :param node_type: Type of ``bindsnet.network.nodes`` to use.
     :param last: Whether this connection and layer is the last to be converted.
     :return: Spiking neural network layer and connection corresponding to ``prev`` and
-             ``current`` PyTorch modules.
+        ``current`` PyTorch modules.
     """
     if isinstance(current, nn.Linear):
         layer = node_type(
@@ -534,15 +543,18 @@ def ann_to_snn(
 ) -> Network:
     # language=rst
     """
-    Converts an artificial neural network (ANN) written as a ``torch.nn.Module`` into a near-equivalent spiking neural
-    network.
+    Converts an artificial neural network (ANN) written as a ``torch.nn.Module`` into a
+    near-equivalent spiking neural network.
 
-    :param ann: Artificial neural network implemented in PyTorch. Accepts either ``torch.nn.Module`` or path to network
-                saved using ``torch.save()``.
+    :param ann: Artificial neural network implemented in PyTorch. Accepts either
+        ``torch.nn.Module`` or path to network saved using ``torch.save()``.
     :param input_shape: Shape of input data.
-    :param data: Data to use to perform data-based weight normalization of shape ``[n_examples, ...]``.
-    :param percentile: Percentile (in ``[0, 100]``) of activations to scale by in data-based normalization scheme.
-    :param node_type: Class of ``Nodes`` to use in replacing ``torch.nn.Linear`` layers in original ANN.
+    :param data: Data to use to perform data-based weight normalization of shape
+        ``[n_examples, ...]``.
+    :param percentile: Percentile (in ``[0, 100]``) of activations to scale by in
+        data-based normalization scheme.
+    :param node_type: Class of ``Nodes`` to use in replacing ``torch.nn.Linear`` layers
+        in original ANN.
     :return: Spiking neural network implemented in PyTorch.
     """
     if isinstance(ann, str):

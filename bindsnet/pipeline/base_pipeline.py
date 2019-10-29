@@ -45,14 +45,16 @@ class BasePipeline:
         """
         Initializes the pipeline.
 
-        :param network: Arbitrary network object, will be managed by the ``BasePipeline`` class.
+        :param network: Arbitrary network object, will be managed by the
+            ``BasePipeline`` class.
 
         Keyword arguments:
 
         :param int save_interval: How often to save the network to disk.
         :param str save_dir: Directory to save network object to.
-        :param Dict[str, Any] plot_config: Dict containing the plot configuration. Includes length,
-                                           type (``"color"`` or ``"line"``), and interval per plot type.
+        :param Dict[str, Any] plot_config: Dict containing the plot configuration.
+            Includes length, type (``"color"`` or ``"line"``), and interval per plot
+            type.
         :param int print_interval: Interval to print text output.
         :param bool allow_gpu: Allows automatic transfer to the GPU.
         """
@@ -85,15 +87,10 @@ class BasePipeline:
                     )
 
         self.print_interval = kwargs.get("print_interval", None)
-
         self.test_interval = kwargs.get("test_interval", None)
-
         self.step_count = 0
-
         self.init_fn()
-
         self.clock = time.time()
-
         self.allow_gpu = kwargs.get("allow_gpu", True)
 
         if torch.cuda.is_available() and self.allow_gpu:
@@ -103,13 +100,12 @@ class BasePipeline:
 
         self.network.to(self.device)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Reset the pipeline.
         """
-
-        self.network.reset_()
+        self.network.reset_state_variables()
         self.step_count = 0
 
     def step(self, batch: Any, **kwargs) -> Any:
@@ -119,14 +115,12 @@ class BasePipeline:
 
         :param batch: A batch of inputs to be handed to the ``step_()`` function.
                       Standard in subclasses of ``BasePipeline``.
-
-        :return: The output from the subclass's ``step_()`` method, which could be anything.
-                 Passed to plotting to accommodate this.
+        :return: The output from the subclass's ``step_()`` method, which could be
+            anything. Passed to plotting to accommodate this.
         """
         self.step_count += 1
 
         batch = recursive_to(batch, self.device)
-
         step_out = self.step_(batch, **kwargs)
 
         if (
@@ -138,7 +132,6 @@ class BasePipeline:
             )
             self.clock = time.time()
 
-        # if self.plot_interval is not None and self.step_count % self.plot_interval == 0:
         self.plots(batch, step_out)
 
         if self.save_interval is not None and self.step_count % self.save_interval == 0:
@@ -166,9 +159,11 @@ class BasePipeline:
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         # language=rst
         """
-        Get the voltage data and threshold value from all applicable layers in the pipeline's network.
+        Get the voltage data and threshold value from all applicable layers in the
+        pipeline's network.
 
-        :return: Two dictionaries containing the voltage data and threshold values from the network.
+        :return: Two dictionaries containing the voltage data and threshold values from
+            the network.
         """
         voltage_record = {}
         threshold_value = {}
@@ -185,9 +180,8 @@ class BasePipeline:
         """
         Perform a pass of the network given the input batch.
 
-        :param batch: The current batch. This could be anything as long as
-                      the subclass agrees upon the format in some way.
-
+        :param batch: The current batch. This could be anything as long as the subclass
+            agrees upon the format in some way.
         :return: Any output that is need for recording purposes.
         """
         raise NotImplementedError("You need to provide a step_ method.")
@@ -219,8 +213,8 @@ class BasePipeline:
         """
         Create any plots and logs for a step given the input batch and step output.
 
-        :param batch: The current batch. This could be anything as long as
-                      the subclass agrees upon the format in some way.
+        :param batch: The current batch. This could be anything as long as the subclass
+            agrees upon the format in some way.
         :param step_out: The output from the ``step_()`` method.
         """
         raise NotImplementedError("You need to provide a plots method.")

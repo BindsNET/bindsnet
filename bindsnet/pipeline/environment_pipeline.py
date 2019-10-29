@@ -14,7 +14,8 @@ from ..network.monitors import Monitor
 class EnvironmentPipeline(BasePipeline):
     # language=rst
     """
-    Abstracts the interaction between ``Network``, ``Environment`` and environment feedback action.
+    Abstracts the interaction between ``Network``, ``Environment``, and environment
+    feedback action.
     """
 
     def __init__(
@@ -30,7 +31,8 @@ class EnvironmentPipeline(BasePipeline):
 
         :param network: Arbitrary network object.
         :param environment: Arbitrary environment.
-        :param action_function: Function to convert network outputs into environment inputs.
+        :param action_function: Function to convert network outputs into environment
+            inputs.
 
         Keyword arguments:
 
@@ -38,7 +40,8 @@ class EnvironmentPipeline(BasePipeline):
         :param str output: String name of the layer from which to take output.
         :param int render_interval: Interval to render the environment.
         :param int reward_delay: How many iterations to delay delivery of reward.
-        :param int time: Time for which to run the network. Defaults to the network's timestep.
+        :param int time: Time for which to run the network. Defaults to the network's
+            timestep.
         """
         super().__init__(network, **kwargs)
 
@@ -62,7 +65,7 @@ class EnvironmentPipeline(BasePipeline):
             self.rewards = torch.zeros(self.reward_delay)
 
         # Set up for multiple layers of input layers.
-        self.inpts = [
+        self.inputs = [
             name
             for name, layer in network.layers.items()
             if isinstance(layer, AbstractInput)
@@ -92,10 +95,11 @@ class EnvironmentPipeline(BasePipeline):
     def train(self, **kwargs) -> None:
         # language=rst
         """
-        Trains for the specified number of episodes. Each episode can be of arbitrary length.
+        Trains for the specified number of episodes. Each episode can be of arbitrary
+        length.
         """
         while self.episode < self.num_episodes:
-            self.reset_()
+            self.reset_state_variables()
 
             for _ in itertools.count():
                 obs, reward, done, info = self.env_step()
@@ -106,15 +110,16 @@ class EnvironmentPipeline(BasePipeline):
                     break
 
             print(
-                f"Episode: {self.episode} - accumulated reward: {self.accumulated_reward:.2f}"
+                f"Episode: {self.episode} - "
+                f"accumulated reward: {self.accumulated_reward:.2f}"
             )
             self.episode += 1
 
     def env_step(self) -> Tuple[torch.Tensor, float, bool, Dict]:
         # language=rst
         """
-        Single step of the environment which includes rendering, getting and performing the action,
-        and accumulating/delaying rewards.
+        Single step of the environment which includes rendering, getting and performing
+        the action, and accumulating/delaying rewards.
 
         :return: An OpenAI ``gym`` compatible tuple with modified reward and info.
         """
@@ -149,8 +154,8 @@ class EnvironmentPipeline(BasePipeline):
     ) -> None:
         # language=rst
         """
-        Run a single iteration of the network and update it and the
-        reward list when done.
+        Run a single iteration of the network and update it and the reward list when
+        done.
 
         :param gym_batch: An OpenAI ``gym`` compatible tuple.
         """
@@ -158,10 +163,10 @@ class EnvironmentPipeline(BasePipeline):
 
         # Place the observations into the inputs.
         obs_shape = [1] * len(obs.shape[1:])
-        inpts = {k: obs.repeat(self.time, *obs_shape) for k in self.inpts}
+        inputs = {k: obs.repeat(self.time, *obs_shape) for k in self.inputs}
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(inpts=inpts, time=self.time, reward=reward, **kwargs)
+        self.network.run(inputs=inputs, time=self.time, reward=reward, **kwargs)
 
         if self.output is not None:
             self.spike_record[self.output] = (
@@ -177,13 +182,13 @@ class EnvironmentPipeline(BasePipeline):
                 )
             self.reward_list.append(self.accumulated_reward)
 
-    def reset_(self) -> None:
+    def reset_state_variables(self) -> None:
         # language=rst
         """
         Reset the pipeline.
         """
         self.env.reset()
-        self.network.reset_()
+        self.network.reset_state_variables()
         self.accumulated_reward = 0.0
         self.step_count = 0
 

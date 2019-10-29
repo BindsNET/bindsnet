@@ -16,17 +16,21 @@ def assign_labels(
     """
     Assign labels to the neurons based on highest average spiking activity.
 
-    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a single layer's spiking activity.
-    :param labels: Vector of shape ``(n_samples,)`` with data labels corresponding to spiking activity.
+    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a single
+        layer's spiking activity.
+    :param labels: Vector of shape ``(n_samples,)`` with data labels corresponding to
+        spiking activity.
     :param n_labels: The number of target labels in the data.
-    :param rates: If passed, these represent spike rates from a previous ``assign_labels()`` call.
+    :param rates: If passed, these represent spike rates from a previous
+        ``assign_labels()`` call.
     :param alpha: Rate of decay of label assignments.
-    :return: Tuple of class assignments, per-class spike proportions, and per-class firing rates.
+    :return: Tuple of class assignments, per-class spike proportions, and per-class
+        firing rates.
     """
     n_neurons = spikes.size(2)
 
     if rates is None:
-        rates = torch.zeros_like(torch.Tensor(n_neurons, n_labels))
+        rates = torch.zeros(n_neurons, n_labels)
 
     # Sum over time dimension (spike ordering doesn't matter).
     spikes = spikes.sum(1)
@@ -62,7 +66,8 @@ def logreg_fit(
     (Re)fit logistic regression model to spike data summed over time.
 
     :param spikes: Summed (over time) spikes of shape ``(n_examples, time, n_neurons)``.
-    :param labels: Vector of shape ``(n_samples,)`` with data labels corresponding to spiking activity.
+    :param labels: Vector of shape ``(n_samples,)`` with data labels corresponding to
+        spiking activity.
     :param logreg: Logistic regression model from previous fits.
     :return: (Re)fitted logistic regression model.
     """
@@ -95,10 +100,12 @@ def all_activity(
     """
     Classify data with the label with highest average spiking activity over all neurons.
 
-    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a layer's spiking activity.
+    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a layer's
+        spiking activity.
     :param assignments: A vector of shape ``(n_neurons,)`` of neuron label assignments.
     :param n_labels: The number of target labels in the data.
-    :return: Predictions tensor of shape ``(n_samples,)`` resulting from the "all activity" classification scheme.
+    :return: Predictions tensor of shape ``(n_samples,)`` resulting from the "all
+        activity" classification scheme.
     """
     n_samples = spikes.size(0)
 
@@ -129,16 +136,17 @@ def proportion_weighting(
 ) -> torch.Tensor:
     # language=rst
     """
-    Classify data with the label with highest average spiking activity over all neurons, weighted by class-wise
-    proportion.
+    Classify data with the label with highest average spiking activity over all neurons,
+    weighted by class-wise proportion.
 
-    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a single layer's spiking activity.
+    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a single
+        layer's spiking activity.
     :param assignments: A vector of shape ``(n_neurons,)`` of neuron label assignments.
-    :param proportions: A matrix of shape ``(n_neurons, n_labels)`` giving the per-class proportions of neuron spiking
-                        activity.
+    :param proportions: A matrix of shape ``(n_neurons, n_labels)`` giving the per-class
+        proportions of neuron spiking activity.
     :param n_labels: The number of target labels in the data.
-    :return: Predictions tensor of shape ``(n_samples,)`` resulting from the "proportion weighting" classification
-             scheme.
+    :return: Predictions tensor of shape ``(n_samples,)`` resulting from the "proportion
+        weighting" classification scheme.
     """
     n_samples = spikes.size(0)
 
@@ -199,7 +207,7 @@ def ngram(
 
         predictions.append(torch.argmax(score))
 
-    return torch.Tensor(predictions).long()
+    return torch.tensor(predictions).long()
 
 
 def update_ngram_scores(
@@ -211,7 +219,8 @@ def update_ngram_scores(
 ) -> Dict[Tuple[int, ...], torch.Tensor]:
     # language=rst
     """
-    Updates ngram scores by adding the count of each spike sequence of length n from the past ``n_examples``.
+    Updates ngram scores by adding the count of each spike sequence of length n from the
+    past ``n_examples``.
 
     :param spikes: Spikes of shape ``(n_examples, time, n_neurons)``.
     :param labels: The ground truth labels of shape ``(n_examples)``.
