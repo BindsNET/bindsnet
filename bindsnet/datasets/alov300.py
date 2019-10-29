@@ -3,41 +3,28 @@ from __future__ import print_function, division
 import os
 import numpy as np
 import torch
-import shutil
 import zipfile
 import warnings
 import sys
 import time
 import cv2
-import random
 import bindsnet.datasets.preprocess
 
 
 from PIL import Image
 from glob import glob
-from tqdm import tqdm
-from collections import defaultdict
 from typing import Optional, Tuple, List, Iterable
 from urllib.request import urlretrieve
-from torchvision import transforms
-import xml.etree.ElementTree as ET
 from torch.utils.data import Dataset
 
 warnings.filterwarnings("ignore")
 
-class ALOV300(torch.utils.data.Dataset):
+class ALOV300(Dataset):
+
     DATASET_WEB = "http://alov300pp.joomlafree.it/dataset-resources.html"
     VOID_LABEL = 255
 
-    def __init__(
-        self,
-        root,
-        transform,
-        input_size,
-        codalab=False,
-        download=False,
-        num_samples: int = -1,
-    ):
+    def __init__(self, root, transform, input_size, download=False):
         """
         Class to read the ALOV dataset
         
@@ -51,9 +38,6 @@ class ALOV300(torch.utils.data.Dataset):
         # Makes a unique path for a given instance of davis
         self.root = root
         self.download = download
-        self.num_samples = num_samples
-        self.frame_zip_path = os.path.join(self.root, "frame.zip")
-        self.text_zip_path = os.path.join(self.root, "text.zip")
         self.img_path = os.path.join(self.root, "JPEGImages")
         self.box_path = os.path.join(self.root, "box/")
         self.frame_path = os.path.join(self.root, "frame/")
@@ -61,15 +45,6 @@ class ALOV300(torch.utils.data.Dataset):
         # Check if Davis is installed and download it if necessary
         self._check_directories()
 
-        self.exclude = [
-            "01-Light_video00016",
-            "01-Light_video00022",
-            "01-Light_video00023",
-            "02-SurfaceCover_video00012",
-            "03-Specularity_video00003",
-            "03-Specularity_video00012",
-            "10-LowContrast_video00013",
-        ]
         self.input_size = input_size
         self.transform = transform
         self.x, self.y = self._parse_data(self.frame_path, self.box_path)
@@ -89,6 +64,16 @@ class ALOV300(torch.utils.data.Dataset):
         Parses ALOV dataset and builds tuples of (template, search region)
         tuples from consecutive annotated frames.
         """
+        self.exclude = [
+            # "01-Light_video00016",
+            # "01-Light_video00022",
+            # "01-Light_video00023",
+            # "02-SurfaceCover_video00012",
+            # "03-Specularity_video00003",
+            # "03-Specularity_video00012",
+            # "10-LowContrast_video00013",
+        ]
+
         x = []
         y = []
         envs = os.listdir(target_dir)
@@ -99,8 +84,8 @@ class ALOV300(torch.utils.data.Dataset):
             for vid in env_videos:
                 if vid in self.exclude:
                     continue
-                vid_src = self.frame_path + env + "/" + vid
-                vid_ann = self.box_path + env + "/" + vid + ".ann"
+                vid_src = f"{self.frame_path}{env}/{vid}"
+                vid_ann = f"{self.box_path}{env}/{vid}.ann"
                 frames = os.listdir(vid_src)
                 frames.sort()
                 frames = [vid_src + "/" + frame for frame in frames]
@@ -188,11 +173,11 @@ class ALOV300(torch.utils.data.Dataset):
         Parses ALOV annotation and returns bounding box in the format:
         [left, upper, width, height]
         """
-        ann = ann.strip().split(" ")
-        left = min(float(ann[1]), float(ann[3]), float(ann[5]), float(ann[7]))
-        top = min(float(ann[2]), float(ann[4]), float(ann[6]), float(ann[8]))
-        right = max(float(ann[1]), float(ann[3]), float(ann[5]), float(ann[7]))
-        bottom = max(float(ann[2]), float(ann[4]), float(ann[6]), float(ann[8]))
+        ann = map(lambda x: float(x), ann.strip().split(" "))
+        left = min(ann[1], ann[3], ann[5], ann[7])
+        top = min(ann[2], ann[4], ann[6], ann[8])
+        right = max(ann[1], ann[3], ann[5], ann[7])
+        bottom = max(ann[2], ann[4], ann[6], ann[8])
         return [left, top, right, bottom]
 
     def show(self, idx, is_current=1):
@@ -267,6 +252,8 @@ class ALOV300(torch.utils.data.Dataset):
         os.makedirs(self.root)
 
         # Grabs the correct zip url based on parameters
+        self.frame_zip_path = os.path.join(self.root, "frame.zip")
+        self.text_zip_path = os.path.join(self.root, "text.zip")
         frame_zip_url = f"http://isis-data.science.uva.nl/alov/alov300++_frames.zip"
         text_zip_url = f"http://isis-data.science.uva.nl/alov/alov300++GT_txtFiles.zip"
 
