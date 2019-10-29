@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from scipy.spatial.distance import euclidean
 from torch.nn.modules.utils import _pair
+import torch.nn as nn
+from torchvision import models
 
 from ..learning import PostPre
 from ..network import Network

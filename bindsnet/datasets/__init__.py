@@ -1,6 +1,7 @@
 from .torchvision_wrapper import create_torchvision_dataset_wrapper
 from .spoken_mnist import SpokenMNIST
 from .davis import Davis
+from .alov300 import ALOV300
 
 from .collate import time_aware_collate
 from .dataloader import DataLoader
