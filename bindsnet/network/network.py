@@ -4,7 +4,7 @@ from typing import Dict, Optional, Type, Iterable
 import torch
 
 from .monitors import AbstractMonitor
-from .nodes import AbstractInput, Nodes
+from .nodes import Nodes
 from .topology import AbstractConnection
 from ..learning.reward import AbstractReward
 
@@ -93,6 +93,7 @@ class Network(torch.nn.Module):
         Initializes network object.
 
         :param dt: Simulation timestep.
+        :param batch_size: Mini-batch size.
         :param learning: Whether to allow connection updates. True by default.
         :param reward_fn: Optional class allowing for modification of reward in case of
             reward-modulated learning.
@@ -334,23 +335,26 @@ class Network(torch.nn.Module):
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
-        # Get input to all layers (synchronous mode).
-        if not one_step:
-            inputs.update(self._get_inputs())
-
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
+            # Get input to all layers (synchronous mode).
+            current_inputs = {}
+            if not one_step:
+                current_inputs.update(self._get_inputs())
+
             for l in self.layers:
                 # Update each layer of nodes.
-                if isinstance(self.layers[l], AbstractInput):
-                    # shape is [time, batch, n_0, ...]
-                    self.layers[l].forward(x=inputs[l][t])
-                else:
-                    if one_step:
-                        # Get input to this layer (one-step mode).
-                        inputs.update(self._get_inputs(layers=[l]))
+                if l in inputs:
+                    if l in current_inputs:
+                        current_inputs[l] += inputs[l][t]
+                    else:
+                        current_inputs[l] = inputs[l][t]
 
-                    self.layers[l].forward(x=inputs[l])
+                if one_step:
+                    # Get input to this layer (one-step mode).
+                    current_inputs.update(self._get_inputs(layers=[l]))
+
+                self.layers[l].forward(x=current_inputs[l])
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
@@ -383,7 +387,7 @@ class Network(torch.nn.Module):
                 )
 
             # Get input to all layers.
-            inputs.update(self._get_inputs())
+            current_inputs.update(self._get_inputs())
 
             # Record state variables of interest.
             for m in self.monitors:
