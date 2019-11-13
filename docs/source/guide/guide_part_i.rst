@@ -78,7 +78,6 @@ Such layers are kept in the dictionary attribute :code:`network.layers`, and can
 :code:`network.layers['LIF population']`.
 
 Other layer types include :py:class:`bindsnet.network.nodes.Input` (for user-specified input spikes),
-:py:class:`bindsnet.network.nodes.RealInput` (for user-specified real-valued inputs),
 :py:class:`bindsnet.network.nodes.McCullochPitts` (the McCulloch-Pitts neuron model),
 :py:class:`bindsnet.network.nodes.AdaptiveLIFNodes` (LIF neurons with adaptive thresholds), and
 :py:class:`bindsnet.network.nodes.IzhikevichNodes` (the Izhikevich neuron model). Any number of layers can be

@@ -575,7 +575,7 @@ def ann_to_snn(
 
     snn = Network()
 
-    input_layer = nodes.RealInput(shape=input_shape)
+    input_layer = nodes.Input(shape=input_shape)
     snn.add_layer(input_layer, name="Input")
 
     children = []

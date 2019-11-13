@@ -9,7 +9,7 @@ from torchvision import models
 
 from ..learning import PostPre
 from ..network import Network
-from ..network.nodes import Input, RealInput, LIFNodes, DiehlAndCookNodes
+from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes
 from ..network.topology import Connection, LocalConnection
 
 
@@ -430,7 +430,6 @@ class LocallyConnectedNetwork(Network):
         wmin: float = 0.0,
         wmax: float = 1.0,
         norm: Optional[float] = 0.2,
-        real=False,
     ) -> None:
         # language=rst
         """
@@ -460,8 +459,6 @@ class LocallyConnectedNetwork(Network):
             potential decay.
         :param norm: ``Input`` to ``DiehlAndCookNodes`` layer connection weights
             normalization constant.
-        :param real: Whether to use real-valued (non-spiking) input (implemented as a
-            "clamp").
         """
         super().__init__(dt=dt)
 
@@ -489,10 +486,7 @@ class LocallyConnectedNetwork(Network):
                 int((input_shape[1] - kernel_size[1]) / stride[1]) + 1,
             )
 
-        if real:
-            input_layer = RealInput(n=self.n_inpt, traces=True, tc_trace=20.0)
-        else:
-            input_layer = Input(n=self.n_inpt, traces=True, tc_trace=20.0)
+        input_layer = Input(n=self.n_inpt, traces=True, tc_trace=20.0)
 
         output_layer = DiehlAndCookNodes(
             n=self.n_filters * conv_size[0] * conv_size[1],
