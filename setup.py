@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 with open("README.md") as f:
     long_description = f.read()
 
-version = "0.2.5"
+version = "0.2.6"
 
 setup(
     name="bindsnet",
