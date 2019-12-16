@@ -12,12 +12,12 @@ setup(
     license="AGPL-3.0",
     long_description=long_description,
     long_description_content_type="text/markdown",  # This is important!
-    url="http://github.com/Hananel-Hazan/bindsnet",
-    author="Daniel Saunders, Hananel Hazan, Darpan Sanghavi, Hassaan Khan",
+    url="http://github.com/BINDS-LAB-UMASS/bindsnet",
+    author="Daniel Saunders",
     author_email="danjsaund@gmail.com",
     packages=find_packages(),
     zip_safe=False,
-    download_url="https://github.com/Hananel-Hazan/bindsnet/archive/%s.tar.gz"
+    download_url="https://github.com/BINDS-LAB-UMASS/bindsnet/archive/%s.tar.gz"
     % version,
     install_requires=[
         "numpy>=1.14.2",
