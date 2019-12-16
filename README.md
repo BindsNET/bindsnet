@@ -9,7 +9,7 @@ This package is used as part of ongoing research on applying SNNs to machine lea
 Check out the [BindsNET experiments repository](https://github.com/djsaunde/bindsnet_experiments) for a collection of experiments, accompanying bash scripts for dispatching on [CICS](https://www.cics.umass.edu/) clusters, functions for the analysis of results, plots of experiment outcomes, and more. Documentation for the package can be found [here](https://bindsnet-docs.readthedocs.io).
 
 [![Build Status](https://travis-ci.com/Hananel-Hazan/bindsnet.svg?token=trym5Uzx1rs9Ez2yENEF&branch=master)](https://travis-ci.com/BINDS-LAB-UMASS/bindsnet)
-[![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/bindsnet/badge/?version=latest)](https://bindsnet.readthedocs.io/en/latest/?badge=latest)
 [![HitCount](http://hits.dwyl.io/Hananel-Hazan/bindsnet.svg)](http://hits.dwyl.io/Hananel-Hazan/bindsnet)
 [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/bindsnet_/community)
 
