@@ -19,6 +19,7 @@ from torch.utils.data import Dataset
 
 warnings.filterwarnings("ignore")
 
+
 class ALOV300(Dataset):
 
     DATASET_WEB = "http://alov300pp.joomlafree.it/dataset-resources.html"
