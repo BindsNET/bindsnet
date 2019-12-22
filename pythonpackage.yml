@@ -21,6 +21,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+    - name: Format with black
+      run: |
+        pip install black
+        # PEP 8 specifies a max line length of 79
+        black . -l 79
     - name: Lint with flake8
       run: |
         pip install flake8
