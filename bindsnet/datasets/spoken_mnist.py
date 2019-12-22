@@ -121,7 +121,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
-            audio, labels = [torch.Tensor(audio[_]) for _ in perm], labels[perm]
+            audio, labels = ([torch.Tensor(audio[_]) for _ in perm], labels[perm])
 
         return audio, torch.Tensor(labels)
 

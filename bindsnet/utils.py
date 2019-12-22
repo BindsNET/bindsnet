@@ -137,7 +137,7 @@ def reshape_locally_connected_weights(
     k1, k2 = kernel_size
     c1, c2 = conv_size
     i1, i2 = input_sqrt
-    c1sqrt, c2sqrt = int(math.ceil(math.sqrt(c1))), int(math.ceil(math.sqrt(c2)))
+    c1sqrt, c2sqrt = (int(math.ceil(math.sqrt(c1))), int(math.ceil(math.sqrt(c2))))
     fs = int(math.ceil(math.sqrt(n_filters)))
 
     w_ = torch.zeros((n_filters * k1, k2 * c1 * c2))

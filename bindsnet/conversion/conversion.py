@@ -254,8 +254,8 @@ class PassThroughNodes(nodes.Nodes):
 class PermuteConnection(topology.AbstractConnection):
     # language=rst
     """
-    Special-purpose connection for emulating the custom ``Permute`` module in spiking
-    neural networks.
+    Special-purpose connection for emulating the custom ``Permute`` module in
+    spiking neural networks.
     """
 
     def __init__(
