@@ -42,12 +42,20 @@ class TestConnection:
                     conn_type, connection.state_dict().keys()
                 )
             )
-            print("__dict__ in {} : {}".format(conn_type, connection.__dict__.keys()))
+            print(
+                "__dict__ in {} : {}".format(
+                    conn_type, connection.__dict__.keys()
+                )
+            )
             print("Tensors in {} : {}".format(conn_type, connection_tensors))
 
-            tensor_devs = [getattr(connection, k).device for k in connection_tensors]
+            tensor_devs = [
+                getattr(connection, k).device for k in connection_tensors
+            ]
             print(
-                "Tensor devices {}".format(list(zip(connection_tensors, tensor_devs)))
+                "Tensor devices {}".format(
+                    list(zip(connection_tensors, tensor_devs))
+                )
             )
 
             for d in tensor_devs:

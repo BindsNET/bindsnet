@@ -32,7 +32,9 @@ class TestEncodings:
                 for m in [0.1, 1.0]:  # maximum spiking probability
                     for t in [1, 100]:  # number of timesteps
                         data = torch.empty(s, n).uniform_(0, 1)
-                        spike_loader = bernoulli_loader(data, time=t, max_prob=m)
+                        spike_loader = bernoulli_loader(
+                            data, time=t, max_prob=m
+                        )
 
                         for i, spikes in enumerate(spike_loader):
                             assert spikes.size() == torch.Size((t, n))
@@ -40,7 +42,9 @@ class TestEncodings:
     def test_poisson(self):
         for n in [1, 100]:  # number of nodes in layer
             for t in [1000]:  # number of timesteps
-                datum = torch.empty(n).uniform_(20, 100)  # Generate firing rates.
+                datum = torch.empty(n).uniform_(
+                    20, 100
+                )  # Generate firing rates.
                 spikes = poisson(datum, time=t)  # Encode as spikes.
 
                 assert spikes.size() == torch.Size((t, n))
@@ -49,8 +53,12 @@ class TestEncodings:
         for s in [1, 10]:  # number of data samples
             for n in [1, 100]:  # number of nodes in layer
                 for t in [1000]:  # number of timesteps
-                    data = torch.empty(s, n).uniform_(20, 100)  # Generate firing rates.
-                    spike_loader = poisson_loader(data, time=t)  # Encode as spikes.
+                    data = torch.empty(s, n).uniform_(
+                        20, 100
+                    )  # Generate firing rates.
+                    spike_loader = poisson_loader(
+                        data, time=t
+                    )  # Encode as spikes.
 
                     for i, spikes in enumerate(spike_loader):
                         assert spikes.size() == torch.Size((t, n))

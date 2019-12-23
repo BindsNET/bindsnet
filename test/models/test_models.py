@@ -8,7 +8,9 @@ class TestTwoLayerNetwork:
         for n_inpt in [50, 100, 200]:
             for n_neurons in [50, 100, 200]:
                 for dt in [1.0, 2.0]:
-                    network = TwoLayerNetwork(n_inpt, n_neurons=n_neurons, dt=dt)
+                    network = TwoLayerNetwork(
+                        n_inpt, n_neurons=n_neurons, dt=dt
+                    )
 
                     assert network.n_inpt == n_inpt
                     assert network.n_neurons == n_neurons
@@ -22,10 +24,13 @@ class TestTwoLayerNetwork:
                         isinstance(network.layers["Y"], LIFNodes)
                         and network.layers["Y"].n == n_neurons
                     )
-                    assert isinstance(network.connections[("X", "Y")], Connection)
+                    assert isinstance(
+                        network.connections[("X", "Y")], Connection
+                    )
                     assert (
                         network.connections[("X", "Y")].source.n == n_inpt
-                        and network.connections[("X", "Y")].target.n == n_neurons
+                        and network.connections[("X", "Y")].target.n
+                        == n_neurons
                     )
 
 
@@ -55,7 +60,9 @@ class TestDiehlAndCook2015:
                                 and network.layers["X"].n == n_inpt
                             )
                             assert (
-                                isinstance(network.layers["Ae"], DiehlAndCookNodes)
+                                isinstance(
+                                    network.layers["Ae"], DiehlAndCookNodes
+                                )
                                 and network.layers["Ae"].n == n_neurons
                             )
                             assert (
@@ -63,5 +70,9 @@ class TestDiehlAndCook2015:
                                 and network.layers["Ae"].n == n_neurons
                             )
 
-                            for conn in [("X", "Ae"), ("Ae", "Ai"), ("Ai", "Ae")]:
+                            for conn in [
+                                ("X", "Ae"),
+                                ("Ae", "Ai"),
+                                ("Ai", "Ae"),
+                            ]:
                                 assert conn in network.connections

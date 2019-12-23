@@ -27,7 +27,9 @@ def im2col_indices(
     :param stride: Amount to stride over image by per convolution.
     :return: Input tensor reshaped to column-wise format.
     """
-    return F.unfold(x, (kernel_height, kernel_width), padding=padding, stride=stride)
+    return F.unfold(
+        x, (kernel_height, kernel_width), padding=padding, stride=stride
+    )
 
 
 def col2im_indices(
@@ -51,7 +53,11 @@ def col2im_indices(
     :return: Image tensor in original image shape.
     """
     return F.fold(
-        cols, x_shape, (kernel_height, kernel_width), padding=padding, stride=stride
+        cols,
+        x_shape,
+        (kernel_height, kernel_width),
+        padding=padding,
+        stride=stride,
     )
 
 
@@ -137,7 +143,10 @@ def reshape_locally_connected_weights(
     k1, k2 = kernel_size
     c1, c2 = conv_size
     i1, i2 = input_sqrt
-    c1sqrt, c2sqrt = (int(math.ceil(math.sqrt(c1))), int(math.ceil(math.sqrt(c2))))
+    c1sqrt, c2sqrt = (
+        int(math.ceil(math.sqrt(c1))),
+        int(math.ceil(math.sqrt(c2))),
+    )
     fs = int(math.ceil(math.sqrt(n_filters)))
 
     w_ = torch.zeros((n_filters * k1, k2 * c1 * c2))
@@ -148,9 +157,13 @@ def reshape_locally_connected_weights(
                 n = n1 * c2 + n2
                 filter_ = w[
                     locations[:, n],
-                    feature * (c1 * c2) + (n // c2sqrt) * c2sqrt + (n % c2sqrt),
+                    feature * (c1 * c2)
+                    + (n // c2sqrt) * c2sqrt
+                    + (n % c2sqrt),
                 ].view(k1, k2)
-                w_[feature * k1 : (feature + 1) * k1, n * k2 : (n + 1) * k2] = filter_
+                w_[
+                    feature * k1 : (feature + 1) * k1, n * k2 : (n + 1) * k2
+                ] = filter_
 
     if c1 == 1 and c2 == 1:
         square = torch.zeros((i1 * fs, i2 * fs))
@@ -201,16 +214,21 @@ def reshape_conv2d_weights(weights: torch.Tensor) -> torch.Tensor:
         for j in range(sqrt1):
             for k in range(sqrt2):
                 for l in range(sqrt2):
-                    if i * sqrt1 + j < weights.size(0) and k * sqrt2 + l < weights.size(
-                        1
-                    ):
-                        fltr = weights[i * sqrt1 + j, k * sqrt2 + l].view(height, width)
+                    if i * sqrt1 + j < weights.size(
+                        0
+                    ) and k * sqrt2 + l < weights.size(1):
+                        fltr = weights[i * sqrt1 + j, k * sqrt2 + l].view(
+                            height, width
+                        )
                         reshaped[
                             i * height
                             + k * height * sqrt1 : (i + 1) * height
                             + k * height * sqrt1,
                             (j % sqrt1) * width
-                            + (l % sqrt2) * width * sqrt1 : ((j % sqrt1) + 1) * width
+                            + (l % sqrt2)
+                            * width
+                            * sqrt1 : ((j % sqrt1) + 1)
+                            * width
                             + (l % sqrt2) * width * sqrt1,
                         ] = fltr
 

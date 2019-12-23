@@ -40,7 +40,9 @@ class MovingAvgRPE(AbstractReward):
         Constructor for EMA reward prediction error.
         """
         self.reward_predict = torch.tensor(0.0)  # Predicted reward (per step).
-        self.reward_predict_episode = torch.tensor(0.0)  # Predicted reward per episode.
+        self.reward_predict_episode = torch.tensor(
+            0.0
+        )  # Predicted reward per episode.
         self.rewards_predict_episode = (
             []
         )  # List of predicted rewards per episode (used for plotting).
@@ -85,6 +87,7 @@ class MovingAvgRPE(AbstractReward):
             1 - 1 / ema_window
         ) * self.reward_predict + 1 / ema_window * reward
         self.reward_predict_episode = (
-            1 - 1 / ema_window
-        ) * self.reward_predict_episode + 1 / ema_window * accumulated_reward
+            (1 - 1 / ema_window) * self.reward_predict_episode
+            + 1 / ema_window * accumulated_reward
+        )
         self.rewards_predict_episode.append(self.reward_predict_episode.item())

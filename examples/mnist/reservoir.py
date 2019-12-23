@@ -74,10 +74,16 @@ else:
 network = Network(dt=dt)
 inpt = Input(784, shape=(1, 28, 28))
 network.add_layer(inpt, name="I")
-output = LIFNodes(n_neurons, thresh=-52 + np.random.randn(n_neurons).astype(float))
+output = LIFNodes(
+    n_neurons, thresh=-52 + np.random.randn(n_neurons).astype(float)
+)
 network.add_layer(output, name="O")
-C1 = Connection(source=inpt, target=output, w=0.5 * torch.randn(inpt.n, output.n))
-C2 = Connection(source=output, target=output, w=0.5 * torch.randn(output.n, output.n))
+C1 = Connection(
+    source=inpt, target=output, w=0.5 * torch.randn(inpt.n, output.n)
+)
+C2 = Connection(
+    source=output, target=output, w=0.5 * torch.randn(output.n, output.n)
+)
 
 network.add_connection(C1, source="I", target="O")
 network.add_connection(C2, source="O", target="O")
@@ -149,7 +155,10 @@ for (i, dataPoint) in pbar:
             ims=spike_ims,
         )
         voltage_ims, voltage_axes = plot_voltages(
-            {layer: voltages[layer].get("v").view(-1, time) for layer in voltages},
+            {
+                layer: voltages[layer].get("v").view(-1, time)
+                for layer in voltages
+            },
             ims=voltage_ims,
             axes=voltage_axes,
         )
@@ -230,7 +239,10 @@ for (i, dataPoint) in pbar:
             ims=spike_ims,
         )
         voltage_ims, voltage_axes = plot_voltages(
-            {layer: voltages[layer].get("v").view(-1, 250) for layer in voltages},
+            {
+                layer: voltages[layer].get("v").view(-1, 250)
+                for layer in voltages
+            },
             ims=voltage_ims,
             axes=voltage_axes,
         )

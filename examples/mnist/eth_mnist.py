@@ -14,7 +14,11 @@ from bindsnet.encoding import PoissonEncoder
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_weights, get_square_assignments
-from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
+from bindsnet.evaluation import (
+    all_activity,
+    proportion_weighting,
+    assign_labels,
+)
 from bindsnet.analysis.plotting import (
     plot_input,
     plot_spikes,
@@ -133,7 +137,9 @@ for layer in set(network.layers):
 
 voltages = {}
 for layer in set(network.layers) - {"X"}:
-    voltages[layer] = Monitor(network.layers[layer], state_vars=["v"], time=time)
+    voltages[layer] = Monitor(
+        network.layers[layer], state_vars=["v"], time=time
+    )
     network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
 inpt_ims, inpt_axes = None, None
@@ -151,12 +157,18 @@ for epoch in range(n_epochs):
     labels = []
 
     if epoch % progress_interval == 0:
-        print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
+        print(
+            "Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start)
+        )
         start = t()
 
     # Create a dataloader to iterate and batch data
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=True, num_workers=n_workers, pin_memory=gpu
+        dataset,
+        batch_size=1,
+        shuffle=True,
+        num_workers=n_workers,
+        pin_memory=gpu,
     )
 
     for step, batch in enumerate(tqdm(dataloader)):
@@ -171,7 +183,9 @@ for epoch in range(n_epochs):
 
             # Get network predictions.
             all_activity_pred = all_activity(
-                spikes=spike_record, assignments=assignments, n_labels=n_classes
+                spikes=spike_record,
+                assignments=assignments,
+                n_labels=n_classes,
             )
             proportion_pred = proportion_weighting(
                 spikes=spike_record,
@@ -245,7 +259,9 @@ for epoch in range(n_epochs):
             inpt_axes, inpt_ims = plot_input(
                 image, inpt, label=batch["label"], axes=inpt_axes, ims=inpt_ims
             )
-            spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
+            spike_ims, spike_axes = plot_spikes(
+                spikes_, ims=spike_ims, axes=spike_axes
+            )
             weights_im = plot_weights(square_weights, im=weights_im)
             assigns_im = plot_assignments(square_assignments, im=assigns_im)
             perf_ax = plot_performance(accuracy, ax=perf_ax)

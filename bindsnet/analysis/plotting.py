@@ -115,7 +115,8 @@ def plot_spikes(
         for i, datum in enumerate(spikes.items()):
             spikes = (
                 datum[1][
-                    time[0] : time[1], n_neurons[datum[0]][0] : n_neurons[datum[0]][1]
+                    time[0] : time[1],
+                    n_neurons[datum[0]][0] : n_neurons[datum[0]][1],
                 ]
                 .detach()
                 .clone()
@@ -143,14 +144,19 @@ def plot_spikes(
             ax.set_aspect("auto")
 
         plt.setp(
-            axes, xticks=[], yticks=[], xlabel="Simulation time", ylabel="Neuron index"
+            axes,
+            xticks=[],
+            yticks=[],
+            xlabel="Simulation time",
+            ylabel="Neuron index",
         )
         plt.tight_layout()
     else:
         for i, datum in enumerate(spikes.items()):
             spikes = (
                 datum[1][
-                    time[0] : time[1], n_neurons[datum[0]][0] : n_neurons[datum[0]][1]
+                    time[0] : time[1],
+                    n_neurons[datum[0]][0] : n_neurons[datum[0]][1],
                 ]
                 .detach()
                 .clone()
@@ -369,11 +375,16 @@ def plot_assignments(
 
         if classes is None:
             color = plt.get_cmap("RdBu", 11)
-            im = ax.matshow(locals_assignments, cmap=color, vmin=-1.5, vmax=9.5)
+            im = ax.matshow(
+                locals_assignments, cmap=color, vmin=-1.5, vmax=9.5
+            )
         else:
             color = plt.get_cmap("RdBu", len(classes) + 1)
             im = ax.matshow(
-                locals_assignments, cmap=color, vmin=-1.5, vmax=len(classes) - 0.5
+                locals_assignments,
+                cmap=color,
+                vmin=-1.5,
+                vmax=len(classes) - 0.5,
             )
 
         div = make_axes_locatable(ax)
@@ -497,12 +508,14 @@ def plot_voltages(
                         )
                     )
 
-                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
-                        []
-                    ):
+                    if thresholds is not None and thresholds[
+                        v[0]
+                    ].size() == torch.Size([]):
                         ims.append(
                             axes.axhline(
-                                y=thresholds[v[0]].item(), c="r", linestyle="--"
+                                y=thresholds[v[0]].item(),
+                                c="r",
+                                linestyle="--",
                             )
                         )
                 else:
@@ -519,8 +532,17 @@ def plot_voltages(
                         )
                     )
 
-                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
-                plt.title("%s voltages for neurons (%d - %d) from t = %d to %d " % args)
+                args = (
+                    v[0],
+                    n_neurons[v[0]][0],
+                    n_neurons[v[0]][1],
+                    time[0],
+                    time[1],
+                )
+                plt.title(
+                    "%s voltages for neurons (%d - %d) from t = %d to %d "
+                    % args
+                )
                 plt.xlabel("Time (ms)")
 
                 if plot_type == "line":
@@ -543,12 +565,14 @@ def plot_voltages(
                             ]
                         )
                     )
-                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
-                        []
-                    ):
+                    if thresholds is not None and thresholds[
+                        v[0]
+                    ].size() == torch.Size([]):
                         ims.append(
                             axes[i].axhline(
-                                y=thresholds[v[0]].item(), c="r", linestyle="--"
+                                y=thresholds[v[0]].item(),
+                                c="r",
+                                linestyle="--",
                             )
                         )
                 else:
@@ -564,9 +588,16 @@ def plot_voltages(
                             cmap=cmap,
                         )
                     )
-                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                args = (
+                    v[0],
+                    n_neurons[v[0]][0],
+                    n_neurons[v[0]][1],
+                    time[0],
+                    time[1],
+                )
                 axes[i].set_title(
-                    "%s voltages for neurons (%d - %d) from t = %d to %d " % args
+                    "%s voltages for neurons (%d - %d) from t = %d to %d "
+                    % args
                 )
 
             for ax in axes:
@@ -589,26 +620,37 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
+                            n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            time[0] : time[1],
                         ]
                     )
-                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
-                        []
-                    ):
-                        axes.axhline(y=thresholds[v[0]].item(), c="r", linestyle="--")
+                    if thresholds is not None and thresholds[
+                        v[0]
+                    ].size() == torch.Size([]):
+                        axes.axhline(
+                            y=thresholds[v[0]].item(), c="r", linestyle="--"
+                        )
                 else:
                     axes.matshow(
                         v[1]
                         .cpu()
                         .numpy()[
-                            n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
+                            n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            time[0] : time[1],
                         ]
                         .T,
                         cmap=cmap,
                     )
-                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                args = (
+                    v[0],
+                    n_neurons[v[0]][0],
+                    n_neurons[v[0]][1],
+                    time[0],
+                    time[1],
+                )
                 axes.set_title(
-                    "%s voltages for neurons (%d - %d) from t = %d to %d " % args
+                    "%s voltages for neurons (%d - %d) from t = %d to %d "
+                    % args
                 )
                 axes.set_aspect("auto")
 
@@ -621,12 +663,13 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
+                            n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            time[0] : time[1],
                         ]
                     )
-                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
-                        []
-                    ):
+                    if thresholds is not None and thresholds[
+                        v[0]
+                    ].size() == torch.Size([]):
                         axes[i].axhline(
                             y=thresholds[v[0]].item(), c="r", linestyle="--"
                         )
@@ -635,14 +678,22 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
+                            n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            time[0] : time[1],
                         ]
                         .T,
                         cmap=cmap,
                     )
-                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                args = (
+                    v[0],
+                    n_neurons[v[0]][0],
+                    n_neurons[v[0]][1],
+                    time[0],
+                    time[1],
+                )
                 axes[i].set_title(
-                    "%s voltages for neurons (%d - %d) from t = %d to %d " % args
+                    "%s voltages for neurons (%d - %d) from t = %d to %d "
+                    % args
                 )
 
             for ax in axes:

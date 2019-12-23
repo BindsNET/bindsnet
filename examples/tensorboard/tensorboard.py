@@ -14,7 +14,10 @@ from bindsnet.network import Network
 from bindsnet.learning import PostPre
 from bindsnet.network.nodes import LIFNodes, Input
 from bindsnet.network.topology import Conv2dConnection, Connection
-from bindsnet.analysis.pipeline_analysis import TensorboardAnalyzer, MatplotlibAnalyzer
+from bindsnet.analysis.pipeline_analysis import (
+    TensorboardAnalyzer,
+    MatplotlibAnalyzer,
+)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

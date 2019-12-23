@@ -20,7 +20,14 @@ class TestNodes:
     def test_init(self):
         network = Network()
         for i, nodes in enumerate(
-            [Input, McCullochPitts, IFNodes, LIFNodes, AdaptiveLIFNodes, SRM0Nodes]
+            [
+                Input,
+                McCullochPitts,
+                IFNodes,
+                LIFNodes,
+                AdaptiveLIFNodes,
+                SRM0Nodes,
+            ]
         ):
             for n in [1, 100, 10000]:
                 layer = nodes(n)
@@ -47,7 +54,12 @@ class TestNodes:
         for nodes in [LIFNodes, AdaptiveLIFNodes]:
             for n in [1, 100, 10000]:
                 layer = nodes(
-                    n, rest=0.0, reset=-10.0, thresh=10.0, refrac=3, tc_decay=1.5e3
+                    n,
+                    rest=0.0,
+                    reset=-10.0,
+                    thresh=10.0,
+                    refrac=3,
+                    tc_decay=1.5e3,
                 )
                 network.add_layer(layer=layer, name=f"{i}_params_{n}")
 
@@ -69,15 +81,25 @@ class TestNodes:
             layer.to(torch.device("cuda:0"))
 
             layer_tensors = [
-                k for k, v in layer.state_dict().items() if isinstance(v, torch.Tensor)
+                k
+                for k, v in layer.state_dict().items()
+                if isinstance(v, torch.Tensor)
             ]
 
             tensor_devs = [getattr(layer, k).device for k in layer_tensors]
 
-            print("State dict in {} : {}".format(nodes, layer.state_dict().keys()))
+            print(
+                "State dict in {} : {}".format(
+                    nodes, layer.state_dict().keys()
+                )
+            )
             print("__dict__ in {} : {}".format(nodes, layer.__dict__.keys()))
             print("Tensors in {} : {}".format(nodes, layer_tensors))
-            print("Tensor devices {}".format(list(zip(layer_tensors, tensor_devs))))
+            print(
+                "Tensor devices {}".format(
+                    list(zip(layer_tensors, tensor_devs))
+                )
+            )
 
             for d in tensor_devs:
                 print(d, d == torch.device("cuda:0"))
@@ -86,7 +108,9 @@ class TestNodes:
             print("Reset layer")
             layer.reset_state_variables()
             layer_tensors = [
-                k for k, v in layer.state_dict().items() if isinstance(v, torch.Tensor)
+                k
+                for k, v in layer.state_dict().items()
+                if isinstance(v, torch.Tensor)
             ]
 
             tensor_devs = [getattr(layer, k).device for k in layer_tensors]

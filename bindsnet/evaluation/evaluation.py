@@ -76,7 +76,9 @@ def logreg_fit(
     return logreg
 
 
-def logreg_predict(spikes: torch.Tensor, logreg: LogisticRegression) -> torch.Tensor:
+def logreg_predict(
+    spikes: torch.Tensor, logreg: LogisticRegression
+) -> torch.Tensor:
     # language=rst
     """
     Predicts classes according to spike data summed over time.
@@ -164,7 +166,8 @@ def proportion_weighting(
 
             # Compute layer-wise firing rate for this label.
             rates[:, i] += (
-                torch.sum((proportions[:, i] * spikes)[:, indices], 1) / n_assigns
+                torch.sum((proportions[:, i] * spikes)[:, indices], 1)
+                / n_assigns
             )
 
     # Predictions are arg-max of layer-wise firing rates.
