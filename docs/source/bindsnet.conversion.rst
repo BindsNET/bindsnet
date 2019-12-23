@@ -12,6 +12,22 @@ bindsnet.conversion.conversion module
    :undoc-members:
    :show-inheritance:
 
+bindsnet.conversion.nodes module
+--------------------------------
+
+.. automodule:: bindsnet.conversion.nodes
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+bindsnet.conversion.topology module
+-----------------------------------
+
+.. automodule:: bindsnet.conversion.topology
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------
