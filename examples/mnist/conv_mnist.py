@@ -154,13 +154,13 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=1, shuffle=True, num_workers=4, pin_memory=gpu
+        train_dataset, batch_size=1, shuffle=True#, num_workers=4, pin_memory=gpu
     )
 
-    for step, batch in enumerate(tqdm(train_dataloader)):
+    for step, batch in enumerate((train_dataloader)):
         # Get next input sample.
 
-        inputs = {"X": batch["encoded_image"]}
+        inputs = {"X": batch["encoded_image"].view(time, 1, 1, 28, 28)}
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
         label = batch["label"]
