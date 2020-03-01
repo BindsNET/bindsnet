@@ -31,16 +31,16 @@ parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_clamp", type=int, default=1)
 parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=22.5)
-parser.add_argument("--time", type=int, default=50)
+parser.add_argument("--time", type=int, default=500)
 parser.add_argument("--dt", type=int, default=1.0)
-parser.add_argument("--intensity", type=float, default=0.25)
+parser.add_argument("--intensity", type=float, default=128)
 parser.add_argument("--progress_interval", type=int, default=10)
-parser.add_argument("--update_interval", type=int, default=250)
+parser.add_argument("--update_interval", type=int, default=50)
 parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=False, train=True)
+parser.set_defaults(plot=False, gpu=False, train=True)
 
 args = parser.parse_args()
 
@@ -118,20 +118,34 @@ rates = torch.zeros_like(torch.Tensor(n_neurons, 10))
 # Sequence of accuracy estimates.
 accuracy = {"all": [], "proportion": []}
 
+# Labels to determine neuron assignments and spike proportions and estimate accuracy
+labels = torch.empty(update_interval)
+
 spikes = {}
-for layer in set(network.layers) - {"X"}:
+for layer in set(network.layers):
     spikes[layer] = Monitor(network.layers[layer], state_vars=["s"], time=time)
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
 # Train the network.
 print("Begin training.\n")
 
+inpt_axes = None
+inpt_ims = None
+spike_axes = None
+spike_ims = None
+weights_im = None
+assigns_im = None
+perf_ax = None
+voltage_axes = None
+voltage_ims = None
+
 pbar = tqdm(enumerate(dataloader))
-for (i, dataPoint) in pbar:
+for (i, datum) in pbar:
     if i > n_train:
         break
-    image = dataPoint["encoded_image"]
-    label = dataPoint["label"]
+
+    image = datum["encoded_image"]
+    label = datum["label"]
     pbar.set_description_str("Train progress: (%d / %d)" % (i, n_train))
 
     if i % update_interval == 0 and i > 0:
@@ -143,10 +157,10 @@ for (i, dataPoint) in pbar:
 
         # Compute network accuracy according to available classification strategies.
         accuracy["all"].append(
-            100 * torch.sum(label.long() == all_activity_pred).item() / update_interval
+            100 * torch.sum(labels.long() == all_activity_pred).item() / update_interval
         )
         accuracy["proportion"].append(
-            100 * torch.sum(label.long() == proportion_pred).item() / update_interval
+            100 * torch.sum(labels.long() == proportion_pred).item() / update_interval
         )
 
         print(
@@ -163,24 +177,27 @@ for (i, dataPoint) in pbar:
         )
 
         # Assign labels to excitatory layer neurons.
-        assignments, proportions, rates = assign_labels(spike_record, label, 10, rates)
+        assignments, proportions, rates = assign_labels(spike_record, labels, 10, rates)
+
+    #Add the current label to the list of labels for this update_interval
+    labels[i % update_interval] = label[0]
 
     # Run the network on the input.
     choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
     clamp = {"Ae": per_class * label.long() + torch.Tensor(choice).long()}
-    inpts = {"X": image.view(time, 1, 28, 28)}
-    network.run(inpts=inpts, time=time, clamp=clamp)
+    inputs = {"X": image.view(time, 1, 1, 28, 28)}
+    network.run(inpts=inputs, time=time, clamp=clamp)
 
     # Get voltage recording.
     exc_voltages = exc_voltage_monitor.get("v")
     inh_voltages = inh_voltage_monitor.get("v")
 
     # Add to spikes recording.
-    spike_record[i % update_interval] = spikes["Ae"].get("s").view(50, n_neurons)
+    spike_record[i % update_interval] = spikes["Ae"].get("s").view(time, n_neurons)
 
     # Optionally plot various simulation information.
     if plot:
-        inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
+        inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
         input_exc_weights = network.connections[("X", "Ae")].w
         square_weights = get_square_weights(
             input_exc_weights.view(784, n_neurons), n_sqrt, 28
@@ -188,37 +205,20 @@ for (i, dataPoint) in pbar:
         square_assignments = get_square_assignments(assignments, n_sqrt)
         voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
 
-        if i == 0:
-            inpt_axes, inpt_ims = plot_input(
-                image.sum(1).view(28, 28), inpt, label=label
-            )
-            spike_ims, spike_axes = plot_spikes(
-                {layer: spikes[layer].get("s") for layer in spikes}
-            )
-            weights_im = plot_weights(square_weights)
-            assigns_im = plot_assignments(square_assignments)
-            perf_ax = plot_performance(accuracy)
-            voltage_ims, voltage_axes = plot_voltages(voltages)
-
-        else:
-            inpt_axes, inpt_ims = plot_input(
-                image.sum(1).view(28, 28),
-                inpt,
-                label=label,
-                axes=inpt_axes,
-                ims=inpt_ims,
-            )
-            spike_ims, spike_axes = plot_spikes(
-                {layer: spikes[layer].get("s") for layer in spikes},
-                ims=spike_ims,
-                axes=spike_axes,
-            )
-            weights_im = plot_weights(square_weights, im=weights_im)
-            assigns_im = plot_assignments(square_assignments, im=assigns_im)
-            perf_ax = plot_performance(accuracy, ax=perf_ax)
-            voltage_ims, voltage_axes = plot_voltages(
-                voltages, ims=voltage_ims, axes=voltage_axes
-            )
+        inpt_axes, inpt_ims = plot_input(
+            image.sum(1).view(28, 28), inpt, label=label, axes=inpt_axes, ims=inpt_ims
+        )
+        spike_ims, spike_axes = plot_spikes(
+            {layer: spikes[layer].get("s").view(time, 1, -1) for layer in spikes},
+            ims=spike_ims,
+            axes=spike_axes,
+        )
+        weights_im = plot_weights(square_weights, im=weights_im)
+        assigns_im = plot_assignments(square_assignments, im=assigns_im)
+        perf_ax = plot_performance(accuracy, ax=perf_ax)
+        voltage_ims, voltage_axes = plot_voltages(
+            voltages, ims=voltage_ims, axes=voltage_axes
+        )
 
         plt.pause(1e-8)
 
