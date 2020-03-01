@@ -11,7 +11,7 @@ def plot_weights_movie(ws: np.ndarray, sample_every: int = 1) -> None:
     """
     Create and plot movie of weights.
     
-    :param ws: Array of shape ``[n_examples, source, target, time]``
+    :param ws: Array of shape ``[n_examples, source, target, time]``.
     :param sample_every: Sub-sample using this parameter.
     """
     weights = []
@@ -53,7 +53,8 @@ def plot_spike_trains_for_example(
     """
     Plot spike trains for top-k neurons or for specific indices.
 
-    :param spikes: Spikes for one simulation run of shape ``(n_examples, n_neurons, time)``.
+    :param spikes: Spikes for one simulation run of shape
+        ``(n_examples, n_neurons, time)``.
     :param n_ex: Allows user to pick which example to plot spikes for.
     :param top_k: Plot k neurons that spiked the most for n_ex example.
     :param indices: Plot specific neurons' spiking activity instead of top_k.

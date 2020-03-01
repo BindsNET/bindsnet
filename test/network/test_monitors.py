@@ -25,7 +25,7 @@ class TestMonitor:
     _if_mon = Monitor(_if, state_vars=["s", "v"])
     network.add_monitor(_if_mon, name="Y")
 
-    network.run(inpts={"X": torch.bernoulli(torch.rand(100, inpt.n))}, time=100)
+    network.run(inputs={"X": torch.bernoulli(torch.rand(100, inpt.n))}, time=100)
 
     assert inpt_mon.get("s").size() == torch.Size([100, 1, inpt.n])
     assert _if_mon.get("s").size() == torch.Size([100, 1, _if.n])
@@ -38,7 +38,7 @@ class TestMonitor:
     _if_mon = Monitor(_if, state_vars=["s", "v"], time=500)
     network.add_monitor(_if_mon, name="Y")
 
-    network.run(inpts={"X": torch.bernoulli(torch.rand(500, inpt.n))}, time=500)
+    network.run(inputs={"X": torch.bernoulli(torch.rand(500, inpt.n))}, time=500)
 
     assert inpt_mon.get("s").size() == torch.Size([500, 1, inpt.n])
     assert _if_mon.get("s").size() == torch.Size([500, 1, _if.n])
@@ -62,7 +62,7 @@ class TestNetworkMonitor:
     mon = NetworkMonitor(network, state_vars=["s", "v", "w"])
     network.add_monitor(mon, name="monitor")
 
-    network.run(inpts={"X": torch.bernoulli(torch.rand(50, inpt.n))}, time=50)
+    network.run(inputs={"X": torch.bernoulli(torch.rand(50, inpt.n))}, time=50)
 
     recording = mon.get()
 
@@ -75,7 +75,7 @@ class TestNetworkMonitor:
     mon = NetworkMonitor(network, state_vars=["s", "v", "w"], time=50)
     network.add_monitor(mon, name="monitor")
 
-    network.run(inpts={"X": torch.bernoulli(torch.rand(50, inpt.n))}, time=50)
+    network.run(inputs={"X": torch.bernoulli(torch.rand(50, inpt.n))}, time=50)
 
     recording = mon.get()
 

@@ -16,7 +16,7 @@ class TestNetwork:
             network = Network(dt=dt)
             assert network.dt == dt
 
-            network.run(inpts={}, time=1000)
+            network.run(inputs={}, time=1000)
 
             network.save("net.pt")
             _network = load("net.pt")

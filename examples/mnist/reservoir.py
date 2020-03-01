@@ -131,7 +131,7 @@ for (i, dataPoint) in pbar:
     label = dataPoint["label"]
     pbar.set_description_str("Train progress: (%d / %d)" % (i, n_iters))
 
-    network.run(inpts={"I": datum}, time=time, input_time_dim=1)
+    network.run(inputs={"I": datum}, time=time, input_time_dim=1)
     training_pairs.append([spikes["O"].get("s").sum(0), label])
 
     if plot:
@@ -159,7 +159,7 @@ for (i, dataPoint) in pbar:
         weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
 
         plt.pause(1e-8)
-    network.reset_()
+    network.reset_state_variables()
 
 
 # Define logistic regression model using PyTorch.
@@ -213,7 +213,7 @@ for (i, dataPoint) in pbar:
     label = dataPoint["label"]
     pbar.set_description_str("Testing progress: (%d / %d)" % (i, n_iters))
 
-    network.run(inpts={"I": datum}, time=250, input_time_dim=1)
+    network.run(inputs={"I": datum}, time=250, input_time_dim=1)
     test_pairs.append([spikes["O"].get("s").sum(0), label])
 
     if plot:
@@ -240,7 +240,7 @@ for (i, dataPoint) in pbar:
         weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
 
         plt.pause(1e-8)
-    network.reset_()
+    network.reset_state_variables()
 
 # Test the Model
 correct, total = 0, 0

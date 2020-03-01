@@ -161,9 +161,9 @@ for epoch in range(n_epochs):
 
     for step, batch in enumerate(tqdm(dataloader)):
         # Get next input sample.
-        inpts = {"X": batch["encoded_image"].view(time, 1, 1, 28, 28)}
+        inputs = {"X": batch["encoded_image"].view(time, 1, 1, 28, 28)}
         if gpu:
-            inpts = {k: v.cuda() for k, v in inpts.items()}
+            inputs = {k: v.cuda() for k, v in inputs.items()}
 
         if step % update_interval == 0 and step > 0:
             # Convert the array of labels into a tensor
@@ -222,7 +222,7 @@ for epoch in range(n_epochs):
         labels.append(batch["label"])
 
         # Run the network on the input.
-        network.run(inpts=inpts, time=time, input_time_dim=1)
+        network.run(inputs=inputs, time=time, input_time_dim=1)
 
         # Get voltage recording.
         exc_voltages = exc_voltage_monitor.get("v")
@@ -234,7 +234,7 @@ for epoch in range(n_epochs):
         # Optionally plot various simulation information.
         if plot:
             image = batch["image"].view(28, 28)
-            inpt = inpts["X"].view(time, 784).sum(0).view(28, 28)
+            inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
             input_exc_weights = network.connections[("X", "Ae")].w
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
@@ -242,9 +242,8 @@ for epoch in range(n_epochs):
             square_assignments = get_square_assignments(assignments, n_sqrt)
             spikes_ = {layer: spikes[layer].get("s") for layer in spikes}
             voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
-            #
             inpt_axes, inpt_ims = plot_input(
-                image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
+                image, inpt, label=batch["label"], axes=inpt_axes, ims=inpt_ims
             )
             spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(square_weights, im=weights_im)
@@ -256,7 +255,7 @@ for epoch in range(n_epochs):
 
             plt.pause(1e-8)
 
-        network.reset_()  # Reset state variables.
+        network.reset_state_variables()  # Reset state variables.
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")

@@ -13,10 +13,10 @@ from ..datasets import DataLoader
 class DataLoaderPipeline(BasePipeline):
     # language=rst
     """
-    A generic ``DataLoader`` pipeline that leverages the ``torch.utils.data``
-    setup. This still needs to be subclasses for specific
-    implementations for functions given the dataset that will be used.
-    An example can be seen in ``TorchVisionDatasetPipeline``.
+    A generic ``DataLoader`` pipeline that leverages the ``torch.utils.data`` setup.
+    This still needs to be subclassed for specific implementations for functions given
+    the dataset that will be used. An example can be seen in
+    ``TorchVisionDatasetPipeline``.
     """
 
     def __init__(
@@ -48,8 +48,8 @@ class DataLoaderPipeline(BasePipeline):
     def train(self) -> None:
         # language=rst
         """
-        Training loop that runs for the set number of epochs and creates
-        a new ``DataLoader`` at each epoch.
+        Training loop that runs for the set number of epochs and creates a new
+        ``DataLoader`` at each epoch.
         """
         for epoch in range(self.num_epochs):
             train_dataloader = DataLoader(
@@ -76,11 +76,10 @@ class DataLoaderPipeline(BasePipeline):
 class TorchVisionDatasetPipeline(DataLoaderPipeline):
     # language=rst
     """
-    An example implementation of ``DataLoaderPipeline`` that runs all of the
-    datasets inside of ``bindsnet.datasets`` that inherit from an instance
-    of a ``torchvision.datasets``. These are documented in
-    ``bindsnet/datasets/README.md``. This specific class just runs an
-    unsupervised network.
+    An example implementation of ``DataLoaderPipeline`` that runs all of the datasets
+    inside of ``bindsnet.datasets`` that inherit from an instance of a
+    ``torchvision.datasets``. These are documented in ``bindsnet/datasets/README.md``.
+    This specific class just runs an unsupervised network.
     """
 
     def __init__(
@@ -95,7 +94,8 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         Initializes the pipeline.
 
         :param network: Arbitrary ``network`` object.
-        :param train_ds: A ``torchvision.datasets`` wrapper dataset from ``bindsnet.datasets``.
+        :param train_ds: A ``torchvision.datasets`` wrapper dataset from
+            ``bindsnet.datasets``.
 
         Keyword arguments:
 
@@ -110,14 +110,15 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         # language=rst
         """
         Perform a pass of the network given the input batch. Unsupervised training
-        (implying everything is stored inside of the ``network`` object, therefore returns ``None``.
+        (implying everything is stored inside of the ``network`` object, therefore
+        returns ``None``.
 
-        :param batch: A dictionary of the current batch. Includes image,
-                      label and encoded versions.
+        :param batch: A dictionary of the current batch. Includes image, label and
+            encoded versions.
         """
-        self.network.reset_()
-        inpts = {self.input_layer: batch["encoded_image"]}
-        self.network.run(inpts, time=batch["encoded_image"].shape[0])
+        self.network.reset_state_variables()
+        inputs = {self.input_layer: batch["encoded_image"]}
+        self.network.run(inputs, time=batch["encoded_image"].shape[0])
 
     def init_fn(self) -> None:
         pass
@@ -127,8 +128,8 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         """
         Create any plots and logs for a step given the input batch.
 
-        :param batch: A dictionary of the current batch. Includes image,
-                      label and encoded versions.
+        :param batch: A dictionary of the current batch. Includes image, label and
+            encoded versions.
         """
         if self.pipeline_analyzer is not None:
             self.pipeline_analyzer.plot_obs(

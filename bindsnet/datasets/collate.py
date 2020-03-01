@@ -1,21 +1,22 @@
-r"""" This code is directly pulled from the pytorch version found at:
+# language=rst
+"""
+This code is directly pulled from the pytorch version found at:
 
-    https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py
+https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.py
 
-Modifications exist to have [time, batch, n_0, ... n_k] instead of batch
-in dimension 0.
+Modifications exist to have [time, batch, n_0, ... n_k] instead of batch in dimension 0.
 """
 
 import torch
-import re
 from torch._six import container_abcs, string_classes, int_classes
 
 from torch.utils.data._utils import collate as pytorch_collate
 
 
 def safe_worker_check():
-    """ Method to check to used shared memory will change in a newer
-    version of pytorch
+    # language=rst
+    """
+    Method to check to use shared memory.
     """
     try:
         return torch.utils.data.get_worker_info() is not None
@@ -24,15 +25,15 @@ def safe_worker_check():
 
 
 def time_aware_collate(batch):
-    r"""Puts each data field into a tensor with dimensions [time,
-    batch size, ...]
+    # language=rst
+    """
+    Puts each data field into a tensor with dimensions ``[time, batch size, ...]``
 
     Interpretation of dimensions being input:
     -  0 dim (,) - (1, batch_size, 1)
     -  1 dim (time,) - (time, batch_size, 1)
     - >2 dim (time, n_0, ...) - (time, batch_size, n_0, ...)
     """
-
     elem = batch[0]
     elem_type = type(elem)
     if isinstance(elem, torch.Tensor):
