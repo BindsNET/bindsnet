@@ -408,6 +408,7 @@ def plot_performance(
     :param performances: Lists of training accuracy estimates per voting scheme.
     :param ax: Used for re-drawing the performance plot.
     :param figsize: Horizontal, vertical figure size in inches.
+    :param x_scale: scaling factor for the x axis, equal to the number of examples per performance measure
     :return: Used for re-drawing the performance plot.
     """
     if not ax:
