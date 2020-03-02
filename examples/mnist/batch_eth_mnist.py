@@ -254,14 +254,13 @@ for epoch in range(n_epochs):
                 layer: spikes[layer].get("s")[:, 0].contiguous() for layer in spikes
             }
             voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
-
             inpt_axes, inpt_ims = plot_input(
                 image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
             )
             spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(square_weights, im=weights_im)
             assigns_im = plot_assignments(square_assignments, im=assigns_im)
-            perf_ax = plot_performance(accuracy, ax=perf_ax)
+            perf_ax = plot_performance(accuracy, x_scale=update_steps * batch_size, ax=perf_ax)
             voltage_ims, voltage_axes = plot_voltages(
                 voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"
             )
