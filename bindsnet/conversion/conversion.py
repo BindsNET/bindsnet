@@ -402,6 +402,13 @@ def data_based_normalization(
                 elif isinstance(module2, nn.Linear) or isinstance(module2, nn.Conv2d):
                     prev_module = module2
 
+        if isinstance(module2, nn.Linear):
+                if prev_module is not None:
+                    scale_factor = np.percentile(activations.cpu(), percentile)
+                    prev_module.weight *= prev_factor / scale_factor
+                    prev_module.bias /= scale_factor
+                    prev_factor = scale_factor
+
         else:
             activations = all_activations[name]
             if isinstance(module, nn.ReLU):
@@ -446,12 +453,8 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
         )
 
     elif isinstance(current, nn.Conv2d):
-        input_height, input_width = prev.shape[2], prev.shape[3]
-        out_channels, output_height, output_width = (
-            current.out_channels,
-            prev.shape[2],
-            prev.shape[3],
-        )
+        input_height, input_width = prev.shape[1], prev.shape[2]
+        out_channels = current.out_channels
 
         width = (
             input_height - current.kernel_size[0] + 2 * current.padding[0]
@@ -459,7 +462,7 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
         height = (
             input_width - current.kernel_size[1] + 2 * current.padding[1]
         ) / current.stride[1] + 1
-        shape = (1, out_channels, int(width), int(height))
+        shape = (out_channels, int(width), int(height))
 
         layer = node_type(
             shape=shape, reset=0, thresh=1, refrac=0, sum_input=last, **kwargs
@@ -477,7 +480,7 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
         )
 
     elif isinstance(current, nn.MaxPool2d):
-        input_height, input_width = prev.shape[2], prev.shape[3]
+        input_height, input_width = prev.shape[1], prev.shape[2]
         current.kernel_size = _pair(current.kernel_size)
         current.padding = _pair(current.padding)
         current.stride = _pair(current.stride)
@@ -488,7 +491,7 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
         height = (
             input_width - current.kernel_size[1] + 2 * current.padding[1]
         ) / current.stride[1] + 1
-        shape = (1, prev.shape[1], int(width), int(height))
+        shape = (prev.shape[0], int(width), int(height))
 
         layer = PassThroughNodes(shape=shape)
         connection = topology.MaxPool2dConnection(
@@ -507,7 +510,6 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
                 prev.shape[current.dims[0]],
                 prev.shape[current.dims[1]],
                 prev.shape[current.dims[2]],
-                prev.shape[current.dims[3]],
             ]
         )
 
@@ -517,9 +519,8 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
         layer = PassThroughNodes(
             shape=[
                 prev.shape[0],
-                prev.shape[1],
-                current.padding[0] + current.padding[1] + prev.shape[2],
-                current.padding[2] + current.padding[3] + prev.shape[3],
+                current.padding[0] + current.padding[1] + prev.shape[1],
+                current.padding[2] + current.padding[3] + prev.shape[2],
             ]
         )
 
