@@ -31,8 +31,12 @@ middle_out = Connection(
 network.add_layer(inpt, name="Input Layer")
 network.add_layer(middle, name="Hidden Layer")
 network.add_layer(out, name="Output Layer")
-network.add_connection(inpt_middle, source="Input Layer", target="Hidden Layer")
-network.add_connection(middle_out, source="Hidden Layer", target="Output Layer")
+network.add_connection(
+    inpt_middle, source="Input Layer", target="Hidden Layer"
+)
+network.add_connection(
+    middle_out, source="Hidden Layer", target="Output Layer"
+)
 
 # Load the Breakout environment.
 environment = GymEnvironment("BreakoutDeterministic-v4")

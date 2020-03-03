@@ -53,7 +53,9 @@ class TwoLayerNetwork(Network):
         self.n_neurons = n_neurons
         self.dt = dt
 
-        self.add_layer(Input(n=self.n_inpt, traces=True, tc_trace=20.0), name="X")
+        self.add_layer(
+            Input(n=self.n_inpt, traces=True, tc_trace=20.0), name="X"
+        )
         self.add_layer(
             LIFNodes(
                 n=self.n_neurons,
@@ -393,7 +395,9 @@ class IncreasingInhibitionNetwork(Network):
                     x1, y1 = i // self.n_sqrt, i % self.n_sqrt
                     x2, y2 = j // self.n_sqrt, j % self.n_sqrt
 
-                    inhib = self.start_inhib * np.sqrt(euclidean([x1, y1], [x2, y2]))
+                    inhib = self.start_inhib * np.sqrt(
+                        euclidean([x1, y1], [x2, y2])
+                    )
                     w[i, j] = -min(self.max_inhib, inhib)
 
         recurrent_output_conn = Connection(

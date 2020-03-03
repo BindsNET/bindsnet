@@ -76,7 +76,9 @@ class LearningRule(ABC):
         if (
             self.connection.wmin != -np.inf or self.connection.wmax != np.inf
         ) and not isinstance(self, NoOp):
-            self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
+            self.connection.w.clamp_(
+                self.connection.wmin, self.connection.wmax
+            )
 
 
 class NoOp(LearningRule):
@@ -204,7 +206,11 @@ class PostPre(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
-            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
+            self.source.x,
+            kernel_height,
+            kernel_width,
+            padding=padding,
+            stride=stride,
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
@@ -221,14 +227,18 @@ class PostPre(LearningRule):
             pre = self.reduction(
                 torch.bmm(target_x, source_s.permute((0, 2, 1))), dim=0
             )
-            self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
+            self.connection.w -= self.nu[0] * pre.view(
+                self.connection.w.size()
+            )
 
         # Post-synaptic update.
         if self.nu[1]:
             post = self.reduction(
                 torch.bmm(target_s, source_x.permute((0, 2, 1))), dim=0
             )
-            self.connection.w += self.nu[1] * post.view(self.connection.w.size())
+            self.connection.w += self.nu[1] * post.view(
+                self.connection.w.size()
+            )
 
         super().update()
 
@@ -268,7 +278,9 @@ class WeightDependentPostPre(LearningRule):
             **kwargs
         )
 
-        assert self.source.traces, "Pre-synaptic nodes must record spike traces."
+        assert (
+            self.source.traces
+        ), "Pre-synaptic nodes must record spike traces."
         assert (
             connection.wmin != -np.inf and connection.wmax != np.inf
         ), "Connection must define finite wmin and wmax."
@@ -302,13 +314,21 @@ class WeightDependentPostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0]:
-            outer_product = self.reduction(torch.bmm(source_s, target_x), dim=0)
-            update -= self.nu[0] * outer_product * (self.connection.w - self.wmin)
+            outer_product = self.reduction(
+                torch.bmm(source_s, target_x), dim=0
+            )
+            update -= (
+                self.nu[0] * outer_product * (self.connection.w - self.wmin)
+            )
 
         # Post-synaptic update.
         if self.nu[1]:
-            outer_product = self.reduction(torch.bmm(source_x, target_s), dim=0)
-            update += self.nu[1] * outer_product * (self.wmax - self.connection.w)
+            outer_product = self.reduction(
+                torch.bmm(source_x, target_s), dim=0
+            )
+            update += (
+                self.nu[1] * outer_product * (self.wmax - self.connection.w)
+            )
 
         self.connection.w += update
 
@@ -332,7 +352,11 @@ class WeightDependentPostPre(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
-            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
+            self.source.x,
+            kernel_height,
+            kernel_width,
+            padding=padding,
+            stride=stride,
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
@@ -454,7 +478,11 @@ class Hebbian(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
-            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
+            self.source.x,
+            kernel_height,
+            kernel_width,
+            padding=padding,
+            stride=stride,
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
@@ -467,11 +495,15 @@ class Hebbian(LearningRule):
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Pre-synaptic update.
-        pre = self.reduction(torch.bmm(target_x, source_s.permute((0, 2, 1))), dim=0)
+        pre = self.reduction(
+            torch.bmm(target_x, source_s.permute((0, 2, 1))), dim=0
+        )
         self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = self.reduction(torch.bmm(target_s, source_x.permute((0, 2, 1))), dim=0)
+        post = self.reduction(
+            torch.bmm(target_s, source_x.permute((0, 2, 1))), dim=0
+        )
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -549,7 +581,9 @@ class MSTDP(LearningRule):
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(batch_size, *self.target.shape)
         if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(batch_size, *self.connection.w.shape)
+            self.eligibility = torch.zeros(
+                batch_size, *self.connection.w.shape
+            )
 
         # Reshape pre- and post-synaptic spikes.
         source_s = self.source.s.view(batch_size, -1).float()
@@ -594,7 +628,9 @@ class MSTDP(LearningRule):
 
         # Initialize eligibility.
         if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(batch_size, *self.connection.w.shape)
+            self.eligibility = torch.zeros(
+                batch_size, *self.connection.w.shape
+            )
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
@@ -614,11 +650,17 @@ class MSTDP(LearningRule):
         if not hasattr(self, "p_plus"):
             self.p_plus = torch.zeros(batch_size, *self.source.shape)
             self.p_plus = im2col_indices(
-                self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
+                self.p_plus,
+                kernel_height,
+                kernel_width,
+                padding=padding,
+                stride=stride,
             )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(batch_size, *self.target.shape)
-            self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
+            self.p_minus = self.p_minus.view(
+                batch_size, out_channels, -1
+            ).float()
 
         # Reshaping spike occurrences.
         source_s = im2col_indices(
@@ -733,7 +775,9 @@ class MSTDPET(LearningRule):
 
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace *= torch.exp(
+            -self.connection.dt / self.tc_e_trace
+        )
         self.eligibility_trace += self.eligibility / self.tc_e_trace
 
         # Compute weight update.
@@ -771,9 +815,13 @@ class MSTDPET(LearningRule):
 
         # Initialize eligibility and eligibility trace.
         if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(batch_size, *self.connection.w.shape)
+            self.eligibility = torch.zeros(
+                batch_size, *self.connection.w.shape
+            )
         if not hasattr(self, "eligibility_trace"):
-            self.eligibility_trace = torch.zeros(batch_size, *self.connection.w.shape)
+            self.eligibility_trace = torch.zeros(
+                batch_size, *self.connection.w.shape
+            )
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
@@ -782,11 +830,15 @@ class MSTDPET(LearningRule):
 
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace *= torch.exp(
+            -self.connection.dt / self.tc_e_trace
+        )
 
         # Compute weight update.
         update = reward * self.eligibility_trace
-        self.connection.w += self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
+        self.connection.w += (
+            self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
+        )
 
         out_channels, _, kernel_height, kernel_width = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
@@ -795,11 +847,17 @@ class MSTDPET(LearningRule):
         if not hasattr(self, "p_plus"):
             self.p_plus = torch.zeros(batch_size, *self.source.shape)
             self.p_plus = im2col_indices(
-                self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
+                self.p_plus,
+                kernel_height,
+                kernel_width,
+                padding=padding,
+                stride=stride,
             )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(batch_size, *self.target.shape)
-            self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
+            self.p_minus = self.p_minus.view(
+                batch_size, out_channels, -1
+            ).float()
 
         # Reshaping spike occurrences.
         source_s = im2col_indices(
@@ -810,7 +868,9 @@ class MSTDPET(LearningRule):
             stride=stride,
         )
         target_s = (
-            self.target.s.permute(1, 2, 3, 0).view(batch_size, out_channels, -1).float()
+            self.target.s.permute(1, 2, 3, 0)
+            .view(batch_size, out_channels, -1)
+            .float()
         )
 
         # Update P^+ and P^- values.
@@ -918,7 +978,10 @@ class Rmax(LearningRule):
         self.eligibility_trace *= 1 - self.connection.dt / self.tc_e_trace
         self.eligibility_trace += (
             target_s
-            - (target_s_prob / (1.0 + self.tc_c / self.connection.dt * target_s_prob))
+            - (
+                target_s_prob
+                / (1.0 + self.tc_c / self.connection.dt * target_s_prob)
+            )
         ) * source_x[:, None]
 
         # Compute weight update.

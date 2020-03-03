@@ -28,7 +28,9 @@ class PipelineAnalyzer(ABC):
         pass
 
     @abstractmethod
-    def plot_obs(self, obs: torch.Tensor, tag: str = "obs", step: int = None) -> None:
+    def plot_obs(
+        self, obs: torch.Tensor, tag: str = "obs", step: int = None
+    ) -> None:
         # language=rst
         """
         Pulls the observation from PyTorch and sets up for Matplotlib
@@ -137,7 +139,9 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         plt.ion()
         self.plots = {}
 
-    def plot_obs(self, obs: torch.Tensor, tag: str = "obs", step: int = None) -> None:
+    def plot_obs(
+        self, obs: torch.Tensor, tag: str = "obs", step: int = None
+    ) -> None:
         # language=rst
         """
         Pulls the observation off of torch and sets up for Matplotlib
@@ -256,7 +260,9 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         """
         if tag not in self.plots:
             self.plots[tag] = plot_voltages(
-                voltage_record, plot_type=self.volts_type, thresholds=thresholds
+                voltage_record,
+                plot_type=self.volts_type,
+                thresholds=thresholds,
             )
         else:
             v_im, v_ax = self.plots[tag]
@@ -315,7 +321,9 @@ class TensorboardAnalyzer(PipelineAnalyzer):
         """
         pass
 
-    def plot_obs(self, obs: torch.Tensor, tag: str = "obs", step: int = None) -> None:
+    def plot_obs(
+        self, obs: torch.Tensor, tag: str = "obs", step: int = None
+    ) -> None:
         # language=rst
         """
         Pulls the observation off of torch and sets up for Matplotlib

@@ -64,7 +64,9 @@ class GymEnvironment(Environment):
     A wrapper around the OpenAI ``gym`` environments.
     """
 
-    def __init__(self, name: str, encoder: Encoder = NullEncoder(), **kwargs) -> None:
+    def __init__(
+        self, name: str, encoder: Encoder = NullEncoder(), **kwargs
+    ) -> None:
         # language=rst
         """
         Initializes the environment wrapper. This class makes the
@@ -103,7 +105,9 @@ class GymEnvironment(Environment):
         if self.history_length is not None and self.delta is not None:
             self.history = {
                 i: torch.Tensor()
-                for i in range(1, self.history_length * self.delta + 1, self.delta)
+                for i in range(
+                    1, self.history_length * self.delta + 1, self.delta
+                )
             }
         else:
             self.history = {}
@@ -208,7 +212,9 @@ class GymEnvironment(Environment):
             self.obs = self.obs[26:104, :]
             self.obs = binary_image(self.obs)
         elif self.name == "BreakoutDeterministic-v4":
-            self.obs = subsample(gray_scale(crop(self.obs, 34, 194, 0, 160)), 80, 80)
+            self.obs = subsample(
+                gray_scale(crop(self.obs, 34, 194, 0, 160)), 80, 80
+            )
             self.obs = binary_image(self.obs)
         else:  # Default pre-processing step.
             pass
@@ -254,4 +260,6 @@ class GymEnvironment(Environment):
                 self.history_index += self.delta
             else:
                 # Wrap around the history.
-                self.history_index = (self.history_index % max(self.history.keys())) + 1
+                self.history_index = (
+                    self.history_index % max(self.history.keys())
+                ) + 1

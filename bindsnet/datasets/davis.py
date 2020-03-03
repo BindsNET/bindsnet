@@ -52,7 +52,9 @@ class Davis(torch.utils.data.Dataset):
         if subset not in self.SUBSET_OPTIONS:
             raise ValueError(f"Subset should be in {self.SUBSET_OPTIONS}")
         if task not in self.TASKS:
-            raise ValueError(f"The only tasks that are supported are {self.TASKS}")
+            raise ValueError(
+                f"The only tasks that are supported are {self.TASKS}"
+            )
         if resolution not in self.RESOLUTION_OPTIONS:
             raise ValueError(
                 f"You may only use one of these resolutions: {self.RESOLUTION_OPTIONS}"
@@ -87,9 +89,13 @@ class Davis(torch.utils.data.Dataset):
         self.zip_path = os.path.join(self.root, "repo.zip")
         self.img_path = os.path.join(self.root, "JPEGImages", resolution)
         annotations_folder = (
-            "Annotations" if task == "semi-supervised" else "Annotations_unsupervised"
+            "Annotations"
+            if task == "semi-supervised"
+            else "Annotations_unsupervised"
         )
-        self.mask_path = os.path.join(self.root, annotations_folder, resolution)
+        self.mask_path = os.path.join(
+            self.root, annotations_folder, resolution
+        )
         year = (
             "2019"
             if task == "unsupervised"
@@ -128,11 +134,17 @@ class Davis(torch.utils.data.Dataset):
 
         # Sets the images and masks for each sequence resizing for the given size
         for seq in self.sequences_names:
-            images = np.sort(glob(os.path.join(self.img_path, seq, "*.jpg"))).tolist()
+            images = np.sort(
+                glob(os.path.join(self.img_path, seq, "*.jpg"))
+            ).tolist()
             if len(images) == 0 and not self.codalab:
-                raise FileNotFoundError(f"Images for sequence {seq} not found.")
+                raise FileNotFoundError(
+                    f"Images for sequence {seq} not found."
+                )
             self.sequences[seq]["images"] = images
-            masks = np.sort(glob(os.path.join(self.mask_path, seq, "*.png"))).tolist()
+            masks = np.sort(
+                glob(os.path.join(self.mask_path, seq, "*.png"))
+            ).tolist()
             masks.extend([-1] * (len(images) - len(masks)))
             self.sequences[seq]["masks"] = masks
 
@@ -156,7 +168,9 @@ class Davis(torch.utils.data.Dataset):
         Creates a new root for the dataset to be converted and placed into,
         then copies each image and mask into the given size and stores correctly.
         """
-        os.makedirs(os.path.join(self.converted_imagesets_path, f"{self.subset}.txt"))
+        os.makedirs(
+            os.path.join(self.converted_imagesets_path, f"{self.subset}.txt")
+        )
         os.makedirs(self.converted_img_path)
         os.makedirs(self.converted_mask_path)
 
@@ -169,24 +183,34 @@ class Davis(torch.utils.data.Dataset):
         for seq in tqdm(self.sequences_names):
             os.makedirs(os.path.join(self.converted_img_path, seq))
             os.makedirs(os.path.join(self.converted_mask_path, seq))
-            images = np.sort(glob(os.path.join(self.img_path, seq, "*.jpg"))).tolist()
+            images = np.sort(
+                glob(os.path.join(self.img_path, seq, "*.jpg"))
+            ).tolist()
             if len(images) == 0 and not self.codalab:
-                raise FileNotFoundError(f"Images for sequence {seq} not found.")
+                raise FileNotFoundError(
+                    f"Images for sequence {seq} not found."
+                )
             for ind, img in enumerate(images):
                 im = Image.open(img)
                 im.thumbnail(self.size, Image.ANTIALIAS)
                 im.save(
                     os.path.join(
-                        self.converted_img_path, seq, str(ind).zfill(5) + ".jpg"
+                        self.converted_img_path,
+                        seq,
+                        str(ind).zfill(5) + ".jpg",
                     )
                 )
-            masks = np.sort(glob(os.path.join(self.mask_path, seq, "*.png"))).tolist()
+            masks = np.sort(
+                glob(os.path.join(self.mask_path, seq, "*.png"))
+            ).tolist()
             for ind, msk in enumerate(masks):
                 im = Image.open(msk)
                 im.thumbnail(self.size, Image.ANTIALIAS)
                 im.convert("RGB").save(
                     os.path.join(
-                        self.converted_mask_path, seq, str(ind).zfill(5) + ".png"
+                        self.converted_mask_path,
+                        seq,
+                        str(ind).zfill(5) + ".png",
                     )
                 )
 
@@ -207,12 +231,16 @@ class Davis(torch.utils.data.Dataset):
                     f"DAVIS not found in the specified directory, download it from "
                     f"{self.DATASET_WEB} or add download=True to your call"
                 )
-        if not os.path.exists(os.path.join(self.imagesets_path, f"{self.subset}.txt")):
+        if not os.path.exists(
+            os.path.join(self.imagesets_path, f"{self.subset}.txt")
+        ):
             raise FileNotFoundError(
                 f"Subset sequences list for {self.subset} not found, download the "
                 f"missing subset for the {self.task} task from {self.DATASET_WEB}"
             )
-        if self.subset in ["train", "val"] and not os.path.exists(self.mask_path):
+        if self.subset in ["train", "val"] and not os.path.exists(
+            self.mask_path
+        ):
             raise FileNotFoundError(
                 f"Annotations folder for the {self.task} task not found, "
                 f"download it from {self.DATASET_WEB}"
@@ -226,7 +254,8 @@ class Davis(torch.utils.data.Dataset):
 
     def get_frames(self, sequence):
         for img, msk in zip(
-            self.sequences[sequence]["images"], self.sequences[sequence]["masks"]
+            self.sequences[sequence]["images"],
+            self.sequences[sequence]["masks"],
         ):
             image = np.array(Image.open(img))
             mask = None if msk is None else np.array(Image.open(msk))
@@ -234,7 +263,9 @@ class Davis(torch.utils.data.Dataset):
 
     def _get_all_elements(self, sequence, obj_type):
         obj = np.array(Image.open(self.sequences[sequence][obj_type][0]))
-        all_objs = np.zeros((len(self.sequences[sequence][obj_type]), *obj.shape))
+        all_objs = np.zeros(
+            (len(self.sequences[sequence][obj_type]), *obj.shape)
+        )
         obj_id = []
         for i, obj in enumerate(self.sequences[sequence][obj_type]):
             all_objs[i, ...] = np.array(Image.open(obj))

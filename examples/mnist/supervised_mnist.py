@@ -13,7 +13,11 @@ from bindsnet.encoding import PoissonEncoder
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_assignments, get_square_weights
-from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
+from bindsnet.evaluation import (
+    all_activity,
+    proportion_weighting,
+    assign_labels,
+)
 from bindsnet.analysis.plotting import (
     plot_input,
     plot_assignments,
@@ -154,15 +158,23 @@ for (i, datum) in pbar:
 
         # Compute network accuracy according to available classification strategies.
         accuracy["all"].append(
-            100 * torch.sum(label.long() == all_activity_pred).item() / update_interval
+            100
+            * torch.sum(label.long() == all_activity_pred).item()
+            / update_interval
         )
         accuracy["proportion"].append(
-            100 * torch.sum(label.long() == proportion_pred).item() / update_interval
+            100
+            * torch.sum(label.long() == proportion_pred).item()
+            / update_interval
         )
 
         print(
             "\nAll activity accuracy: %.2f (last), %.2f (average), %.2f (best)"
-            % (accuracy["all"][-1], np.mean(accuracy["all"]), np.max(accuracy["all"]))
+            % (
+                accuracy["all"][-1],
+                np.mean(accuracy["all"]),
+                np.max(accuracy["all"]),
+            )
         )
         print(
             "Proportion weighting accuracy: %.2f (last), %.2f (average), %.2f (best)\n"
@@ -174,7 +186,9 @@ for (i, datum) in pbar:
         )
 
         # Assign labels to excitatory layer neurons.
-        assignments, proportions, rates = assign_labels(spike_record, label, 10, rates)
+        assignments, proportions, rates = assign_labels(
+            spike_record, label, 10, rates
+        )
 
     # Run the network on the input.
     choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
@@ -187,7 +201,9 @@ for (i, datum) in pbar:
     inh_voltages = inh_voltage_monitor.get("v")
 
     # Add to spikes recording.
-    spike_record[i % update_interval] = spikes["Ae"].get("s").view(time, n_neurons)
+    spike_record[i % update_interval] = (
+        spikes["Ae"].get("s").view(time, n_neurons)
+    )
 
     # Optionally plot various simulation information.
     if plot:
@@ -200,7 +216,11 @@ for (i, datum) in pbar:
         voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
 
         inpt_axes, inpt_ims = plot_input(
-            image.sum(1).view(28, 28), inpt, label=label, axes=inpt_axes, ims=inpt_ims
+            image.sum(1).view(28, 28),
+            inpt,
+            label=label,
+            axes=inpt_axes,
+            ims=inpt_ims,
         )
         spike_ims, spike_axes = plot_spikes(
             {layer: spikes[layer].get("s") for layer in spikes},

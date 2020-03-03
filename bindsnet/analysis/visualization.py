@@ -18,14 +18,18 @@ def plot_weights_movie(ws: np.ndarray, sample_every: int = 1) -> None:
 
     # Obtain samples from the weights for every example.
     for i in range(ws.shape[0]):
-        sub_sampled_weight = ws[i, :, :, range(0, ws[i].shape[2], sample_every)]
+        sub_sampled_weight = ws[
+            i, :, :, range(0, ws[i].shape[2], sample_every)
+        ]
         weights.append(sub_sampled_weight)
     else:
         weights = np.concatenate(weights, axis=0)
 
     # Initialize plot.
     fig = plt.figure()
-    im = plt.imshow(weights[0, :, :], cmap="hot_r", animated=True, vmin=0, vmax=1)
+    im = plt.imshow(
+        weights[0, :, :], cmap="hot_r", animated=True, vmin=0, vmax=1
+    )
     plt.axis("off")
     plt.colorbar(im)
 
@@ -64,7 +68,9 @@ def plot_spike_trains_for_example(
     plt.figure()
 
     if top_k is None and indices is None:  # Plot all neurons' spiking activity
-        spike_per_neuron = [np.argwhere(i == 1).flatten() for i in spikes[n_ex, :, :]]
+        spike_per_neuron = [
+            np.argwhere(i == 1).flatten() for i in spikes[n_ex, :, :]
+        ]
         plt.title("Spiking activity for all %d neurons" % spikes.shape[1])
 
     elif top_k is None:  # Plot based on indices parameter
@@ -76,9 +82,12 @@ def plot_spike_trains_for_example(
     elif indices is None:  # Plot based on top_k parameter
         assert top_k is not None
         # Obtain the top k neurons that fired the most
-        top_k_loc = np.argsort(np.sum(spikes[n_ex, :, :], axis=1), axis=0)[::-1]
+        top_k_loc = np.argsort(np.sum(spikes[n_ex, :, :], axis=1), axis=0)[
+            ::-1
+        ]
         spike_per_neuron = [
-            np.argwhere(i == 1).flatten() for i in spikes[n_ex, top_k_loc[0:top_k], :]
+            np.argwhere(i == 1).flatten()
+            for i in spikes[n_ex, top_k_loc[0:top_k], :]
         ]
         plt.title("Spiking activity for top %d neurons" % top_k)
 
@@ -124,7 +133,9 @@ def plot_voltage(
     plt.plot(voltage[n_ex, n_neuron, timer])
     plt.xlabel("Simulation Time")
     plt.ylabel("Voltage")
-    plt.title("Membrane voltage of neuron %d for example %d" % (n_neuron, n_ex + 1))
+    plt.title(
+        "Membrane voltage of neuron %d for example %d" % (n_neuron, n_ex + 1)
+    )
     locs, labels = plt.xticks()
     locs = range(int(locs[1]), int(locs[-1]), 10)
     plt.xticks(locs, time_ticks)
