@@ -21,10 +21,10 @@ Check out the [BindsNET experiments repository](https://github.com/djsaunde/bind
 ## Setting things up
 
 ### Using pip
-BindsNET is available on PyPI. Issue
+BindsNET is available through its git repository. Issue
 
 ```
-pip install bindsnet
+pip install git+https://github.com/BindsNET/bindsnet.git
 ```
 
 to get the most recent stable release. Or, to build the `bindsnet` package from source, clone the GitHub repository, change directory to the top level of this project, and issue
