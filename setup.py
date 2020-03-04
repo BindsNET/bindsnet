@@ -3,22 +3,18 @@ from setuptools import setup, find_packages
 with open("README.md") as f:
     long_description = f.read()
 
-version = "0.2.5"
-
 setup(
-    name="bindsnet",
-    version=version,
+    name="BindsNET-pkg-Hananel",
+    version = "0.2.5",
     description="Spiking neural networks for ML in Python",
     license="AGPL-3.0",
     long_description=long_description,
     long_description_content_type="text/markdown",  # This is important!
     url="http://github.com/Hananel-Hazan/bindsnet",
-    author="Daniel Saunders, Hananel Hazan, Darpan Sanghavi, Hassaan Khan",
-    author_email="danjsaund@gmail.com",
+    author="Hananel Hazan, Daniel Saunders, Darpan Sanghavi, Hassaan Khan",
+    author_email="hananel@hazan.org.il",
     packages=find_packages(),
     zip_safe=False,
-    download_url="https://github.com/Hananel-Hazan/bindsnet/archive/%s.tar.gz"
-    % version,
     install_requires=[
         "numpy>=1.14.2",
         "torch>=1.2.0",
