@@ -419,13 +419,7 @@ class MaxPool2dConnection(AbstractConnection):
             return_indices=True,
         )
 
-        B, C, H, W = indices.shape
-        output = torch.zeros_like(indices)
-        for b in range(B):
-            for c in range(C):
-                        output[b][c] = s[b][c].take(indices[b][c])
-
-        return output.float()
+        return s.flatten(2).gather(2, indices.flatten(2)).view_as(indices).float()
 
     def update(self, **kwargs) -> None:
         # language=rst
