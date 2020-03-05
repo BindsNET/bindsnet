@@ -4,7 +4,7 @@ with open("README.md") as f:
     long_description = f.read()
 
 setup(
-    name="BindsNET-pkg-Hananel",
+    name="BindsNET",
     version = "0.2.5",
     description="Spiking neural networks for ML in Python",
     license="AGPL-3.0",
