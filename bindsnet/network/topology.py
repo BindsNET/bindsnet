@@ -285,7 +285,7 @@ class Conv2dConnection(AbstractConnection):
             "(input_height - filter_height + 2 * padding_height) / stride_height + 1,"
             "(input_width - filter_width + 2 * padding_width) / stride_width + 1"
         )
-
+        
         assert (
             target.shape[0] == shape[1]
             and target.shape[1] == shape[2]
@@ -405,7 +405,7 @@ class MaxPool2dConnection(AbstractConnection):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
 
-        self.register_buffer("firing_rates", torch.zeros(source.shape))
+        self.register_buffer("firing_rates", torch.zeros(source.s.shape))
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -429,7 +429,7 @@ class MaxPool2dConnection(AbstractConnection):
             return_indices=True,
         )
 
-        return s.take(indices).float()
+        return s.flatten(2).gather(2, indices.flatten(2)).view_as(indices).float()
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -452,7 +452,7 @@ class MaxPool2dConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
-        self.firing_rates = torch.zeros(self.source.shape)
+        self.firing_rates = torch.zeros(self.source.s.shape)
 
 
 class LocalConnection(AbstractConnection):
