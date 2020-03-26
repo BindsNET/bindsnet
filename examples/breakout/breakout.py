@@ -15,7 +15,7 @@ middle = LIFNodes(n=100, traces=True)
 out = LIFNodes(n=4, refrac=0, traces=True)
 
 # Connections between layers.
-inpt_middle = Connection(source=inpt, target=middle, wmin=0, wmax=1e-1)
+inpt_middle = Connection(source=inpt, target=middle, wmin=0, wmax=1)
 middle_out = Connection(source=middle, target=out, wmin=0, wmax=1)
 
 # Add all layers and connections to the network.
