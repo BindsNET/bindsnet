@@ -75,11 +75,11 @@ per_class = int((n_filters * conv_size * conv_size) / 10)
 network = Network()
 
 # Make sure to include the batch dimension but not time
-input_layer = Input(shape=(1, *sample_shape[1:]), traces=True)
+input_layer = Input(shape=(sample_shape[1:]), traces=True)
 
 conv_layer = LIFNodes(
     n=n_filters * conv_size * conv_size,
-    shape=(1, n_filters, conv_size, conv_size),
+    shape=(n_filters, conv_size, conv_size),
     traces=True,
 )
 
@@ -112,7 +112,7 @@ for step, batch in enumerate(tqdm(train_dataloader)):
     # was provided
 
     # batch["encoded_image"] is in BxTxCxHxW format
-    inputs = {"X": batch["encoded_image"]}
+    inputs = {"X": batch["encoded_image"].view(time, 1, 1, 28, 28)}
 
     # Run the network on the input.
     # Specify the location of the time dimension
