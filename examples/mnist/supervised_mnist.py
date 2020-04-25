@@ -186,7 +186,7 @@ for (i, datum) in pbar:
     choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
     clamp = {"Ae": per_class * label.long() + torch.Tensor(choice).long()}
     inputs = {"X": image.view(time, 1, 1, 28, 28)}
-    network.run(inpts=inputs, time=time, clamp=clamp)
+    network.run(inputs=inputs, time=time, clamp=clamp)
 
     # Get voltage recording.
     exc_voltages = exc_voltage_monitor.get("v")
