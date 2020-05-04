@@ -60,6 +60,7 @@ train = args.train
 plot = args.plot
 gpu = args.gpu
 
+# Sets up Gpu use
 if gpu:
     torch.set_default_tensor_type("torch.cuda.FloatTensor")
     torch.cuda.manual_seed_all(seed)
@@ -85,6 +86,10 @@ network = DiehlAndCook2015(
     inpt_shape=(1, 28, 28),
 )
 
+# Directs network to GPU
+if gpu:
+    network.to("cuda")
+
 # Voltage recording for excitatory and inhibitory layers.
 exc_voltage_monitor = Monitor(network.layers["Ae"], ["v"], time=time)
 inh_voltage_monitor = Monitor(network.layers["Ai"], ["v"], time=time)
@@ -104,7 +109,7 @@ dataset = MNIST(
 
 # Create a dataloader to iterate and batch data
 dataloader = torch.utils.data.DataLoader(
-    dataset, batch_size=1, shuffle=True, num_workers=0, pin_memory=gpu
+    dataset, batch_size=1, shuffle=True
 )
 
 # Record spikes during the simulation.
@@ -139,14 +144,13 @@ perf_ax = None
 voltage_axes = None
 voltage_ims = None
 
-pbar = tqdm(enumerate(dataloader))
-for (i, datum) in pbar:
+pbar = tqdm(total=n_train)
+for (i, datum) in enumerate(dataloader):
     if i > n_train:
         break
 
     image = datum["encoded_image"]
     label = datum["label"]
-    pbar.set_description_str("Train progress: (%d / %d)" % (i, n_train))
 
     if i % update_interval == 0 and i > 0:
         # Get network predictions.
@@ -185,8 +189,11 @@ for (i, datum) in pbar:
     # Run the network on the input.
     choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
     clamp = {"Ae": per_class * label.long() + torch.Tensor(choice).long()}
-    inputs = {"X": image.view(time, 1, 1, 28, 28)}
-    network.run(inpts=inputs, time=time, clamp=clamp)
+    if gpu:
+        inputs = {"X": image.cuda().view(time, 1, 1, 28, 28)}
+    else:
+        inputs = {"X": image.view(time, 1, 1, 28, 28)}
+    network.run(inputs=inputs, time=time, clamp=clamp)
 
     # Get voltage recording.
     exc_voltages = exc_voltage_monitor.get("v")
@@ -223,6 +230,8 @@ for (i, datum) in pbar:
         plt.pause(1e-8)
 
     network.reset_state_variables()  # Reset state variables.
+    pbar.set_description_str("Train progress: (%d / %d)" % (i, n_train))
+    pbar.update()
 
 print("Progress: %d / %d \n" % (n_train, n_train))
 print("Training complete.\n")
