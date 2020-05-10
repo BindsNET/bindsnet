@@ -158,6 +158,41 @@ class Network(torch.nn.Module):
         monitor.network = self
         monitor.dt = self.dt
 
+    def summary(self) -> None:
+        total_neurons = 0
+        total_trainable_neurons = 0
+        total_weights = 0
+        total_trainable_weights = 0
+        out = '\033[92m         ===============\n'
+        out += '         NETWORK SUMMARY\n'
+        out += '         ===============\n'
+        out += '         \033[0mbatch size:' + str(self.batch_size) + '\n'
+        for l in self.layers:
+            out += '    \033[0m··········································\n'
+            out += '    Layer: \'' + l + '\''
+
+            if self.layers[l].learning:
+                out += ' (trainable)\n'
+                total_trainable_neurons += self.layers[l].n
+            else:
+                out += ' (not trainable)\n'
+
+            out += '   ' + '{:,}'.format(self.layers[l].n) + ' neurons ' + str(self.layers[l].shape) + '\n'
+            total_neurons += self.layers[l].n
+            for c in self.connections:
+                if c[0] == l: 
+                    w_size = 1
+                    for dim in self.connections[c[0], c[1]].w.shape: w_size *= dim
+                    out += '       \033[94m·connected to \'' + c[1] + '\' by ' + '{:,}'.format(w_size) + ' synapses\n'
+                    total_weights += w_size
+                    if self.layers[c[1]].learning:
+                        total_trainable_weights += w_size
+
+        out += '     \033[92m==========================\n'
+        out += '\033[95mTotal neurons: ' + '{:,}'.format(total_neurons) + ' ({:,} trainable)'.format(total_trainable_neurons) + '\n'
+        out += 'Total synapses weights: ' + '{:,}'.format(total_weights) + ' ({:,} trainable)'.format(total_trainable_weights) + '\033[0m'
+        return out
+
     def save(self, file_name: str) -> None:
         # language=rst
         """
