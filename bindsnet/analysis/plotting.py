@@ -181,6 +181,7 @@ def plot_weights(
     im: Optional[AxesImage] = None,
     figsize: Tuple[int, int] = (5, 5),
     cmap: str = "hot_r",
+    save: Optional[str] = None,
 ) -> AxesImage:
     # language=rst
     """
@@ -192,10 +193,13 @@ def plot_weights(
     :param im: Used for re-drawing the weights plot.
     :param figsize: Horizontal, vertical figure size in inches.
     :param cmap: Matplotlib colormap.
+    :param save: file name to save fig, if None = not saving fig.
     :return: ``AxesImage`` for re-drawing the weights plot.
     """
     local_weights = weights.detach().clone().cpu().numpy()
-    if not im:
+    if save is not None:
+        plt.ioff()
+
         fig, ax = plt.subplots(figsize=figsize)
 
         im = ax.imshow(local_weights, cmap=cmap, vmin=wmin, vmax=wmax)
@@ -208,10 +212,37 @@ def plot_weights(
 
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
-    else:
-        im.set_data(local_weights)
 
-    return im
+        a = save.split('.')
+        if len(a) ==2:
+            save = a[0] + '.1.' + a[1]
+        else:
+            a[1] = '.' + str(1 + int(a[1])) + '.png'
+            save = a[0] + a[1]
+
+        plt.savefig(save, bbox_inches='tight')
+
+        plt.close(fig)
+        plt.ion()
+        return im, save
+    else:
+        if not im:
+            fig, ax = plt.subplots(figsize=figsize)
+
+            im = ax.imshow(local_weights, cmap=cmap, vmin=wmin, vmax=wmax)
+            div = make_axes_locatable(ax)
+            cax = div.append_axes("right", size="5%", pad=0.05)
+
+            ax.set_xticks(())
+            ax.set_yticks(())
+            ax.set_aspect("auto")
+
+            plt.colorbar(im, cax=cax)
+            fig.tight_layout()
+        else:
+            im.set_data(local_weights)
+
+        return im
 
 
 def plot_conv2d_weights(
@@ -351,6 +382,7 @@ def plot_assignments(
     im: Optional[AxesImage] = None,
     figsize: Tuple[int, int] = (5, 5),
     classes: Optional[Sized] = None,
+    save: Optional[str] = None,
 ) -> AxesImage:
     # language=rst
     """
@@ -360,10 +392,14 @@ def plot_assignments(
     :param im: Used for re-drawing the assignments plot.
     :param figsize: Horizontal, vertical figure size in inches.
     :param classes: Iterable of labels for colorbar ticks corresponding to data labels.
+    :param save: file name to save fig, if None = not saving fig.
     :return: Used for re-drawing the assigments plot.
     """
     locals_assignments = assignments.detach().clone().cpu().numpy()
-    if not im:
+
+    if save is not None:
+        plt.ioff()
+
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title("Categorical assignments")
 
@@ -388,18 +424,51 @@ def plot_assignments(
 
         ax.set_xticks(())
         ax.set_yticks(())
-        fig.tight_layout()
-    else:
-        im.set_data(locals_assignments)
+        # fig.tight_layout()
 
-    return im
+        fig.savefig(save, bbox_inches='tight')
+        plt.close()
+
+        plt.ion()
+        return im
+    else:
+        if not im:
+            fig, ax = plt.subplots(figsize=figsize)
+            ax.set_title("Categorical assignments")
+
+            if classes is None:
+                color = plt.get_cmap("RdBu", 11)
+                im = ax.matshow(locals_assignments, cmap=color, vmin=-1.5, vmax=9.5)
+            else:
+                color = plt.get_cmap("RdBu", len(classes) + 1)
+                im = ax.matshow(
+                    locals_assignments, cmap=color, vmin=-1.5, vmax=len(classes) - 0.5
+                )
+
+            div = make_axes_locatable(ax)
+            cax = div.append_axes("right", size="5%", pad=0.05)
+
+            if classes is None:
+                cbar = plt.colorbar(im, cax=cax, ticks=list(range(-1, 11)))
+                cbar.ax.set_yticklabels(["none"] + list(range(10)))
+            else:
+                cbar = plt.colorbar(im, cax=cax, ticks=np.arange(-1, len(classes)))
+                cbar.ax.set_yticklabels(["none"] + list(classes))
+
+            ax.set_xticks(())
+            ax.set_yticks(())
+            fig.tight_layout()
+        else:
+            im.set_data(locals_assignments)
+
+        return im
 
 
 def plot_performance(
     performances: Dict[str, List[float]],
     ax: Optional[Axes] = None,
     figsize: Tuple[int, int] = (7, 4),
-    x_scale: int = 1,
+    save: Optional[str] = None,
 ) -> Axes:
     # language=rst
     """
@@ -408,27 +477,52 @@ def plot_performance(
     :param performances: Lists of training accuracy estimates per voting scheme.
     :param ax: Used for re-drawing the performance plot.
     :param figsize: Horizontal, vertical figure size in inches.
-    :param x_scale: scaling factor for the x axis, equal to the number of examples per performance measure
+    :param save: file name to save fig, if None = not saving fig.
     :return: Used for re-drawing the performance plot.
     """
-    if not ax:
+
+    if save is not None:
+        plt.ioff()
         _, ax = plt.subplots(figsize=figsize)
+
+        for scheme in performances:
+            ax.plot(
+                range(len(performances[scheme])),
+                [p for p in performances[scheme]],
+                label=scheme,
+            )
+
+        ax.set_ylim([0, 100])
+        ax.set_title("Estimated classification accuracy")
+        ax.set_xlabel("No. of examples")
+        ax.set_ylabel("Accuracy")
+        ax.set_xticks(())
+        ax.set_yticks(range(0, 110, 10))
+        ax.legend()
+
+        plt.savefig(save, bbox_inches='tight')
+        plt.close()
+        plt.ion()
     else:
-        ax.clear()
+        if not ax:
+            _, ax = plt.subplots(figsize=figsize)
+        else:
+            ax.clear()
 
-    for scheme in performances:
-        ax.plot(
-            [n * x_scale for n in range(len(performances[scheme]))],
-            [p for p in performances[scheme]],
-            label=scheme,
-        )
+        for scheme in performances:
+            ax.plot(
+                range(len(performances[scheme])),
+                [p for p in performances[scheme]],
+                label=scheme,
+            )
 
-    ax.set_ylim([0, 100])
-    ax.set_title("Estimated classification accuracy")
-    ax.set_xlabel("No. of examples")
-    ax.set_ylabel("Accuracy")
-    ax.set_yticks(range(0, 110, 10))
-    ax.legend()
+        ax.set_ylim([0, 100])
+        ax.set_title("Estimated classification accuracy")
+        ax.set_xlabel("No. of examples")
+        ax.set_ylabel("Accuracy")
+        ax.set_xticks(())
+        ax.set_yticks(range(0, 110, 10))
+        ax.legend()
 
     return ax
 

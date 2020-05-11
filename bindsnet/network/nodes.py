@@ -481,7 +481,7 @@ class LIFNodes(Nodes):
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
         self.register_buffer(
-            "tc_decay", torch.tensor(tc_decay)
+            "tc_decay", torch.tensor(tc_decay, dtype=torch.float)
         )  # Time constant of neuron voltage decay.
         self.register_buffer(
             "decay", torch.zeros(*self.shape)
@@ -491,7 +491,10 @@ class LIFNodes(Nodes):
             "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
 
-        self.lbound = lbound  # Lower bound of voltage.
+        if lbound is None:
+                self.lbound = None  # Lower bound of voltage.
+        else:
+                self.lbound = torch.tensor(lbound, dtype=torch.float)   # Lower bound of voltage.
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst

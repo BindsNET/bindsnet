@@ -27,13 +27,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
 parser.add_argument("--n_train", type=int, default=5000)
-parser.add_argument("--n_test", type=int, default=10000)
+parser.add_argument("--n_test", type=int, default=1000)
 parser.add_argument("--n_clamp", type=int, default=1)
 parser.add_argument("--exc", type=float, default=22.5)
-parser.add_argument("--inh", type=float, default=22.5)
-parser.add_argument("--time", type=int, default=500)
+parser.add_argument("--inh", type=float, default=120)
+parser.add_argument("--theta_plus", type=float, default=0.05)
+parser.add_argument("--time", type=int, default=250)
 parser.add_argument("--dt", type=int, default=1.0)
-parser.add_argument("--intensity", type=float, default=128)
+parser.add_argument("--intensity", type=float, default=32)
 parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--train", dest="train", action="store_true")
@@ -51,6 +52,7 @@ n_test = args.n_test
 n_clamp = args.n_clamp
 exc = args.exc
 inh = args.inh
+theta_plus = args.theta_plus
 time = args.time
 dt = args.dt
 intensity = args.intensity
@@ -81,8 +83,9 @@ network = DiehlAndCook2015(
     exc=exc,
     inh=inh,
     dt=dt,
+    nu=[1e-2, 1e-4],
     norm=78.4,
-    nu=[0, 1e-2],
+    theta_plus=theta_plus,
     inpt_shape=(1, 28, 28),
 )
 
@@ -230,8 +233,42 @@ for (i, datum) in enumerate(dataloader):
         plt.pause(1e-8)
 
     network.reset_state_variables()  # Reset state variables.
-    pbar.set_description_str("Train progress: (%d / %d)" % (i, n_train))
+    pbar.set_description_str("Train progress: ")
     pbar.update()
 
 print("Progress: %d / %d \n" % (n_train, n_train))
 print("Training complete.\n")
+
+
+print("Testing....\n")
+
+hit = 0
+pbar = tqdm(total=n_test)
+for (i, datum) in enumerate(dataloader):
+    if i > n_test:
+        break
+
+    image = datum["encoded_image"]
+    label = datum["label"]
+    if gpu:
+        inputs = {"X": image.cuda().view(time, 1, 1, 28, 28)}
+    else:
+        inputs = {"X": image.view(time, 1, 1, 28, 28)}
+
+    network.run(inputs=inputs, time=time)
+
+    out_spikes = network.monitors["Ae_spikes"].get("s")
+
+    out_spikes = out_spikes.squeeze().sum(dim=0)
+    class_spike = torch.zeros(10)
+    for c in range(10):
+        class_spike[c] = out_spikes[i * 10:(c + 1) * 10].sum()
+    maxInd = class_spike.argmax()
+    if maxInd == label[0]:
+        hit += 1
+
+    pbar.set_description_str(f"Accuracy: {hit / (i+1)}")
+    pbar.update()
+
+acc = hit / n_test
+print("\n accuracy: " + str(acc) + "\n")
