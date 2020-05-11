@@ -399,6 +399,7 @@ def plot_performance(
     performances: Dict[str, List[float]],
     ax: Optional[Axes] = None,
     figsize: Tuple[int, int] = (7, 4),
+    x_scale: int = 1,
 ) -> Axes:
     # language=rst
     """
@@ -407,6 +408,7 @@ def plot_performance(
     :param performances: Lists of training accuracy estimates per voting scheme.
     :param ax: Used for re-drawing the performance plot.
     :param figsize: Horizontal, vertical figure size in inches.
+    :param x_scale: scaling factor for the x axis, equal to the number of examples per performance measure
     :return: Used for re-drawing the performance plot.
     """
     if not ax:
@@ -416,7 +418,7 @@ def plot_performance(
 
     for scheme in performances:
         ax.plot(
-            range(len(performances[scheme])),
+            [n * x_scale for n in range(len(performances[scheme]))],
             [p for p in performances[scheme]],
             label=scheme,
         )
@@ -425,7 +427,6 @@ def plot_performance(
     ax.set_title("Estimated classification accuracy")
     ax.set_xlabel("No. of examples")
     ax.set_ylabel("Accuracy")
-    ax.set_xticks(())
     ax.set_yticks(range(0, 110, 10))
     ax.legend()
 
