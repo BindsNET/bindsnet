@@ -24,7 +24,6 @@ from bindsnet.analysis.plotting import (
     plot_voltages,
 )
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
@@ -43,7 +42,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="test", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=False, gpu=False, train=True)
+parser.set_defaults(plot=True, gpu=True, train=True)
 
 args = parser.parse_args()
 
@@ -67,16 +66,15 @@ update_inhibation_weights = args.update_inhibation_weights
 # Sets up Gpu use
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('Running on Device = ', device)
-if gpu:
+if torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
-    # torch.set_num_threads(4)
 else:
     torch.manual_seed(seed)
-    torch.set_num_threads(os.cpu_count() - 1)
+torch.set_num_threads(os.cpu_count() - 1)
 
 # Determines number of workers to use
 if n_workers == -1:
-    n_workers = gpu * 4 * torch.cuda.device_count()
+    n_workers = torch.cuda.is_available() * 4 * torch.cuda.device_count()
 
 if not train:
     update_interval = n_test
@@ -146,20 +144,18 @@ save_weights_fn = "plots/weights/weights.png"
 save_performance_fn = "plots/performance/performance.png"
 save_assaiments_fn = "plots/assaiments/assaiments.png"
 
-directorys=[
-           'plots', 
-           'plots/weights',
-           'plots/performance',
-           'plots/assaiments'
-           ]
+directorys = [
+    'plots',
+    'plots/weights',
+    'plots/performance',
+    'plots/assaiments'
+]
 for directory in directorys:
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-
-# diagonal weights for increassing the inhibitiosn 
-weights_mask = (1-torch.diag(torch.ones(n_neurons))).to(device)
-
+# diagonal weights for increassing the inhibitiosn
+weights_mask = (1 - torch.diag(torch.ones(n_neurons))).to(device)
 
 # Train the network.
 print("\nBegin training.\n")
@@ -180,12 +176,10 @@ for epoch in range(n_epochs):
     for step, batch in enumerate(tqdm(dataloader)):
         # Get next input sample.
         inputs = {"X": batch["encoded_image"].view(time, 1, 1, 28, 28).to(device)}
-        # if gpu:
-        #     inputs = {k: v.cuda() for k, v in inputs.items()}
-        
-        if  step > 0:
-            if step % update_inhibation_weights ==0 :
-                if step % (update_inhibation_weights * 10) ==0:
+
+        if step > 0:
+            if step % update_inhibation_weights == 0:
+                if step % (update_inhibation_weights * 10) == 0:
                     network.Y_to_Y.w -= weights_mask * 50
                 else:
                     # Inhibit the connection even more
@@ -265,35 +259,35 @@ for epoch in range(n_epochs):
                 break
 
         # Get voltage recording.
-        # exc_voltages = som_voltage_monitor.get("v")
+        exc_voltages = som_voltage_monitor.get("v")
 
         # Add to spikes recording.
-        # spike_record[step % update_interval] = temp_spikes.detach().clone().cpu()
+        spike_record[step % update_interval] = temp_spikes.detach().clone().cpu()
         spike_record[step % update_interval].copy_(temp_spikes, non_blocking=True)
-        
+
         # Optionally plot various simulation information.
         if plot and step % plot_interval == 0:
-            # image = batch["image"].view(28, 28)
-            # inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
+            image = batch["image"].view(28, 28)
+            inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
             input_exc_weights = network.connections[("X", "Y")].w
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
             )
             square_assignments = get_square_assignments(assignments, n_sqrt)
-            # spikes_ = {layer: spikes[layer].get("s") for layer in spikes}
-            # voltages = {"Y": exc_voltages}
-            # inpt_axes, inpt_ims = plot_input(
-            #     image, inpt, label=batch["label"], axes=inpt_axes, ims=inpt_ims
-            # )
-            # spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
+            spikes_ = {layer: spikes[layer].get("s") for layer in spikes}
+            voltages = {"Y": exc_voltages}
+            inpt_axes, inpt_ims = plot_input(
+                image, inpt, label=batch["label"], axes=inpt_axes, ims=inpt_ims
+            )
+            spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             [weights_im, save_weights_fn] = plot_weights(square_weights, im=weights_im, save=save_weights_fn)
             assigns_im = plot_assignments(square_assignments, im=assigns_im, save=save_assaiments_fn)
             perf_ax = plot_performance(accuracy, ax=perf_ax, save=save_performance_fn)
-            # voltage_ims, voltage_axes = plot_voltages(
-            #     voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"
-            # )
-
-            # plt.pause(1e-8)
+            voltage_ims, voltage_axes = plot_voltages(
+                voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"
+            )
+            #
+            plt.pause(1e-8)
 
         network.reset_state_variables()  # Reset state variables.
 
