@@ -5,7 +5,7 @@ with open("README.md") as f:
 
 setup(
     name="BindsNET",
-    version = "0.2.5",
+    version = "0.2.6",
     description="Spiking neural networks for ML in Python",
     license="AGPL-3.0",
     long_description=long_description,
@@ -17,8 +17,8 @@ setup(
     zip_safe=False,
     install_requires=[
         "numpy>=1.14.2",
-        "torch>=1.2.0",
-        "torchvision>=0.4.0",
+        "torch==1.4.0",
+        "torchvision==0.5.0",
         "tensorboardX>=1.7",
         "tqdm>=4.19.9",
         "matplotlib>=2.1.0",
