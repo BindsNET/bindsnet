@@ -5,7 +5,12 @@ import numpy as np
 
 
 def single(
-    datum: torch.Tensor, time: int, dt: float = 1.0, sparsity: float = 0.5, device='cpu', **kwargs
+    datum: torch.Tensor,
+    time: int,
+    dt: float = 1.0,
+    sparsity: float = 0.5,
+    device="cpu",
+    **kwargs
 ) -> torch.Tensor:
     # language=rst
     """
@@ -44,7 +49,11 @@ def repeat(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.T
 
 
 def bernoulli(
-    datum: torch.Tensor, time: Optional[int] = None, dt: float = 1.0, device='cpu', **kwargs
+    datum: torch.Tensor,
+    time: Optional[int] = None,
+    dt: float = 1.0,
+    device="cpu",
+    **kwargs
 ) -> torch.Tensor:
     # language=rst
     """
@@ -88,7 +97,9 @@ def bernoulli(
     return spikes.byte()
 
 
-def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, device='cpu', **kwargs) -> torch.Tensor:
+def poisson(
+    datum: torch.Tensor, time: int, dt: float = 1.0, device="cpu", **kwargs
+) -> torch.Tensor:
     # language=rst
     """
     Generates Poisson-distributed spike trains based on input intensity. Inputs must be

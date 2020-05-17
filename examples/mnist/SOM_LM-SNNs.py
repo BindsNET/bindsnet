@@ -65,7 +65,7 @@ update_inhibation_weights = args.update_inhibation_weights
 
 # Sets up Gpu use
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print('Running on Device = ', device)
+print("Running on Device = ", device)
 if torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
 else:
@@ -144,12 +144,7 @@ save_weights_fn = "plots/weights/weights.png"
 save_performance_fn = "plots/performance/performance.png"
 save_assaiments_fn = "plots/assaiments/assaiments.png"
 
-directorys = [
-    'plots',
-    'plots/weights',
-    'plots/performance',
-    'plots/assaiments'
-]
+directorys = ["plots", "plots/weights", "plots/performance", "plots/assaiments"]
 for directory in directorys:
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -252,8 +247,13 @@ for epoch in range(n_epochs):
             temp_spikes = spikes["Y"].get("s").squeeze()
 
             if temp_spikes.sum().sum() < 2:
-                inputs["X"] *= poisson(datum=factor * batch["image"].clamp(min=0),
-                                       dt=dt, time=time).to(device).view(time, 1, 1, 28, 28)
+                inputs["X"] *= (
+                    poisson(
+                        datum=factor * batch["image"].clamp(min=0), dt=dt, time=time
+                    )
+                    .to(device)
+                    .view(time, 1, 1, 28, 28)
+                )
                 factor *= factor
             else:
                 break
@@ -280,8 +280,12 @@ for epoch in range(n_epochs):
                 image, inpt, label=batch["label"], axes=inpt_axes, ims=inpt_ims
             )
             spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
-            [weights_im, save_weights_fn] = plot_weights(square_weights, im=weights_im, save=save_weights_fn)
-            assigns_im = plot_assignments(square_assignments, im=assigns_im, save=save_assaiments_fn)
+            [weights_im, save_weights_fn] = plot_weights(
+                square_weights, im=weights_im, save=save_weights_fn
+            )
+            assigns_im = plot_assignments(
+                square_assignments, im=assigns_im, save=save_assaiments_fn
+            )
             perf_ax = plot_performance(accuracy, ax=perf_ax, save=save_performance_fn)
             voltage_ims, voltage_axes = plot_voltages(
                 voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"

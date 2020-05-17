@@ -59,8 +59,8 @@ class Nodes(torch.nn.Module):
 
         self.traces = traces  # Whether to record synaptic traces.
         self.traces_additive = (
-            traces_additive
-        )  # Whether to record spike traces additively.
+            traces_additive  # Whether to record spike traces additively.
+        )
         self.register_buffer("s", torch.ByteTensor())  # Spike occurrences.
 
         self.sum_input = sum_input  # Whether to sum all inputs.
@@ -492,9 +492,11 @@ class LIFNodes(Nodes):
         )  # Refractory period counters.
 
         if lbound is None:
-                self.lbound = None  # Lower bound of voltage.
+            self.lbound = None  # Lower bound of voltage.
         else:
-                self.lbound = torch.tensor(lbound, dtype=torch.float)   # Lower bound of voltage.
+            self.lbound = torch.tensor(
+                lbound, dtype=torch.float
+            )  # Lower bound of voltage.
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst

@@ -66,7 +66,7 @@ device_id = args.device_id
 
 # Sets up Gpu use
 if gpu and torch.cuda.is_available():
-    #torch.set_default_tensor_type("torch.cuda.FloatTensor")
+    # torch.set_default_tensor_type("torch.cuda.FloatTensor")
     torch.cuda.set_device(device_id)
     torch.cuda.manual_seed_all(seed)
 else:
@@ -114,9 +114,7 @@ dataset = MNIST(
 )
 
 # Create a dataloader to iterate and batch data
-dataloader = torch.utils.data.DataLoader(
-    dataset, batch_size=1, shuffle=True
-)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
 
 # Record spikes during the simulation.
 spike_record = torch.zeros(update_interval, time, n_neurons)
@@ -189,7 +187,7 @@ for (i, datum) in enumerate(dataloader):
         # Assign labels to excitatory layer neurons.
         assignments, proportions, rates = assign_labels(spike_record, labels, 10, rates)
 
-    #Add the current label to the list of labels for this update_interval
+    # Add the current label to the list of labels for this update_interval
     labels[i % update_interval] = label[0]
 
     # Run the network on the input.
@@ -265,7 +263,7 @@ for (i, datum) in enumerate(dataloader):
     out_spikes = out_spikes.squeeze().sum(dim=0)
     class_spike = torch.zeros(10)
     for c in range(10):
-        class_spike[c] = out_spikes[i * 10:(c + 1) * 10].sum()
+        class_spike[c] = out_spikes[i * 10 : (c + 1) * 10].sum()
     maxInd = class_spike.argmax()
     if maxInd == label[0]:
         hit += 1

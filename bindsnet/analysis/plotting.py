@@ -213,14 +213,14 @@ def plot_weights(
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
 
-        a = save.split('.')
-        if len(a) ==2:
-            save = a[0] + '.1.' + a[1]
+        a = save.split(".")
+        if len(a) == 2:
+            save = a[0] + ".1." + a[1]
         else:
-            a[1] = '.' + str(1 + int(a[1])) + '.png'
+            a[1] = "." + str(1 + int(a[1])) + ".png"
             save = a[0] + a[1]
 
-        plt.savefig(save, bbox_inches='tight')
+        plt.savefig(save, bbox_inches="tight")
 
         plt.close(fig)
         plt.ion()
@@ -426,7 +426,7 @@ def plot_assignments(
         ax.set_yticks(())
         # fig.tight_layout()
 
-        fig.savefig(save, bbox_inches='tight')
+        fig.savefig(save, bbox_inches="tight")
         plt.close()
 
         plt.ion()
@@ -500,7 +500,7 @@ def plot_performance(
         ax.set_yticks(range(0, 110, 10))
         ax.legend()
 
-        plt.savefig(save, bbox_inches='tight')
+        plt.savefig(save, bbox_inches="tight")
         plt.close()
         plt.ion()
     else:
@@ -633,7 +633,7 @@ def plot_voltages(
                             v[1]
                             .cpu()
                             .numpy()[
-                                time[0]: time[1],
+                                time[0] : time[1],
                                 n_neurons[v[0]][0] : n_neurons[v[0]][1],
                             ]
                         )
@@ -652,7 +652,7 @@ def plot_voltages(
                             v[1]
                             .cpu()
                             .numpy()[
-                                time[0]: time[1],
+                                time[0] : time[1],
                                 n_neurons[v[0]][0] : n_neurons[v[0]][1],
                             ]
                             .T,
@@ -716,8 +716,7 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            time[0]: time[1],
-                            n_neurons[v[0]][0]: n_neurons[v[0]][1],
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1],
                         ]
                     )
                     if thresholds is not None and thresholds[v[0]].size() == torch.Size(
@@ -731,8 +730,7 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            time[0]: time[1],
-                            n_neurons[v[0]][0]: n_neurons[v[0]][1],
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1],
                         ]
                         .T,
                         cmap=cmap,

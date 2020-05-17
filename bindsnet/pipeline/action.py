@@ -107,7 +107,7 @@ def select_highest(pipeline: EnvironmentPipeline, **kwargs) -> int:
     ), "EnvironmentPipeline is missing the attribute: spike_record."
 
     spikes = torch.sum(pipeline.spike_record[output], dim=0).squeeze()
-    action = torch.where(spikes==spikes.max())[0]
+    action = torch.where(spikes == spikes.max())[0]
     if torch.sum(spikes) == 0:
         # choose random between fire(1) start(0).
         action[0] = torch.randint(low=0, high=1, size=(1,))[0]
@@ -117,6 +117,7 @@ def select_highest(pipeline: EnvironmentPipeline, **kwargs) -> int:
     #     action[0] = action[p]
 
     return action[0]
+
 
 def select_first_spike(pipeline: EnvironmentPipeline, **kwargs) -> int:
     # language=rst
@@ -152,6 +153,7 @@ def select_first_spike(pipeline: EnvironmentPipeline, **kwargs) -> int:
         action = spikes[0, 1]
 
     return action
+
 
 def select_random(pipeline: EnvironmentPipeline, **kwargs) -> int:
     # language=rst

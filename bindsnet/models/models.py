@@ -358,7 +358,9 @@ class IncreasingInhibitionNetwork(Network):
         self.dt = dt
         self.inpt_shape = inpt_shape
 
-        input_layer = Input(n=self.n_input, shape=self.inpt_shape, traces=True, tc_trace=20.0)
+        input_layer = Input(
+            n=self.n_input, shape=self.inpt_shape, traces=True, tc_trace=20.0
+        )
         self.add_layer(input_layer, name="X")
 
         output_layer = DiehlAndCookNodes(
@@ -390,7 +392,9 @@ class IncreasingInhibitionNetwork(Network):
         self.add_connection(input_output_conn, source="X", target="Y")
 
         # add internal inhibetory connections
-        w = torch.ones(self.n_neurons, self.n_neurons) - torch.diag(torch.ones(self.n_neurons))
+        w = torch.ones(self.n_neurons, self.n_neurons) - torch.diag(
+            torch.ones(self.n_neurons)
+        )
         for i in range(self.n_neurons):
             for j in range(self.n_neurons):
                 if i != j:
@@ -401,9 +405,7 @@ class IncreasingInhibitionNetwork(Network):
         w = w / w.max()
         w = (w * self.max_inhib) + self.start_inhib
         recurrent_output_conn = Connection(
-            source=self.layers["Y"],
-            target=self.layers["Y"],
-            w=w,
+            source=self.layers["Y"], target=self.layers["Y"], w=w,
         )
         self.add_connection(recurrent_output_conn, source="Y", target="Y")
 

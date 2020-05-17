@@ -12,6 +12,7 @@ from ..network import Network
 from ..network.nodes import AbstractInput
 from ..network.monitors import Monitor
 
+
 class EnvironmentPipeline(BasePipeline):
     # language=rst
     """
@@ -20,12 +21,12 @@ class EnvironmentPipeline(BasePipeline):
     """
 
     def __init__(
-            self,
-            network: Network,
-            environment: Environment,
-            action_function: Optional[Callable] = None,
-            encoding: Optional[Callable] = None,
-            **kwargs,
+        self,
+        network: Network,
+        environment: Environment,
+        action_function: Optional[Callable] = None,
+        encoding: Optional[Callable] = None,
+        **kwargs,
     ):
         # language=rst
         """
@@ -71,13 +72,16 @@ class EnvironmentPipeline(BasePipeline):
         self.time = kwargs.get("time", int(network.dt))
         self.overlay_t = kwargs.get("overlay_input", 1)
         self.percent_of_random_action = kwargs.get("percent_of_random_action", 0.0)
-        self.device = kwargs.get("device", 'cpu')
+        self.device = kwargs.get("device", "cpu")
         self.encode_factor = kwargs.get("encode_factor", 1.0)
 
         # var for overlay process
         if self.overlay_t > 1:
-            self.overlay_time_effect = torch.tensor([i / self.overlay_t for i in range(1, self.overlay_t+1)],
-                                                    dtype=torch.float, device=self.device)
+            self.overlay_time_effect = torch.tensor(
+                [i / self.overlay_t for i in range(1, self.overlay_t + 1)],
+                dtype=torch.float,
+                device=self.device,
+            )
         self.overlay_start = True
 
         if self.reward_delay is not None:
@@ -103,14 +107,16 @@ class EnvironmentPipeline(BasePipeline):
 
         self.analyzer = MatplotlibAnalyzer(**self.plot_config)
 
-
         if self.output is not None:
             self.network.add_monitor(
-                Monitor(self.network.layers[self.output], ["s"], time=self.time), self.output
+                Monitor(self.network.layers[self.output], ["s"], time=self.time),
+                self.output,
             )
 
             self.spike_record = {
-                self.output: torch.zeros((self.time, self.env.action_space.n)).to(self.device)
+                self.output: torch.zeros((self.time, self.env.action_space.n)).to(
+                    self.device
+                )
             }
 
     def init_fn(self) -> None:
@@ -149,28 +155,32 @@ class EnvironmentPipeline(BasePipeline):
         """
         # Render game.
         if (
-                self.render_interval is not None
-                and self.step_count % self.render_interval == 0
+            self.render_interval is not None
+            and self.step_count % self.render_interval == 0
         ):
             self.env.render()
 
         # Choose action based on output neuron spiking.
         if self.action_function is not None:
             self.last_action = self.action
-            if torch.rand(1) < self.percent_of_random_action :
-                self.action = torch.randint(low=0, high=self.spike_record[self.output].shape[-1], size=(1,))[0]
+            if torch.rand(1) < self.percent_of_random_action:
+                self.action = torch.randint(
+                    low=0, high=self.spike_record[self.output].shape[-1], size=(1,)
+                )[0]
             elif self.action_counter > self.random_action_after:
-                if self.last_action == 0: # last action was start b
-                    self.action = 1 # next action will be fire b
+                if self.last_action == 0:  # last action was start b
+                    self.action = 1  # next action will be fire b
                     tqdm.write(f"Fire -> too many times {self.last_action} ")
                 else:
-                    self.action = torch.randint(low=2, high=self.spike_record[self.output].shape[-1], size=(1,))[0]
+                    self.action = torch.randint(
+                        low=2, high=self.spike_record[self.output].shape[-1], size=(1,)
+                    )[0]
                     tqdm.write(f"too many times {self.last_action} ")
             else:
                 self.action = self.action_function(self, output=self.output)
 
             if self.last_action == self.action:
-                self.action_counter +=1
+                self.action_counter += 1
             else:
                 self.action_counter = 0
 
@@ -190,7 +200,7 @@ class EnvironmentPipeline(BasePipeline):
         return obs, reward, done, info
 
     def step_(
-            self, gym_batch: Tuple[torch.Tensor, float, bool, Dict], **kwargs
+        self, gym_batch: Tuple[torch.Tensor, float, bool, Dict], **kwargs
     ) -> None:
         # language=rst
         """
@@ -203,31 +213,54 @@ class EnvironmentPipeline(BasePipeline):
 
         if self.overlay_t > 1:
             if self.overlay_start:
-                self.overlay_last_obs = obs.view(obs.shape[2], obs.shape[3]).clone().to(self.device)
-                self.overlay_buffer = torch.stack([self.overlay_last_obs] * self.overlay_t, dim=2).to(self.device)
+                self.overlay_last_obs = (
+                    obs.view(obs.shape[2], obs.shape[3]).clone().to(self.device)
+                )
+                self.overlay_buffer = torch.stack(
+                    [self.overlay_last_obs] * self.overlay_t, dim=2
+                ).to(self.device)
                 self.overlay_start = False
             else:
                 obs = obs.to(self.device)
-                self.overlay_next_stat = torch.clamp(self.overlay_last_obs - obs, min=0).to(self.device)
+                self.overlay_next_stat = torch.clamp(
+                    self.overlay_last_obs - obs, min=0
+                ).to(self.device)
                 self.overlay_last_obs = obs.clone()
                 self.overlay_buffer = torch.cat(
-                    (self.overlay_buffer[:, :, 1:],
-                     self.overlay_next_stat.view(
-                         [self.overlay_next_stat.shape[2], self.overlay_next_stat.shape[3], 1])
-                     ),
-                    dim=2
+                    (
+                        self.overlay_buffer[:, :, 1:],
+                        self.overlay_next_stat.view(
+                            [
+                                self.overlay_next_stat.shape[2],
+                                self.overlay_next_stat.shape[3],
+                                1,
+                            ]
+                        ),
+                    ),
+                    dim=2,
                 )
-            obs = torch.sum(self.overlay_time_effect * self.overlay_buffer, dim=2) * self.encode_factor
+            obs = (
+                torch.sum(self.overlay_time_effect * self.overlay_buffer, dim=2)
+                * self.encode_factor
+            )
 
         # Place the observations into the inputs.
         if self.encoding is None:
             obs = obs.unsqueeze(0).unsqueeze(0)
             obs_shape = torch.tensor([1] * len(obs.shape[1:]), device=self.device)
-            inputs = {k: self.encoding(obs.repeat(self.time, *obs_shape).to(self.device), device=self.device)
-                      for k in self.inputs}
+            inputs = {
+                k: self.encoding(
+                    obs.repeat(self.time, *obs_shape).to(self.device),
+                    device=self.device,
+                )
+                for k in self.inputs
+            }
         else:
             obs = obs.unsqueeze(0)
-            inputs = {k: self.encoding(obs,self.time, device=self.device) for k in self.inputs}
+            inputs = {
+                k: self.encoding(obs, self.time, device=self.device)
+                for k in self.inputs
+            }
 
         # Run the network on the spike train-encoded inputs.
         self.network.run(inputs=inputs, time=self.time, reward=reward, **kwargs)

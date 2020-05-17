@@ -155,7 +155,7 @@ class BasePipeline:
         }
 
     def get_voltage_data(
-        self
+        self,
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         # language=rst
         """

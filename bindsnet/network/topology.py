@@ -444,6 +444,7 @@ class MaxPool2dConnection(AbstractConnection):
 
         self.firing_rates = torch.zeros(self.source.shape)
 
+
 class LocalConnection(AbstractConnection):
     # language=rst
     """
