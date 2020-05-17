@@ -223,7 +223,8 @@ class EnvironmentPipeline(BasePipeline):
         if self.encoding is None:
             obs = obs.unsqueeze(0).unsqueeze(0)
             obs_shape = torch.tensor([1] * len(obs.shape[1:]), device=self.device)
-            inputs = {k: obs.repeat(self.time, *obs_shape).to(self.device) for k in self.inputs}
+            inputs = {k: self.encoding(obs.repeat(self.time, *obs_shape).to(self.device), device=self.device)
+                      for k in self.inputs}
         else:
             obs = obs.unsqueeze(0)
             inputs = {k: self.encoding(obs,self.time, device=self.device) for k in self.inputs}
