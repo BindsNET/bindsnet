@@ -38,11 +38,9 @@ parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--update_inhibation_weights", type=int, default=500)
 parser.add_argument("--plot_interval", type=int, default=250)
-parser.add_argument("--train", dest="train", action="store_true")
-parser.add_argument("--test", dest="test", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=True, train=True)
+parser.set_defaults(plot=True, gpu=True)
 
 args = parser.parse_args()
 
@@ -58,7 +56,6 @@ intensity = args.intensity
 progress_interval = args.progress_interval
 plot_interval = args.plot_interval
 update_interval = args.update_interval
-train = args.train
 plot = args.plot
 gpu = args.gpu
 update_inhibation_weights = args.update_inhibation_weights
@@ -75,9 +72,6 @@ torch.set_num_threads(os.cpu_count() - 1)
 # Determines number of workers to use
 if n_workers == -1:
     n_workers = torch.cuda.is_available() * 4 * torch.cuda.device_count()
-
-if not train:
-    update_interval = n_test
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
