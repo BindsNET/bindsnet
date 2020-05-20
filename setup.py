@@ -5,7 +5,7 @@ with open("README.md") as f:
 
 setup(
     name="BindsNET",
-    version = "0.2.6",
+    version="0.2.7",
     description="Spiking neural networks for ML in Python",
     license="AGPL-3.0",
     long_description=long_description,

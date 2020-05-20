@@ -3,16 +3,16 @@ from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.encoding import bernoulli
 from bindsnet.network.topology import Connection
 from bindsnet.environment import GymEnvironment
-from bindsnet.network.nodes import Input, LIFNodes
+from bindsnet.network.nodes import Input, IzhikevichNodes
 from bindsnet.pipeline.action import select_softmax
 
 # Build network.
 network = Network(dt=1.0)
 
 # Layers of neurons.
-inpt = Input(n=80 * 80, shape=[80, 80], traces=True)
-middle = LIFNodes(n=100, traces=True)
-out = LIFNodes(n=4, refrac=0, traces=True)
+inpt = Input(n=80 * 80, shape=[1, 1, 1, 80, 80], traces=True)
+middle = IzhikevichNodes(n=100, traces=True)
+out = IzhikevichNodes(n=4, refrac=0, traces=True)
 
 # Connections between layers.
 inpt_middle = Connection(source=inpt, target=middle, wmin=0, wmax=1)

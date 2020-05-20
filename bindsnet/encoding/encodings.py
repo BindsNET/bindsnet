@@ -5,7 +5,12 @@ import numpy as np
 
 
 def single(
-    datum: torch.Tensor, time: int, dt: float = 1.0, sparsity: float = 0.5, **kwargs
+    datum: torch.Tensor,
+    time: int,
+    dt: float = 1.0,
+    sparsity: float = 0.5,
+    device="cpu",
+    **kwargs
 ) -> torch.Tensor:
     # language=rst
     """
@@ -24,7 +29,7 @@ def single(
     shape = list(datum.shape)
     datum = np.copy(datum)
     quantile = np.quantile(datum, 1 - sparsity)
-    s = np.zeros([time, *shape])
+    s = np.zeros([time, *shape], device=device)
     s[0] = np.where(datum > quantile, np.ones(shape), np.zeros(shape))
     return torch.Tensor(s).byte()
 
@@ -44,7 +49,11 @@ def repeat(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.T
 
 
 def bernoulli(
-    datum: torch.Tensor, time: Optional[int] = None, dt: float = 1.0, **kwargs
+    datum: torch.Tensor,
+    time: Optional[int] = None,
+    dt: float = 1.0,
+    device="cpu",
+    **kwargs
 ) -> torch.Tensor:
     # language=rst
     """
@@ -79,7 +88,7 @@ def bernoulli(
 
     # Make spike data from Bernoulli sampling.
     if time is None:
-        spikes = torch.bernoulli(max_prob * datum)
+        spikes = torch.bernoulli(max_prob * datum).to(device)
         spikes = spikes.view(*shape)
     else:
         spikes = torch.bernoulli(max_prob * datum.repeat([time, 1]))
@@ -88,7 +97,9 @@ def bernoulli(
     return spikes.byte()
 
 
-def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.Tensor:
+def poisson(
+    datum: torch.Tensor, time: int, dt: float = 1.0, device="cpu", **kwargs
+) -> torch.Tensor:
     # language=rst
     """
     Generates Poisson-distributed spike trains based on input intensity. Inputs must be
@@ -110,7 +121,7 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
 
     # Compute firing rates in seconds as function of data intensity,
     # accounting for simulation time step.
-    rate = torch.zeros(size)
+    rate = torch.zeros(size, device=device)
     rate[datum != 0] = 1 / datum[datum != 0] * (1000 / dt)
 
     # Create Poisson distribution and sample inter-spike intervals
@@ -124,7 +135,7 @@ def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.
     times[times >= time + 1] = 0
 
     # Create tensor of spikes.
-    spikes = torch.zeros(time + 1, size).byte()
+    spikes = torch.zeros(time + 1, size, device=device).byte()
     spikes[times, torch.arange(size)] = 1
     spikes = spikes[1:]
 

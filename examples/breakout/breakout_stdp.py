@@ -11,7 +11,7 @@ from bindsnet.pipeline.action import select_softmax
 network = Network(dt=1.0)
 
 # Layers of neurons.
-inpt = Input(n=80 * 80, shape=[80, 80], traces=True)
+inpt = Input(n=80 * 80, shape=[1, 1, 1, 80, 80], traces=True)
 middle = LIFNodes(n=100, traces=True)
 out = LIFNodes(n=4, refrac=0, traces=True)
 

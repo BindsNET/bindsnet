@@ -67,7 +67,7 @@ class BasePipeline:
         # Handles plotting of all layer spikes and voltages.
         # This constructs monitors at every level.
         self.plot_config = kwargs.get(
-            "plot_config", {"data_step": True, "data_length": 10}
+            "plot_config", {"data_step": True, "data_length": 100}
         )
 
         if self.plot_config["data_step"] is not None:
@@ -155,7 +155,7 @@ class BasePipeline:
         }
 
     def get_voltage_data(
-        self
+        self,
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         # language=rst
         """
