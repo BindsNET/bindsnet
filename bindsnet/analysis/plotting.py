@@ -607,8 +607,8 @@ def plot_voltages(
                             v[1]
                             .cpu()
                             .numpy()[
-                                n_neurons[time[0] : time[1],
-                                    v[0]][0] : n_neurons[v[0]][1],
+                                time[0] : time[1],
+                                    n_neurons[v[0]][0] : n_neurons[v[0]][1],
                             ]
                             .T,
                             cmap=cmap,
