@@ -558,8 +558,9 @@ def plot_voltages(
     """
     n_subplots = len(voltages.keys())
 
-    for key in voltages.keys():
-        voltages[key] = voltages[key].view(-1, voltages[key].size(-1))
+    # for key in voltages.keys():
+    #     voltages[key] = voltages[key].view(-1, voltages[key].size(-1))
+    voltages = {k: v.view(v.size(0), -1) for (k, v) in voltages.items()}
 
     if time is None:
         for key in voltages.keys():
@@ -586,8 +587,8 @@ def plot_voltages(
                             .clone()
                             .cpu()
                             .numpy()[
-                                n_neurons[v[0]][0] : n_neurons[v[0]][1],
                                 time[0] : time[1],
+                                n_neurons[v[0]][0]: n_neurons[v[0]][1],
                             ]
                         )
                     )
@@ -606,8 +607,8 @@ def plot_voltages(
                             v[1]
                             .cpu()
                             .numpy()[
-                                n_neurons[v[0]][0] : n_neurons[v[0]][1],
-                                time[0] : time[1],
+                                n_neurons[time[0] : time[1],
+                                    v[0]][0] : n_neurons[v[0]][1],
                             ]
                             .T,
                             cmap=cmap,
@@ -684,7 +685,7 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
+                           time[0] : time[1],  n_neurons[v[0]][0] : n_neurons[v[0]][1]
                         ]
                     )
                     if thresholds is not None and thresholds[v[0]].size() == torch.Size(
@@ -696,7 +697,7 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            n_neurons[v[0]][0] : n_neurons[v[0]][1], time[0] : time[1]
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1]
                         ]
                         .T,
                         cmap=cmap,
