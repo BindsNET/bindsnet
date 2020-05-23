@@ -2,15 +2,15 @@
 The examples are shortly described and main parameters are given.
 ***
 ## MNIST examples
-*/examples/mnist/*
+*/examples/mnist/*  
 This directory contains different spiking network structures to train on the MNIST dataset (70.000 handwritten samples). In all these examples, the (28, 28) pixels are frequency-encoded using Poisson distribution into firing rates.
 
 ```python eth_mnist.py```: performs a near-replication of Diehl & Cook 2015 (https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full).
-Two layers with lateral inhibition, unsupervised STDP.
-Approx running time of 1 hour on intel x86 i7.
+Two layers with lateral inhibition, unsupervised STDP.  
+>*Approx running time of 1 hour on intel x86 i7.*
 
-```batch_eth_mnist.py```: uses the same network as eth_mnist.py, but performs multiple parallel trainings on a GPU, and ensembles the results for faster learning (https://arxiv.org/pdf/1909.02549.pdf).
-Training can be as fast as 1 minute/epoch on GPU (1080ti)
+```batch_eth_mnist.py```: uses the same network as eth_mnist.py, but performs multiple parallel trainings on a GPU, and ensembles the results for faster learning (https://arxiv.org/pdf/1909.02549.pdf).  
+>*Training can be as fast as 1 minute/epoch on GPU (1080ti)*
 
 |training parameters |default|description|
 |-|:-:|-|
@@ -38,8 +38,8 @@ Training can be as fast as 1 minute/epoch on GPU (1080ti)
 * Rising –-batch_size can drastically reduce learning time, but may lower final accuracy, STDP being averaged through the batch and performed only at the end of each batch.
 
 
-```reservoir.py```: **Training MNIST dataset using a reservoir computing paradigm.**
-The reservoir is a liquid state machine (LSM) composed of a spiking network (SNN), read out by a simple linear neural model. The SNN structure is a two-layer input-output, with an additional recurrent connection on the output. The LSM output then fed to a perceptron to be classified.
+```reservoir.py```: **Training MNIST dataset using a reservoir computing paradigm.**  
+The reservoir is a liquid state machine (LSM) composed of a spiking network (SNN), read out by a simple linear neural model. The SNN structure is a two-layer input-output, with an additional recurrent connection on the output. The LSM output then fed to a perceptron to be classified.  
 MNIST data are first Poisson-converted and fed to the input layer of the SNN.
 Output from the SNN is used to train the 1-layer linear neural network, which learns the (higher dimensional) representations of the MNIST.
 
@@ -59,7 +59,7 @@ Output from the SNN is used to train the 1-layer linear neural network, which le
 |--n_workers|-1|dataset spikes conversion CPU/GPU threads (-1 for auto)
 
 
-```SOM_LM-SNN.py``` ***Improving upon Diehl & Cook 2015***
+```SOM_LM-SNN.py``` ***Improving upon Diehl & Cook 2015***  
 (https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full), with two layers with lateral inhibition, unsupervised STDP, and a Self-Organizing Maps (SOM) property by Teuvo Kohonen (https://link.springer.com/article/10.1007/BF00317973). This example achieves better accuracy than Diehl & Cook, with additional of clustering the digits by shape similarity. 
 
 |model parameters|default|description
@@ -85,7 +85,7 @@ Output from the SNN is used to train the 1-layer linear neural network, which le
 |--plot |False| graphically monitors voltages, spikes, output neurons assignments and confusion matrix
 ***
 ## BreakOut examples
-*/examples/breakout/*
+*/examples/breakout/*  
 A reinforcement learning example.
 
 **OpenAI's Gym environments** (https://gym.openai.com/) provide a standard benchmark for reinforcement learning algorithms. The video game used in this example is a simple **breakout** game (https://gym.openai.com/envs/Breakout-v0/), where the spiking network (SNN) tries to maximize its game score.
@@ -98,7 +98,7 @@ You can experiment with your own hyper-parameters, learning rules or network str
 ***
 
 
-```random_baseline.py``` shows how to setup the Gym Environment, choses a video game and interacts with it.  It provides a baseline score, based on pure random actions.
+```random_baseline.py``` shows how to setup the Gym Environment, choses a video game and interacts with it.  It provides a baseline score, based on pure random actions.  
 **Parameters:** None
 
 
@@ -124,8 +124,8 @@ parameters|default|description
 ***
 
 ## Tensorboard example
-*/examples/tensorboard/*
-Google's Tensorflow is a powerful tool to analyze Deep Learning models. It helps visualizing data flows, or any changes happening during a training process.
+*/examples/tensorboard/*  
+Google's Tensorflow is a powerful tool to analyze Deep Learning models. It helps visualizing data flows, or any changes happening during a training process.  
 First developped for Google's Tensorflows, it is now available as **TensorboardX** (https://tensorboardx.readthedocs.io/en/latest/index.html) for Py-Torch or other DL fameworks *(under development)*.
 
 ```tensorboard.py``` shows how to use the ```TensorboardAnalyzer``` class, graphically monitoring the weights of 2D convolutional SNN during its training process.
