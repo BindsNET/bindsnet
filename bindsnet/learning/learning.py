@@ -62,7 +62,7 @@ class LearningRule(ABC):
                 reduction = NoBatch
             else:
                 reduction = torch.sum
-                self.reduction = reduction
+            self.reduction = reduction
 
         # Weight decay.
         self.weight_decay = weight_decay
