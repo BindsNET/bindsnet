@@ -56,9 +56,13 @@ class LearningRule(ABC):
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
-            reduction = torch.mean
-
-        self.reduction = reduction
+            if self.source.batch_size == 1:
+                def NoBatch(a, dim):# get rid of the batch dim
+                    return a[0]
+                reduction = NoBatch
+            else:
+                reduction = torch.sum
+                self.reduction = reduction
 
         # Weight decay.
         self.weight_decay = weight_decay
