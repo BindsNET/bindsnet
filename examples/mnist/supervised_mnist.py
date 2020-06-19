@@ -26,8 +26,8 @@ from bindsnet.analysis.plotting import (
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
-parser.add_argument("--n_train", type=int, default=5000)
-parser.add_argument("--n_test", type=int, default=1000)
+parser.add_argument("--n_train", type=int, default=60000)
+parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_clamp", type=int, default=1)
 parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=120)
@@ -75,9 +75,10 @@ else:
 if not train:
     update_interval = n_test
 
+n_classes = 10
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
-per_class = int(n_neurons / 10)
+per_class = int(n_neurons / n_classes)
 
 # Build Diehl & Cook 2015 network.
 network = DiehlAndCook2015(
@@ -121,8 +122,8 @@ spike_record = torch.zeros(update_interval, time, n_neurons)
 
 # Neuron assignments and spike proportions.
 assignments = -torch.ones_like(torch.Tensor(n_neurons))
-proportions = torch.zeros_like(torch.Tensor(n_neurons, 10))
-rates = torch.zeros_like(torch.Tensor(n_neurons, 10))
+proportions = torch.zeros_like(torch.Tensor(n_neurons, n_classes))
+rates = torch.zeros_like(torch.Tensor(n_neurons, n_classes))
 
 # Sequence of accuracy estimates.
 accuracy = {"all": [], "proportion": []}
@@ -158,9 +159,9 @@ for (i, datum) in enumerate(dataloader):
 
     if i % update_interval == 0 and i > 0:
         # Get network predictions.
-        all_activity_pred = all_activity(spike_record, assignments, 10)
+        all_activity_pred = all_activity(spike_record, assignments, n_classes)
         proportion_pred = proportion_weighting(
-            spike_record, assignments, proportions, 10
+            spike_record, assignments, proportions, n_classes
         )
 
         # Compute network accuracy according to available classification strategies.
@@ -185,13 +186,13 @@ for (i, datum) in enumerate(dataloader):
         )
 
         # Assign labels to excitatory layer neurons.
-        assignments, proportions, rates = assign_labels(spike_record, labels, 10, rates)
+        assignments, proportions, rates = assign_labels(spike_record, labels, n_classes, rates)
 
     # Add the current label to the list of labels for this update_interval
     labels[i % update_interval] = label[0]
 
     # Run the network on the input.
-    choice = np.random.choice(int(n_neurons / 10), size=n_clamp, replace=False)
+    choice = np.random.choice(int(n_neurons / n_classes), size=n_clamp, replace=False)
     clamp = {"Ae": per_class * label.long() + torch.Tensor(choice).long()}
     if gpu:
         inputs = {"X": image.cuda().view(time, 1, 1, 28, 28)}
@@ -243,33 +244,70 @@ print("Training complete.\n")
 
 print("Testing....\n")
 
-hit = 0
+
+
+# Load MNIST data.
+test_dataset = MNIST(
+    PoissonEncoder(time=time, dt=dt),
+    None,
+    root=os.path.join("..", "..", "data", "MNIST"),
+    download=True,
+    train=False,
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+    ),
+)
+
+# Sequence of accuracy estimates.
+accuracy = {"all": 0, "proportion": 0}
+
+# Record spikes during the simulation.
+spike_record = torch.zeros(1, int(time/dt), n_neurons)
+
+# Train the network.
+print("\nBegin testing\n")
+network.train(mode=False)
+
 pbar = tqdm(total=n_test)
-for (i, datum) in enumerate(dataloader):
-    if i > n_test:
+for step, batch in enumerate(test_dataset):
+    if step > n_test:
         break
-
-    image = datum["encoded_image"]
-    label = datum["label"]
+    # Get next input sample.
+    inputs = {"X": batch["encoded_image"].view(int(time/dt), 1, 1, 28, 28)}
     if gpu:
-        inputs = {"X": image.cuda().view(time, 1, 1, 28, 28)}
-    else:
-        inputs = {"X": image.view(time, 1, 1, 28, 28)}
+        inputs = {k: v.cuda() for k, v in inputs.items()}
 
-    network.run(inputs=inputs, time=time)
+    # Run the network on the input.
+    network.run(inputs=inputs, time=time, input_time_dim=1)
 
-    out_spikes = network.monitors["Ae_spikes"].get("s")
+    # Add to spikes recording.
+    spike_record[0] = spikes["Ae"].get("s").squeeze()
 
-    out_spikes = out_spikes.squeeze().sum(dim=0)
-    class_spike = torch.zeros(10)
-    for c in range(10):
-        class_spike[c] = out_spikes[i * 10 : (c + 1) * 10].sum()
-    maxInd = class_spike.argmax()
-    if maxInd == label[0]:
-        hit += 1
+    # Convert the array of labels into a tensor
+    label_tensor = torch.tensor(batch["label"])
 
-    pbar.set_description_str(f"Accuracy: {hit / (i+1)}")
+    # Get network predictions.
+    all_activity_pred = all_activity(
+        spikes=spike_record, assignments=assignments, n_labels=n_classes
+    )
+    proportion_pred = proportion_weighting(
+        spikes=spike_record,
+        assignments=assignments,
+        proportions=proportions,
+        n_labels=n_classes,
+    )
+
+    # Compute network accuracy according to available classification strategies.
+    accuracy["all"] += float(torch.sum(label_tensor.long() == all_activity_pred).item())
+    accuracy["proportion"] += float(torch.sum(label_tensor.long() == proportion_pred).item())
+
+    network.reset_state_variables()  # Reset state variables.
+
+    pbar.set_description_str(f"Accuracy: {(max(accuracy['all'] ,accuracy['proportion'] ) / (step+1)):.3}")
     pbar.update()
 
-acc = hit / n_test
-print("\n accuracy: " + str(acc) + "\n")
+print("\nAll activity accuracy: %.2f" % (accuracy["all"] / test_dataset.test_labels.shape[0]))
+print("Proportion weighting accuracy: %.2f \n" % ( accuracy["proportion"] / test_dataset.test_labels.shape[0]))
+
+
+print("Testing complete.\n")

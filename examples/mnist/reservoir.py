@@ -39,8 +39,7 @@ parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.add_argument("--device_id", type=int, default=0)
-parser.set_defaults(plot=True, gpu=True, train=True)
+parser.set_defaults(plot=True, gpu=False, train=True)
 
 args = parser.parse_args()
 
@@ -57,7 +56,6 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-device_id = args.device_id
 
 np.random.seed(seed)
 torch.cuda.manual_seed_all(seed)
@@ -65,10 +63,14 @@ torch.manual_seed(seed)
 
 # Sets up Gpu use
 if gpu and torch.cuda.is_available():
-    torch.cuda.set_device(device_id)
+    device = 'cuda'
+    torch.cuda.set_device(device)
     # torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
     torch.manual_seed(seed)
+    device = 'cpu'
+    if gpu:
+        gpu = False
 
 
 network = Network(dt=dt)
@@ -127,7 +129,7 @@ pbar = tqdm(enumerate(dataloader))
 for (i, dataPoint) in pbar:
     if i > n_iters:
         break
-    datum = dataPoint["encoded_image"].view(time, 1, 1, 28, 28).to(device_id)
+    datum = dataPoint["encoded_image"].view(int(time/dt), 1, 1, 28, 28).to(device)
     label = dataPoint["label"]
     pbar.set_description_str("Train progress: (%d / %d)" % (i, n_iters))
 
@@ -138,7 +140,7 @@ for (i, dataPoint) in pbar:
 
         inpt_axes, inpt_ims = plot_input(
             dataPoint["image"].view(28, 28),
-            datum.view(time, 784).sum(0).view(28, 28),
+            datum.view(int(time/dt), 784).sum(0).view(28, 28),
             label=label,
             axes=inpt_axes,
             ims=inpt_ims,

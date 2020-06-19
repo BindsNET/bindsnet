@@ -62,12 +62,16 @@ update_inhibation_weights = args.update_inhibation_weights
 
 # Sets up Gpu use
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Running on Device = ", device)
-if torch.cuda.is_available():
+if gpu and torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
 else:
     torch.manual_seed(seed)
+    if gpu:
+        gpu = False
+        device = 'cpu'
+
 torch.set_num_threads(os.cpu_count() - 1)
+print("Running on Device = ", device)
 
 # Determines number of workers to use
 if n_workers == -1:
@@ -102,7 +106,7 @@ dataset = MNIST(
 )
 
 # Record spikes during the simulation.
-spike_record = torch.zeros(update_interval, time, n_neurons).cpu()
+spike_record = torch.zeros(update_interval, int(time/dt), n_neurons).cpu()
 
 # Neuron assignments and spike proportions.
 n_classes = 10
@@ -114,18 +118,18 @@ rates = torch.zeros(n_neurons, n_classes).cpu()
 accuracy = {"all": [], "proportion": []}
 
 # Voltage recording for excitatory and inhibitory layers.
-som_voltage_monitor = Monitor(network.layers["Y"], ["v"], time=time)
+som_voltage_monitor = Monitor(network.layers["Y"], ["v"], time=int(time/dt))
 network.add_monitor(som_voltage_monitor, name="som_voltage")
 
 # Set up monitors for spikes and voltages
 spikes = {}
 for layer in set(network.layers):
-    spikes[layer] = Monitor(network.layers[layer], state_vars=["s"], time=time)
+    spikes[layer] = Monitor(network.layers[layer], state_vars=["s"], time=int(time/dt))
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
 voltages = {}
 for layer in set(network.layers) - {"X"}:
-    voltages[layer] = Monitor(network.layers[layer], state_vars=["v"], time=time)
+    voltages[layer] = Monitor(network.layers[layer], state_vars=["v"], time=int(time/dt))
     network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
 inpt_ims, inpt_axes = None, None
@@ -164,7 +168,7 @@ for epoch in range(n_epochs):
 
     for step, batch in enumerate(tqdm(dataloader)):
         # Get next input sample.
-        inputs = {"X": batch["encoded_image"].view(time, 1, 1, 28, 28).to(device)}
+        inputs = {"X": batch["encoded_image"].view(int(time/dt), 1, 1, 28, 28).to(device)}
 
         if step > 0:
             if step % update_inhibation_weights == 0:
@@ -243,10 +247,10 @@ for epoch in range(n_epochs):
             if temp_spikes.sum().sum() < 2:
                 inputs["X"] *= (
                     poisson(
-                        datum=factor * batch["image"].clamp(min=0), dt=dt, time=time
+                        datum=factor * batch["image"].clamp(min=0), dt=dt, time=int(time/dt)
                     )
                     .to(device)
-                    .view(time, 1, 1, 28, 28)
+                    .view(int(time/dt), 1, 1, 28, 28)
                 )
                 factor *= factor
             else:
@@ -256,7 +260,7 @@ for epoch in range(n_epochs):
         exc_voltages = som_voltage_monitor.get("v")
 
         # Add to spikes recording.
-        spike_record[step % update_interval] = temp_spikes.detach().clone().cpu()
+        # spike_record[step % update_interval] = temp_spikes.detach().clone().cpu()
         spike_record[step % update_interval].copy_(temp_spikes, non_blocking=True)
 
         # Optionally plot various simulation information.
@@ -291,3 +295,66 @@ for epoch in range(n_epochs):
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")
+
+
+# Load MNIST data.
+test_dataset = MNIST(
+    PoissonEncoder(time=time, dt=dt),
+    None,
+    root=os.path.join("..", "..", "data", "MNIST"),
+    download=True,
+    train=False,
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+    ),
+)
+
+# Sequence of accuracy estimates.
+accuracy = {"all": 0, "proportion": 0}
+
+# Record spikes during the simulation.
+spike_record = torch.zeros(1, int(time/dt), n_neurons)
+
+# Train the network.
+print("\nBegin testing\n")
+network.train(mode=False)
+start = t()
+
+for step, batch in enumerate(tqdm(test_dataset)):
+    # Get next input sample.
+    inputs = {"X": batch["encoded_image"].view(int(time/dt), 1, 1, 28, 28)}
+    if gpu:
+        inputs = {k: v.cuda() for k, v in inputs.items()}
+
+    # Run the network on the input.
+    network.run(inputs=inputs, time=time, input_time_dim=1)
+
+    # Add to spikes recording.
+    spike_record[0] = spikes["Y"].get("s").squeeze()
+
+    # Convert the array of labels into a tensor
+    label_tensor = torch.tensor(batch["label"])
+
+    # Get network predictions.
+    all_activity_pred = all_activity(
+        spikes=spike_record, assignments=assignments, n_labels=n_classes
+    )
+    proportion_pred = proportion_weighting(
+        spikes=spike_record,
+        assignments=assignments,
+        proportions=proportions,
+        n_labels=n_classes,
+    )
+
+    # Compute network accuracy according to available classification strategies.
+    accuracy["all"] += float(torch.sum(label_tensor.long() == all_activity_pred).item())
+    accuracy["proportion"] += float(torch.sum(label_tensor.long() == proportion_pred).item())
+
+    network.reset_state_variables()  # Reset state variables.
+
+print("\nAll activity accuracy: %.2f" % (accuracy["all"] / test_dataset.test_labels.shape[0]))
+print("Proportion weighting accuracy: %.2f \n" % ( accuracy["proportion"] / test_dataset.test_labels.shape[0]))
+
+
+print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
+print("Testing complete.\n")
