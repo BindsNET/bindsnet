@@ -13,6 +13,8 @@ from ..network.topology import (
 )
 from ..utils import im2col_indices
 
+def NoBatch(a, dim):# get rid of the batch dim
+    return a[0]
 
 class LearningRule(ABC):
     # language=rst
@@ -57,8 +59,6 @@ class LearningRule(ABC):
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
             if self.source.batch_size == 1:
-                def NoBatch(a, dim):# get rid of the batch dim
-                    return a[0]
                 reduction = NoBatch
             else:
                 reduction = torch.sum
