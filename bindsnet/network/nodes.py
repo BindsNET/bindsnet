@@ -1296,7 +1296,7 @@ class SRM0Nodes(Nodes):
         self.v = self.decay * (self.v - self.rest) + self.rest
 
         # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * self.eps_0 * x
+        self.v += (self.refrac_count <= 0).float() * self.eps_0 * x
 
         # Compute (instantaneous) probabilities of spiking, clamp between 0 and 1 using exponentials.
         # Also known as 'escape noise', this simulates nearby neurons.
@@ -1304,9 +1304,7 @@ class SRM0Nodes(Nodes):
         self.s_prob = 1.0 - torch.exp(-self.rho * self.dt)
 
         # Decrement refractory counters.
-        self.refrac_count = (self.refrac_count > 0).float() * (
-            self.refrac_count - self.dt
-        )
+        self.refrac_count -= self.dt
 
         # Check for spiking neurons (spike when probability > some random number).
         self.s = torch.rand_like(self.s_prob) < self.s_prob
