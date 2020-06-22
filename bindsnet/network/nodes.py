@@ -375,12 +375,10 @@ class IFNodes(Nodes):
         :param x: Inputs to the layer.
         """
         # Integrate input voltages.
-        self.v += (self.refrac_count == 0).float() * x
+        self.v += (self.refrac_count <= 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count = (self.refrac_count > 0).float() * (
-            self.refrac_count - self.dt
-        )
+        self.refrac_count -= self.dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
@@ -653,13 +651,11 @@ class CurrentLIFNodes(Nodes):
         self.i *= self.i_decay
 
         # Decrement refractory counters.
-        self.refrac_count = (self.refrac_count > 0).float() * (
-            self.refrac_count - self.dt
-        )
+        self.refrac_count -= self.dt
 
         # Integrate inputs.
         self.i += x
-        self.v += (self.refrac_count == 0).float() * self.i
+        self.v += (self.refrac_count <= 0).float() * self.i
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
@@ -808,12 +804,10 @@ class AdaptiveLIFNodes(Nodes):
             self.theta *= self.theta_decay
 
         # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * x
+        self.v += (self.refrac_count <= 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count = (self.refrac_count > 0).float() * (
-            self.refrac_count - self.dt
-        )
+        self.refrac_count -= self.dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh + self.theta
