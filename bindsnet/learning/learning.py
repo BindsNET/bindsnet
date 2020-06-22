@@ -13,14 +13,14 @@ from ..network.topology import (
 )
 from ..utils import im2col_indices
 
-def NoBatch(a, dim):# get rid of the batch dim
-    return a[0]
-
 class LearningRule(ABC):
     # language=rst
     """
     Abstract base class for learning rules.
     """
+
+    def NoBatch(a, dim):# get rid of the batch dim
+        return a[0]
 
     def __init__(
         self,
