@@ -28,7 +28,7 @@ parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=100)
 parser.add_argument("--n_train", type=int, default=60000)
 parser.add_argument("--n_test", type=int, default=10000)
-parser.add_argument("--n_clamp", type=int, default=1)
+parser.add_argument("--n_clamp", type=int, default=3)
 parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=120)
 parser.add_argument("--theta_plus", type=float, default=0.05)
@@ -87,7 +87,7 @@ network = DiehlAndCook2015(
     exc=exc,
     inh=inh,
     dt=dt,
-    nu=[1e-2, 1e-4],
+    nu=[1e-10, 1e-3],  # 0.711
     norm=78.4,
     theta_plus=theta_plus,
     inpt_shape=(1, 28, 28),
@@ -241,10 +241,7 @@ for (i, datum) in enumerate(dataloader):
 print("Progress: %d / %d \n" % (n_train, n_train))
 print("Training complete.\n")
 
-
 print("Testing....\n")
-
-
 
 # Load MNIST data.
 test_dataset = MNIST(
@@ -307,7 +304,7 @@ for step, batch in enumerate(test_dataset):
     pbar.update()
 
 print("\nAll activity accuracy: %.2f" % (accuracy["all"] / test_dataset.test_labels.shape[0]))
-print("Proportion weighting accuracy: %.2f \n" % ( accuracy["proportion"] / test_dataset.test_labels.shape[0]))
+print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / test_dataset.test_labels.shape[0]))
 
 
 print("Testing complete.\n")
