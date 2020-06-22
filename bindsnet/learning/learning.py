@@ -19,9 +19,6 @@ class LearningRule(ABC):
     Abstract base class for learning rules.
     """
 
-    def NoBatch(a, dim):# get rid of the batch dim
-        return a[0]
-
     def __init__(
         self,
         connection: AbstractConnection,
@@ -59,10 +56,9 @@ class LearningRule(ABC):
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
             if self.source.batch_size == 1:
-                reduction = NoBatch
+                self.reduction = torch.squeeze
             else:
-                reduction = torch.sum
-            self.reduction = reduction
+                self.reduction = torch.sum
 
         # Weight decay.
         self.weight_decay = weight_decay
