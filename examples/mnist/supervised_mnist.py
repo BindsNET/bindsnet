@@ -87,7 +87,7 @@ network = DiehlAndCook2015(
     exc=exc,
     inh=inh,
     dt=dt,
-    nu=[1e-2, 1e-4],
+    nu=[1e-10, 1e-3],  # 0.711
     norm=78.4,
     theta_plus=theta_plus,
     inpt_shape=(1, 28, 28),
@@ -241,10 +241,7 @@ for (i, datum) in enumerate(dataloader):
 print("Progress: %d / %d \n" % (n_train, n_train))
 print("Training complete.\n")
 
-
 print("Testing....\n")
-
-
 
 # Load MNIST data.
 test_dataset = MNIST(
@@ -307,7 +304,7 @@ for step, batch in enumerate(test_dataset):
     pbar.update()
 
 print("\nAll activity accuracy: %.2f" % (accuracy["all"] / test_dataset.test_labels.shape[0]))
-print("Proportion weighting accuracy: %.2f \n" % ( accuracy["proportion"] / test_dataset.test_labels.shape[0]))
+print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / test_dataset.test_labels.shape[0]))
 
 
 print("Testing complete.\n")
