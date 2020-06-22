@@ -965,12 +965,10 @@ class DiehlAndCookNodes(Nodes):
             self.theta *= self.theta_decay
 
         # Integrate inputs.
-        self.v += (self.refrac_count == 0).float() * x
+        self.v += (self.refrac_count <= 0).float() * x
 
         # Decrement refractory counters.
-        self.refrac_count = (self.refrac_count > 0).float() * (
-            self.refrac_count - self.dt
-        )
+        self.refrac_count -= self.dt
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh + self.theta
