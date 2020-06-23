@@ -59,6 +59,8 @@ class LearningRule(ABC):
                 self.reduction = torch.squeeze
             else:
                 self.reduction = torch.sum
+        else:
+            self.reduction = reduction
 
         # Weight decay.
         self.weight_decay = weight_decay
