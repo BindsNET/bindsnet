@@ -772,7 +772,7 @@ class AdaptiveLIFNodes(Nodes):
             "tc_decay", torch.tensor(tc_decay)
         )  # Time constant of neuron voltage decay.
         self.register_buffer(
-            "decay", torch.empty_like(self.tc_decay)
+            "decay", torch.empty_like(self.tc_decay, dtype=torch.float32)
         )  # Set in compute_decays.
         self.register_buffer(
             "theta_plus", torch.tensor(theta_plus)
