@@ -13,7 +13,6 @@ from ..network.topology import (
 )
 from ..utils import im2col_indices
 
-
 class LearningRule(ABC):
     # language=rst
     """
@@ -56,9 +55,12 @@ class LearningRule(ABC):
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
-            reduction = torch.mean
-
-        self.reduction = reduction
+            if self.source.batch_size == 1:
+                self.reduction = torch.squeeze
+            else:
+                self.reduction = torch.sum
+        else:
+            self.reduction = reduction
 
         # Weight decay.
         self.weight_decay = weight_decay
