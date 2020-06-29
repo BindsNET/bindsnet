@@ -180,7 +180,7 @@ class NN(nn.Module):
 
 
 # Create and train logistic regression model on reservoir outputs.
-model = NN(n_neurons, 10).to(device_id)
+model = NN(n_neurons, 10).to(device)
 criterion = torch.nn.MSELoss(reduction="sum")
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
 
@@ -193,7 +193,7 @@ for epoch, _ in pbar:
         # Forward + Backward + Optimize
         optimizer.zero_grad()
         outputs = model(s)
-        label = torch.zeros(1, 1, 10).float().to(device_id)
+        label = torch.zeros(1, 1, 10).float().to(device)
         label[0, 0, l] = 1.0
         loss = criterion(outputs.view(1, 1, -1), label)
         avg_loss += loss.data
@@ -211,7 +211,7 @@ pbar = tqdm(enumerate(dataloader))
 for (i, dataPoint) in pbar:
     if i > n_iters:
         break
-    datum = dataPoint["encoded_image"].view(time, 1, 1, 28, 28).to(device_id)
+    datum = dataPoint["encoded_image"].view(time, 1, 1, 28, 28).to(device)
     label = dataPoint["label"]
     pbar.set_description_str("Testing progress: (%d / %d)" % (i, n_iters))
 
@@ -250,7 +250,7 @@ for s, label in test_pairs:
     outputs = model(s)
     _, predicted = torch.max(outputs.data.unsqueeze(0), 1)
     total += 1
-    correct += int(predicted == label.long().to(device_id))
+    correct += int(predicted == label.long().to(device))
 
 print(
     "\n Accuracy of the model on %d test images: %.2f %%"
