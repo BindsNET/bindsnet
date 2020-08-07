@@ -13,7 +13,6 @@ from ..network.topology import (
 )
 from ..utils import im2col_indices
 
-
 class LearningRule(ABC):
     # language=rst
     """
