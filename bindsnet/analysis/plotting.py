@@ -588,7 +588,7 @@ def plot_voltages(
                             .cpu()
                             .numpy()[
                                 time[0] : time[1],
-                                n_neurons[v[0]][0]: n_neurons[v[0]][1],
+                                n_neurons[v[0]][0] : n_neurons[v[0]][1],
                             ]
                         )
                     )
@@ -608,7 +608,7 @@ def plot_voltages(
                             .cpu()
                             .numpy()[
                                 time[0] : time[1],
-                                    n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                                n_neurons[v[0]][0] : n_neurons[v[0]][1],
                             ]
                             .T,
                             cmap=cmap,
@@ -685,7 +685,7 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                           time[0] : time[1],  n_neurons[v[0]][0] : n_neurons[v[0]][1]
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1]
                         ]
                     )
                     if thresholds is not None and thresholds[v[0]].size() == torch.Size(

@@ -204,7 +204,7 @@ class Davis(torch.utils.data.Dataset):
                 self._download()
             else:
                 raise FileNotFoundError(
-                    f"DAVIS not found in the specified directory, download it from "
+                    "DAVIS not found in the specified directory, download it from "
                     f"{self.DATASET_WEB} or add download=True to your call"
                 )
         if not os.path.exists(os.path.join(self.imagesets_path, f"{self.subset}.txt")):

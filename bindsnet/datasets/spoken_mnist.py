@@ -103,7 +103,10 @@ class SpokenMNIST(torch.utils.data.Dataset):
                 # Serialize image data on disk for next time.
                 torch.save((audio, labels), open(path, "wb"))
             else:
-                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
+                msg = (
+                    "Dataset not found on disk; specify 'download=True' to allow"
+                    " downloads."
+                )
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -148,7 +151,10 @@ class SpokenMNIST(torch.utils.data.Dataset):
                 # Serialize image data on disk for next time.
                 torch.save((audio, labels), open(path, "wb"))
             else:
-                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
+                msg = (
+                    "Dataset not found on disk; specify 'download=True' to allow"
+                    " downloads."
+                )
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):

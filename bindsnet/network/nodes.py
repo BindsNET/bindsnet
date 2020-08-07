@@ -507,15 +507,14 @@ class LIFNodes(Nodes):
         self.v = self.decay * (self.v - self.rest) + self.rest
 
         # Integrate inputs.
-        x.masked_fill_(self.refrac_count > 0, 0.0) # OPTIM 2
+        x.masked_fill_(self.refrac_count > 0, 0.0)
         # Decrement refractory counters.
-        self.refrac_count -= self.dt  # OPTIM 1
+        self.refrac_count -= self.dt
 
-        self.v += x # interlaced
+        self.v += x  # interlaced
 
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
-
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
