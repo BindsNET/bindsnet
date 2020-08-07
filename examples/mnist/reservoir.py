@@ -63,12 +63,12 @@ torch.manual_seed(seed)
 
 # Sets up Gpu use
 if gpu and torch.cuda.is_available():
-    device = 'cuda'
+    device = "cuda"
     torch.cuda.set_device(device)
     # torch.set_default_tensor_type('torch.cuda.FloatTensor')
 else:
     torch.manual_seed(seed)
-    device = 'cpu'
+    device = "cpu"
     if gpu:
         gpu = False
 
@@ -129,7 +129,7 @@ pbar = tqdm(enumerate(dataloader))
 for (i, dataPoint) in pbar:
     if i > n_iters:
         break
-    datum = dataPoint["encoded_image"].view(int(time/dt), 1, 1, 28, 28).to(device)
+    datum = dataPoint["encoded_image"].view(int(time / dt), 1, 1, 28, 28).to(device)
     label = dataPoint["label"]
     pbar.set_description_str("Train progress: (%d / %d)" % (i, n_iters))
 
@@ -140,7 +140,7 @@ for (i, dataPoint) in pbar:
 
         inpt_axes, inpt_ims = plot_input(
             dataPoint["image"].view(28, 28),
-            datum.view(int(time/dt), 784).sum(0).view(28, 28),
+            datum.view(int(time / dt), 784).sum(0).view(28, 28),
             label=label,
             axes=inpt_axes,
             ims=inpt_ims,
