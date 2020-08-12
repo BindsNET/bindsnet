@@ -72,8 +72,12 @@ class EnvironmentPipeline(BasePipeline):
         self.time = kwargs.get("time", int(network.dt))
         self.overlay_t = kwargs.get("overlay_input", 1)
         self.percent_of_random_action = kwargs.get("percent_of_random_action", 0.0)
-        self.device = kwargs.get("device", "cpu")
         self.encode_factor = kwargs.get("encode_factor", 1.0)
+
+        if torch.cuda.is_available() and self.allow_gpu:
+            self.device = torch.device("cuda")
+        else:
+            self.device = torch.device("cpu")
 
         # var for overlay process
         if self.overlay_t > 1:
