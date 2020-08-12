@@ -23,6 +23,7 @@ setup(
         "tqdm>=4.19.9",
         "matplotlib>=2.1.0",
         "gym>=0.10.4",
+        "scikit-build>=0.11.1",
         "scikit_image>=0.13.1",
         "scikit_learn>=0.19.1",
         "opencv-python>=3.4.0.12",
