@@ -1,3 +1,4 @@
+cmake
 sphinx_rtd_theme
 imagecodecs
 scikit-build
