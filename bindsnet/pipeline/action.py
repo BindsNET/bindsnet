@@ -43,7 +43,8 @@ def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
             [
                 spikes[(i * pop_size) : (i * pop_size) + pop_size].sum()
                 for i in range(action_space.n)
-            ]
+            ],
+            device=spikes.device,
         )
         action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0].item()
 
