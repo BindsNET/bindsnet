@@ -417,7 +417,7 @@ def plot_assignments(
 
         if classes is None:
             cbar = plt.colorbar(im, cax=cax, ticks=list(range(-1, 11)))
-            cbar.ax.set_yticklabels(["none"] + list(range(10)))
+            cbar.ax.set_yticklabels(["none"] + list(range(11)))
         else:
             cbar = plt.colorbar(im, cax=cax, ticks=np.arange(-1, len(classes)))
             cbar.ax.set_yticklabels(["none"] + list(classes))
@@ -717,7 +717,8 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            time[0] : time[1],
+                            n_neurons[v[0]][0] : n_neurons[v[0]][1],
                         ]
                     )
                     if thresholds is not None and thresholds[v[0]].size() == torch.Size(
@@ -731,7 +732,8 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            time[0] : time[1],
+                            n_neurons[v[0]][0] : n_neurons[v[0]][1],
                         ]
                         .T,
                         cmap=cmap,
