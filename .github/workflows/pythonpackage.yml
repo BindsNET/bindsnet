@@ -25,8 +25,7 @@ jobs:
     - name: Format with black
       run: |
         pip install black
-        # PEP 8 specifies a max line length of 79
-        black . -l 79
+        black .
     - name: Test with pytest
       run: |
         pip install pytest
