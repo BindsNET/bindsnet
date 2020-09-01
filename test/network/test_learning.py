@@ -34,16 +34,13 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
-            time=250,
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250,
         )
 
         # Conv2dConnection test
         network = Network(dt=1.0)
         network.add_layer(Input(shape=[1, 10, 10], traces=True), name="input")
-        network.add_layer(
-            LIFNodes(shape=[32, 8, 8], traces=True), name="output"
-        )
+        network.add_layer(LIFNodes(shape=[32, 8, 8], traces=True), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],
@@ -58,9 +55,7 @@ class TestLearningRules:
         )
         # shape is [time, batch, channels, height, width]
         network.run(
-            inputs={
-                "input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()
-            },
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
             time=250,
         )
 
@@ -80,16 +75,13 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
-            time=250,
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250,
         )
 
         # Conv2dConnection test
         network = Network(dt=1.0)
         network.add_layer(Input(shape=[1, 10, 10], traces=True), name="input")
-        network.add_layer(
-            LIFNodes(shape=[32, 8, 8], traces=True), name="output"
-        )
+        network.add_layer(LIFNodes(shape=[32, 8, 8], traces=True), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],
@@ -103,9 +95,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={
-                "input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()
-            },
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
             time=250,
         )
 
@@ -127,16 +117,13 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
-            time=250,
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250,
         )
 
         # Conv2dConnection test
         network = Network(dt=1.0)
         network.add_layer(Input(shape=[1, 10, 10], traces=True), name="input")
-        network.add_layer(
-            LIFNodes(shape=[32, 8, 8], traces=True), name="output"
-        )
+        network.add_layer(LIFNodes(shape=[32, 8, 8], traces=True), name="output")
         network.add_connection(
             Conv2dConnection(
                 source=network.layers["input"],
@@ -152,9 +139,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={
-                "input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()
-            },
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
             time=250,
         )
 
@@ -197,9 +182,7 @@ class TestLearningRules:
         )
 
         network.run(
-            inputs={
-                "input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()
-            },
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
             time=250,
             reward=1.0,
         )
@@ -243,9 +226,7 @@ class TestLearningRules:
         )
 
         network.run(
-            inputs={
-                "input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()
-            },
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
             time=250,
             reward=1.0,
         )
@@ -253,9 +234,7 @@ class TestLearningRules:
     def test_rmax(self):
         # Connection test
         network = Network(dt=1.0)
-        network.add_layer(
-            Input(n=100, traces=True, traces_additive=True), name="input"
-        )
+        network.add_layer(Input(n=100, traces=True, traces_additive=True), name="input")
         network.add_layer(SRM0Nodes(n=100), name="output")
         network.add_connection(
             Connection(

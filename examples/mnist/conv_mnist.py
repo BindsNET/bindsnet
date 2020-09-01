@@ -91,9 +91,7 @@ conv_conn = Conv2dConnection(
     wmax=1.0,
 )
 
-w = torch.zeros(
-    n_filters, conv_size, conv_size, n_filters, conv_size, conv_size
-)
+w = torch.zeros(n_filters, conv_size, conv_size, n_filters, conv_size, conv_size)
 for fltr1 in range(n_filters):
     for fltr2 in range(n_filters):
         if fltr1 != fltr2:
@@ -101,9 +99,7 @@ for fltr1 in range(n_filters):
                 for j in range(conv_size):
                     w[fltr1, i, j, fltr2, i, j] = -100.0
 
-w = w.view(
-    n_filters * conv_size * conv_size, n_filters * conv_size * conv_size
-)
+w = w.view(n_filters * conv_size * conv_size, n_filters * conv_size * conv_size)
 recurrent_conn = Connection(conv_layer, conv_layer, w=w)
 
 network.add_layer(input_layer, name="X")
@@ -137,9 +133,7 @@ for layer in set(network.layers):
 
 voltages = {}
 for layer in set(network.layers) - {"X"}:
-    voltages[layer] = Monitor(
-        network.layers[layer], state_vars=["v"], time=time
-    )
+    voltages[layer] = Monitor(network.layers[layer], state_vars=["v"], time=time)
     network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
 # Train the network.
@@ -156,17 +150,11 @@ voltage_axes = None
 
 for epoch in range(n_epochs):
     if epoch % progress_interval == 0:
-        print(
-            "Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start)
-        )
+        print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=1,
-        shuffle=True,
-        num_workers=4,
-        pin_memory=gpu,
+        train_dataset, batch_size=1, shuffle=True, num_workers=4, pin_memory=gpu,
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
@@ -195,9 +183,7 @@ for epoch in range(n_epochs):
             inpt_axes, inpt_ims = plot_input(
                 image, inpt, label=label, axes=inpt_axes, ims=inpt_ims
             )
-            spike_ims, spike_axes = plot_spikes(
-                _spikes, ims=spike_ims, axes=spike_axes
-            )
+            spike_ims, spike_axes = plot_spikes(_spikes, ims=spike_ims, axes=spike_axes)
             weights1_im = plot_conv2d_weights(weights1, im=weights1_im)
             voltage_ims, voltage_axes = plot_voltages(
                 _voltages, ims=voltage_ims, axes=voltage_axes

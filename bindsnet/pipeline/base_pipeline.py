@@ -74,9 +74,7 @@ class BasePipeline:
             for l in self.network.layers:
                 self.network.add_monitor(
                     Monitor(
-                        self.network.layers[l],
-                        "s",
-                        self.plot_config["data_length"],
+                        self.network.layers[l], "s", self.plot_config["data_length"],
                     ),
                     name=f"{l}_spikes",
                 )
@@ -138,16 +136,10 @@ class BasePipeline:
 
         self.plots(batch, step_out)
 
-        if (
-            self.save_interval is not None
-            and self.step_count % self.save_interval == 0
-        ):
+        if self.save_interval is not None and self.step_count % self.save_interval == 0:
             self.network.save(self.save_dir)
 
-        if (
-            self.test_interval is not None
-            and self.step_count % self.test_interval == 0
-        ):
+        if self.test_interval is not None and self.step_count % self.test_interval == 0:
             self.test()
 
         return step_out
@@ -165,7 +157,7 @@ class BasePipeline:
         }
 
     def get_voltage_data(
-        self
+        self,
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
         # language=rst
         """
@@ -179,9 +171,7 @@ class BasePipeline:
         threshold_value = {}
         for l in self.network.layers:
             if hasattr(self.network.layers[l], "v"):
-                voltage_record[l] = self.network.monitors[f"{l}_voltages"].get(
-                    "v"
-                )
+                voltage_record[l] = self.network.monitors[f"{l}_voltages"].get("v")
             if hasattr(self.network.layers[l], "thresh"):
                 threshold_value[l] = self.network.layers[l].thresh
 

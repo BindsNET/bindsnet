@@ -5,11 +5,7 @@ import numpy as np
 
 
 def single(
-    datum: torch.Tensor,
-    time: int,
-    dt: float = 1.0,
-    sparsity: float = 0.5,
-    **kwargs
+    datum: torch.Tensor, time: int, dt: float = 1.0, sparsity: float = 0.5, **kwargs
 ) -> torch.Tensor:
     # language=rst
     """
@@ -33,9 +29,7 @@ def single(
     return torch.Tensor(s).byte()
 
 
-def repeat(
-    datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs
-) -> torch.Tensor:
+def repeat(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.Tensor:
     # language=rst
     """
     :param datum: Repeats a tensor along a new dimension in the 0th position for
@@ -70,9 +64,7 @@ def bernoulli(
     # Setting kwargs.
     max_prob = kwargs.get("max_prob", 1.0)
 
-    assert (
-        0 <= max_prob <= 1
-    ), "Maximum firing probability must be in range [0, 1]"
+    assert 0 <= max_prob <= 1, "Maximum firing probability must be in range [0, 1]"
     assert (datum >= 0).all(), "Inputs must be non-negative"
 
     shape, size = datum.shape, datum.numel()
@@ -96,9 +88,7 @@ def bernoulli(
     return spikes.byte()
 
 
-def poisson(
-    datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs
-) -> torch.Tensor:
+def poisson(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.Tensor:
     # language=rst
     """
     Generates Poisson-distributed spike trains based on input intensity. Inputs must be

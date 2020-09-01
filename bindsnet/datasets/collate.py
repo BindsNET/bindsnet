@@ -64,9 +64,7 @@ def time_aware_collate(batch):
                 is not None
             ):
                 raise TypeError(
-                    pytorch_collate.default_collate_err_msg_format.format(
-                        elem.dtype
-                    )
+                    pytorch_collate.default_collate_err_msg_format.format(elem.dtype)
                 )
 
             return time_aware_collate([torch.as_tensor(b) for b in batch])
@@ -79,17 +77,11 @@ def time_aware_collate(batch):
     elif isinstance(elem, string_classes):
         return batch
     elif isinstance(elem, container_abcs.Mapping):
-        return {
-            key: time_aware_collate([d[key] for d in batch]) for key in elem
-        }
+        return {key: time_aware_collate([d[key] for d in batch]) for key in elem}
     elif isinstance(elem, tuple) and hasattr(elem, "_fields"):  # namedtuple
-        return elem_type(
-            *(time_aware_collate(samples) for samples in zip(*batch))
-        )
+        return elem_type(*(time_aware_collate(samples) for samples in zip(*batch)))
     elif isinstance(elem, container_abcs.Sequence):
         transposed = zip(*batch)
         return [time_aware_collate(samples) for samples in transposed]
 
-    raise TypeError(
-        pytorch_collate.default_collate_err_msg_format.format(elem_type)
-    )
+    raise TypeError(pytorch_collate.default_collate_err_msg_format.format(elem_type))

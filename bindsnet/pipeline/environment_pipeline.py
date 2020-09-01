@@ -166,9 +166,7 @@ class EnvironmentPipeline(BasePipeline):
         inputs = {k: obs.repeat(self.time, *obs_shape) for k in self.inputs}
 
         # Run the network on the spike train-encoded inputs.
-        self.network.run(
-            inputs=inputs, time=self.time, reward=reward, **kwargs
-        )
+        self.network.run(inputs=inputs, time=self.time, reward=reward, **kwargs)
 
         if self.output is not None:
             self.spike_record[self.output] = (
@@ -194,9 +192,7 @@ class EnvironmentPipeline(BasePipeline):
         self.accumulated_reward = 0.0
         self.step_count = 0
 
-    def plots(
-        self, gym_batch: Tuple[torch.Tensor, float, bool, Dict], *args
-    ) -> None:
+    def plots(self, gym_batch: Tuple[torch.Tensor, float, bool, Dict], *args) -> None:
         # language=rst
         """
         Plot the encoded input, layer spikes, and layer voltages.

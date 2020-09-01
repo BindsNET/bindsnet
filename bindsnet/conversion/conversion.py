@@ -126,26 +126,22 @@ def data_based_normalization(
 
                 if isinstance(module2, nn.ReLU):
                     if prev_module is not None:
-                        scale_factor = np.percentile(
-                            activations.cpu(), percentile
-                        )
+                        scale_factor = np.percentile(activations.cpu(), percentile)
 
                         prev_module.weight *= prev_factor / scale_factor
                         prev_module.bias /= scale_factor
 
                         prev_factor = scale_factor
 
-                elif isinstance(module2, nn.Linear) or isinstance(
-                    module2, nn.Conv2d
-                ):
+                elif isinstance(module2, nn.Linear) or isinstance(module2, nn.Conv2d):
                     prev_module = module2
 
         if isinstance(module2, nn.Linear):
-                if prev_module is not None:
-                    scale_factor = np.percentile(activations.cpu(), percentile)
-                    prev_module.weight *= prev_factor / scale_factor
-                    prev_module.bias /= scale_factor
-                    prev_factor = scale_factor
+            if prev_module is not None:
+                scale_factor = np.percentile(activations.cpu(), percentile)
+                prev_module.weight *= prev_factor / scale_factor
+                prev_module.bias /= scale_factor
+                prev_factor = scale_factor
 
         else:
             activations = all_activations[name]
@@ -158,9 +154,7 @@ def data_based_normalization(
 
                     prev_factor = scale_factor
 
-            elif isinstance(module, nn.Linear) or isinstance(
-                module, nn.Conv2d
-            ):
+            elif isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
                 prev_module = module
 
     return ann
@@ -187,9 +181,7 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
             sum_input=last,
             **kwargs,
         )
-        bias = (
-            current.bias if current.bias is not None else torch.zeros(layer.n)
-        )
+        bias = current.bias if current.bias is not None else torch.zeros(layer.n)
         connection = topology.Connection(
             source=prev, target=layer, w=current.weight.t(), b=bias
         )
@@ -209,11 +201,7 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
         layer = node_type(
             shape=shape, reset=0, thresh=1, refrac=0, sum_input=last, **kwargs
         )
-        bias = (
-            current.bias
-            if current.bias is not None
-            else torch.zeros(layer.shape[1])
-        )
+        bias = current.bias if current.bias is not None else torch.zeros(layer.shape[1])
         connection = topology.Conv2dConnection(
             source=prev,
             target=layer,
@@ -259,9 +247,7 @@ def _ann_to_snn_helper(prev, current, node_type, last=False, **kwargs):
             ]
         )
 
-        connection = PermuteConnection(
-            source=prev, target=layer, dims=current.dims
-        )
+        connection = PermuteConnection(source=prev, target=layer, dims=current.dims)
 
     elif isinstance(current, nn.ConstantPad2d):
         layer = PassThroughNodes(
@@ -317,9 +303,7 @@ def ann_to_snn(
     if data is None:
         import warnings
 
-        warnings.warn(
-            "Data is None. Weights will not be scaled.", RuntimeWarning
-        )
+        warnings.warn("Data is None. Weights will not be scaled.", RuntimeWarning)
     else:
         ann = data_based_normalization(
             ann=ann, data=data.detach(), percentile=percentile
@@ -342,9 +326,7 @@ def ann_to_snn(
     prev = input_layer
     while i < len(children) - 1:
         current, nxt = children[i : i + 2]
-        layer, connection = _ann_to_snn_helper(
-            prev, current, node_type, **kwargs
-        )
+        layer, connection = _ann_to_snn_helper(prev, current, node_type, **kwargs)
 
         i += 1
 

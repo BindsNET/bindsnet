@@ -129,10 +129,7 @@ def shift_crop_training_sample(sample, bb_params):
     bbox_curr_gt = BoundingBox(currbb[0], currbb[1], currbb[2], currbb[3])
     bbox_gt_recentered = BoundingBox(0, 0, 0, 0)
     bbox_gt_recentered = bbox_curr_gt.recenter(
-        rand_search_location,
-        edge_spacing_x,
-        edge_spacing_y,
-        bbox_gt_recentered,
+        rand_search_location, edge_spacing_x, edge_spacing_y, bbox_gt_recentered,
     )
     output_sample["image"] = rand_search_region
     output_sample["bb"] = bbox_gt_recentered.get_bb_list()
@@ -155,12 +152,9 @@ def crop_sample(sample):
     opts = {}
     image, bb = sample["image"], sample["bb"]
     orig_bbox = BoundingBox(bb[0], bb[1], bb[2], bb[3])
-    (
-        output_image,
-        pad_image_location,
-        edge_spacing_x,
-        edge_spacing_y,
-    ) = cropPadImage(orig_bbox, image)
+    (output_image, pad_image_location, edge_spacing_x, edge_spacing_y,) = cropPadImage(
+        orig_bbox, image
+    )
     new_bbox = BoundingBox(0, 0, 0, 0)
     new_bbox = new_bbox.recenter(
         pad_image_location, edge_spacing_x, edge_spacing_y, new_bbox
@@ -195,13 +189,10 @@ def cropPadImage(bbox_tight, image):
         int(roi_left + err) : int(roi_left + roi_width),
     ]
     output_width = max(math.ceil(bbox_tight.compute_output_width()), roi_width)
-    output_height = max(
-        math.ceil(bbox_tight.compute_output_height()), roi_height
-    )
+    output_height = max(math.ceil(bbox_tight.compute_output_height()), roi_height)
     if image.ndim > 2:
         output_image = np.zeros(
-            (int(output_height), int(output_width), image.shape[2]),
-            dtype=image.dtype,
+            (int(output_height), int(output_width), image.shape[2]), dtype=image.dtype,
         )
     else:
         output_image = np.zeros(
@@ -285,11 +276,7 @@ class BoundingBox:
         print("------Bounding-box-------")
         print("(x1, y1): ({}, {})".format(self.x1, self.y1))
         print("(x2, y2): ({}, {})".format(self.x2, self.y2))
-        print(
-            "(w, h)  : ({}, {})".format(
-                self.x2 - self.x1 + 1, self.y2 - self.y1 + 1
-            )
-        )
+        print("(w, h)  : ({}, {})".format(self.x2 - self.x1 + 1, self.y2 - self.y1 + 1))
         print("--------------------------")
 
     def get_bb_list(self):
@@ -339,21 +326,13 @@ class BoundingBox:
         self.y1 = self.y1 * height
         self.y2 = self.y2 * height
 
-    def uncenter(
-        self, raw_image, search_location, edge_spacing_x, edge_spacing_y
-    ):
+    def uncenter(self, raw_image, search_location, edge_spacing_x, edge_spacing_y):
         self.x1 = max(0.0, self.x1 + search_location.x1 - edge_spacing_x)
         self.y1 = max(0.0, self.y1 + search_location.y1 - edge_spacing_y)
-        self.x2 = min(
-            raw_image.shape[1], self.x2 + search_location.x1 - edge_spacing_x
-        )
-        self.y2 = min(
-            raw_image.shape[0], self.y2 + search_location.y1 - edge_spacing_y
-        )
+        self.x2 = min(raw_image.shape[1], self.x2 + search_location.x1 - edge_spacing_x)
+        self.y2 = min(raw_image.shape[0], self.y2 + search_location.y1 - edge_spacing_y)
 
-    def recenter(
-        self, search_loc, edge_spacing_x, edge_spacing_y, bbox_gt_recentered
-    ):
+    def recenter(self, search_loc, edge_spacing_x, edge_spacing_y, bbox_gt_recentered):
         bbox_gt_recentered.x1 = self.x1 - search_loc.x1 + edge_spacing_x
         bbox_gt_recentered.y1 = self.y1 - search_loc.y1 + edge_spacing_y
         bbox_gt_recentered.x2 = self.x2 - search_loc.x1 + edge_spacing_x
@@ -406,14 +385,11 @@ class BoundingBox:
         ):
             if shift_motion_model:
                 width_scale_factor = max(
-                    min_scale,
-                    min(max_scale, sample_exp_two_sides(lambda_scale_frac)),
+                    min_scale, min(max_scale, sample_exp_two_sides(lambda_scale_frac)),
                 )
             else:
                 rand_num = sample_rand_uniform()
-                width_scale_factor = (
-                    rand_num * (max_scale - min_scale) + min_scale
-                )
+                width_scale_factor = rand_num * (max_scale - min_scale) + min_scale
 
             new_width = width * (1 + width_scale_factor)
             new_width = max(1.0, min((image.shape[1] - 1), new_width))
@@ -426,14 +402,11 @@ class BoundingBox:
         ):
             if shift_motion_model:
                 height_scale_factor = max(
-                    min_scale,
-                    min(max_scale, sample_exp_two_sides(lambda_scale_frac)),
+                    min_scale, min(max_scale, sample_exp_two_sides(lambda_scale_frac)),
                 )
             else:
                 rand_num = sample_rand_uniform()
-                height_scale_factor = (
-                    rand_num * (max_scale - min_scale) + min_scale
-                )
+                height_scale_factor = rand_num * (max_scale - min_scale) + min_scale
 
             new_height = height * (1 + height_scale_factor)
             new_height = max(1.0, min((image.shape[0] - 1), new_height))
@@ -452,9 +425,7 @@ class BoundingBox:
         ) and (num_tries_x < kMaxNumTries):
 
             if shift_motion_model:
-                new_x_temp = center_x + width * sample_exp_two_sides(
-                    lambda_shift_frac
-                )
+                new_x_temp = center_x + width * sample_exp_two_sides(lambda_shift_frac)
             else:
                 rand_num = sample_rand_uniform()
                 new_x_temp = center_x + rand_num * (2 * new_width) - new_width
@@ -478,18 +449,13 @@ class BoundingBox:
         ) and (num_tries_y < kMaxNumTries):
 
             if shift_motion_model:
-                new_y_temp = center_y + height * sample_exp_two_sides(
-                    lambda_shift_frac
-                )
+                new_y_temp = center_y + height * sample_exp_two_sides(lambda_shift_frac)
             else:
                 rand_num = sample_rand_uniform()
-                new_y_temp = (
-                    center_y + rand_num * (2 * new_height) - new_height
-                )
+                new_y_temp = center_y + rand_num * (2 * new_height) - new_height
 
             new_center_y = min(
-                image.shape[0] - new_height / 2,
-                max(new_height / 2, new_y_temp),
+                image.shape[0] - new_height / 2, max(new_height / 2, new_y_temp),
             )
             first_time_y = False
             num_tries_y = num_tries_y + 1

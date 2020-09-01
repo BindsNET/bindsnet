@@ -136,9 +136,7 @@ for layer in set(network.layers):
 
 voltages = {}
 for layer in set(network.layers) - {"X"}:
-    voltages[layer] = Monitor(
-        network.layers[layer], state_vars=["v"], time=time
-    )
+    voltages[layer] = Monitor(network.layers[layer], state_vars=["v"], time=time)
     network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
 inpt_ims, inpt_axes = None, None
@@ -158,9 +156,7 @@ for epoch in range(n_epochs):
     labels = []
 
     if epoch % progress_interval == 0:
-        print(
-            "Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start)
-        )
+        print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
         start = t()
 
     # Create a dataloader to iterate and batch data
@@ -184,9 +180,7 @@ for epoch in range(n_epochs):
 
             # Get network predictions.
             all_activity_pred = all_activity(
-                spikes=spike_record,
-                assignments=assignments,
-                n_labels=n_classes,
+                spikes=spike_record, assignments=assignments, n_labels=n_classes,
             )
             proportion_pred = proportion_weighting(
                 spikes=spike_record,
@@ -261,19 +255,18 @@ for epoch in range(n_epochs):
             )
             square_assignments = get_square_assignments(assignments, n_sqrt)
             spikes_ = {
-                layer: spikes[layer].get("s")[:, 0].contiguous()
-                for layer in spikes
+                layer: spikes[layer].get("s")[:, 0].contiguous() for layer in spikes
             }
             voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
             inpt_axes, inpt_ims = plot_input(
                 image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
             )
-            spike_ims, spike_axes = plot_spikes(
-                spikes_, ims=spike_ims, axes=spike_axes
-            )
+            spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(square_weights, im=weights_im)
             assigns_im = plot_assignments(square_assignments, im=assigns_im)
-            perf_ax = plot_performance(accuracy, x_scale=update_steps * batch_size, ax=perf_ax)
+            perf_ax = plot_performance(
+                accuracy, x_scale=update_steps * batch_size, ax=perf_ax
+            )
             voltage_ims, voltage_axes = plot_voltages(
                 voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"
             )

@@ -21,9 +21,7 @@ def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
     try:
         output = kwargs["output"]
     except KeyError:
-        raise KeyError(
-            'select_multinomial() requires an "output" layer argument.'
-        )
+        raise KeyError('select_multinomial() requires an "output" layer argument.')
 
     output = pipeline.network.layers[output]
     action_space = pipeline.env.action_space
@@ -46,9 +44,7 @@ def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
                 for i in range(action_space.n)
             ]
         )
-        action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[
-            0
-        ].item()
+        action = torch.multinomial((pop_spikes.float() / _sum).view(-1), 1)[0].item()
 
     return action
 

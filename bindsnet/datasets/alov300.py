@@ -99,9 +99,7 @@ class ALOV300(Dataset):
                 f = open(vid_ann, "r")
                 annotations = f.readlines()
                 f.close()
-                frame_idxs = [
-                    int(ann.split(" ")[0]) - 1 for ann in annotations
-                ]
+                frame_idxs = [int(ann.split(" ")[0]) - 1 for ann in annotations]
                 frames = np.array(frames)
                 num_anno += len(annotations)
                 for i in range(len(frame_idxs) - 1):
@@ -130,9 +128,7 @@ class ALOV300(Dataset):
         curr_img = self.get_orig_sample(idx, 1)["image"]
         currbb = self.get_orig_sample(idx, 1)["bb"]
         prevbb = self.get_orig_sample(idx, 0)["bb"]
-        bbox_curr_shift = BoundingBox(
-            prevbb[0], prevbb[1], prevbb[2], prevbb[3]
-        )
+        bbox_curr_shift = BoundingBox(prevbb[0], prevbb[1], prevbb[2], prevbb[3])
         (
             rand_search_region,
             rand_search_location,
@@ -142,10 +138,7 @@ class ALOV300(Dataset):
         bbox_curr_gt = BoundingBox(currbb[0], currbb[1], currbb[2], currbb[3])
         bbox_gt_recentered = BoundingBox(0, 0, 0, 0)
         bbox_gt_recentered = bbox_curr_gt.recenter(
-            rand_search_location,
-            edge_spacing_x,
-            edge_spacing_y,
-            bbox_gt_recentered,
+            rand_search_location, edge_spacing_x, edge_spacing_y, bbox_gt_recentered,
         )
         curr_sample["image"] = rand_search_region
         curr_sample["bb"] = bbox_gt_recentered.get_bb_list()
@@ -208,9 +201,7 @@ class ALOV300(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         bb = sample["bb"]
         bb = [int(val) for val in bb]
-        image = cv2.rectangle(
-            image, (bb[0], bb[1]), (bb[2], bb[3]), (0, 255, 0), 2
-        )
+        image = cv2.rectangle(image, (bb[0], bb[1]), (bb[2], bb[3]), (0, 255, 0), 2)
         cv2.imshow("alov dataset sample: " + str(idx), image)
         cv2.waitKey(0)
 
@@ -270,18 +261,12 @@ class ALOV300(Dataset):
         # Grabs the correct zip url based on parameters
         self.frame_zip_path = os.path.join(self.root, "frame.zip")
         self.text_zip_path = os.path.join(self.root, "text.zip")
-        frame_zip_url = (
-            f"http://isis-data.science.uva.nl/alov/alov300++_frames.zip"
-        )
-        text_zip_url = (
-            f"http://isis-data.science.uva.nl/alov/alov300++GT_txtFiles.zip"
-        )
+        frame_zip_url = f"http://isis-data.science.uva.nl/alov/alov300++_frames.zip"
+        text_zip_url = f"http://isis-data.science.uva.nl/alov/alov300++GT_txtFiles.zip"
 
         # Downloads the relevant dataset
         print("\nDownloading ALOV300++ frame set from " + frame_zip_url + "\n")
-        urlretrieve(
-            frame_zip_url, self.frame_zip_path, reporthook=self.progress
-        )
+        urlretrieve(frame_zip_url, self.frame_zip_path, reporthook=self.progress)
 
         print("\nDownloading ALOV300++ text set from " + text_zip_url + "\n")
         urlretrieve(text_zip_url, self.text_zip_path, reporthook=self.progress)
@@ -300,9 +285,7 @@ class ALOV300(Dataset):
         os.remove(self.text_zip_path)
 
         # Renames the folders containing the dataset
-        box_folder = os.path.join(
-            self.root, "alov300++_rectangleAnnotation_full/"
-        )
+        box_folder = os.path.join(self.root, "alov300++_rectangleAnnotation_full/")
         frame_folder = os.path.join(self.root, "imagedata++")
 
         os.rename(box_folder, self.box_path)

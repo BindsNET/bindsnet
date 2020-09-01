@@ -59,8 +59,8 @@ class Nodes(torch.nn.Module):
 
         self.traces = traces  # Whether to record synaptic traces.
         self.traces_additive = (
-            traces_additive
-        )  # Whether to record spike traces additively.
+            traces_additive  # Whether to record spike traces additively.
+        )
         self.register_buffer("s", torch.ByteTensor())  # Spike occurrences.
 
         self.sum_input = sum_input  # Whether to sum all inputs.
@@ -79,9 +79,7 @@ class Nodes(torch.nn.Module):
             )  # Set in compute_decays.
 
         if self.sum_input:
-            self.register_buffer(
-                "summed", torch.FloatTensor()
-            )  # Summed inputs.
+            self.register_buffer("summed", torch.FloatTensor())  # Summed inputs.
 
         self.dt = None
         self.batch_size = None
@@ -414,12 +412,8 @@ class IFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.reset * torch.ones(
-            batch_size, *self.shape, device=self.v.device
-        )
-        self.refrac_count = torch.zeros_like(
-            self.v, device=self.refrac_count.device
-        )
+        self.v = self.reset * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class LIFNodes(Nodes):
@@ -557,12 +551,8 @@ class LIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(
-            batch_size, *self.shape, device=self.v.device
-        )
-        self.refrac_count = torch.zeros_like(
-            self.v, device=self.refrac_count.device
-        )
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class CurrentLIFNodes(Nodes):
@@ -620,12 +610,8 @@ class CurrentLIFNodes(Nodes):
         )
 
         self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
-        self.register_buffer(
-            "reset", torch.tensor(reset)
-        )  # Post-spike reset voltage.
-        self.register_buffer(
-            "thresh", torch.tensor(thresh)
-        )  # Spike threshold voltage.
+        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
+        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
@@ -643,9 +629,7 @@ class CurrentLIFNodes(Nodes):
         )  # Set in compute_decays.
 
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
-        self.register_buffer(
-            "i", torch.FloatTensor()
-        )  # Synaptic input currents.
+        self.register_buffer("i", torch.FloatTensor())  # Synaptic input currents.
         self.register_buffer(
             "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
@@ -716,13 +700,9 @@ class CurrentLIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(
-            batch_size, *self.shape, device=self.v.device
-        )
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
         self.i = torch.zeros_like(self.v, device=self.i.device)
-        self.refrac_count = torch.zeros_like(
-            self.v, device=self.refrac_count.device
-        )
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class AdaptiveLIFNodes(Nodes):
@@ -782,12 +762,8 @@ class AdaptiveLIFNodes(Nodes):
         )
 
         self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
-        self.register_buffer(
-            "reset", torch.tensor(reset)
-        )  # Post-spike reset voltage.
-        self.register_buffer(
-            "thresh", torch.tensor(thresh)
-        )  # Spike threshold voltage.
+        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
+        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
@@ -808,9 +784,7 @@ class AdaptiveLIFNodes(Nodes):
         )  # Set in compute_decays.
 
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
-        self.register_buffer(
-            "theta", torch.zeros(*self.shape)
-        )  # Adaptive thresholds.
+        self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
         self.register_buffer(
             "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
@@ -881,12 +855,8 @@ class AdaptiveLIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(
-            batch_size, *self.shape, device=self.v.device
-        )
-        self.refrac_count = torch.zeros_like(
-            self.v, device=self.refrac_count.device
-        )
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class DiehlAndCookNodes(Nodes):
@@ -948,12 +918,8 @@ class DiehlAndCookNodes(Nodes):
         )
 
         self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
-        self.register_buffer(
-            "reset", torch.tensor(reset)
-        )  # Post-spike reset voltage.
-        self.register_buffer(
-            "thresh", torch.tensor(thresh)
-        )  # Spike threshold voltage.
+        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
+        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
@@ -973,9 +939,7 @@ class DiehlAndCookNodes(Nodes):
             "theta_decay", torch.empty_like(self.tc_theta_decay)
         )  # Set in compute_decays.
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
-        self.register_buffer(
-            "theta", torch.zeros(*self.shape)
-        )  # Adaptive thresholds.
+        self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
         self.register_buffer(
             "refrac_count", torch.FloatTensor()
         )  # Refractory period counters.
@@ -1059,12 +1023,8 @@ class DiehlAndCookNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(
-            batch_size, *self.shape, device=self.v.device
-        )
-        self.refrac_count = torch.zeros_like(
-            self.v, device=self.refrac_count.device
-        )
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class IzhikevichNodes(Nodes):
@@ -1115,9 +1075,7 @@ class IzhikevichNodes(Nodes):
         )
 
         self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
-        self.register_buffer(
-            "thresh", torch.tensor(thresh)
-        )  # Spike threshold voltage.
+        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
         self.lbound = lbound
 
         self.register_buffer("r", None)
@@ -1184,9 +1142,7 @@ class IzhikevichNodes(Nodes):
             self.S[:, ex:] = -torch.rand(n, inh)
             self.excitatory[ex:] = 0
 
-        self.register_buffer(
-            "v", self.rest * torch.ones(n)
-        )  # Neuron voltages.
+        self.register_buffer("v", self.rest * torch.ones(n))  # Neuron voltages.
         self.register_buffer("u", self.b * self.v)  # Neuron recovery.
 
     def forward(self, x: torch.Tensor) -> None:
@@ -1206,24 +1162,13 @@ class IzhikevichNodes(Nodes):
         # Add inter-columnar input.
         if self.s.any():
             x += torch.cat(
-                [
-                    self.S[:, self.s[i]].sum(dim=1)[None]
-                    for i in range(self.s.shape[0])
-                ],
+                [self.S[:, self.s[i]].sum(dim=1)[None] for i in range(self.s.shape[0])],
                 dim=0,
             )
 
         # Apply v and u updates.
-        self.v += (
-            self.dt
-            * 0.5
-            * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
-        )
-        self.v += (
-            self.dt
-            * 0.5
-            * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
-        )
+        self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
+        self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
         self.u += self.dt * self.a * (self.b * self.v - self.u)
 
         # Voltage clipping to lower bound.
@@ -1249,9 +1194,7 @@ class IzhikevichNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(
-            batch_size, *self.shape, device=self.v.device
-        )
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
         self.u = self.b * self.v
 
 
@@ -1314,21 +1257,15 @@ class SRM0Nodes(Nodes):
         )
 
         self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
-        self.register_buffer(
-            "reset", torch.tensor(reset)
-        )  # Post-spike reset voltage.
-        self.register_buffer(
-            "thresh", torch.tensor(thresh)
-        )  # Spike threshold voltage.
+        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
+        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
         self.register_buffer(
             "refrac", torch.tensor(refrac)
         )  # Post-spike refractory period.
         self.register_buffer(
             "tc_decay", torch.tensor(tc_decay)
         )  # Time constant of neuron voltage decay.
-        self.register_buffer(
-            "decay", torch.tensor(tc_decay)
-        )  # Set in compute_decays.
+        self.register_buffer("decay", torch.tensor(tc_decay))  # Set in compute_decays.
         self.register_buffer(
             "eps_0", torch.tensor(eps_0)
         )  # Scaling factor for pre-synaptic spike contributions.
@@ -1360,9 +1297,7 @@ class SRM0Nodes(Nodes):
 
         # Compute (instantaneous) probabilities of spiking, clamp between 0 and 1 using exponentials.
         # Also known as 'escape noise', this simulates nearby neurons.
-        self.rho = self.rho_0 * torch.exp(
-            (self.v - self.thresh) / self.d_thresh
-        )
+        self.rho = self.rho_0 * torch.exp((self.v - self.thresh) / self.d_thresh)
         self.s_prob = 1.0 - torch.exp(-self.rho * self.dt)
 
         # Decrement refractory counters.
@@ -1410,9 +1345,5 @@ class SRM0Nodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.rest * torch.ones(
-            batch_size, *self.shape, device=self.v.device
-        )
-        self.refrac_count = torch.zeros_like(
-            self.v, device=self.refrac_count.device
-        )
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)

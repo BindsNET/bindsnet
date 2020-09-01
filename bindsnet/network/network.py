@@ -9,9 +9,7 @@ from .topology import AbstractConnection
 from ..learning.reward import AbstractReward
 
 
-def load(
-    file_name: str, map_location: str = "cpu", learning: bool = None
-) -> "Network":
+def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
     # language=rst
     """
     Loads serialized network object from disk.
@@ -238,11 +236,7 @@ class Network(torch.nn.Module):
         return inputs
 
     def run(
-        self,
-        inputs: Dict[str, torch.Tensor],
-        time: int,
-        one_step=False,
-        **kwargs
+        self, inputs: Dict[str, torch.Tensor], time: int, one_step=False, **kwargs
     ) -> None:
         # language=rst
         """

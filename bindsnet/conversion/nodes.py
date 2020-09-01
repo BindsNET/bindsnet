@@ -115,12 +115,8 @@ class SubtractiveResetIFNodes(nodes.Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = self.reset * torch.ones(
-            batch_size, *self.shape, device=self.v.device
-        )
-        self.refrac_count = torch.zeros_like(
-            self.v, device=self.refrac_count.device
-        )
+        self.v = self.reset * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class PassThroughNodes(nodes.Nodes):

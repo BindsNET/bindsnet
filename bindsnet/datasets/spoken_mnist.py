@@ -27,9 +27,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
     for digit in range(10):
         for speaker in ["jackson", "nicolas", "theo"]:
             for example in range(50):
-                files.append(
-                    "_".join([str(digit), speaker, str(example)]) + ".wav"
-                )
+                files.append("_".join([str(digit), speaker, str(example)]) + ".wav")
 
     n_files = len(files)
 
@@ -82,9 +80,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
 
         return {"audio": audio, "label": label}
 
-    def _get_train(
-        self, split: float = 0.8
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _get_train(self, split: float = 0.8) -> Tuple[torch.Tensor, torch.Tensor]:
         # language=rst
         """
         Gets the Spoken MNIST training audio and labels.
@@ -93,22 +89,16 @@ class SpokenMNIST(torch.utils.data.Dataset):
         :return: Spoken MNIST training audio and labels.
         """
         split_index = int(split * SpokenMNIST.n_files)
-        path = os.path.join(
-            self.path, "_".join([SpokenMNIST.train_pickle, str(split)])
-        )
+        path = os.path.join(self.path, "_".join([SpokenMNIST.train_pickle, str(split)]))
 
-        if not all(
-            [os.path.isfile(os.path.join(self.path, f)) for f in self.files]
-        ):
+        if not all([os.path.isfile(os.path.join(self.path, f)) for f in self.files]):
             # Download data if it isn't on disk.
             if self.download:
                 print("Downloading Spoken MNIST data.\n")
                 self._download()
 
                 # Process data into audio, label (input, output) pairs.
-                audio, labels = self.process_data(
-                    SpokenMNIST.files[:split_index]
-                )
+                audio, labels = self.process_data(SpokenMNIST.files[:split_index])
 
                 # Serialize image data on disk for next time.
                 torch.save((audio, labels), open(path, "wb"))
@@ -138,9 +128,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
 
         return audio, torch.Tensor(labels)
 
-    def _get_test(
-        self, split: float = 0.8
-    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+    def _get_test(self, split: float = 0.8) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         # language=rst
         """
         Gets the Spoken MNIST training audio and labels.
@@ -149,22 +137,16 @@ class SpokenMNIST(torch.utils.data.Dataset):
         :return: The Spoken MNIST test audio and labels.
         """
         split_index = int(split * SpokenMNIST.n_files)
-        path = os.path.join(
-            self.path, "_".join([SpokenMNIST.test_pickle, str(split)])
-        )
+        path = os.path.join(self.path, "_".join([SpokenMNIST.test_pickle, str(split)]))
 
-        if not all(
-            [os.path.isfile(os.path.join(self.path, f)) for f in self.files]
-        ):
+        if not all([os.path.isfile(os.path.join(self.path, f)) for f in self.files]):
             # Download data if it isn't on disk.
             if self.download:
                 print("Downloading Spoken MNIST data.\n")
                 self._download()
 
                 # Process data into audio, label (input, output) pairs.
-                audio, labels = self.process_data(
-                    SpokenMNIST.files[split_index:]
-                )
+                audio, labels = self.process_data(SpokenMNIST.files[split_index:])
 
                 # Serialize image data on disk for next time.
                 torch.save((audio, labels), open(path, "wb"))
@@ -202,9 +184,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
         z.extractall(path=self.path)
         z.close()
 
-        path = os.path.join(
-            self.path, "free-spoken-digit-dataset-master", "recordings"
-        )
+        path = os.path.join(self.path, "free-spoken-digit-dataset-master", "recordings")
         for f in os.listdir(path):
             shutil.move(os.path.join(path, f), os.path.join(self.path))
 
@@ -249,9 +229,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
 
             # Make sure that we have at least 1 frame
             num_frames = int(
-                np.ceil(
-                    float(np.abs(signal_length - frame_length)) / frame_step
-                )
+                np.ceil(float(np.abs(signal_length - frame_length)) / frame_step)
             )
 
             pad_signal_length = num_frames * frame_step + frame_length
@@ -272,9 +250,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
 
             # Fast Fourier Transform and Power Spectrum
             NFFT = 512
-            mag_frames = np.absolute(
-                np.fft.rfft(frames, NFFT)
-            )  # Magnitude of the FFT
+            mag_frames = np.absolute(np.fft.rfft(frames, NFFT))  # Magnitude of the FFT
             pow_frames = (1.0 / NFFT) * (mag_frames ** 2)  # Power Spectrum
 
             # Log filter banks
@@ -286,9 +262,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
             mel_points = np.linspace(
                 low_freq_mel, high_freq_mel, nfilt + 2
             )  # Equally spaced in Mel scale
-            hz_points = 700 * (
-                10 ** (mel_points / 2595) - 1
-            )  # Convert Mel to Hz
+            hz_points = 700 * (10 ** (mel_points / 2595) - 1)  # Convert Mel to Hz
             bin = np.floor((NFFT + 1) * hz_points / sample_rate)
 
             fbank = np.zeros((nfilt, int(np.floor(NFFT / 2 + 1))))
