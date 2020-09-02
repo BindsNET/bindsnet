@@ -99,8 +99,8 @@ class EnvironmentPipeline(BasePipeline):
             if isinstance(layer, AbstractInput)
         ]
 
-        self.action = torch.tensor(-1)
-        self.last_action = torch.tensor(-1)
+        self.action = torch.tensor(-1, device=self.device)
+        self.last_action = torch.tensor(-1, device=self.device)
         self.action_counter = 0
         self.random_action_after = kwargs.get("random_action_after", self.time)
 
@@ -169,7 +169,7 @@ class EnvironmentPipeline(BasePipeline):
             self.last_action = self.action
             if torch.rand(1) < self.percent_of_random_action:
                 self.action = torch.randint(
-                    low=0, high=self.spike_record[self.output].shape[-1], size=(1,)
+                    low=0, high=self.env.action_space.n, size=(1,)
                 )[0]
             elif self.action_counter > self.random_action_after:
                 if self.last_action == 0:  # last action was start b
@@ -177,7 +177,7 @@ class EnvironmentPipeline(BasePipeline):
                     tqdm.write(f"Fire -> too many times {self.last_action} ")
                 else:
                     self.action = torch.randint(
-                        low=2, high=self.spike_record[self.output].shape[-1], size=(1,)
+                        low=0, high=self.env.action_space.n, size=(1,)
                     )[0]
                     tqdm.write(f"too many times {self.last_action} ")
             else:
