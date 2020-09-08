@@ -65,12 +65,17 @@ gpu = args.gpu
 device_id = args.device_id
 
 # Sets up Gpu use
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if gpu and torch.cuda.is_available():
-    # torch.set_default_tensor_type("torch.cuda.FloatTensor")
-    torch.cuda.set_device(device_id)
     torch.cuda.manual_seed_all(seed)
 else:
     torch.manual_seed(seed)
+    device = "cpu"
+    if gpu:
+        gpu = False
+
+torch.set_num_threads(os.cpu_count() - 1)
+print("Running on Device = ", device)
 
 if not train:
     update_interval = n_test
@@ -118,18 +123,18 @@ dataset = MNIST(
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
 
 # Record spikes during the simulation.
-spike_record = torch.zeros(update_interval, time, n_neurons)
+spike_record = torch.zeros(update_interval, time, n_neurons, device=device)
 
 # Neuron assignments and spike proportions.
-assignments = -torch.ones_like(torch.Tensor(n_neurons))
-proportions = torch.zeros_like(torch.Tensor(n_neurons, n_classes))
-rates = torch.zeros_like(torch.Tensor(n_neurons, n_classes))
+assignments = -torch.ones_like(torch.Tensor(n_neurons), device=device)
+proportions = torch.zeros_like(torch.Tensor(n_neurons, n_classes), device=device)
+rates = torch.zeros_like(torch.Tensor(n_neurons, n_classes), device=device)
 
 # Sequence of accuracy estimates.
 accuracy = {"all": [], "proportion": []}
 
 # Labels to determine neuron assignments and spike proportions and estimate accuracy
-labels = torch.empty(update_interval)
+labels = torch.empty(update_interval, device=device)
 
 spikes = {}
 for layer in set(network.layers):
@@ -186,7 +191,9 @@ for (i, datum) in enumerate(dataloader):
         )
 
         # Assign labels to excitatory layer neurons.
-        assignments, proportions, rates = assign_labels(spike_record, labels, n_classes, rates)
+        assignments, proportions, rates = assign_labels(
+            spike_record, labels, n_classes, rates
+        )
 
     # Add the current label to the list of labels for this update_interval
     labels[i % update_interval] = label[0]
@@ -259,7 +266,7 @@ test_dataset = MNIST(
 accuracy = {"all": 0, "proportion": 0}
 
 # Record spikes during the simulation.
-spike_record = torch.zeros(1, int(time/dt), n_neurons)
+spike_record = torch.zeros(1, int(time / dt), n_neurons)
 
 # Train the network.
 print("\nBegin testing\n")
@@ -270,7 +277,7 @@ for step, batch in enumerate(test_dataset):
     if step > n_test:
         break
     # Get next input sample.
-    inputs = {"X": batch["encoded_image"].view(int(time/dt), 1, 1, 28, 28)}
+    inputs = {"X": batch["encoded_image"].view(int(time / dt), 1, 1, 28, 28)}
     if gpu:
         inputs = {k: v.cuda() for k, v in inputs.items()}
 
@@ -281,7 +288,7 @@ for step, batch in enumerate(test_dataset):
     spike_record[0] = spikes["Ae"].get("s").squeeze()
 
     # Convert the array of labels into a tensor
-    label_tensor = torch.tensor(batch["label"])
+    label_tensor = torch.tensor(batch["label"], device=device)
 
     # Get network predictions.
     all_activity_pred = all_activity(
@@ -296,15 +303,19 @@ for step, batch in enumerate(test_dataset):
 
     # Compute network accuracy according to available classification strategies.
     accuracy["all"] += float(torch.sum(label_tensor.long() == all_activity_pred).item())
-    accuracy["proportion"] += float(torch.sum(label_tensor.long() == proportion_pred).item())
+    accuracy["proportion"] += float(
+        torch.sum(label_tensor.long() == proportion_pred).item()
+    )
 
     network.reset_state_variables()  # Reset state variables.
 
-    pbar.set_description_str(f"Accuracy: {(max(accuracy['all'] ,accuracy['proportion'] ) / (step+1)):.3}")
+    pbar.set_description_str(
+        f"Accuracy: {(max(accuracy['all'] ,accuracy['proportion'] ) / (step+1)):.3}"
+    )
     pbar.update()
 
-print("\nAll activity accuracy: %.2f" % (accuracy["all"] / test_dataset.test_labels.shape[0]))
-print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / test_dataset.test_labels.shape[0]))
+print("\nAll activity accuracy: %.2f" % (accuracy["all"] / n_test))
+print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_test))
 
 
 print("Testing complete.\n")

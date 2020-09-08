@@ -197,7 +197,7 @@ class Network(torch.nn.Module):
         # language=rst
         """
         Returns a cloned network object.
-        
+
         :return: A copy of this network.
         """
         virtual_file = tempfile.SpooledTemporaryFile()
@@ -368,9 +368,9 @@ class Network(torch.nn.Module):
                 unclamp = unclamps.get(l, None)
                 if unclamp is not None:
                     if unclamp.ndimension() == 1:
-                        self.layers[l].s[unclamp] = 0
+                        self.layers[l].s[:, unclamp] = 0
                     else:
-                        self.layers[l].s[unclamp[t]] = 0
+                        self.layers[l].s[:, unclamp[t]] = 0
 
                 # Inject voltage to neurons.
                 inject_v = injects_v.get(l, None)

@@ -62,16 +62,16 @@ torch.cuda.manual_seed_all(seed)
 torch.manual_seed(seed)
 
 # Sets up Gpu use
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if gpu and torch.cuda.is_available():
-    device = "cuda"
-    torch.cuda.set_device(device)
-    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.cuda.manual_seed_all(seed)
 else:
     torch.manual_seed(seed)
     device = "cpu"
     if gpu:
         gpu = False
-
+torch.set_num_threads(os.cpu_count() - 1)
+print("Running on Device = ", device)
 
 network = Network(dt=dt)
 inpt = Input(784, shape=(1, 28, 28))
