@@ -22,7 +22,7 @@ class NullEncoder(Encoder):
     # language=rst
     """
     Pass through of the datum that was input.
-    
+
     .. note::
         This is not a real spike encoder. Be careful with the usage of this class.
     """
