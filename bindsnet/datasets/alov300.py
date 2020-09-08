@@ -28,7 +28,7 @@ class ALOV300(Dataset):
     def __init__(self, root, transform, input_size, download=False):
         """
         Class to read the ALOV dataset
-        
+
         :param root: Path to the ALOV folder that contains JPEGImages, Annotations, etc. folders.
         :param input_size: The input size of network that is using this data, for rescaling
         :param download: Specify whether to download the dataset if it is not present
@@ -247,7 +247,7 @@ class ALOV300(Dataset):
         """
         Downloads the correct dataset based on the given parameters
 
-        Relies on self.tag to determine both the name of the folder created for the dataset and for the finding the correct download url. 
+        Relies on self.tag to determine both the name of the folder created for the dataset and for the finding the correct download url.
         """
 
         os.makedirs(self.root)

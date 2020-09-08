@@ -10,7 +10,7 @@ def plot_weights_movie(ws: np.ndarray, sample_every: int = 1) -> None:
     # language=rst
     """
     Create and plot movie of weights.
-    
+
     :param ws: Array of shape ``[n_examples, source, target, time]``.
     :param sample_every: Sub-sample using this parameter.
     """

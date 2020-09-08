@@ -1,3 +1,4 @@
+import os
 import torch
 import argparse
 import matplotlib.pyplot as plt
@@ -26,6 +27,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
+parser.add_argument("--n_train", type=int, default=60000)
 parser.add_argument("--kernel_size", type=int, default=16)
 parser.add_argument("--stride", type=int, default=4)
 parser.add_argument("--n_filters", type=int, default=25)
@@ -46,6 +48,7 @@ args = parser.parse_args()
 seed = args.seed
 n_epochs = args.n_epochs
 n_test = args.n_test
+n_train = args.n_train
 kernel_size = args.kernel_size
 stride = args.stride
 n_filters = args.n_filters
@@ -59,10 +62,17 @@ train = args.train
 plot = args.plot
 gpu = args.gpu
 
-if gpu:
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if gpu and torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
 else:
     torch.manual_seed(seed)
+    device = "cpu"
+    if gpu:
+        gpu = False
+
+torch.set_num_threads(os.cpu_count() - 1)
+print("Running on Device = ", device)
 
 if not train:
     update_interval = n_test
@@ -159,7 +169,8 @@ for epoch in range(n_epochs):
 
     for step, batch in enumerate(tqdm(train_dataloader)):
         # Get next input sample.
-
+        if step > n_train:
+            break
         inputs = {"X": batch["encoded_image"].view(time, 1, 1, 28, 28)}
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}

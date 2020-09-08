@@ -450,7 +450,7 @@ def plot_assignments(
 
             if classes is None:
                 cbar = plt.colorbar(im, cax=cax, ticks=list(range(-1, 11)))
-                cbar.ax.set_yticklabels(["none"] + list(range(10)))
+                cbar.ax.set_yticklabels(["none"] + list(range(11)))
             else:
                 cbar = plt.colorbar(im, cax=cax, ticks=np.arange(-1, len(classes)))
                 cbar.ax.set_yticklabels(["none"] + list(classes))
