@@ -566,8 +566,12 @@ class MSTDP(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(kwargs.get("a_plus", 1.0))
-        a_minus = torch.tensor(kwargs.get("a_minus", -1.0))
+        a_plus = torch.tensor(
+            kwargs.get("a_plus", 1.0), device=self.connection.w.device
+        )
+        a_minus = torch.tensor(
+            kwargs.get("a_minus", -1.0), device=self.connection.w.device
+        )
 
         # Compute weight update based on the eligibility value of the past timestep.
         update = reward * self.eligibility
@@ -603,12 +607,18 @@ class MSTDP(LearningRule):
 
         # Initialize eligibility.
         if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(batch_size, *self.connection.w.shape)
+            self.eligibility = torch.zeros(
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
+            )
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(kwargs.get("a_plus", 1.0))
-        a_minus = torch.tensor(kwargs.get("a_minus", -1.0))
+        a_plus = torch.tensor(
+            kwargs.get("a_plus", 1.0), device=self.connection.w.device
+        )
+        a_minus = torch.tensor(
+            kwargs.get("a_minus", -1.0), device=self.connection.w.device
+        )
 
         batch_size = self.source.batch_size
 
@@ -621,12 +631,16 @@ class MSTDP(LearningRule):
 
         # Initialize P^+ and P^-.
         if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(batch_size, *self.source.shape)
+            self.p_plus = torch.zeros(
+                batch_size, *self.source.shape, device=self.connection.w.device
+            )
             self.p_plus = im2col_indices(
                 self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
             )
         if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(batch_size, *self.target.shape)
+            self.p_minus = torch.zeros(
+                batch_size, *self.target.shape, device=self.connection.w.device
+            )
             self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
 
         # Reshaping spike occurrences.
@@ -723,13 +737,17 @@ class MSTDPET(LearningRule):
         """
         # Initialize eligibility, eligibility trace, P^+, and P^-.
         if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(self.source.n)
+            self.p_plus = torch.zeros((self.source.n), device=self.source.s.device)
         if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(self.target.n)
+            self.p_minus = torch.zeros((self.target.n), device=self.target.s.device)
         if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(*self.connection.w.shape)
+            self.eligibility = torch.zeros(
+                *self.connection.w.shape, device=self.connection.w.device
+            )
         if not hasattr(self, "eligibility_trace"):
-            self.eligibility_trace = torch.zeros(*self.connection.w.shape)
+            self.eligibility_trace = torch.zeros(
+                *self.connection.w.shape, device=self.connection.w.device
+            )
 
         # Reshape pre- and post-synaptic spikes.
         source_s = self.source.s.view(-1).float()
@@ -737,8 +755,12 @@ class MSTDPET(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(kwargs.get("a_plus", 1.0))
-        a_minus = torch.tensor(kwargs.get("a_minus", -1.0))
+        a_plus = torch.tensor(
+            kwargs.get("a_plus", 1.0), device=self.connection.w.device
+        )
+        a_minus = torch.tensor(
+            kwargs.get("a_minus", -1.0), device=self.connection.w.device
+        )
 
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
@@ -780,14 +802,22 @@ class MSTDPET(LearningRule):
 
         # Initialize eligibility and eligibility trace.
         if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(batch_size, *self.connection.w.shape)
+            self.eligibility = torch.zeros(
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
+            )
         if not hasattr(self, "eligibility_trace"):
-            self.eligibility_trace = torch.zeros(batch_size, *self.connection.w.shape)
+            self.eligibility_trace = torch.zeros(
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
+            )
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(kwargs.get("a_plus", 1.0))
-        a_minus = torch.tensor(kwargs.get("a_minus", -1.0))
+        a_plus = torch.tensor(
+            kwargs.get("a_plus", 1.0), device=self.connection.w.device
+        )
+        a_minus = torch.tensor(
+            kwargs.get("a_minus", -1.0), device=self.connection.w.device
+        )
 
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
@@ -802,12 +832,16 @@ class MSTDPET(LearningRule):
 
         # Initialize P^+ and P^-.
         if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(batch_size, *self.source.shape)
+            self.p_plus = torch.zeros(
+                batch_size, *self.source.shape, device=self.connection.w.device
+            )
             self.p_plus = im2col_indices(
                 self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
             )
         if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(batch_size, *self.target.shape)
+            self.p_minus = torch.zeros(
+                batch_size, *self.target.shape, device=self.connection.w.device
+            )
             self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
 
         # Reshaping spike occurrences.
@@ -913,7 +947,9 @@ class Rmax(LearningRule):
         """
         # Initialize eligibility trace.
         if not hasattr(self, "eligibility_trace"):
-            self.eligibility_trace = torch.zeros(*self.connection.w.shape)
+            self.eligibility_trace = torch.zeros(
+                *self.connection.w.shape, device=self.connection.w.device
+            )
 
         # Reshape variables.
         target_s = self.target.s.view(-1).float()
