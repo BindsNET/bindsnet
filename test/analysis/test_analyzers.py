@@ -1,9 +1,6 @@
 import torch
 
-from bindsnet.analysis.pipeline_analysis import (
-    TensorboardAnalyzer,
-    MatplotlibAnalyzer,
-)
+from bindsnet.analysis.pipeline_analysis import TensorboardAnalyzer, MatplotlibAnalyzer
 
 import matplotlib.pyplot as plt
 import os
@@ -43,13 +40,13 @@ class TestAnalyzer:
             analyzer.plot_reward(rewards)
 
             # Monitors have time as last dimension
-            v = torch.rand(1, 1, 28, 28, 50)
+            v = torch.rand(50, 1, 1, 28, 28)
             voltage_dict = {"X": v}
             threshold_dict = {"X": torch.tensor(0.75)}
             analyzer.plot_voltages(voltage_dict, threshold_dict)
 
             # The monitors have time as last dimension
-            spikes = torch.rand(1, 1, 28, 28, 50) > 0.5
+            spikes = torch.rand(50, 1, 1, 28, 28) > 0.5
             spike_dict = {"X": spikes}
             analyzer.plot_spikes(spike_dict)
 

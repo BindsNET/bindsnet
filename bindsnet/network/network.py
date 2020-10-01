@@ -386,6 +386,9 @@ class Network(torch.nn.Module):
                     mask=masks.get(c, None), learning=self.learning, **kwargs
                 )
 
+            # Get input to all layers.
+            current_inputs.update(self._get_inputs())
+
             # Record state variables of interest.
             for m in self.monitors:
                 self.monitors[m].record()

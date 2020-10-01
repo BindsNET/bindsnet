@@ -20,7 +20,7 @@ class TestNodes:
     def test_init(self):
         network = Network()
         for i, nodes in enumerate(
-            [Input, McCullochPitts, IFNodes, LIFNodes, AdaptiveLIFNodes, SRM0Nodes,]
+            [Input, McCullochPitts, IFNodes, LIFNodes, AdaptiveLIFNodes, SRM0Nodes]
         ):
             for n in [1, 100, 10000]:
                 layer = nodes(n)
@@ -47,7 +47,7 @@ class TestNodes:
         for nodes in [LIFNodes, AdaptiveLIFNodes]:
             for n in [1, 100, 10000]:
                 layer = nodes(
-                    n, rest=0.0, reset=-10.0, thresh=10.0, refrac=3, tc_decay=1.5e3,
+                    n, rest=0.0, reset=-10.0, thresh=10.0, refrac=3, tc_decay=1.5e3
                 )
                 network.add_layer(layer=layer, name=f"{i}_params_{n}")
 

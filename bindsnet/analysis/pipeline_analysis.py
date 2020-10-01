@@ -256,7 +256,7 @@ class MatplotlibAnalyzer(PipelineAnalyzer):
         """
         if tag not in self.plots:
             self.plots[tag] = plot_voltages(
-                voltage_record, plot_type=self.volts_type, thresholds=thresholds,
+                voltage_record, plot_type=self.volts_type, thresholds=thresholds
             )
         else:
             v_im, v_ax = self.plots[tag]

@@ -103,7 +103,10 @@ class SpokenMNIST(torch.utils.data.Dataset):
                 # Serialize image data on disk for next time.
                 torch.save((audio, labels), open(path, "wb"))
             else:
-                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
+                msg = (
+                    "Dataset not found on disk; specify 'download=True' to allow"
+                    " downloads."
+                )
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -121,10 +124,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
 
         if self.shuffle:
             perm = np.random.permutation(np.arange(labels.shape[0]))
-            audio, labels = (
-                [torch.Tensor(audio[_]) for _ in perm],
-                labels[perm],
-            )
+            audio, labels = [torch.Tensor(audio[_]) for _ in perm], labels[perm]
 
         return audio, torch.Tensor(labels)
 
@@ -151,7 +151,10 @@ class SpokenMNIST(torch.utils.data.Dataset):
                 # Serialize image data on disk for next time.
                 torch.save((audio, labels), open(path, "wb"))
             else:
-                msg = "Dataset not found on disk; specify 'download=True' to allow downloads."
+                msg = (
+                    "Dataset not found on disk; specify 'download=True' to allow"
+                    " downloads."
+                )
                 raise FileNotFoundError(msg)
         else:
             if not os.path.isdir(path):
@@ -239,8 +242,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
             indices = (
                 np.tile(np.arange(0, frame_length), (num_frames, 1))
                 + np.tile(
-                    np.arange(0, num_frames * frame_step, frame_step),
-                    (frame_length, 1),
+                    np.arange(0, num_frames * frame_step, frame_step), (frame_length, 1)
                 ).T
             )
             frames = pad_signal[indices.astype(np.int32, copy=False)]

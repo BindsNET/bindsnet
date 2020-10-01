@@ -177,7 +177,7 @@ class Davis(torch.utils.data.Dataset):
                 im.thumbnail(self.size, Image.ANTIALIAS)
                 im.save(
                     os.path.join(
-                        self.converted_img_path, seq, str(ind).zfill(5) + ".jpg",
+                        self.converted_img_path, seq, str(ind).zfill(5) + ".jpg"
                     )
                 )
             masks = np.sort(glob(os.path.join(self.mask_path, seq, "*.png"))).tolist()
@@ -186,7 +186,7 @@ class Davis(torch.utils.data.Dataset):
                 im.thumbnail(self.size, Image.ANTIALIAS)
                 im.convert("RGB").save(
                     os.path.join(
-                        self.converted_mask_path, seq, str(ind).zfill(5) + ".png",
+                        self.converted_mask_path, seq, str(ind).zfill(5) + ".png"
                     )
                 )
 
@@ -204,7 +204,7 @@ class Davis(torch.utils.data.Dataset):
                 self._download()
             else:
                 raise FileNotFoundError(
-                    f"DAVIS not found in the specified directory, download it from "
+                    "DAVIS not found in the specified directory, download it from "
                     f"{self.DATASET_WEB} or add download=True to your call"
                 )
         if not os.path.exists(os.path.join(self.imagesets_path, f"{self.subset}.txt")):
@@ -226,7 +226,7 @@ class Davis(torch.utils.data.Dataset):
 
     def get_frames(self, sequence):
         for img, msk in zip(
-            self.sequences[sequence]["images"], self.sequences[sequence]["masks"],
+            self.sequences[sequence]["images"], self.sequences[sequence]["masks"]
         ):
             image = np.array(Image.open(img))
             mask = None if msk is None else np.array(Image.open(msk))

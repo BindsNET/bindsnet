@@ -34,7 +34,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250,
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
         )
 
         # Conv2dConnection test
@@ -75,7 +75,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250,
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
         )
 
         # Conv2dConnection test
@@ -117,7 +117,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250,
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
         )
 
         # Conv2dConnection test

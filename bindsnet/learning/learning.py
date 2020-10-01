@@ -56,9 +56,12 @@ class LearningRule(ABC):
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
-            reduction = torch.mean
-
-        self.reduction = reduction
+            if self.source.batch_size == 1:
+                self.reduction = torch.squeeze
+            else:
+                self.reduction = torch.sum
+        else:
+            self.reduction = reduction
 
         # Weight decay.
         self.weight_decay = weight_decay
@@ -204,7 +207,7 @@ class PostPre(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
-            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride,
+            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
@@ -332,7 +335,7 @@ class WeightDependentPostPre(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
-            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride,
+            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
@@ -454,7 +457,7 @@ class Hebbian(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = im2col_indices(
-            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride,
+            self.source.x, kernel_height, kernel_width, padding=padding, stride=stride
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = im2col_indices(
@@ -545,11 +548,17 @@ class MSTDP(LearningRule):
 
         # Initialize eligibility, P^+, and P^-.
         if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(batch_size, *self.source.shape)
+            self.p_plus = torch.zeros(
+                batch_size, *self.source.shape, device=self.source.s.device
+            )
         if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(batch_size, *self.target.shape)
+            self.p_minus = torch.zeros(
+                batch_size, *self.target.shape, device=self.target.s.device
+            )
         if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(batch_size, *self.connection.w.shape)
+            self.eligibility = torch.zeros(
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
+            )
 
         # Reshape pre- and post-synaptic spikes.
         source_s = self.source.s.view(batch_size, -1).float()
@@ -614,11 +623,7 @@ class MSTDP(LearningRule):
         if not hasattr(self, "p_plus"):
             self.p_plus = torch.zeros(batch_size, *self.source.shape)
             self.p_plus = im2col_indices(
-                self.p_plus,
-                kernel_height,
-                kernel_width,
-                padding=padding,
-                stride=stride,
+                self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
             )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(batch_size, *self.target.shape)
@@ -799,11 +804,7 @@ class MSTDPET(LearningRule):
         if not hasattr(self, "p_plus"):
             self.p_plus = torch.zeros(batch_size, *self.source.shape)
             self.p_plus = im2col_indices(
-                self.p_plus,
-                kernel_height,
-                kernel_width,
-                padding=padding,
-                stride=stride,
+                self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
             )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(batch_size, *self.target.shape)

@@ -67,23 +67,21 @@ class BasePipeline:
         # Handles plotting of all layer spikes and voltages.
         # This constructs monitors at every level.
         self.plot_config = kwargs.get(
-            "plot_config", {"data_step": None, "data_length": 10}
+            "plot_config", {"data_step": True, "data_length": 100}
         )
 
         if self.plot_config["data_step"] is not None:
             for l in self.network.layers:
                 self.network.add_monitor(
                     Monitor(
-                        self.network.layers[l], "s", self.plot_config["data_length"],
+                        self.network.layers[l], "s", self.plot_config["data_length"]
                     ),
                     name=f"{l}_spikes",
                 )
                 if hasattr(self.network.layers[l], "v"):
                     self.network.add_monitor(
                         Monitor(
-                            self.network.layers[l],
-                            "v",
-                            self.plot_config["data_length"],
+                            self.network.layers[l], "v", self.plot_config["data_length"]
                         ),
                         name=f"{l}_voltages",
                     )

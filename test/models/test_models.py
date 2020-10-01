@@ -63,9 +63,5 @@ class TestDiehlAndCook2015:
                                 and network.layers["Ae"].n == n_neurons
                             )
 
-                            for conn in [
-                                ("X", "Ae"),
-                                ("Ae", "Ai"),
-                                ("Ai", "Ae"),
-                            ]:
+                            for conn in [("X", "Ae"), ("Ae", "Ai"), ("Ai", "Ae")]:
                                 assert conn in network.connections
