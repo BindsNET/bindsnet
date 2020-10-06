@@ -146,12 +146,12 @@ for (i, dataPoint) in pbar:
             ims=inpt_ims,
         )
         spike_ims, spike_axes = plot_spikes(
-            {layer: spikes[layer].get("s").view(-1, time) for layer in spikes},
+            {layer: spikes[layer].get("s").view(time, -1) for layer in spikes},
             axes=spike_axes,
             ims=spike_ims,
         )
         voltage_ims, voltage_axes = plot_voltages(
-            {layer: voltages[layer].get("v").view(-1, time) for layer in voltages},
+            {layer: voltages[layer].get("v").view(time, -1) for layer in voltages},
             ims=voltage_ims,
             axes=voltage_axes,
         )
