@@ -354,7 +354,10 @@ class Network(torch.nn.Module):
                     # Get input to this layer (one-step mode).
                     current_inputs.update(self._get_inputs(layers=[l]))
 
-                self.layers[l].forward(x=current_inputs[l])
+                if l in current_inputs:
+                    self.layers[l].forward(x=current_inputs[l])
+                else:
+                    self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape))
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
