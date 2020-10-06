@@ -98,13 +98,13 @@ def plot_spikes(
     if time is None:
         # Set it for entire duration
         for key in spikes.keys():
-            time = (0, spikes[key].shape[1])
+            time = (0, spikes[key].shape[0])
             break
 
     # Use all neurons if no argument provided.
     for key, val in spikes.items():
         if key not in n_neurons.keys():
-            n_neurons[key] = (0, val.shape[0])
+            n_neurons[key] = (0, val.shape[1])
 
     if ims is None:
         fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
