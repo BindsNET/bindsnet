@@ -253,7 +253,7 @@ class ALOV300(Dataset):
         """
         Downloads the correct dataset based on the given parameters
 
-        Relies on self.tag to determine both the name of the folder created for the dataset and for the finding the correct download url. 
+        Relies on self.tag to determine both the name of the folder created for the dataset and for the finding the correct download url.
         """
 
         os.makedirs(self.root)

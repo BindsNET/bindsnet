@@ -408,7 +408,7 @@ class MaxPool2dConnection(AbstractConnection):
             decaying spike activation).
         """
         self.firing_rates -= self.decay * self.firing_rates
-        self.firing_rates += s.float()
+        self.firing_rates += s.float().squeeze()
 
         _, indices = F.max_pool2d(
             self.firing_rates,
@@ -443,6 +443,7 @@ class MaxPool2dConnection(AbstractConnection):
         super().reset_state_variables()
 
         self.firing_rates = torch.zeros(self.source.s.shape)
+
 
 
 class LocalConnection(AbstractConnection):

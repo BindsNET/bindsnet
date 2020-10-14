@@ -9,7 +9,7 @@ from torchvision import models
 
 from ..learning import PostPre
 from ..network import Network
-from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes
+from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes, AdaptiveLIFNodes
 from ..network.topology import Connection, LocalConnection
 
 
@@ -324,6 +324,7 @@ class IncreasingInhibitionNetwork(Network):
         norm: float = 78.4,
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
+        inpt_shape: Optional[Iterable[int]] = None,
     ) -> None:
         # language=rst
         """
@@ -345,6 +346,7 @@ class IncreasingInhibitionNetwork(Network):
             threshold potential.
         :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold
             potential decay.
+        :param inpt_shape: The dimensionality of the input layer.
         """
         super().__init__(dt=dt)
 
@@ -354,8 +356,11 @@ class IncreasingInhibitionNetwork(Network):
         self.start_inhib = start_inhib
         self.max_inhib = max_inhib
         self.dt = dt
+        self.inpt_shape = inpt_shape
 
-        input_layer = Input(n=self.n_input, traces=True, tc_trace=20.0)
+        input_layer = Input(
+            n=self.n_input, shape=self.inpt_shape, traces=True, tc_trace=20.0
+        )
         self.add_layer(input_layer, name="X")
 
         output_layer = DiehlAndCookNodes(
@@ -386,22 +391,23 @@ class IncreasingInhibitionNetwork(Network):
         )
         self.add_connection(input_output_conn, source="X", target="Y")
 
-        w = torch.zeros(self.n_neurons, self.n_neurons)
+        # add internal inhibetory connections
+        w = torch.ones(self.n_neurons, self.n_neurons) - torch.diag(
+            torch.ones(self.n_neurons)
+        )
         for i in range(self.n_neurons):
             for j in range(self.n_neurons):
                 if i != j:
                     x1, y1 = i // self.n_sqrt, i % self.n_sqrt
                     x2, y2 = j // self.n_sqrt, j % self.n_sqrt
 
-                    inhib = self.start_inhib * np.sqrt(euclidean([x1, y1], [x2, y2]))
-                    w[i, j] = -min(self.max_inhib, inhib)
-
+                    w[i, j] = np.sqrt(euclidean([x1, y1], [x2, y2]))
+        w = w / w.max()
+        w = (w * self.max_inhib) + self.start_inhib
         recurrent_output_conn = Connection(
             source=self.layers["Y"],
             target=self.layers["Y"],
             w=w,
-            wmin=-self.max_inhib,
-            wmax=0,
         )
         self.add_connection(recurrent_output_conn, source="Y", target="Y")
 

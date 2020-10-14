@@ -9,7 +9,7 @@ Issue:
 
 .. code-block:: bash
 
-        pip install -U bindsnet
+        pip install git+https://github.com/BindsNET/bindsnet.git
 
 
 Installing from source

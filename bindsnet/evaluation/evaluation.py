@@ -30,7 +30,7 @@ def assign_labels(
     n_neurons = spikes.size(2)
 
     if rates is None:
-        rates = torch.zeros(n_neurons, n_labels)
+        rates = torch.zeros((n_neurons, n_labels), device=spikes.device)
 
     # Sum over time dimension (spike ordering doesn't matter).
     spikes = spikes.sum(1)
@@ -112,7 +112,7 @@ def all_activity(
     # Sum over time dimension (spike ordering doesn't matter).
     spikes = spikes.sum(1)
 
-    rates = torch.zeros(n_samples, n_labels)
+    rates = torch.zeros((n_samples, n_labels), device=spikes.device)
     for i in range(n_labels):
         # Count the number of neurons with this label assignment.
         n_assigns = torch.sum(assignments == i).float()
@@ -153,7 +153,7 @@ def proportion_weighting(
     # Sum over time dimension (spike ordering doesn't matter).
     spikes = spikes.sum(1)
 
-    rates = torch.zeros(n_samples, n_labels)
+    rates = torch.zeros((n_samples, n_labels), device=spikes.device)
     for i in range(n_labels):
         # Count the number of neurons with this label assignment.
         n_assigns = torch.sum(assignments == i).float()
@@ -191,7 +191,7 @@ def ngram(
     """
     predictions = []
     for activity in spikes:
-        score = torch.zeros(n_labels)
+        score = torch.zeros(n_labels, device=spikes.device)
 
         # Aggregate all of the firing neurons' indices
         fire_order = []

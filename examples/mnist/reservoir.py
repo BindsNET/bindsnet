@@ -39,8 +39,7 @@ parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.add_argument("--device_id", type=int, default=0)
-parser.set_defaults(plot=True, gpu=True, train=True)
+parser.set_defaults(plot=True, gpu=False, train=True)
 
 args = parser.parse_args()
 
@@ -57,19 +56,22 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-device_id = args.device_id
 
 np.random.seed(seed)
 torch.cuda.manual_seed_all(seed)
 torch.manual_seed(seed)
 
 # Sets up Gpu use
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if gpu and torch.cuda.is_available():
-    torch.cuda.set_device(device_id)
-    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.cuda.manual_seed_all(seed)
 else:
     torch.manual_seed(seed)
-
+    device = "cpu"
+    if gpu:
+        gpu = False
+torch.set_num_threads(os.cpu_count() - 1)
+print("Running on Device = ", device)
 
 network = Network(dt=dt)
 inpt = Input(784, shape=(1, 28, 28))
@@ -127,7 +129,7 @@ pbar = tqdm(enumerate(dataloader))
 for (i, dataPoint) in pbar:
     if i > n_iters:
         break
-    datum = dataPoint["encoded_image"].view(time, 1, 1, 28, 28).to(device_id)
+    datum = dataPoint["encoded_image"].view(int(time / dt), 1, 1, 28, 28).to(device)
     label = dataPoint["label"]
     pbar.set_description_str("Train progress: (%d / %d)" % (i, n_iters))
 
@@ -138,18 +140,18 @@ for (i, dataPoint) in pbar:
 
         inpt_axes, inpt_ims = plot_input(
             dataPoint["image"].view(28, 28),
-            datum.view(time, 784).sum(0).view(28, 28),
+            datum.view(int(time / dt), 784).sum(0).view(28, 28),
             label=label,
             axes=inpt_axes,
             ims=inpt_ims,
         )
         spike_ims, spike_axes = plot_spikes(
-            {layer: spikes[layer].get("s").view(-1, time) for layer in spikes},
+            {layer: spikes[layer].get("s").view(time, -1) for layer in spikes},
             axes=spike_axes,
             ims=spike_ims,
         )
         voltage_ims, voltage_axes = plot_voltages(
-            {layer: voltages[layer].get("v").view(-1, time) for layer in voltages},
+            {layer: voltages[layer].get("v").view(time, -1) for layer in voltages},
             ims=voltage_ims,
             axes=voltage_axes,
         )
@@ -178,7 +180,7 @@ class NN(nn.Module):
 
 
 # Create and train logistic regression model on reservoir outputs.
-model = NN(n_neurons, 10).to(device_id)
+model = NN(n_neurons, 10).to(device)
 criterion = torch.nn.MSELoss(reduction="sum")
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
 
@@ -191,7 +193,7 @@ for epoch, _ in pbar:
         # Forward + Backward + Optimize
         optimizer.zero_grad()
         outputs = model(s)
-        label = torch.zeros(1, 1, 10).float().to(device_id)
+        label = torch.zeros(1, 1, 10).float().to(device)
         label[0, 0, l] = 1.0
         loss = criterion(outputs.view(1, 1, -1), label)
         avg_loss += loss.data
@@ -209,7 +211,7 @@ pbar = tqdm(enumerate(dataloader))
 for (i, dataPoint) in pbar:
     if i > n_iters:
         break
-    datum = dataPoint["encoded_image"].view(time, 1, 1, 28, 28).to(device_id)
+    datum = dataPoint["encoded_image"].view(time, 1, 1, 28, 28).to(device)
     label = dataPoint["label"]
     pbar.set_description_str("Testing progress: (%d / %d)" % (i, n_iters))
 
@@ -248,7 +250,7 @@ for s, label in test_pairs:
     outputs = model(s)
     _, predicted = torch.max(outputs.data.unsqueeze(0), 1)
     total += 1
-    correct += int(predicted == label.long().to(device_id))
+    correct += int(predicted == label.long().to(device))
 
 print(
     "\n Accuracy of the model on %d test images: %.2f %%"
