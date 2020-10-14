@@ -489,7 +489,7 @@ def plot_performance(
 
         for scheme in performances:
             ax.plot(
-                range(len(performances[scheme])),
+                [n * x_scale for n in range(len(performances[scheme]))],
                 [p for p in performances[scheme]],
                 label=scheme,
             )
@@ -498,7 +498,6 @@ def plot_performance(
         ax.set_title("Estimated classification accuracy")
         ax.set_xlabel("No. of examples")
         ax.set_ylabel("Accuracy")
-        ax.set_xticks(())
         ax.set_yticks(range(0, 110, 10))
         ax.legend()
 
