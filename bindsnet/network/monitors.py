@@ -54,16 +54,15 @@ class Monitor(AbstractMonitor):
         Return recording to user.
 
         :param var: State variable recording to return.
-        :return: Tensor of shape ``[time, n_1, ..., n_k]``, where
-            ``[n_1, ..., n_k]`` is the shape of the recorded state variable.
+        :return: Tensor of shape ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is
+            the shape of the recorded state variable.
         """
         return torch.cat(self.recording[var], 0)
 
     def record(self) -> None:
         # language=rst
         """
-        Appends the current value of the recorded state variables to the
-        recording.
+        Appends the current value of the recorded state variables to the recording.
         """
         for v in self.state_vars:
             data = getattr(self.obj, v).unsqueeze(0)
@@ -104,10 +103,9 @@ class NetworkMonitor(AbstractMonitor):
         :param network: Network to record state variables from.
         :param layers: Layers to record state variables from.
         :param connections: Connections to record state variables from.
-        :param state_vars: List of strings indicating names of state variables
-            to record.
-        :param time: If not ``None``, pre-allocate memory for state variable
-            recording.
+        :param state_vars: List of strings indicating names of state variables to
+            record.
+        :param time: If not ``None``, pre-allocate memory for state variable recording.
         """
         super().__init__()
 
@@ -138,8 +136,7 @@ class NetworkMonitor(AbstractMonitor):
                     if hasattr(self.network.connections[c], v):
                         self.recording[c][v] = torch.Tensor()
 
-        # If simulation time is specified,
-        # pre-allocate recordings in memory for speed.
+        # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
             for v in self.state_vars:
                 for l in self.layers:
@@ -159,16 +156,15 @@ class NetworkMonitor(AbstractMonitor):
         """
         Return entire recording to user.
 
-        :return: Dictionary of dictionary of all layers' and connections'
-            recorded state variables.
+        :return: Dictionary of dictionary of all layers' and connections' recorded
+            state variables.
         """
         return self.recording
 
     def record(self) -> None:
         # language=rst
         """
-        Appends the current value of the recorded state variables to the
-        recording.
+        Appends the current value of the recorded state variables to the recording.
         """
         if self.time is None:
             for v in self.state_vars:
@@ -192,14 +188,14 @@ class NetworkMonitor(AbstractMonitor):
                     if hasattr(self.network.layers[l], v):
                         data = getattr(self.network.layers[l], v).float().unsqueeze(0)
                         self.recording[l][v] = torch.cat(
-                            (self.recording[l][v][1:].type(data.type()), data), 0,
+                            (self.recording[l][v][1:].type(data.type()), data), 0
                         )
 
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
                         data = getattr(self.network.connections[c], v).unsqueeze(0)
                         self.recording[c][v] = torch.cat(
-                            (self.recording[c][v][1:].type(data.type()), data), 0,
+                            (self.recording[c][v][1:].type(data.type()), data), 0
                         )
 
             self.i += 1
@@ -210,8 +206,7 @@ class NetworkMonitor(AbstractMonitor):
         Write the recording dictionary out to file.
 
         :param path: The directory to which to write the monitor's recording.
-        :param fmt: Type of file to write to disk. One of ``"pickle"`` or
-            ``"npz"``.
+        :param fmt: Type of file to write to disk. One of ``"pickle"`` or ``"npz"``.
         """
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
@@ -263,8 +258,7 @@ class NetworkMonitor(AbstractMonitor):
                     if hasattr(self.network.connections[c], v):
                         self.recording[c][v] = torch.Tensor()
 
-        # If simulation time is specified,
-        # pre-allocate recordings in memory for speed.
+        # If simulation time is specified, pre-allocate recordings in memory for speed.
         else:
             for v in self.state_vars:
                 for l in self.layers:
