@@ -28,6 +28,7 @@ class Monitor(AbstractMonitor):
         state_vars: Iterable[str],
         time: Optional[int] = None,
         batch_size: int = 1,
+        device: str = "cpu",
     ):
         # language=rst
         """
@@ -37,6 +38,7 @@ class Monitor(AbstractMonitor):
         :param state_vars: Iterable of strings indicating names of state variables to
             record.
         :param time: If not ``None``, pre-allocate memory for state variable recording.
+        :param device: Allow the monitor to be on different device separate from Network device
         """
         super().__init__()
 
@@ -44,6 +46,7 @@ class Monitor(AbstractMonitor):
         self.state_vars = state_vars
         self.time = time
         self.batch_size = batch_size
+        self.device = device
 
         # Deal with time later, the same underlying list is used
         self.recording = {v: [] for v in self.state_vars}
@@ -66,13 +69,15 @@ class Monitor(AbstractMonitor):
         """
         for v in self.state_vars:
             data = getattr(self.obj, v).unsqueeze(0)
-            self.recording[v].append(data.detach().clone())
-
-        # remove the oldest element (first in the list)
-        if self.time is not None:
-            for v in self.state_vars:
-                if len(self.recording[v]) > self.time:
-                    self.recording[v].pop(0)
+            # self.recording[v].append(data.detach().clone())
+            self.recording[v].append(
+                torch.empty_like(data, device=self.device, requires_grad=False).copy_(
+                    data, non_blocking=True
+                )
+            )
+            # remove the oldest element (first in the list)
+            if self.time is not None and len(self.recording[v]) > self.time:
+                self.recording[v].pop(0)
 
     def reset_state_variables(self) -> None:
         # language=rst

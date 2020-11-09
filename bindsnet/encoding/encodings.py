@@ -135,7 +135,7 @@ def poisson(
     times[times >= time + 1] = 0
 
     # Create tensor of spikes.
-    spikes = torch.zeros(time + 1, size, device=device).byte()
+    spikes = torch.zeros([time + 1, size], device=device, dtype=torch.bool)
     spikes[times, torch.arange(size)] = 1
     spikes = spikes[1:]
 
