@@ -175,8 +175,8 @@ class Connection(AbstractConnection):
                  decaying spike activation).
         """
         # Compute multiplication of spike activations by weights and add bias.
-        post = s.float().view(s.size(0), -1) @ self.w + self.b
-        return post.view(s.size(0), *self.target.shape)
+        post = s.float().view(s.shape[0], -1) @ self.w + self.b
+        return post.view(s.shape[0], *self.target.shape)
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -342,10 +342,10 @@ class Conv2dConnection(AbstractConnection):
         if self.norm is not None:
             # get a view and modify in place
             w = self.w.view(
-                self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3)
+                self.w.shape[0] * self.w.shape[1], self.w.shape[2] * self.w.shape[3]
             )
 
-            for fltr in range(w.size(0)):
+            for fltr in range(w.shape[0]):
                 w[fltr] *= self.norm / w[fltr].sum(0)
 
     def reset_state_variables(self) -> None:
@@ -581,10 +581,10 @@ class LocalConnection(AbstractConnection):
         """
         # Compute multiplication of pre-activations by connection weights.
         if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
-            return s.float().view(s.size(0), -1) @ self.w + self.b
+            return s.float().view(s.shape[0], -1) @ self.w + self.b
         else:
             a_post = (
-                s.float().view(s.size(0), -1)
+                s.float().view(s.shape[0], -1)
                 @ self.w.view(self.source.n, self.target.n)
                 + self.b
             )
