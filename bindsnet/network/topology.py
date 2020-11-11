@@ -160,7 +160,7 @@ class Connection(AbstractConnection):
                 w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
-                w = torch.clamp(w, self.wmin, self.wmax)
+                w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(kwargs.get("b", torch.zeros(target.n)), requires_grad=False)
