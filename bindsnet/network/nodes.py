@@ -418,7 +418,7 @@ class LIFNodes(Nodes):
     # language=rst
     """
     Layer of `leaky integrate-and-fire (LIF) neurons
-    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02311000000000000000>`_.
+    <http://web.archive.org/web/20190318204706/http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02311000000000000000>`_.
     """
 
     def __init__(
@@ -562,7 +562,7 @@ class CurrentLIFNodes(Nodes):
     # language=rst
     """
     Layer of `current-based leaky integrate-and-fire (LIF) neurons
-    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02313000000000000000>`_.
+    <http://web.archive.org/web/20190318204706/http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02313000000000000000>`_.
     Total synaptic input current is modeled as a decaying memory of input spikes multiplied by synaptic strengths.
     """
 
@@ -1027,7 +1027,7 @@ class DiehlAndCookNodes(Nodes):
 class IzhikevichNodes(Nodes):
     # language=rst
     """
-    Layer of Izhikevich neurons.
+    Layer of `Izhikevich neurons<https://www.izhikevich.org/publications/spikes.htm>`_.
     """
 
     def __init__(
