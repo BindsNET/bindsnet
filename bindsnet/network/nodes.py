@@ -139,7 +139,7 @@ class Nodes(torch.nn.Module):
         :param batch_size: Mini-batch size.
         """
         self.batch_size = batch_size
-        self.s = torch.zeros(batch_size, *self.shape, device=self.s.device)
+        self.s = torch.zeros(batch_size, *self.shape, device=self.s.device, dtype=torch.bool)
 
         if self.traces:
             self.x = torch.zeros(batch_size, *self.shape, device=self.x.device)
