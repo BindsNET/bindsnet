@@ -308,6 +308,10 @@ class Network(torch.nn.Module):
         # Dynamic setting of batch size.
         if inputs != {}:
             for key in inputs:
+                # convert input spikes to bool if necessary
+                if inputs[key].dtype is not torch.bool:
+                    inputs[key] = torch.gt(inputs[key], 0)
+
                 # goal shape is [time, batch, n_0, ...]
                 if len(inputs[key].size()) == 1:
                     # current shape is [n_0, ...]
