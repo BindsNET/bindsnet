@@ -142,6 +142,32 @@ def poisson(
     return spikes.view(time, *shape)
 
 
+def boosted_poisson(
+    datum: torch.Tensor, time: int, dt: float = 1.0, device="cpu", **kwargs
+) -> torch.Tensor:
+    # language=rst
+    """
+    Generates a fast approximation of Poisson-distributed spike trains based on
+    input intensity. Inputs must be non-negative, and give the firing rate in Hz.
+
+    :param datum: Tensor of shape ``[n_1, ..., n_k]``.
+    :param time: Length of Poisson spike train per input variable.
+    :param dt: Simulation time step.
+    :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
+    """
+    assert (datum >= 0).all(), "Inputs must be non-negative"
+
+    # Get shape and size of data.
+    shape, size = datum.shape, datum.numel()
+    datum = datum.flatten()
+    time = int(time / dt)
+
+    x = torch.randn((time, size), device=device).abs()
+    x = torch.pow(x, (datum * 0.11 + 5) / 50)
+    y = torch.tensor(x < 0.6, dtype=torch.bool, device=device)
+    return y.view(time, *shape).byte()
+
+
 def rank_order(
     datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs
 ) -> torch.Tensor:
