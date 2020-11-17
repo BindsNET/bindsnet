@@ -98,7 +98,12 @@ def bernoulli(
 
 
 def poisson(
-    datum: torch.Tensor, time: int, dt: float = 1.0, device="cpu", **kwargs
+    datum: torch.Tensor,
+    time: int,
+    dt: float = 1.0,
+    device="cpu",
+    approx=False,
+    **kwargs
 ) -> torch.Tensor:
     # language=rst
     """
@@ -110,6 +115,8 @@ def poisson(
     :param datum: Tensor of shape ``[n_1, ..., n_k]``.
     :param time: Length of Poisson spike train per input variable.
     :param dt: Simulation time step.
+    :param device: target destination of poisson spikes.
+    :param approx: Bool: use alternate faster, less accurate computation.
     :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
     """
     assert (datum >= 0).all(), "Inputs must be non-negative"
@@ -119,53 +126,35 @@ def poisson(
     datum = datum.flatten()
     time = int(time / dt)
 
-    # Compute firing rates in seconds as function of data intensity,
-    # accounting for simulation time step.
-    rate = torch.zeros(size, device=device)
-    rate[datum != 0] = 1 / datum[datum != 0] * (1000 / dt)
+    if approx:
+        # random normal power awful approximation
+        x = torch.randn((time, size), device=device).abs()
+        x = torch.pow(x, (datum * 0.11 + 5) / 50)
+        y = torch.tensor(x < 0.6, dtype=torch.bool, device=device)
 
-    # Create Poisson distribution and sample inter-spike intervals
-    # (incrementing by 1 to avoid zero intervals).
-    dist = torch.distributions.Poisson(rate=rate)
-    intervals = dist.sample(sample_shape=torch.Size([time + 1]))
-    intervals[:, datum != 0] += (intervals[:, datum != 0] == 0).float()
+        return y.view(time, *shape).byte()
+    else:
+        # Compute firing rates in seconds as function of data intensity,
+        # accounting for simulation time step.
+        rate = torch.zeros(size, device=device)
+        rate[datum != 0] = 1 / datum[datum != 0] * (1000 / dt)
 
-    # Calculate spike times by cumulatively summing over time dimension.
-    times = torch.cumsum(intervals, dim=0).long()
-    times[times >= time + 1] = 0
+        # Create Poisson distribution and sample inter-spike intervals
+        # (incrementing by 1 to avoid zero intervals).
+        dist = torch.distributions.Poisson(rate=rate)
+        intervals = dist.sample(sample_shape=torch.Size([time + 1]))
+        intervals[:, datum != 0] += (intervals[:, datum != 0] == 0).float()
 
-    # Create tensor of spikes.
-    spikes = torch.zeros(time + 1, size, device=device).byte()
-    spikes[times, torch.arange(size)] = 1
-    spikes = spikes[1:]
+        # Calculate spike times by cumulatively summing over time dimension.
+        times = torch.cumsum(intervals, dim=0).long()
+        times[times >= time + 1] = 0
 
-    return spikes.view(time, *shape)
+        # Create tensor of spikes.
+        spikes = torch.zeros(time + 1, size, device=device).byte()
+        spikes[times, torch.arange(size)] = 1
+        spikes = spikes[1:]
 
-
-def boosted_poisson(
-    datum: torch.Tensor, time: int, dt: float = 1.0, device="cpu", **kwargs
-) -> torch.Tensor:
-    # language=rst
-    """
-    Generates a fast approximation of Poisson-distributed spike trains based on
-    input intensity. Inputs must be non-negative, and give the firing rate in Hz.
-
-    :param datum: Tensor of shape ``[n_1, ..., n_k]``.
-    :param time: Length of Poisson spike train per input variable.
-    :param dt: Simulation time step.
-    :return: Tensor of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
-    """
-    assert (datum >= 0).all(), "Inputs must be non-negative"
-
-    # Get shape and size of data.
-    shape, size = datum.shape, datum.numel()
-    datum = datum.flatten()
-    time = int(time / dt)
-
-    x = torch.randn((time, size), device=device).abs()
-    x = torch.pow(x, (datum * 0.11 + 5) / 50)
-    y = torch.tensor(x < 0.6, dtype=torch.bool, device=device)
-    return y.view(time, *shape).byte()
+        return spikes.view(time, *shape)
 
 
 def rank_order(

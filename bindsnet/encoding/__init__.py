@@ -7,6 +7,5 @@ from .encoders import (
     RepeatEncoder,
     BernoulliEncoder,
     PoissonEncoder,
-    BoostedPoissonEncoder,
     RankOrderEncoder,
 )
