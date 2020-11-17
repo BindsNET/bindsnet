@@ -560,7 +560,7 @@ class LIFNodes(Nodes):
         self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
-class BoostedLIFNodes(LIFNodes):
+class BoostedLIFNodes(Nodes):
     # Same as LIFNodes, faster: no rest, no reset, no lbound
     def __init__(
         self,
@@ -571,7 +571,7 @@ class BoostedLIFNodes(LIFNodes):
         tc_trace: Union[float, torch.Tensor] = 20.0,
         trace_scale: Union[float, torch.Tensor] = 1.0,
         sum_input: bool = False,
-        thresh: Union[float, torch.Tensor] = -52.0,
+        thresh: Union[float, torch.Tensor] = 13.0,
         refrac: Union[int, torch.Tensor] = 5,
         tc_decay: Union[float, torch.Tensor] = 100.0,
         **kwargs,
@@ -619,8 +619,6 @@ class BoostedLIFNodes(LIFNodes):
             "refrac_count", torch.tensor(0)
         )  # Refractory period counters.
 
-        self.thresh -= self.rest
-
     def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
@@ -647,6 +645,38 @@ class BoostedLIFNodes(LIFNodes):
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, 0)
+
+        super().forward(x)
+
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Resets relevant state variables.
+        """
+        super().reset_state_variables()
+        self.v.fill_(0)  # Neuron voltages.
+        self.refrac_count.zero_()  # Refractory period counters.
+
+    def compute_decays(self, dt) -> None:
+        # language=rst
+        """
+        Sets the relevant decays.
+        """
+        super().compute_decays(dt=dt)
+        self.decay = torch.exp(
+            -self.dt / self.tc_decay
+        )  # Neuron voltage decay (per timestep).
+
+    def set_batch_size(self, batch_size) -> None:
+        # language=rst
+        """
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
+        """
+        super().set_batch_size(batch_size=batch_size)
+        self.v = torch.zeros(batch_size, *self.shape, device=self.v.device)
+        self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
 class CurrentLIFNodes(Nodes):
