@@ -163,7 +163,12 @@ class Connection(AbstractConnection):
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
-        self.b = Parameter(kwargs.get("b", torch.zeros(target.n)), requires_grad=False)
+
+        b = kwargs.get("b", None)
+        if b is not None:
+            self.b = Parameter(b, requires_grad=False)
+        else:
+            self.b = None
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -175,7 +180,10 @@ class Connection(AbstractConnection):
                  decaying spike activation).
         """
         # Compute multiplication of spike activations by weights and add bias.
-        post = s.float().view(s.size(0), -1) @ self.w + self.b
+        if self.b is None:
+            post = s.view(s.size(0), -1).float() @ self.w
+        else:
+            post = s.view(s.size(0), -1).float() @ self.w + self.b
         return post.view(s.size(0), *self.target.shape)
 
     def update(self, **kwargs) -> None:
