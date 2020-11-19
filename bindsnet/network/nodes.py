@@ -125,7 +125,7 @@ class Nodes(torch.nn.Module):
         """
         Abstract base class method for setting decays.
         """
-        self.dt = dt
+        self.dt = torch.tensor(dt)
         if self.traces:
             self.trace_decay = torch.exp(
                 -self.dt / self.tc_trace
@@ -634,6 +634,8 @@ class BoostedLIFNodes(Nodes):
             x.masked_fill_(self.refrac_count > 0, 0.0)
 
         # Decrement refractory counters.
+        #print(self.dt.type())
+        #quit()
         self.refrac_count -= self.dt
 
         if x is not None:
