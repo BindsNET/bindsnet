@@ -634,8 +634,6 @@ class BoostedLIFNodes(Nodes):
             x.masked_fill_(self.refrac_count > 0, 0.0)
 
         # Decrement refractory counters.
-        #print(self.dt.type())
-        #quit()
         self.refrac_count -= self.dt
 
         if x is not None:
