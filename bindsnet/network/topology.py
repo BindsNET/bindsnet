@@ -52,7 +52,7 @@ class AbstractConnection(ABC, Module):
         self.source = source
         self.target = target
 
-        self.nu = nu
+        # self.nu = nu
         self.weight_decay = weight_decay
         self.reduction = reduction
 

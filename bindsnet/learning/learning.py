@@ -52,7 +52,9 @@ class LearningRule(ABC):
         elif isinstance(nu, float) or isinstance(nu, int):
             nu = [nu, nu]
 
-        self.nu = nu
+        self.nu = torch.zeros(2, dtype=torch.float)
+        self.nu[0] = nu[0]
+        self.nu[1] = nu[1]
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
