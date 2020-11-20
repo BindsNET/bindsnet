@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 
 from .nodes import Nodes
+from ..global_config import network_config
 
 
 class AbstractConnection(ABC, Module):
@@ -49,17 +50,18 @@ class AbstractConnection(ABC, Module):
         assert isinstance(source, Nodes), "Source is not a Nodes object"
         assert isinstance(target, Nodes), "Target is not a Nodes object"
 
+        self.device = network_config.network_device
+
         self.source = source
         self.target = target
 
-        # self.nu = nu
         self.weight_decay = weight_decay
         self.reduction = reduction
 
         from ..learning import NoOp
 
         self.update_rule = kwargs.get("update_rule", NoOp)
-        self.wmin = kwargs.get("wmin", -np.inf)
+        self.wmin = -np.inf  # kwargs.get("wmin", -np.inf)
         self.wmax = kwargs.get("wmax", np.inf)
         self.norm = kwargs.get("norm", None)
         self.decay = kwargs.get("decay", None)

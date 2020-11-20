@@ -12,6 +12,7 @@ from ..network.topology import (
     LocalConnection,
 )
 from ..utils import im2col_indices
+from ..global_config import network_config
 
 
 class LearningRule(ABC):
@@ -38,13 +39,16 @@ class LearningRule(ABC):
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         """
+
+        self.device = network_config.network_device
+
         # Connection parameters.
         self.connection = connection
         self.source = connection.source
         self.target = connection.target
 
-        self.wmin = connection.wmin
-        self.wmax = connection.wmax
+        self.wmin = torch.tensor(connection.wmin, device=self.device)
+        self.wmax = torch.tensor(connection.wmax, device=self.device)
 
         # Learning rate(s).
         if nu is None:
@@ -52,7 +56,7 @@ class LearningRule(ABC):
         elif isinstance(nu, float) or isinstance(nu, int):
             nu = [nu, nu]
 
-        self.nu = torch.zeros(2, dtype=torch.float)
+        self.nu = torch.zeros(2, dtype=torch.float, device=self.device)
         self.nu[0] = nu[0]
         self.nu[1] = nu[1]
 
@@ -66,7 +70,7 @@ class LearningRule(ABC):
             self.reduction = reduction
 
         # Weight decay.
-        self.weight_decay = 1.0 - weight_decay
+        self.weight_decay = torch.tensor(1.0 - weight_decay, device=self.device)
 
     def update(self) -> None:
         # language=rst
@@ -74,7 +78,7 @@ class LearningRule(ABC):
         Abstract method for a learning rule update.
         """
         # Implement weight decay.
-        if self.weight_decay:
+        if self.weight_decay != 1.0:
             self.connection.w *= self.weight_decay
 
         # Bound weights.
@@ -279,8 +283,8 @@ class WeightDependentPostPre(LearningRule):
             connection.wmin != -np.inf and connection.wmax != np.inf
         ), "Connection must define finite wmin and wmax."
 
-        self.wmin = connection.wmin
-        self.wmax = connection.wmax
+        self.wmin = torch.tensor(connection.wmin, device=self.device)
+        self.wmax = torch.tensor(connection.wmax, device=self.device)
 
         if isinstance(connection, (Connection, LocalConnection)):
             self.update = self._connection_update
@@ -532,8 +536,8 @@ class MSTDP(LearningRule):
                 "This learning rule is not supported for this Connection type."
             )
 
-        self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
-        self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
+        self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0), device=self.device)
+        self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0), device=self.device)
 
     def _connection_update(self, **kwargs) -> None:
         # language=rst
@@ -721,9 +725,11 @@ class MSTDPET(LearningRule):
                 "This learning rule is not supported for this Connection type."
             )
 
-        self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
-        self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
-        self.tc_e_trace = torch.tensor(kwargs.get("tc_e_trace", 25.0))
+        self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0), device=self.device)
+        self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0), device=self.device)
+        self.tc_e_trace = torch.tensor(
+            kwargs.get("tc_e_trace", 25.0), device=self.device
+        )
 
     def _connection_update(self, **kwargs) -> None:
         # language=rst
@@ -740,16 +746,14 @@ class MSTDPET(LearningRule):
         """
         # Initialize eligibility, eligibility trace, P^+, and P^-.
         if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros((self.source.n), device=self.source.s.device)
+            self.p_plus = torch.zeros((self.source.n), device=self.device)
         if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros((self.target.n), device=self.target.s.device)
+            self.p_minus = torch.zeros((self.target.n))
         if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
-            )
+            self.eligibility = torch.zeros(*self.connection.w.shape, device=self.device)
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                *self.connection.w.shape, device=self.device
             )
 
         # Reshape pre- and post-synaptic spikes.
@@ -758,12 +762,8 @@ class MSTDPET(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus = torch.tensor(kwargs.get("a_plus", 1.0), device=self.device)
+        a_minus = torch.tensor(kwargs.get("a_minus", -1.0), device=self.device)
 
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
@@ -806,21 +806,17 @@ class MSTDPET(LearningRule):
         # Initialize eligibility and eligibility trace.
         if not hasattr(self, "eligibility"):
             self.eligibility = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.device
             )
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.device
             )
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus = torch.tensor(kwargs.get("a_plus", 1.0), device=self.device)
+        a_minus = torch.tensor(kwargs.get("a_minus", -1.0), device=self.device)
 
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
@@ -836,14 +832,14 @@ class MSTDPET(LearningRule):
         # Initialize P^+ and P^-.
         if not hasattr(self, "p_plus"):
             self.p_plus = torch.zeros(
-                batch_size, *self.source.shape, device=self.connection.w.device
+                batch_size, *self.source.shape, device=self.device
             )
             self.p_plus = im2col_indices(
                 self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
             )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
-                batch_size, *self.target.shape, device=self.connection.w.device
+                batch_size, *self.target.shape, device=self.device
             )
             self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
 
@@ -951,7 +947,7 @@ class Rmax(LearningRule):
         # Initialize eligibility trace.
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                *self.connection.w.shape, device=self.device
             )
 
         # Reshape variables.

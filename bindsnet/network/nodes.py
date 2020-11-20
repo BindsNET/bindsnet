@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from functools import reduce
 from operator import mul
 from typing import Iterable, Optional, Union
+from ..global_config import network_config
 
 import torch
 
@@ -38,6 +39,8 @@ class Nodes(torch.nn.Module):
         :param learning: Whether to be in learning or testing.
         """
         super().__init__()
+
+        self.device = network_config.network_device
 
         assert (
             n is not None or shape is not None
@@ -125,10 +128,11 @@ class Nodes(torch.nn.Module):
         """
         Abstract base class method for setting decays.
         """
-        self.dt = torch.tensor(dt)
+        self.dt = 1.0  # torch.zeros(self.n, dtype=torch.float32, device=self.device)
+
         if self.traces:
             self.trace_decay = torch.exp(
-                -self.dt / self.tc_trace
+                -dt / self.tc_trace
             )  # Spike trace decay (per timestep).
 
     def set_batch_size(self, batch_size) -> None:
@@ -626,6 +630,17 @@ class BoostedLIFNodes(Nodes):
 
         :param x: Inputs to the layer.
         """
+
+        """
+        print(self.v.type())
+        print(self.refrac_count.type())
+        print(x.type())
+        print(self.v.type())
+        print(self.s.type())
+        print(self.thresh.type())
+        print(self.decay.type())
+        quit()
+        """
         # Decay voltages.
         self.v *= self.decay
 
@@ -663,9 +678,11 @@ class BoostedLIFNodes(Nodes):
         Sets the relevant decays.
         """
         super().compute_decays(dt=dt)
-        self.decay = torch.exp(
-            -self.dt / self.tc_decay
-        )  # Neuron voltage decay (per timestep).
+        # Neuron voltage decay (per timestep).
+        self.decay = torch.exp(-self.dt / self.tc_decay)
+
+        # print(self.decay.type())
+        # quit()
 
     def set_batch_size(self, batch_size) -> None:
         # language=rst

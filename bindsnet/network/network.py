@@ -7,6 +7,7 @@ from .monitors import AbstractMonitor
 from .nodes import Nodes
 from .topology import AbstractConnection
 from ..learning.reward import AbstractReward
+from ..global_config import network_config
 
 
 def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
@@ -87,6 +88,7 @@ class Network(torch.nn.Module):
         batch_size: int = 1,
         learning: bool = True,
         reward_fn: Optional[Type[AbstractReward]] = None,
+        **kwargs
     ) -> None:
         # language=rst
         """
@@ -99,6 +101,17 @@ class Network(torch.nn.Module):
             reward-modulated learning.
         """
         super().__init__()
+
+        network_config.network_device = kwargs.get("device", "cpu")
+        print("Network running on", network_config.network_device)
+        self.device = network_config.network_device
+
+        precision = kwargs.get("precision", "float32")
+        if precision == "float16":
+            network_config.network_float_type = torch.float16
+        else:
+            network_config.network_float_type = torch.float32
+        print("Computation precision:", network_config.network_float_type)
 
         self.dt = dt
         self.batch_size = batch_size
@@ -227,7 +240,7 @@ class Network(torch.nn.Module):
 
                 if not c[1] in inputs:
                     inputs[c[1]] = torch.zeros(
-                        self.batch_size, *target.shape, device=target.s.device
+                        self.batch_size, *target.shape, device=self.device
                     )
 
                 # Add to input: source's spikes multiplied by connection weights.

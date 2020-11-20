@@ -30,6 +30,7 @@ class TwoLayerNetwork(Network):
         nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
         reduction: Optional[callable] = None,
         norm: float = 78.4,
+        device="cpu",
     ) -> None:
         # language=rst
         """
@@ -47,7 +48,7 @@ class TwoLayerNetwork(Network):
         :param norm: ``Input`` to ``LIFNodes`` layer connection weights normalization
             constant.
         """
-        super().__init__(dt=dt)
+        super().__init__(dt=dt, device=device)
 
         self.n_inpt = n_inpt
         self.n_neurons = n_neurons
@@ -108,6 +109,7 @@ class DiehlAndCook2015(Network):
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         inpt_shape: Optional[Iterable[int]] = None,
+        device="cpu",
     ) -> None:
         # language=rst
         """
@@ -132,7 +134,7 @@ class DiehlAndCook2015(Network):
             potential decay.
         :param inpt_shape: The dimensionality of the input layer.
         """
-        super().__init__(dt=dt)
+        super().__init__(dt=dt, device=device)
 
         self.n_inpt = n_inpt
         self.inpt_shape = inpt_shape
@@ -225,6 +227,7 @@ class DiehlAndCook2015v2(Network):
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         inpt_shape: Optional[Iterable[int]] = None,
+        device="cpu",
     ) -> None:
         # language=rst
         """
@@ -248,7 +251,7 @@ class DiehlAndCook2015v2(Network):
             potential decay.
         :param inpt_shape: The dimensionality of the input layer.
         """
-        super().__init__(dt=dt)
+        super().__init__(dt=dt, device=device)
 
         self.n_inpt = n_inpt
         self.inpt_shape = inpt_shape
@@ -325,6 +328,7 @@ class IncreasingInhibitionNetwork(Network):
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         inpt_shape: Optional[Iterable[int]] = None,
+        device="cpu",
     ) -> None:
         # language=rst
         """
@@ -348,7 +352,7 @@ class IncreasingInhibitionNetwork(Network):
             potential decay.
         :param inpt_shape: The dimensionality of the input layer.
         """
-        super().__init__(dt=dt)
+        super().__init__(dt=dt, device=device)
 
         self.n_input = n_input
         self.n_neurons = n_neurons
@@ -405,9 +409,7 @@ class IncreasingInhibitionNetwork(Network):
         w = w / w.max()
         w = (w * self.max_inhib) + self.start_inhib
         recurrent_output_conn = Connection(
-            source=self.layers["Y"],
-            target=self.layers["Y"],
-            w=w,
+            source=self.layers["Y"], target=self.layers["Y"], w=w
         )
         self.add_connection(recurrent_output_conn, source="Y", target="Y")
 
@@ -436,6 +438,7 @@ class LocallyConnectedNetwork(Network):
         wmin: float = 0.0,
         wmax: float = 1.0,
         norm: Optional[float] = 0.2,
+        device="cpu",
     ) -> None:
         # language=rst
         """
@@ -466,7 +469,7 @@ class LocallyConnectedNetwork(Network):
         :param norm: ``Input`` to ``DiehlAndCookNodes`` layer connection weights
             normalization constant.
         """
-        super().__init__(dt=dt)
+        super().__init__(dt=dt, device=device)
 
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
