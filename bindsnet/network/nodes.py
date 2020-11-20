@@ -128,7 +128,8 @@ class Nodes(torch.nn.Module):
         """
         Abstract base class method for setting decays.
         """
-        self.dt = 1.0  # torch.zeros(self.n, dtype=torch.float32, device=self.device)
+        self.dt = torch.zeros(self.n, dtype=torch.float32, device=self.device)
+        self.dt += dt
 
         if self.traces:
             self.trace_decay = torch.exp(
@@ -630,17 +631,6 @@ class BoostedLIFNodes(Nodes):
 
         :param x: Inputs to the layer.
         """
-
-        """
-        print(self.v.type())
-        print(self.refrac_count.type())
-        print(x.type())
-        print(self.v.type())
-        print(self.s.type())
-        print(self.thresh.type())
-        print(self.decay.type())
-        quit()
-        """
         # Decay voltages.
         self.v *= self.decay
 
@@ -680,9 +670,6 @@ class BoostedLIFNodes(Nodes):
         super().compute_decays(dt=dt)
         # Neuron voltage decay (per timestep).
         self.decay = torch.exp(-self.dt / self.tc_decay)
-
-        # print(self.decay.type())
-        # quit()
 
     def set_batch_size(self, batch_size) -> None:
         # language=rst
@@ -1091,6 +1078,23 @@ class DiehlAndCookNodes(Nodes):
 
         :param x: Inputs to the layer.
         """
+
+        """
+        """
+        print(self.s.type())
+        print(self.v.type())
+        print(self.decay.type())
+        print(self.rest.type())
+        print(self.reset.type())
+        print(self.refrac_count.type())
+        print(x.type())
+        print(self.thresh.type())
+        print(self.theta.type())
+        print(self.theta_decay.type())
+        print(self.theta_plus.type())
+        print(self.dt.type())
+        quit()
+
         # Decay voltages and adaptive thresholds.
         self.v = self.decay * (self.v - self.rest) + self.rest
         if self.learning:
