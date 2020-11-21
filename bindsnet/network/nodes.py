@@ -1024,27 +1024,14 @@ class DiehlAndCookNodes(Nodes):
             sum_input=sum_input,
         )
 
-        self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
-        self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
-        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
-        self.register_buffer(
-            "refrac", torch.tensor(refrac)
-        )  # Post-spike refractory period.
-        self.register_buffer(
-            "tc_decay", torch.tensor(tc_decay)
-        )  # Time constant of neuron voltage decay.
-        self.register_buffer(
-            "decay", torch.empty_like(self.tc_decay)
-        )  # Set in compute_decays.
-        self.register_buffer(
-            "theta_plus", torch.tensor(theta_plus)
-        )  # Constant threshold increase on spike.
-        self.register_buffer(
-            "tc_theta_decay", torch.tensor(tc_theta_decay)
-        )  # Time constant of adaptive threshold decay.
-        self.register_buffer(
-            "theta_decay", torch.empty_like(self.tc_theta_decay)
-        )  # Set in compute_decays.
+        self.rest = rest  # Rest voltage.
+        self.reset = reset  # Post-spike reset voltage.
+        self.thresh = thresh  # Spike threshold voltage.
+        self.refrac = refrac  # Post-spike refractory period.
+        self.tc_decay = tc_decay  # Time constant of neuron voltage decay.
+        self.theta_plus = theta_plus  # Constant threshold increase on spike.
+        # Time constant of adaptive threshold decay.
+        self.tc_theta_decay = tc_theta_decay
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
         self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
         self.register_buffer(
