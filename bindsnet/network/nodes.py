@@ -125,10 +125,10 @@ class Nodes(torch.nn.Module):
         """
         Abstract base class method for setting decays.
         """
-        self.dt = torch.tensor(dt)
+        self.dt = dt
         if self.traces:
             self.trace_decay = torch.exp(
-                -self.dt / self.tc_trace
+                -torch.tensor(self.dt) / self.tc_trace
             )  # Spike trace decay (per timestep).
 
     def set_batch_size(self, batch_size) -> None:
@@ -642,7 +642,7 @@ class BoostedLIFNodes(Nodes):
         """
         super().compute_decays(dt=dt)
         self.decay = torch.exp(
-            -self.dt / self.tc_decay
+            -torch.tensor(self.dt) / self.tc_decay
         )  # Neuron voltage decay (per timestep).
 
     def set_batch_size(self, batch_size) -> None:
