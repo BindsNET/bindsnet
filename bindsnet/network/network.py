@@ -102,7 +102,7 @@ class Network(torch.nn.Module):
         """
         super().__init__()
 
-        network_config.network_device = kwargs.get("device", "cpu")
+        network_config.network_device = "cpu"  # kwargs.get("device", "cpu")
         print("Network running on", network_config.network_device)
         self.device = network_config.network_device
 
@@ -240,7 +240,7 @@ class Network(torch.nn.Module):
 
                 if not c[1] in inputs:
                     inputs[c[1]] = torch.zeros(
-                        self.batch_size, *target.shape, device=self.device
+                        self.batch_size, *target.shape, device=source.s.device
                     )
 
                 # Add to input: source's spikes multiplied by connection weights.

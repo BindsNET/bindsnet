@@ -128,8 +128,9 @@ class Nodes(torch.nn.Module):
         """
         Abstract base class method for setting decays.
         """
-        self.dt = torch.zeros(self.n, dtype=torch.float32, device=self.device)
-        self.dt += dt
+        self.dt = dt
+        # torch.zeros(self.n, dtype=torch.float32, device=self.device)
+        # self.dt += dt
 
         if self.traces:
             self.trace_decay = torch.exp(
@@ -1041,6 +1042,8 @@ class DiehlAndCookNodes(Nodes):
             sum_input=sum_input,
         )
 
+        """
+
         self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
         self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
         self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
@@ -1062,6 +1065,17 @@ class DiehlAndCookNodes(Nodes):
         self.register_buffer(
             "theta_decay", torch.empty_like(self.tc_theta_decay)
         )  # Set in compute_decays.
+        """
+        self.rest = rest
+        self.reset = reset
+        self.thresh = thresh
+        self.refrac = refrac
+        self.tc_decay = tc_decay
+        self.decay = 0
+        self.theta_plus = theta_plus
+        self.tc_theta_decay = tc_theta_decay
+        self.theta_decay = 0
+
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
         self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
         self.register_buffer(
@@ -1080,7 +1094,6 @@ class DiehlAndCookNodes(Nodes):
         """
 
         """
-        """
         print(self.s.type())
         print(self.v.type())
         print(self.decay.type())
@@ -1094,6 +1107,7 @@ class DiehlAndCookNodes(Nodes):
         print(self.theta_plus.type())
         print(self.dt.type())
         quit()
+        """
 
         # Decay voltages and adaptive thresholds.
         self.v = self.decay * (self.v - self.rest) + self.rest
@@ -1148,10 +1162,10 @@ class DiehlAndCookNodes(Nodes):
         """
         super().compute_decays(dt=dt)
         self.decay = torch.exp(
-            -self.dt / self.tc_decay
+            -1 / torch.tensor(self.tc_decay)
         )  # Neuron voltage decay (per timestep).
         self.theta_decay = torch.exp(
-            -self.dt / self.tc_theta_decay
+            -1 / torch.tensor(self.tc_theta_decay)
         )  # Adaptive threshold decay (per timestep).
 
     def set_batch_size(self, batch_size) -> None:
@@ -1395,12 +1409,19 @@ class SRM0Nodes(Nodes):
             sum_input=sum_input,
         )
 
+        # self.rest= rest
         self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
+
+        # self.reset = reset
         self.register_buffer("reset", torch.tensor(reset))  # Post-spike reset voltage.
+
+        # self.thresh = thresh
         self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
-        self.register_buffer(
-            "refrac", torch.tensor(refrac)
-        )  # Post-spike refractory period.
+
+        # self.refrac = refrac
+        # Post-spike refractory period.
+        self.register_buffer("refrac", torch.tensor(refrac))
+
         self.register_buffer(
             "tc_decay", torch.tensor(tc_decay)
         )  # Time constant of neuron voltage decay.

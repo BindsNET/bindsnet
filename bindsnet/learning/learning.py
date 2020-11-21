@@ -47,8 +47,11 @@ class LearningRule(ABC):
         self.source = connection.source
         self.target = connection.target
 
-        self.wmin = torch.tensor(connection.wmin, device=self.device)
-        self.wmax = torch.tensor(connection.wmax, device=self.device)
+        # self.wmin = torch.tensor(connection.wmin, device=self.device)
+        # self.wmax = torch.tensor(connection.wmax, device=self.device)
+
+        self.wmin = connection.wmin
+        self.wmax = connection.wmax
 
         # Learning rate(s).
         if nu is None:
@@ -56,9 +59,10 @@ class LearningRule(ABC):
         elif isinstance(nu, float) or isinstance(nu, int):
             nu = [nu, nu]
 
-        self.nu = torch.zeros(2, dtype=torch.float, device=self.device)
-        self.nu[0] = nu[0]
-        self.nu[1] = nu[1]
+        self.nu = nu
+        # self.nu = torch.zeros(2, dtype=torch.float, device=self.device)
+        # self.nu[0] += nu[0]
+        # self.nu[1] += nu[1]
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
@@ -85,7 +89,7 @@ class LearningRule(ABC):
         if (
             self.connection.wmin != -np.inf or self.connection.wmax != np.inf
         ) and not isinstance(self, NoOp):
-            self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
+            self.connection.w.clamp_(self.wmin, self.wmax)
 
 
 class NoOp(LearningRule):
@@ -188,6 +192,13 @@ class PostPre(LearningRule):
             source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
             target_x = self.target.x.view(batch_size, -1).unsqueeze(1) * self.nu[0]
             self.connection.w -= self.reduction(torch.bmm(source_s, target_x), dim=0)
+
+            """print(source_s.type())
+            print(target_x.type())
+            print(self.nu[0].type())
+            print(self.connection.w.type())
+            quit()"""
+
             del source_s, target_x
 
         # Post-synaptic update.
@@ -283,8 +294,10 @@ class WeightDependentPostPre(LearningRule):
             connection.wmin != -np.inf and connection.wmax != np.inf
         ), "Connection must define finite wmin and wmax."
 
-        self.wmin = torch.tensor(connection.wmin, device=self.device)
-        self.wmax = torch.tensor(connection.wmax, device=self.device)
+        # self.wmin = torch.tensor(connection.wmin, device=self.device)
+        # self.wmax = torch.tensor(connection.wmax, device=self.device)
+        self.wmin = connection.wmin
+        self.wmax = connection.wmax
 
         if isinstance(connection, (Connection, LocalConnection)):
             self.update = self._connection_update
