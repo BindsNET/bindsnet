@@ -468,24 +468,11 @@ class LIFNodes(Nodes):
             sum_input=sum_input,
         )
 
-        self.register_buffer(
-            "rest", torch.tensor(rest, dtype=torch.float)
-        )  # Rest voltage.
-        self.register_buffer(
-            "reset", torch.tensor(reset, dtype=torch.float)
-        )  # Post-spike reset voltage.
-        self.register_buffer(
-            "thresh", torch.tensor(thresh, dtype=torch.float)
-        )  # Spike threshold voltage.
-        self.register_buffer(
-            "refrac", torch.tensor(refrac)
-        )  # Post-spike refractory period.
-        self.register_buffer(
-            "tc_decay", torch.tensor(tc_decay, dtype=torch.float)
-        )  # Time constant of neuron voltage decay.
-        self.register_buffer(
-            "decay", torch.zeros(*self.shape)
-        )  # Set in compute_decays.
+        self.rest = rest  # Rest voltage.
+        self.reset = reset  # Post-spike reset voltage.
+        self.thresh = thresh  # Spike threshold voltage.
+        self.refrac = refrac  # Post-spike refractory period.
+        self.tc_decay = tc_decay  # Time constant of neuron voltage decay.
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
         self.register_buffer(
             "refrac_count", torch.FloatTensor()
