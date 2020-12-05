@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 from tqdm import tqdm
 
+import sys
+sys.path.insert(0, '../../')
+
 from time import time as t
 
 from bindsnet import ROOT_DIR
@@ -45,7 +48,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=False)
+parser.set_defaults(plot=False, gpu=False)
 
 args = parser.parse_args()
 
@@ -166,7 +169,7 @@ for epoch in range(n_epochs):
     labels = []
 
     if epoch % progress_interval == 0:
-        print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
+        print("\n Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
         start = t()
 
     # Create a dataloader to iterate and batch data
@@ -178,8 +181,9 @@ for epoch in range(n_epochs):
         pin_memory=gpu,
     )
 
-    for step, batch in enumerate(tqdm(train_dataloader)):
-        if step > n_train:
+    pbar_training = tqdm(total=n_train)
+    for step, batch in enumerate(train_dataloader):
+        if step > n_train - 1:
             break
         # Get next input sample.
         inputs = {"X": batch["encoded_image"]}
@@ -287,8 +291,8 @@ for epoch in range(n_epochs):
 
         network.reset_state_variables()  # Reset state variables.
 
-        if step % update_steps == 0 and step > 0:
-            break
+        pbar_training.update()
+
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")
