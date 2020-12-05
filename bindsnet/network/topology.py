@@ -589,8 +589,7 @@ class LocalConnection(AbstractConnection):
         """
         # Compute multiplication of pre-activations by connection weights.
         a_post = (
-            s.float().view(s.size(0), -1)
-            @ self.w.view(self.source.n, self.target.n)
+            s.float().view(s.size(0), -1) @ self.w.view(self.source.n, self.target.n)
             + self.b
         )
         return a_post.view(*self.target.shape)
