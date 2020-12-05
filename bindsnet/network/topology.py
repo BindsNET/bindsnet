@@ -588,15 +588,12 @@ class LocalConnection(AbstractConnection):
             decaying spike activation).
         """
         # Compute multiplication of pre-activations by connection weights.
-        if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
-            return s.float().view(s.size(0), -1) @ self.w + self.b
-        else:
-            a_post = (
-                s.float().view(s.size(0), -1)
-                @ self.w.view(self.source.n, self.target.n)
-                + self.b
-            )
-            return a_post.view(*self.target.shape)
+        a_post = (
+            s.float().view(s.size(0), -1)
+            @ self.w.view(self.source.n, self.target.n)
+            + self.b
+        )
+        return a_post.view(*self.target.shape)
 
     def update(self, **kwargs) -> None:
         # language=rst
