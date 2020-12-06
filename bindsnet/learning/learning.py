@@ -52,7 +52,9 @@ class LearningRule(ABC):
         elif isinstance(nu, float) or isinstance(nu, int):
             nu = [nu, nu]
 
-        self.nu = nu
+        self.nu = torch.zeros(2, dtype=torch.float)
+        self.nu[0] = nu[0]
+        self.nu[1] = nu[1]
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
@@ -64,7 +66,7 @@ class LearningRule(ABC):
             self.reduction = reduction
 
         # Weight decay.
-        self.weight_decay = weight_decay
+        self.weight_decay = 1.0 - weight_decay
 
     def update(self) -> None:
         # language=rst
@@ -73,7 +75,7 @@ class LearningRule(ABC):
         """
         # Implement weight decay.
         if self.weight_decay:
-            self.connection.w -= self.weight_decay * self.connection.w
+            self.connection.w *= self.weight_decay
 
         # Bound weights.
         if (
@@ -177,20 +179,21 @@ class PostPre(LearningRule):
         """
         batch_size = self.source.batch_size
 
-        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
-        source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
-        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
-        target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
-
         # Pre-synaptic update.
         if self.nu[0]:
-            update = self.reduction(torch.bmm(source_s, target_x), dim=0)
-            self.connection.w -= self.nu[0] * update
+            source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+            target_x = self.target.x.view(batch_size, -1).unsqueeze(1) * self.nu[0]
+            self.connection.w -= self.reduction(torch.bmm(source_s, target_x), dim=0)
+            del source_s, target_x
 
         # Post-synaptic update.
         if self.nu[1]:
-            update = self.reduction(torch.bmm(source_x, target_s), dim=0)
-            self.connection.w += self.nu[1] * update
+            target_s = (
+                self.target.s.view(batch_size, -1).unsqueeze(1).float() * self.nu[1]
+            )
+            source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+            self.connection.w += self.reduction(torch.bmm(source_x, target_s), dim=0)
+            del source_x, target_s
 
         super().update()
 

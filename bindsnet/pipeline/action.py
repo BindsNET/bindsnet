@@ -118,7 +118,7 @@ def select_highest(pipeline: EnvironmentPipeline, **kwargs) -> int:
     #     p = torch.randint(low=0, high=action.shape[0], size=(1,))[0]
     #     action[0] = action[p]
 
-    return action[0]
+    return action[0].item()
 
 
 def select_first_spike(pipeline: EnvironmentPipeline, **kwargs) -> int:
