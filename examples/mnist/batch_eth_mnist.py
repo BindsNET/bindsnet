@@ -7,8 +7,6 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 from tqdm import tqdm
 
-import sys
-sys.path.insert(0, '../../')
 
 from time import time as t
 
@@ -48,7 +46,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=False, gpu=False)
+parser.set_defaults(plot=True, gpu=False)
 
 args = parser.parse_args()
 
@@ -183,7 +181,7 @@ for epoch in range(n_epochs):
 
     pbar_training = tqdm(total=n_train)
     for step, batch in enumerate(train_dataloader):
-        if step > n_train - 1:
+        if step > n_train:
             break
         # Get next input sample.
         inputs = {"X": batch["encoded_image"]}
