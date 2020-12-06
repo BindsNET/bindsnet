@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 from tqdm import tqdm
 
-
 from time import time as t
 
 from bindsnet import ROOT_DIR
@@ -288,9 +287,7 @@ for epoch in range(n_epochs):
             plt.pause(1e-8)
 
         network.reset_state_variables()  # Reset state variables.
-
         pbar_training.update()
-
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")
