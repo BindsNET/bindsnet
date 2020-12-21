@@ -4,7 +4,7 @@ from typing import Dict, Optional, Type, Iterable
 import torch
 
 from .monitors import AbstractMonitor
-from .nodes import Nodes
+from .nodes import Nodes, SRMNodes
 from .topology import AbstractConnection
 from ..learning.reward import AbstractReward
 
@@ -226,12 +226,20 @@ class Network(torch.nn.Module):
                 target = self.connections[c].target
 
                 if not c[1] in inputs:
-                    inputs[c[1]] = torch.zeros(
-                        self.batch_size, *target.shape, device=target.s.device
-                    )
-
+                    if isinstance(target, SRMNodes):
+                        inputs[c[1]] = torch.zeros(
+                            self.batch_size, target.res_window_size, *target.shape, device=target.s.device
+                        )
+                    else:
+                        inputs[c[1]] = torch.zeros(
+                            self.batch_size, *target.shape, device=target.s.device
+                        )
+                
                 # Add to input: source's spikes multiplied by connection weights.
-                inputs[c[1]] += self.connections[c].compute(source.s)
+                if isinstance(target, SRMNodes):
+                    inputs[c[1]] += self.connections[c].compute_window(source.s)
+                else:
+                    inputs[c[1]] += self.connections[c].compute(source.s)
 
         return inputs
 
