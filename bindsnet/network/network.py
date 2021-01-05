@@ -228,13 +228,16 @@ class Network(torch.nn.Module):
                 if not c[1] in inputs:
                     if isinstance(target, SRMNodes):
                         inputs[c[1]] = torch.zeros(
-                            self.batch_size, target.res_window_size, *target.shape, device=target.s.device
+                            self.batch_size,
+                            target.res_window_size,
+                            *target.shape,
+                            device=target.s.device
                         )
                     else:
                         inputs[c[1]] = torch.zeros(
                             self.batch_size, *target.shape, device=target.s.device
                         )
-                
+
                 # Add to input: source's spikes multiplied by connection weights.
                 if isinstance(target, SRMNodes):
                     inputs[c[1]] += self.connections[c].compute_window(source.s)

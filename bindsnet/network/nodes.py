@@ -1315,6 +1315,7 @@ class IzhikevichNodes(Nodes):
         self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
         self.u = self.b * self.v
 
+
 class SRMNodes(Nodes):
     """
     A layer of Cumulative Spike Response Model (Gerstner and van Hemmen 1992, Gerstner et al. 1996) nodes.
@@ -1405,22 +1406,23 @@ class SRMNodes(Nodes):
         )  # Set in compute_decays.
 
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
-        self.register_buffer("last_spikes", torch.ByteTensor()) # Previous spikes occurrences in time window
+        self.register_buffer(
+            "last_spikes", torch.ByteTensor()
+        )  # Previous spikes occurrences in time window
         self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
         self.lbound = lbound  # Lower bound of voltage.
 
-        self.responseKernel = responseKernel # Type of spike response kernel used
+        self.responseKernel = responseKernel  # Type of spike response kernel used
 
-        self.refractoryKernel = refractoryKernel # Type of refractory kernel used
+        self.refractoryKernel = refractoryKernel  # Type of refractory kernel used
 
         self.register_buffer(
             "resKernel", torch.FloatTensor()
-        ) # Vector of synaptic response kernel values over a window of time 
+        )  # Vector of synaptic response kernel values over a window of time
 
         self.register_buffer(
             "refKernel", torch.FloatTensor()
-        ) # Vector of refractory kernel values over a window of time
-
+        )  # Vector of refractory kernel values over a window of time
 
     def forward(self, x: torch.Tensor) -> None:
         # language=rst
@@ -1436,8 +1438,12 @@ class SRMNodes(Nodes):
             self.theta *= self.theta_decay
 
         # Integrate inputs.
-        v = torch.einsum('i,kij->kj', self.resKernel, x) # Response due to incoming current
-        v += torch.einsum('i,kij->kj', self.refKernel, self.last_spikes) # Refractoriness due to previous spikes
+        v = torch.einsum(
+            "i,kij->kj", self.resKernel, x
+        )  # Response due to incoming current
+        v += torch.einsum(
+            "i,kij->kj", self.refKernel, self.last_spikes
+        )  # Refractoriness due to previous spikes
         self.v += v.view(x.size(0), *self.shape)
 
         # Check for spiking neurons.
@@ -1447,7 +1453,9 @@ class SRMNodes(Nodes):
             self.theta += self.theta_plus * self.s.float().sum(0)
 
         # Add the spike vector into the first in first out matrix of windowed (ref) spike trains
-        self.last_spikes = torch.cat((self.last_spikes[:, 1:, :], self.s[:, None, :]), 1) 
+        self.last_spikes = torch.cat(
+            (self.last_spikes[:, 1:, :], self.s[:, None, :]), 1
+        )
 
         # Voltage clipping to lower bound.
         if self.lbound is not None:
@@ -1487,9 +1495,14 @@ class SRMNodes(Nodes):
         self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
         self.last_spikes = torch.zeros(batch_size, self.ref_window_size, *self.shape)
 
-        resKernels = {"AlphaKernel": self.AlphaKernel, "AlphaKernelSLAYER": self.AlphaKernelSLAYER,
-                "LaplacianKernel": self.LaplacianKernel, "ExponentialKernel": self.ExponentialKernel,
-                "RectangularKernel": self.RectangularKernel, "TriangularKernel": self.TriangularKernel}
+        resKernels = {
+            "AlphaKernel": self.AlphaKernel,
+            "AlphaKernelSLAYER": self.AlphaKernelSLAYER,
+            "LaplacianKernel": self.LaplacianKernel,
+            "ExponentialKernel": self.ExponentialKernel,
+            "RectangularKernel": self.RectangularKernel,
+            "TriangularKernel": self.TriangularKernel,
+        }
 
         if self.responseKernel not in resKernels.keys():
             raise Exception(" The given response Kernel is not implemented")
@@ -1505,37 +1518,37 @@ class SRMNodes(Nodes):
 
     def AlphaKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
-        kernelVec = ((1 / (self.tau ** 2)) * t * torch.exp(-t / self.tau))
+        kernelVec = (1 / (self.tau ** 2)) * t * torch.exp(-t / self.tau)
         return torch.flip(kernelVec, [0])
 
     def AlphaKernelSLAYER(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
-        kernelVec = ((1 / self.tau) * t * torch.exp(1 - t / self.tau))
-        return torch.flip(kernelVec, [0]) 
+        kernelVec = (1 / self.tau) * t * torch.exp(1 - t / self.tau)
+        return torch.flip(kernelVec, [0])
 
     def LaplacianKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
-        kernelVec = ((1 / (self.tau * 2)) * torch.exp(-1 * torch.abs(t / self.tau)))
+        kernelVec = (1 / (self.tau * 2)) * torch.exp(-1 * torch.abs(t / self.tau))
         return torch.flip(kernelVec, [0])
 
     def ExponentialKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
-        kernelVec = ((1 / self.tau) * torch.exp(-t / self.tau))
+        kernelVec = (1 / self.tau) * torch.exp(-t / self.tau)
         return torch.flip(kernelVec, [0])
 
     def RectangularKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
-        kernelVec = (1 / (selftau * 2))
+        kernelVec = 1 / (selftau * 2)
         return torch.flip(kernelVec, [0])
 
     def TriangularKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
-        kernelVec = ((1 / self.tau) * (1 - (t / self.tau)))
+        kernelVec = (1 / self.tau) * (1 - (t / self.tau))
         return torch.flip(kernelVec, [0])
 
     def EtaKernel(self, dt):
         t = torch.arange(0, self.ref_window_size, dt)
-        kernelVec = - self.reset_const * torch.exp(-t / self.tau)
+        kernelVec = -self.reset_const * torch.exp(-t / self.tau)
         return torch.flip(kernelVec, [0])
 
 

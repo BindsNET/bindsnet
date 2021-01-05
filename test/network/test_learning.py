@@ -93,7 +93,7 @@ class TestLearningRules:
         )
         network2.run(
             inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
-        ) 
+        )
 
         # Conv2dConnection test
         network = Network(dt=1.0)

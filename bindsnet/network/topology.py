@@ -173,7 +173,6 @@ class Connection(AbstractConnection):
         if isinstance(self.target, SRMNodes):
             self.s_w = None
 
-
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
         """
@@ -191,25 +190,32 @@ class Connection(AbstractConnection):
         return post.view(s.size(0), *self.target.shape)
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
-        #language=rst
-        """
-        """
+        # language=rst
+        """"""
 
         if self.s_w == None:
             # Construct a matrix of shape batch size * window size * dimension of layer
-            self.s_w = torch.zeros(self.target.batch_size, self.target.res_window_size, *self.source.shape)
+            self.s_w = torch.zeros(
+                self.target.batch_size, self.target.res_window_size, *self.source.shape
+            )
 
         # Add the spike vector into the first in first out matrix of windowed (res) spike trains
         self.s_w = torch.cat((self.s_w[:, 1:, :], s[:, None, :]), 1)
 
         # Compute multiplication of spike activations by weights and add bias.
         if self.b is None:
-            post = self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
+            post = (
+                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
+            )
         else:
-            post = self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w + self.b
+            post = (
+                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
+                + self.b
+            )
 
-        return post.view(self.s_w.size(0), self.target.res_window_size, *self.target.shape)
-
+        return post.view(
+            self.s_w.size(0), self.target.res_window_size, *self.target.shape
+        )
 
     def update(self, **kwargs) -> None:
         # language=rst
