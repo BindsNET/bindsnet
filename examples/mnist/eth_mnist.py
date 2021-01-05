@@ -190,7 +190,9 @@ for epoch in range(n_epochs):
 
             # Get network predictions.
             all_activity_pred = all_activity(
-                spikes=spike_record, assignments=assignments, n_labels=n_classes,
+                spikes=spike_record,
+                assignments=assignments,
+                n_labels=n_classes,
             )
             proportion_pred = proportion_weighting(
                 spikes=spike_record,

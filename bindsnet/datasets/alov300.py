@@ -31,7 +31,7 @@ class ALOV300(Dataset):
     def __init__(self, root, transform, input_size, download=False):
         """
         Class to read the ALOV dataset
-        
+
         :param root: Path to the ALOV folder that contains JPEGImages,
             annotations, etc. folders.
         :param input_size: The input size of network that is using this data,
@@ -138,7 +138,10 @@ class ALOV300(Dataset):
         bbox_curr_gt = BoundingBox(currbb[0], currbb[1], currbb[2], currbb[3])
         bbox_gt_recentered = BoundingBox(0, 0, 0, 0)
         bbox_gt_recentered = bbox_curr_gt.recenter(
-            rand_search_location, edge_spacing_x, edge_spacing_y, bbox_gt_recentered,
+            rand_search_location,
+            edge_spacing_x,
+            edge_spacing_y,
+            bbox_gt_recentered,
         )
         curr_sample["image"] = rand_search_region
         curr_sample["bb"] = bbox_gt_recentered.get_bb_list()

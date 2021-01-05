@@ -313,7 +313,8 @@ class Conv2dConnection(AbstractConnection):
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(
-            kwargs.get("b", torch.zeros(self.out_channels)), requires_grad=False,
+            kwargs.get("b", torch.zeros(self.out_channels)),
+            requires_grad=False,
         )
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
@@ -350,7 +351,8 @@ class Conv2dConnection(AbstractConnection):
         if self.norm is not None:
             # get a view and modify in place
             w = self.w.view(
-                self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3),
+                self.w.size(0) * self.w.size(1),
+                self.w.size(2) * self.w.size(3),
             )
 
             for fltr in range(w.size(0)):
@@ -451,7 +453,6 @@ class MaxPool2dConnection(AbstractConnection):
         super().reset_state_variables()
 
         self.firing_rates = torch.zeros(self.source.s.shape)
-
 
 
 class LocalConnection(AbstractConnection):
