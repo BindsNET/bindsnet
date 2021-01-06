@@ -420,7 +420,7 @@ class LIFNodes(Nodes):
     # language=rst
     """
     Layer of `leaky integrate-and-fire (LIF) neurons
-    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02311000000000000000>`_.
+    <http://web.archive.org/web/20190318204706/http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02311000000000000000>`_.
     """
 
     def __init__(
@@ -683,7 +683,7 @@ class CurrentLIFNodes(Nodes):
     # language=rst
     """
     Layer of `current-based leaky integrate-and-fire (LIF) neurons
-    <http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02313000000000000000>`_.
+    <http://web.archive.org/web/20190318204706/http://icwww.epfl.ch/~gerstner/SPNM/node26.html#SECTION02313000000000000000>`_.
     Total synaptic input current is modeled as a decaying memory of input spikes multiplied by synaptic strengths.
     """
 
@@ -1148,7 +1148,7 @@ class DiehlAndCookNodes(Nodes):
 class IzhikevichNodes(Nodes):
     # language=rst
     """
-    Layer of Izhikevich neurons.
+    Layer of `Izhikevich neurons<https://www.izhikevich.org/publications/spikes.htm>`_.
     """
 
     def __init__(
@@ -1314,6 +1314,242 @@ class IzhikevichNodes(Nodes):
         super().set_batch_size(batch_size=batch_size)
         self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
         self.u = self.b * self.v
+
+
+class CSRMNodes(Nodes):
+    """
+    A layer of Cumulative Spike Response Model (Gerstner and van Hemmen 1992, Gerstner et al. 1996) nodes.
+    It accounts for a model where refractoriness and adaptation were modeled by the combined effects
+    of the spike after potentials of several previous spikes, rather than only the most recent spike.
+    """
+
+    def __init__(
+        self,
+        n: Optional[int] = None,
+        shape: Optional[Iterable[int]] = None,
+        traces: bool = False,
+        traces_additive: bool = False,
+        tc_trace: Union[float, torch.Tensor] = 20.0,
+        trace_scale: Union[float, torch.Tensor] = 1.0,
+        sum_input: bool = False,
+        rest: Union[float, torch.Tensor] = -65.0,
+        thresh: Union[float, torch.Tensor] = -52.0,
+        responseKernel: str = "ExponentialKernel",
+        refractoryKernel: str = "EtaKernel",
+        tau: Union[float, torch.Tensor] = 1,
+        res_window_size: Union[float, torch.Tensor] = 20,
+        ref_window_size: Union[float, torch.Tensor] = 10,
+        reset_const: Union[float, torch.Tensor] = 50,
+        tc_decay: Union[float, torch.Tensor] = 100.0,
+        theta_plus: Union[float, torch.Tensor] = 0.05,
+        tc_theta_decay: Union[float, torch.Tensor] = 1e7,
+        lbound: float = None,
+        **kwargs,
+    ) -> None:
+        # language=rst
+        """
+        Instantiates a layer of Cumulative Spike Response Model nodes.
+
+        :param n: The number of neurons in the layer.
+        :param shape: The dimensionality of the layer.
+        :param traces: Whether to record spike traces.
+        :param traces_additive: Whether to record spike traces additively.
+        :param tc_trace: Time constant of spike trace decay.
+        :param trace_scale: Scaling factor for spike trace.
+        :param sum_input: Whether to sum all inputs.
+        :param rest: Resting membrane voltage.
+        :param thresh: Spike threshold voltage.
+        :param refrac: Refractory (non-firing) period of the neuron.
+        :param tc_decay: Time constant of neuron voltage decay.
+        :param theta_plus: Voltage increase of threshold after spiking.
+        :param tc_theta_decay: Time constant of adaptive threshold decay.
+        :param lbound: Lower bound of the voltage.
+        """
+        super().__init__(
+            n=n,
+            shape=shape,
+            traces=traces,
+            traces_additive=traces_additive,
+            tc_trace=tc_trace,
+            trace_scale=trace_scale,
+            sum_input=sum_input,
+        )
+
+        self.register_buffer("rest", torch.tensor(rest))  # Rest voltage.
+        self.register_buffer("thresh", torch.tensor(thresh))  # Spike threshold voltage.
+        self.register_buffer(
+            "tau", torch.tensor(tau)
+        )  # Time constant of Spike Response Kernel
+        self.register_buffer(
+            "reset_const", torch.tensor(reset_const)
+        )  # Reset constant of refractory kernel
+        self.register_buffer(
+            "res_window_size", torch.tensor(res_window_size)
+        )  # Window size for sampling incoming input current
+        self.register_buffer(
+            "ref_window_size", torch.tensor(ref_window_size)
+        )  # Window size for sampling previous spikes
+        self.register_buffer(
+            "tc_decay", torch.tensor(tc_decay)
+        )  # Time constant of neuron voltage decay.
+        self.register_buffer(
+            "decay", torch.empty_like(self.tc_decay, dtype=torch.float32)
+        )  # Set in compute_decays.
+        self.register_buffer(
+            "theta_plus", torch.tensor(theta_plus)
+        )  # Constant threshold increase on spike.
+        self.register_buffer(
+            "tc_theta_decay", torch.tensor(tc_theta_decay)
+        )  # Time constant of adaptive threshold decay.
+        self.register_buffer(
+            "theta_decay", torch.empty_like(self.tc_theta_decay)
+        )  # Set in compute_decays.
+
+        self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
+        self.register_buffer(
+            "last_spikes", torch.ByteTensor()
+        )  # Previous spikes occurrences in time window
+        self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
+        self.lbound = lbound  # Lower bound of voltage.
+
+        self.responseKernel = responseKernel  # Type of spike response kernel used
+
+        self.refractoryKernel = refractoryKernel  # Type of refractory kernel used
+
+        self.register_buffer(
+            "resKernel", torch.FloatTensor()
+        )  # Vector of synaptic response kernel values over a window of time
+
+        self.register_buffer(
+            "refKernel", torch.FloatTensor()
+        )  # Vector of refractory kernel values over a window of time
+
+    def forward(self, x: torch.Tensor) -> None:
+        # language=rst
+        """
+        Runs a single simulation step.
+
+        :param x: Inputs to the layer.
+        """
+        # Decay voltages.
+        self.v *= self.decay
+
+        if self.learning:
+            self.theta *= self.theta_decay
+
+        # Integrate inputs.
+        v = torch.einsum(
+            "i,kij->kj", self.resKernel, x
+        )  # Response due to incoming current
+        v += torch.einsum(
+            "i,kij->kj", self.refKernel, self.last_spikes
+        )  # Refractoriness due to previous spikes
+        self.v += v.view(x.size(0), *self.shape)
+
+        # Check for spiking neurons.
+        self.s = self.v >= self.thresh + self.theta
+
+        if self.learning:
+            self.theta += self.theta_plus * self.s.float().sum(0)
+
+        # Add the spike vector into the first in first out matrix of windowed (ref) spike trains
+        self.last_spikes = torch.cat(
+            (self.last_spikes[:, 1:, :], self.s[:, None, :]), 1
+        )
+
+        # Voltage clipping to lower bound.
+        if self.lbound is not None:
+            self.v.masked_fill_(self.v < self.lbound, self.lbound)
+
+        super().forward(x)
+
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Resets relevant state variables.
+        """
+        super().reset_state_variables()
+        self.v.fill_(self.rest)  # Neuron voltages.
+
+    def compute_decays(self, dt) -> None:
+        # language=rst
+        """
+        Sets the relevant decays.
+        """
+        super().compute_decays(dt=dt)
+        self.decay = torch.exp(
+            -self.dt / self.tc_decay
+        )  # Neuron voltage decay (per timestep).
+        self.theta_decay = torch.exp(
+            -self.dt / self.tc_theta_decay
+        )  # Adaptive threshold decay (per timestep).
+
+    def set_batch_size(self, batch_size) -> None:
+        # language=rst
+        """
+        Sets mini-batch size. Called when layer is added to a network.
+
+        :param batch_size: Mini-batch size.
+        """
+        super().set_batch_size(batch_size=batch_size)
+        self.v = self.rest * torch.ones(batch_size, *self.shape, device=self.v.device)
+        self.last_spikes = torch.zeros(batch_size, self.ref_window_size, *self.shape)
+
+        resKernels = {
+            "AlphaKernel": self.AlphaKernel,
+            "AlphaKernelSLAYER": self.AlphaKernelSLAYER,
+            "LaplacianKernel": self.LaplacianKernel,
+            "ExponentialKernel": self.ExponentialKernel,
+            "RectangularKernel": self.RectangularKernel,
+            "TriangularKernel": self.TriangularKernel,
+        }
+
+        if self.responseKernel not in resKernels.keys():
+            raise Exception(" The given response Kernel is not implemented")
+
+        self.resKernel = resKernels[self.responseKernel](self.dt)
+
+        refKernels = {"EtaKernel": self.EtaKernel}
+
+        if self.refractoryKernel not in refKernels.keys():
+            raise Exception(" The given refractory Kernel is not implemented")
+
+        self.refKernel = refKernels[self.refractoryKernel](self.dt)
+
+    def AlphaKernel(self, dt):
+        t = torch.arange(0, self.res_window_size, dt)
+        kernelVec = (1 / (self.tau ** 2)) * t * torch.exp(-t / self.tau)
+        return torch.flip(kernelVec, [0])
+
+    def AlphaKernelSLAYER(self, dt):
+        t = torch.arange(0, self.res_window_size, dt)
+        kernelVec = (1 / self.tau) * t * torch.exp(1 - t / self.tau)
+        return torch.flip(kernelVec, [0])
+
+    def LaplacianKernel(self, dt):
+        t = torch.arange(0, self.res_window_size, dt)
+        kernelVec = (1 / (self.tau * 2)) * torch.exp(-1 * torch.abs(t / self.tau))
+        return torch.flip(kernelVec, [0])
+
+    def ExponentialKernel(self, dt):
+        t = torch.arange(0, self.res_window_size, dt)
+        kernelVec = (1 / self.tau) * torch.exp(-t / self.tau)
+        return torch.flip(kernelVec, [0])
+
+    def RectangularKernel(self, dt):
+        t = torch.arange(0, self.res_window_size, dt)
+        kernelVec = 1 / (selftau * 2)
+        return torch.flip(kernelVec, [0])
+
+    def TriangularKernel(self, dt):
+        t = torch.arange(0, self.res_window_size, dt)
+        kernelVec = (1 / self.tau) * (1 - (t / self.tau))
+        return torch.flip(kernelVec, [0])
+
+    def EtaKernel(self, dt):
+        t = torch.arange(0, self.ref_window_size, dt)
+        kernelVec = -self.reset_const * torch.exp(-t / self.tau)
+        return torch.flip(kernelVec, [0])
 
 
 class SRM0Nodes(Nodes):

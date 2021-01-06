@@ -170,7 +170,7 @@ for epoch in range(n_epochs):
     labels = []
 
     if epoch % progress_interval == 0:
-        print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
+        print("\n Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
         start = t()
 
     # Create a dataloader to iterate and batch data
@@ -182,7 +182,8 @@ for epoch in range(n_epochs):
         pin_memory=gpu,
     )
 
-    for step, batch in enumerate(tqdm(train_dataloader)):
+    pbar_training = tqdm(total=n_train)
+    for step, batch in enumerate(train_dataloader):
         if step > n_train:
             break
         # Get next input sample.
@@ -293,9 +294,7 @@ for epoch in range(n_epochs):
             plt.pause(1e-8)
 
         network.reset_state_variables()  # Reset state variables.
-
-        if step % update_steps == 0 and step > 0:
-            break
+        pbar_training.update()
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")

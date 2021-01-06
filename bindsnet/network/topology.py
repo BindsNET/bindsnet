@@ -7,7 +7,7 @@ from torch.nn import Module, Parameter
 import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 
-from .nodes import Nodes
+from .nodes import Nodes, CSRMNodes
 
 
 class AbstractConnection(ABC, Module):
@@ -160,7 +160,7 @@ class Connection(AbstractConnection):
                 w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
-                w = torch.clamp(w, self.wmin, self.wmax)
+                w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
 
@@ -169,6 +169,9 @@ class Connection(AbstractConnection):
             self.b = Parameter(b, requires_grad=False)
         else:
             self.b = None
+
+        if isinstance(self.target, CSRMNodes):
+            self.s_w = None
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -185,6 +188,34 @@ class Connection(AbstractConnection):
         else:
             post = s.view(s.size(0), -1).float() @ self.w + self.b
         return post.view(s.size(0), *self.target.shape)
+
+    def compute_window(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """"""
+
+        if self.s_w == None:
+            # Construct a matrix of shape batch size * window size * dimension of layer
+            self.s_w = torch.zeros(
+                self.target.batch_size, self.target.res_window_size, *self.source.shape
+            )
+
+        # Add the spike vector into the first in first out matrix of windowed (res) spike trains
+        self.s_w = torch.cat((self.s_w[:, 1:, :], s[:, None, :]), 1)
+
+        # Compute multiplication of spike activations by weights and add bias.
+        if self.b is None:
+            post = (
+                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
+            )
+        else:
+            post = (
+                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
+                + self.b
+            )
+
+        return post.view(
+            self.s_w.size(0), self.target.res_window_size, *self.target.shape
+        )
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -351,11 +382,10 @@ class Conv2dConnection(AbstractConnection):
         if self.norm is not None:
             # get a view and modify in place
             w = self.w.view(
-                self.w.size(0) * self.w.size(1),
-                self.w.size(2) * self.w.size(3),
+                self.w.shape[0] * self.w.shape[1], self.w.shape[2] * self.w.shape[3]
             )
 
-            for fltr in range(w.size(0)):
+            for fltr in range(w.shape[0]):
                 w[fltr] *= self.norm / w[fltr].sum(0)
 
     def reset_state_variables(self) -> None:
@@ -590,15 +620,11 @@ class LocalConnection(AbstractConnection):
             decaying spike activation).
         """
         # Compute multiplication of pre-activations by connection weights.
-        if self.w.shape[0] == self.source.n and self.w.shape[1] == self.target.n:
-            return s.float().view(s.size(0), -1) @ self.w + self.b
-        else:
-            a_post = (
-                s.float().view(s.size(0), -1)
-                @ self.w.view(self.source.n, self.target.n)
-                + self.b
-            )
-            return a_post.view(*self.target.shape)
+        a_post = (
+            s.float().view(s.size(0), -1) @ self.w.view(self.source.n, self.target.n)
+            + self.b
+        )
+        return a_post.view(*self.target.shape)
 
     def update(self, **kwargs) -> None:
         # language=rst
