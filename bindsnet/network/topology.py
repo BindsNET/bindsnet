@@ -7,7 +7,7 @@ from torch.nn import Module, Parameter
 import torch.nn.functional as F
 from torch.nn.modules.utils import _pair
 
-from .nodes import Nodes, SRMNodes
+from .nodes import Nodes, CSRMNodes
 
 
 class AbstractConnection(ABC, Module):
@@ -170,7 +170,7 @@ class Connection(AbstractConnection):
         else:
             self.b = None
 
-        if isinstance(self.target, SRMNodes):
+        if isinstance(self.target, CSRMNodes):
             self.s_w = None
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:

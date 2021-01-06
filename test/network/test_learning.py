@@ -1,7 +1,7 @@
 import torch
 
 from bindsnet.network import Network
-from bindsnet.network.nodes import Input, LIFNodes, SRMNodes, SRM0Nodes
+from bindsnet.network.nodes import Input, LIFNodes, CSRMNodes, SRM0Nodes
 from bindsnet.network.topology import Connection, Conv2dConnection
 from bindsnet.learning import (
     Hebbian,
@@ -80,7 +80,7 @@ class TestLearningRules:
 
         network2 = Network(dt=1.0)
         network2.add_layer(Input(n=100, traces=True), name="input")
-        network2.add_layer(SRMNodes(n=100, traces=True), name="output")
+        network2.add_layer(CSRMNodes(n=100, traces=True), name="output")
         network2.add_connection(
             Connection(
                 source=network2.layers["input"],

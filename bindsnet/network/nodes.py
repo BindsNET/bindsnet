@@ -1316,7 +1316,7 @@ class IzhikevichNodes(Nodes):
         self.u = self.b * self.v
 
 
-class SRMNodes(Nodes):
+class CSRMNodes(Nodes):
     """
     A layer of Cumulative Spike Response Model (Gerstner and van Hemmen 1992, Gerstner et al. 1996) nodes.
     It accounts for a model where refractoriness and adaptation were modeled by the combined effects
