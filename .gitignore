@@ -125,7 +125,6 @@ examples/saved_checkpoints
 # macOS
 .DS_Store
 
-benchmark/
 figures/
 
 # Analyzer log default directory.
