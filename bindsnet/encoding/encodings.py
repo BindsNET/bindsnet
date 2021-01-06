@@ -155,7 +155,7 @@ def poisson(
         spikes = spikes[1:]
 
         return spikes.view(time, *shape)
-      
+
 
 def rank_order(
     datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs
