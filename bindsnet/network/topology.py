@@ -160,7 +160,7 @@ class Connection(AbstractConnection):
                 w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
         else:
             if self.wmin != -np.inf or self.wmax != np.inf:
-                w = torch.clamp(w, self.wmin, self.wmax)
+                w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
 
@@ -381,10 +381,10 @@ class Conv2dConnection(AbstractConnection):
         if self.norm is not None:
             # get a view and modify in place
             w = self.w.view(
-                self.w.size(0) * self.w.size(1), self.w.size(2) * self.w.size(3)
+                self.w.shape[0] * self.w.shape[1], self.w.shape[2] * self.w.shape[3]
             )
 
-            for fltr in range(w.size(0)):
+            for fltr in range(w.shape[0]):
                 w[fltr] *= self.norm / w[fltr].sum(0)
 
     def reset_state_variables(self) -> None:
