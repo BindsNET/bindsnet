@@ -379,6 +379,281 @@ class WeightDependentPostPre(LearningRule):
         super().update()
 
 
+class STP(LearningRule):
+     # language=rst
+    """
+    Tsodyks model for Short Term Plasticity
+    <https://science.sciencemag.org/content/319/5869/1543>`_.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractConnection,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        **kwargs
+    ) -> None:
+        # language=rst
+        """
+        Constructor for ``STP`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the
+            ``PostPre`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+        """
+        super().__init__(
+            connection=connection,
+            nu=nu,
+            reduction=reduction,
+            weight_decay=weight_decay,
+            **kwargs
+        )
+
+        self.update = self._connection_update
+
+        self.tau_d = torch.tensor(kwargs.get("tau_d", 0.2))
+        self.tau_f = torch.tensor(kwargs.get("tau_f", 1.5))
+        self.C = torch.tensor(kwargs.get("C", 0.2))
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        STP learning rule for ``Connection`` subclass of ``AbstractConnection``
+        class.
+        """
+        batch_size = self.source.batch_size
+
+        if not hasattr(self, "w"):
+            self.w = self.connection.w.data
+
+        # Initialize resources available and fraction of residual calcium available  
+        if not hasattr(self, "p"):
+            self.p = torch.ones(
+                batch_size, *self.source.shape
+            )
+        if not hasattr(self, "c"):
+            self.c = self.C * torch.ones(
+                batch_size, *self.source.shape
+            )
+
+        self.p += self.connection.dt * (((1 - self.p)/self.tau_d) - (self.c * self.p * self.source.s))
+        self.c += self.connection.dt * (((self.C - self.c)/self.tau_f) + (self.C * (1 - self.c) * self.source.s))
+        self.p = torch.minimum(torch.ones(self.p.size()), torch.nn.functional.relu(self.p))
+        self.c = torch.minimum(torch.ones(self.c.size()), torch.nn.functional.relu(self.c))
+
+        self.connection.w.data = self.w * self.reduction(self.p.view(batch_size, -1) *
+                self.c.view(batch_size, -1), dim=0)[:, None]
+
+        super().update()
+
+
+class PostPreSTP(LearningRule):
+     # language=rst
+    """
+    PostPre STDP rule with Short Term Plasticity dynamics.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractConnection,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        **kwargs
+    ) -> None:
+        # language=rst
+        """
+        Constructor for ``PostPreSTP`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the
+            ``PostPre`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+        """
+        super().__init__(
+            connection=connection,
+            nu=nu,
+            reduction=reduction,
+            weight_decay=weight_decay,
+            **kwargs
+        )
+
+        assert (
+            self.source.traces and self.target.traces
+        ), "Both pre- and post-synaptic nodes must record spike traces."
+
+        if isinstance(connection, (Connection, LocalConnection)):
+            self.update = self._connection_update
+        elif isinstance(connection, Conv2dConnection):
+            self.update = self._conv2d_connection_update
+        else:
+            raise NotImplementedError(
+                "This learning rule is not supported for this Connection type."
+            )
+
+        self.tau_d = torch.tensor(kwargs.get("tau_d", 0.2))
+        self.tau_f = torch.tensor(kwargs.get("tau_f", 1.5))
+        self.C = torch.tensor(kwargs.get("C", 0.2))
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection``
+        class.
+        """
+        batch_size = self.source.batch_size
+
+        if not hasattr(self, "w"):
+            self.w = self.connection.w.data
+
+        # Pre-synaptic update.
+        if self.nu[0]:
+            source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+            target_x = self.target.x.view(batch_size, -1).unsqueeze(1) * self.nu[0]
+            self.w -= self.reduction(torch.bmm(source_s, target_x), dim=0)
+            del source_s, target_x
+
+        # Post-synaptic update.
+        if self.nu[1]:
+            target_s = (
+                self.target.s.view(batch_size, -1).unsqueeze(1).float() * self.nu[1]
+            )
+            source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+            self.w += self.reduction(torch.bmm(source_x, target_s), dim=0)
+            del source_x, target_s
+
+        # Initialize resources available and fraction of residual calcium available  
+        if not hasattr(self, "p"):
+            self.p = torch.ones(
+                batch_size, *self.source.shape
+            )
+        if not hasattr(self, "c"):
+            self.c = self.C * torch.ones(
+                batch_size, *self.source.shape
+            )
+
+        self.p += self.connection.dt * (((1 - self.p)/self.tau_d) - (self.c * self.p * self.source.s))
+        self.c += self.connection.dt * (((self.C - self.c)/self.tau_f) + (self.C * (1 - self.c) * self.source.s))
+        self.p = torch.minimum(torch.ones(self.p.size()), torch.nn.functional.relu(self.p))
+        self.c = torch.minimum(torch.ones(self.c.size()), torch.nn.functional.relu(self.c))
+
+        self.connection.w.data = self.w * self.reduction(self.p.view(batch_size, -1) * 
+                self.c.view(batch_size, -1), dim=0)[:, None]
+
+        super().update()
+
+
+class WeightDependentPostPreSTP(LearningRule):
+    # language=rst
+    """
+    WeightDependentPostPre STDP rule with Short Term Plasticity dynamics.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractConnection,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        **kwargs
+    ) -> None:
+        # language=rst
+        """
+        Constructor for ``WeightDependentPostPreSTP`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the
+            ``WeightDependentPostPre`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+        """
+        super().__init__(
+            connection=connection,
+            nu=nu,
+            reduction=reduction,
+            weight_decay=weight_decay,
+            **kwargs
+        )
+
+        assert self.source.traces, "Pre-synaptic nodes must record spike traces."
+        assert (
+            connection.wmin != -np.inf and connection.wmax != np.inf
+        ), "Connection must define finite wmin and wmax."
+
+        self.wmin = connection.wmin
+        self.wmax = connection.wmax
+
+        if isinstance(connection, (Connection, LocalConnection)):
+            self.update = self._connection_update
+        elif isinstance(connection, Conv2dConnection):
+            self.update = self._conv2d_connection_update
+        else:
+            raise NotImplementedError(
+                "This learning rule is not supported for this Connection type."
+            )
+
+        self.tau_d = torch.tensor(kwargs.get("tau_d", 0.2))
+        self.tau_f = torch.tensor(kwargs.get("tau_f", 1.5))
+        self.C = torch.tensor(kwargs.get("C", 0.2))
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection``
+        class.
+        """
+        batch_size = self.source.batch_size
+
+        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+        source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
+        target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
+
+        update = 0
+
+        if not hasattr(self, "w"):
+            self.w = self.connection.w.data
+
+        # Pre-synaptic update.
+        if self.nu[0]:
+            outer_product = self.reduction(torch.bmm(source_s, target_x), dim=0)
+            update -= self.nu[0] * outer_product * (self.w - self.wmin)
+
+        # Post-synaptic update.
+        if self.nu[1]:
+            outer_product = self.reduction(torch.bmm(source_x, target_s), dim=0)
+            update += self.nu[1] * outer_product * (self.wmax - self.w)
+
+        self.w += update
+
+        # Initialize resources available and fraction of residual calcium available
+        if not hasattr(self, "p"):
+            self.p = torch.ones(
+                batch_size, *self.source.shape
+            )
+        if not hasattr(self, "c"):
+            self.c = self.C * torch.ones(
+                batch_size, *self.source.shape
+            )
+
+        self.p += self.connection.dt * (((1 - self.p)/self.tau_d) - (self.c * self.p * self.source.s))
+        self.c += self.connection.dt * (((self.C - self.c)/self.tau_f) + (self.C * (1 - self.c) * self.source.s))
+        self.p = torch.minimum(torch.ones(self.p.size()), torch.nn.functional.relu(self.p))
+        self.c = torch.minimum(torch.ones(self.c.size()), torch.nn.functional.relu(self.c))
+
+        self.connection.w.data = self.w * self.reduction(self.p.view(batch_size, -1) *
+                self.c.view(batch_size, -1), dim=0)[:, None]
+
+        super().update()
+
+
 class Hebbian(LearningRule):
     # language=rst
     """
@@ -479,6 +754,101 @@ class Hebbian(LearningRule):
         # Post-synaptic update.
         post = self.reduction(torch.bmm(target_s, source_x.permute((0, 2, 1))), dim=0)
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
+
+        super().update()
+
+
+class HebbianSTP(LearningRule):
+    # language=rst
+    """
+    Hebbian learning rule with Short Term Plasticity dynamics.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractConnection,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        **kwargs
+    ) -> None:
+        # language=rst
+        """
+        Constructor for ``HebbianSTP`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the
+            ``Hebbian`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param weight_decay: Constant multiple to decay weights by on each iteration.
+        """
+        super().__init__(
+            connection=connection,
+            nu=nu,
+            reduction=reduction,
+            weight_decay=weight_decay,
+            **kwargs
+        )
+
+        assert (
+            self.source.traces and self.target.traces
+        ), "Both pre- and post-synaptic nodes must record spike traces."
+
+        if isinstance(connection, (Connection, LocalConnection)):
+            self.update = self._connection_update
+        elif isinstance(connection, Conv2dConnection):
+            self.update = self._conv2d_connection_update
+        else:
+            raise NotImplementedError(
+                "This learning rule is not supported for this Connection type."
+            )
+
+        self.tau_d = torch.tensor(kwargs.get("tau_d", 0.2))
+        self.tau_f = torch.tensor(kwargs.get("tau_f", 1.5))
+        self.C = torch.tensor(kwargs.get("C", 0.2))
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection``
+        class.
+        """
+        batch_size = self.source.batch_size
+
+        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+        source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
+        target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
+
+        if not hasattr(self, "w"):
+            self.w = self.connection.w.data
+
+        # Pre-synaptic update.
+        update = self.reduction(torch.bmm(source_s, target_x), dim=0)
+        self.w += self.nu[0] * update
+
+        # Post-synaptic update.
+        update = self.reduction(torch.bmm(source_x, target_s), dim=0)
+        self.w += self.nu[1] * update
+
+        # Initialize resources available and fraction of residual calcium available
+        if not hasattr(self, "p"):
+            self.p = torch.ones(
+                batch_size, *self.source.shape
+            )
+        if not hasattr(self, "c"):
+            self.c = self.C * torch.ones(
+                batch_size, *self.source.shape
+            )
+
+        self.p += self.connection.dt * (((1 - self.p)/self.tau_d) - (self.c * self.p * self.source.s))
+        self.c += self.connection.dt * (((self.C - self.c)/self.tau_f) + (self.C * (1 - self.c) * self.source.s))
+        self.p = torch.minimum(torch.ones(self.p.size()), torch.nn.functional.relu(self.p))
+        self.c = torch.minimum(torch.ones(self.c.size()), torch.nn.functional.relu(self.c))
+
+        self.connection.w.data = self.w * self.reduction(self.p.view(batch_size, -1) *
+                self.c.view(batch_size, -1), dim=0)[:, None]
 
         super().update()
 

@@ -7,6 +7,10 @@ from bindsnet.learning import (
     Hebbian,
     PostPre,
     WeightDependentPostPre,
+    STP,
+    PostPreSTP,
+    WeightDependentPostPreSTP,
+    HebbianSTP,
     MSTDP,
     MSTDPET,
     Rmax,
@@ -158,6 +162,84 @@ class TestLearningRules:
         network.run(
             inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
             time=250,
+        )
+
+    def test_stp(self):
+        # Connection test
+        network = Network(dt=1.0)
+        network.add_layer(Input(n=100, traces=True), name="input")
+        network.add_layer(LIFNodes(n=100, traces=True), name="output")
+        network.add_connection(
+            Connection(
+                source=network.layers["input"],
+                target=network.layers["output"],
+                nu=1e-2,
+                update_rule=PostPre,
+            ),
+            source="input",
+            target="output",
+        )
+        network.run(
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
+        )
+
+    def test_post_pre_stp(self):
+        # Connection test
+        network = Network(dt=1.0)
+        network.add_layer(Input(n=100, traces=True), name="input")
+        network.add_layer(LIFNodes(n=100, traces=True), name="output")
+        network.add_connection(
+            Connection(
+                source=network.layers["input"],
+                target=network.layers["output"],
+                nu=1e-2,
+                update_rule=PostPreSTP,
+            ),
+            source="input",
+            target="output",
+        )
+        network.run(
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
+        )
+
+    def test_weight_dependent_post_pre_stp(self):
+        # Connection test
+        network = Network(dt=1.0)
+        network.add_layer(Input(n=100, traces=True), name="input")
+        network.add_layer(LIFNodes(n=100, traces=True), name="output")
+        network.add_connection(
+            Connection(
+                source=network.layers["input"],
+                target=network.layers["output"],
+                nu=1e-2,
+                update_rule=WeightDependentPostPreSTP,
+                wmin=-1,
+                wmax=1,
+            ),
+            source="input",
+            target="output",
+        )
+        network.run(
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
+        )
+
+    def test_hebbian_stp(self):
+        # Connection test
+        network = Network(dt=1.0)
+        network.add_layer(Input(n=100, traces=True), name="input")
+        network.add_layer(LIFNodes(n=100, traces=True), name="output")
+        network.add_connection(
+            Connection(
+                source=network.layers["input"],
+                target=network.layers["output"],
+                nu=1e-2,
+                update_rule=HebbianSTP,
+            ),
+            source="input",
+            target="output",
+        )
+        network.run(
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
         )
 
     def test_mstdp(self):
