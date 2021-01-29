@@ -14,7 +14,11 @@ from bindsnet.encoding import PoissonEncoder
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_weights, get_square_assignments
-from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
+from bindsnet.evaluation import (
+    all_activity,
+    proportion_weighting,
+    assign_labels,
+)
 from bindsnet.analysis.plotting import (
     plot_input,
     plot_spikes,
@@ -186,7 +190,9 @@ for epoch in range(n_epochs):
 
             # Get network predictions.
             all_activity_pred = all_activity(
-                spikes=spike_record, assignments=assignments, n_labels=n_classes
+                spikes=spike_record,
+                assignments=assignments,
+                n_labels=n_classes,
             )
             proportion_pred = proportion_weighting(
                 spikes=spike_record,
@@ -264,7 +270,7 @@ for epoch in range(n_epochs):
             spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(square_weights, im=weights_im)
             assigns_im = plot_assignments(square_assignments, im=assigns_im)
-            perf_ax = plot_performance(accuracy, ax=perf_ax)
+            perf_ax = plot_performance(accuracy, x_scale=update_interval, ax=perf_ax)
             voltage_ims, voltage_axes = plot_voltages(
                 voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line"
             )
