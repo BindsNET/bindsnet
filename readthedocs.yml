@@ -23,7 +23,7 @@ python:
       extra_requirements:
         - docs
     - method: setuptools
-  #    path: another/package
+      path: another/package
   system_packages: true
    
    
