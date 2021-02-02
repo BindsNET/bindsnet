@@ -1,27 +1,30 @@
-from __future__ import print_function, division
-
 import os
-import numpy as np
-import torch
-import zipfile
-import warnings
 import sys
 import time
-import cv2
-import bindsnet.datasets.preprocess
-
-
-from PIL import Image
+import zipfile
+import warnings
 from glob import glob
-from typing import Optional, Tuple, List, Iterable
 from urllib.request import urlretrieve
+from typing import Optional, Tuple, List, Iterable
+
+import cv2
+import torch
+import numpy as np
+from PIL import Image
 from torch.utils.data import Dataset
+
+from bindsnet.datasets.preprocess import (
+    cropPadImage,
+    BoundingBox,
+    crop_sample,
+    Rescale,
+    bgr2rgb,
+)
 
 warnings.filterwarnings("ignore")
 
 
 class ALOV300(Dataset):
-
     DATASET_WEB = "http://alov300pp.joomlafree.it/dataset-resources.html"
     VOID_LABEL = 255
 
@@ -29,9 +32,12 @@ class ALOV300(Dataset):
         """
         Class to read the ALOV dataset
 
-        :param root: Path to the ALOV folder that contains JPEGImages, Annotations, etc. folders.
-        :param input_size: The input size of network that is using this data, for rescaling
-        :param download: Specify whether to download the dataset if it is not present
+        :param root: Path to the ALOV folder that contains JPEGImages,
+            annotations, etc. folders.
+        :param input_size: The input size of network that is using this data,
+            for rescaling.
+        :param download: Specify whether to download the dataset if it is not
+            present.
         :param num_samples: Number of samples to pass to the batch
         """
         super(ALOV300, self).__init__()
@@ -132,7 +138,10 @@ class ALOV300(Dataset):
         bbox_curr_gt = BoundingBox(currbb[0], currbb[1], currbb[2], currbb[3])
         bbox_gt_recentered = BoundingBox(0, 0, 0, 0)
         bbox_gt_recentered = bbox_curr_gt.recenter(
-            rand_search_location, edge_spacing_x, edge_spacing_y, bbox_gt_recentered
+            rand_search_location,
+            edge_spacing_x,
+            edge_spacing_y,
+            bbox_gt_recentered,
         )
         curr_sample["image"] = rand_search_region
         curr_sample["bb"] = bbox_gt_recentered.get_bb_list()

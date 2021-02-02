@@ -115,7 +115,8 @@ def plot_spikes(
         for i, datum in enumerate(spikes.items()):
             spikes = (
                 datum[1][
-                    time[0] : time[1], n_neurons[datum[0]][0] : n_neurons[datum[0]][1]
+                    time[0] : time[1],
+                    n_neurons[datum[0]][0] : n_neurons[datum[0]][1],
                 ]
                 .detach()
                 .clone()
@@ -143,14 +144,19 @@ def plot_spikes(
             ax.set_aspect("auto")
 
         plt.setp(
-            axes, xticks=[], yticks=[], xlabel="Simulation time", ylabel="Neuron index"
+            axes,
+            xticks=[],
+            yticks=[],
+            xlabel="Simulation time",
+            ylabel="Neuron index",
         )
         plt.tight_layout()
     else:
         for i, datum in enumerate(spikes.items()):
             spikes = (
                 datum[1][
-                    time[0] : time[1], n_neurons[datum[0]][0] : n_neurons[datum[0]][1]
+                    time[0] : time[1],
+                    n_neurons[datum[0]][0] : n_neurons[datum[0]][1],
                 ]
                 .detach()
                 .clone()
@@ -409,7 +415,10 @@ def plot_assignments(
         else:
             color = plt.get_cmap("RdBu", len(classes) + 1)
             im = ax.matshow(
-                locals_assignments, cmap=color, vmin=-1.5, vmax=len(classes) - 0.5
+                locals_assignments,
+                cmap=color,
+                vmin=-1.5,
+                vmax=len(classes) - 0.5,
             )
 
         div = make_axes_locatable(ax)
@@ -468,6 +477,7 @@ def plot_performance(
     performances: Dict[str, List[float]],
     ax: Optional[Axes] = None,
     figsize: Tuple[int, int] = (7, 4),
+    x_scale: int = 1,
     save: Optional[str] = None,
 ) -> Axes:
     # language=rst
@@ -477,6 +487,7 @@ def plot_performance(
     :param performances: Lists of training accuracy estimates per voting scheme.
     :param ax: Used for re-drawing the performance plot.
     :param figsize: Horizontal, vertical figure size in inches.
+    :param x_scale: scaling factor for the x axis, equal to the number of examples per performance measure
     :param save: file name to save fig, if None = not saving fig.
     :return: Used for re-drawing the performance plot.
     """
@@ -487,7 +498,7 @@ def plot_performance(
 
         for scheme in performances:
             ax.plot(
-                range(len(performances[scheme])),
+                [n * x_scale for n in range(len(performances[scheme]))],
                 [p for p in performances[scheme]],
                 label=scheme,
             )
@@ -496,7 +507,6 @@ def plot_performance(
         ax.set_title("Estimated classification accuracy")
         ax.set_xlabel("No. of examples")
         ax.set_ylabel("Accuracy")
-        ax.set_xticks(())
         ax.set_yticks(range(0, 110, 10))
         ax.legend()
 
@@ -511,7 +521,7 @@ def plot_performance(
 
         for scheme in performances:
             ax.plot(
-                range(len(performances[scheme])),
+                [n * x_scale for n in range(len(performances[scheme]))],
                 [p for p in performances[scheme]],
                 label=scheme,
             )
@@ -520,7 +530,6 @@ def plot_performance(
         ax.set_title("Estimated classification accuracy")
         ax.set_xlabel("No. of examples")
         ax.set_ylabel("Accuracy")
-        ax.set_xticks(())
         ax.set_yticks(range(0, 110, 10))
         ax.legend()
 
@@ -598,7 +607,9 @@ def plot_voltages(
                     ):
                         ims.append(
                             axes.axhline(
-                                y=thresholds[v[0]].item(), c="r", linestyle="--"
+                                y=thresholds[v[0]].item(),
+                                c="r",
+                                linestyle="--",
                             )
                         )
                 else:
@@ -615,7 +626,13 @@ def plot_voltages(
                         )
                     )
 
-                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                args = (
+                    v[0],
+                    n_neurons[v[0]][0],
+                    n_neurons[v[0]][1],
+                    time[0],
+                    time[1],
+                )
                 plt.title("%s voltages for neurons (%d - %d) from t = %d to %d " % args)
                 plt.xlabel("Time (ms)")
 
@@ -644,7 +661,9 @@ def plot_voltages(
                     ):
                         ims.append(
                             axes[i].axhline(
-                                y=thresholds[v[0]].item(), c="r", linestyle="--"
+                                y=thresholds[v[0]].item(),
+                                c="r",
+                                linestyle="--",
                             )
                         )
                 else:
@@ -660,7 +679,13 @@ def plot_voltages(
                             cmap=cmap,
                         )
                     )
-                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                args = (
+                    v[0],
+                    n_neurons[v[0]][0],
+                    n_neurons[v[0]][1],
+                    time[0],
+                    time[1],
+                )
                 axes[i].set_title(
                     "%s voltages for neurons (%d - %d) from t = %d to %d " % args
                 )
@@ -702,7 +727,13 @@ def plot_voltages(
                         .T,
                         cmap=cmap,
                     )
-                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                args = (
+                    v[0],
+                    n_neurons[v[0]][0],
+                    n_neurons[v[0]][1],
+                    time[0],
+                    time[1],
+                )
                 axes.set_title(
                     "%s voltages for neurons (%d - %d) from t = %d to %d " % args
                 )
@@ -738,7 +769,13 @@ def plot_voltages(
                         .T,
                         cmap=cmap,
                     )
-                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                args = (
+                    v[0],
+                    n_neurons[v[0]][0],
+                    n_neurons[v[0]][1],
+                    time[0],
+                    time[1],
+                )
                 axes[i].set_title(
                     "%s voltages for neurons (%d - %d) from t = %d to %d " % args
                 )
