@@ -134,8 +134,8 @@ rates = torch.zeros((n_neurons, n_classes), device=device)
 accuracy = {"all": [], "proportion": []}
 
 # Voltage recording for excitatory and inhibitory layers.
-exc_voltage_monitor = Monitor(network.layers["Ae"], ["v"], time=int(time / dt))
-inh_voltage_monitor = Monitor(network.layers["Ai"], ["v"], time=int(time / dt))
+exc_voltage_monitor = Monitor(network.layers["Ae"], ["v"], time=int(time / dt), device=device)
+inh_voltage_monitor = Monitor(network.layers["Ai"], ["v"], time=int(time / dt), device=device)
 network.add_monitor(exc_voltage_monitor, name="exc_voltage")
 network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 
@@ -143,14 +143,14 @@ network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 spikes = {}
 for layer in set(network.layers):
     spikes[layer] = Monitor(
-        network.layers[layer], state_vars=["s"], time=int(time / dt)
+        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device
     )
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
 voltages = {}
 for layer in set(network.layers) - {"X"}:
     voltages[layer] = Monitor(
-        network.layers[layer], state_vars=["v"], time=int(time / dt)
+        network.layers[layer], state_vars=["v"], time=int(time / dt), device=device
     )
     network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
