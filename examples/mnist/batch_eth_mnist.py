@@ -133,8 +133,12 @@ rates = torch.zeros((n_neurons, n_classes), device=device)
 accuracy = {"all": [], "proportion": []}
 
 # Voltage recording for excitatory and inhibitory layers.
-exc_voltage_monitor = Monitor(network.layers["Ae"], ["v"], time=int(time / dt), device=device)
-inh_voltage_monitor = Monitor(network.layers["Ai"], ["v"], time=int(time / dt), device=device)
+exc_voltage_monitor = Monitor(
+    network.layers["Ae"], ["v"], time=int(time / dt), device=device
+)
+inh_voltage_monitor = Monitor(
+    network.layers["Ai"], ["v"], time=int(time / dt), device=device
+)
 network.add_monitor(exc_voltage_monitor, name="exc_voltage")
 network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 
@@ -142,16 +146,14 @@ network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 spikes = {}
 for layer in set(network.layers):
     spikes[layer] = Monitor(
-        network.layers[layer], state_vars=["s"], time=int(time / dt),
-        device=device
+        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device
     )
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
 voltages = {}
 for layer in set(network.layers) - {"X"}:
     voltages[layer] = Monitor(
-        network.layers[layer], state_vars=["v"], time=int(time / dt),
-        device=device
+        network.layers[layer], state_vars=["v"], time=int(time / dt), device=device
     )
     network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
@@ -271,6 +273,7 @@ for epoch in range(n_epochs):
         if plot:
             image = batch["image"][:, 0].view(28, 28)
             inpt = inputs["X"][:, 0].view(time, 784).sum(0).view(28, 28)
+            lable = batch["label"][0]
             input_exc_weights = network.connections[("X", "Ae")].w
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
@@ -281,7 +284,7 @@ for epoch in range(n_epochs):
             }
             voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
             inpt_axes, inpt_ims = plot_input(
-                image, inpt, label=labels[step], axes=inpt_axes, ims=inpt_ims
+                image, inpt, label=lable, axes=inpt_axes, ims=inpt_ims
             )
             spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(square_weights, im=weights_im)

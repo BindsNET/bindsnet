@@ -120,7 +120,9 @@ rates = torch.zeros((n_neurons, n_classes), device=device)
 accuracy = {"all": [], "proportion": []}
 
 # Voltage recording for excitatory and inhibitory layers.
-som_voltage_monitor = Monitor(network.layers["Y"], ["v"], time=int(time / dt), device=device)
+som_voltage_monitor = Monitor(
+    network.layers["Y"], ["v"], time=int(time / dt), device=device
+)
 network.add_monitor(som_voltage_monitor, name="som_voltage")
 
 # Set up monitors for spikes and voltages
