@@ -129,7 +129,9 @@ class Nodes(torch.nn.Module):
         """
         self.dt = torch.tensor(dt)
         if self.traces:
-            self.trace_decay = torch.exp(torch.div(torch.mul(self.dt, -1.0), self.tc_trace))
+            self.trace_decay = torch.exp(
+                torch.div(torch.mul(self.dt, -1.0), self.tc_trace)
+            )
             # self.trace_decay = torch.exp(
             #     -self.dt / self.tc_trace
             # )  # Spike trace decay (per timestep).
@@ -288,7 +290,9 @@ class McCullochPitts(Nodes):
         """
         self.v = x  # Voltages are equal to the inputs.
         # self.s = self.v >= self.thresh  # Check for spiking neurons.
-        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape)
+        )
 
         super().forward(x)
 
@@ -390,7 +394,9 @@ class IFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape)
+        )
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -419,7 +425,9 @@ class IFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.mul(self.reset, torch.ones(batch_size, *self.shape, device=self.v.device))
+        self.v = torch.mul(
+            self.reset, torch.ones(batch_size, *self.shape, device=self.v.device)
+        )
         self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
@@ -514,7 +522,9 @@ class LIFNodes(Nodes):
         """
         # Decay voltages.
         # self.v = self.decay * (self.v - self.rest) + self.rest
-        self.v = torch.add(torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest)
+        self.v = torch.add(
+            torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest
+        )
 
         # Integrate inputs.
         x.masked_fill_(self.refrac_count > 0, 0.0)
@@ -527,7 +537,9 @@ class LIFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape)
+        )
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -567,7 +579,9 @@ class LIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.mul(self.rest, torch.ones(batch_size, *self.shape, device=self.v.device))
+        self.v = torch.mul(
+            self.rest, torch.ones(batch_size, *self.shape, device=self.v.device)
+        )
         self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
@@ -655,7 +669,9 @@ class BoostedLIFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape)
+        )
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -677,7 +693,7 @@ class BoostedLIFNodes(Nodes):
         """
         Sets the relevant decays.
         """
-        super().compute_decays(dt=dt)        
+        super().compute_decays(dt=dt)
         self.decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_decay))
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
@@ -786,7 +802,9 @@ class CurrentLIFNodes(Nodes):
         # Decay voltages and current.
         # self.v = self.decay * (self.v - self.rest) + self.rest
         # self.i *= self.i_decay
-        self.v = torch.add(torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest)
+        self.v = torch.add(
+            torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest
+        )
         self.i = torch.mul(self.i, self.i_decay)
 
         # Decrement refractory counters.
@@ -797,11 +815,13 @@ class CurrentLIFNodes(Nodes):
         # self.i += x
         # self.v += (self.refrac_count <= 0).float() * self.i
         self.i = torch.add(self.i, x)
-        self.v = torch.add(self.v, torch.mul((self.refrac_count <= 0).float(),  self.i))
+        self.v = torch.add(self.v, torch.mul((self.refrac_count <= 0).float(), self.i))
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape)
+        )
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -846,7 +866,9 @@ class CurrentLIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.mul(self.rest, torch.ones(batch_size, *self.shape, device=self.v.device))
+        self.v = torch.mul(
+            self.rest, torch.ones(batch_size, *self.shape, device=self.v.device)
+        )
         self.i = torch.zeros_like(self.v, device=self.i.device)
         self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
@@ -945,7 +967,9 @@ class AdaptiveLIFNodes(Nodes):
         """
         # Decay voltages and adaptive thresholds.
         # self.v = self.decay * (self.v - self.rest) + self.rest
-        self.v = torch.add(torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest)
+        self.v = torch.add(
+            torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest
+        )
         if self.learning:
             self.theta = torch.mul(self.theta, self.theta_decay)
             # self.theta *= self.theta_decay
@@ -960,13 +984,19 @@ class AdaptiveLIFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh + self.theta
-        self.s = torch.where(self.v >= torch.add(self.thresh, self.theta), torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= torch.add(self.thresh, self.theta),
+            torch.zeros(self.v.shape),
+            torch.ones(self.v.shape),
+        )
 
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
         if self.learning:
-            self.theta = torch.add(self.theta, torch.mul(self.theta_plus, self.s.float().sum(0)))
+            self.theta = torch.add(
+                self.theta, torch.mul(self.theta_plus, self.s.float().sum(0))
+            )
             # self.theta += self.theta_plus * self.s.float().sum(0)
 
         # voltage clipping to lowerbound
@@ -994,7 +1024,9 @@ class AdaptiveLIFNodes(Nodes):
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
-        self.theta_decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay))
+        self.theta_decay = torch.exp(
+            torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay)
+        )
         # self.theta_decay = torch.exp(
         #     -self.dt / self.tc_theta_decay
         # )  # Adaptive threshold decay (per timestep).
@@ -1007,7 +1039,9 @@ class AdaptiveLIFNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.mul(self.rest, torch.ones(batch_size, *self.shape, device=self.v.device))
+        self.v = torch.mul(
+            self.rest, torch.ones(batch_size, *self.shape, device=self.v.device)
+        )
         self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
@@ -1108,7 +1142,9 @@ class DiehlAndCookNodes(Nodes):
         """
         # Decay voltages and adaptive thresholds.
         # self.v = self.decay * (self.v - self.rest) + self.rest
-        self.v = torch.add(torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest)
+        self.v = torch.add(
+            torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest
+        )
         if self.learning:
             self.theta = torch.mul(self.theta, self.theta_decay)
             # self.theta *= self.theta_decay
@@ -1123,14 +1159,20 @@ class DiehlAndCookNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh + self.theta
-        self.s = torch.where(self.v >= torch.add(self.thresh, self.theta), torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= torch.add(self.thresh, self.theta),
+            torch.zeros(self.v.shape),
+            torch.ones(self.v.shape),
+        )
 
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
         self.v.masked_fill_(self.s, self.reset)
         if self.learning:
             # self.theta += self.theta_plus * self.s.float().sum(0)
-            self.theta = torch.add(self.theta, torch.mul(self.theta_plus, self.s.float().sum(0)))
+            self.theta = torch.add(
+                self.theta, torch.mul(self.theta_plus, self.s.float().sum(0))
+            )
 
         # Choose only a single neuron to spike.
         if self.one_spike:
@@ -1168,7 +1210,9 @@ class DiehlAndCookNodes(Nodes):
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
-        self.theta_decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay))
+        self.theta_decay = torch.exp(
+            torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay)
+        )
         # self.theta_decay = torch.exp(
         #     -self.dt / self.tc_theta_decay
         # )  # Adaptive threshold decay (per timestep).
@@ -1181,7 +1225,9 @@ class DiehlAndCookNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.mul(self.rest, torch.ones(batch_size, *self.shape, device=self.v.device))
+        self.v = torch.mul(
+            self.rest, torch.ones(batch_size, *self.shape, device=self.v.device)
+        )
         self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
 
 
@@ -1312,7 +1358,9 @@ class IzhikevichNodes(Nodes):
         """
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape)
+        )
 
         # Voltage and recovery reset.
         self.v = torch.where(self.s, self.c, self.v)
@@ -1329,10 +1377,39 @@ class IzhikevichNodes(Nodes):
         # self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
         # self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
         # self.u += self.dt * self.a * (self.b * self.v - self.u)
-        
-        self.v = torch.add(self.v, torch.mul(self.dt, 0.5, torch.add(torch.mul(0.04, torch.pow(self.v, 2)), torch.mul(5, self.v), 140, torch.mul(-1.0, self.u), x)))
-        self.v = torch.add(self.v, torch.mul(self.dt, 0.5, torch.add(torch.mul(0.04, torch.pow(self.v, 2)), torch.mul(5, self.v), 140, torch.mul(-1.0, self.u), x)))
-        self.u = torch.add(self.u, torch.mul(self.dt, self.a, torch.sub(torch.mul(self.b, self.v), self.u)))
+
+        self.v = torch.add(
+            self.v,
+            torch.mul(
+                self.dt,
+                0.5,
+                torch.add(
+                    torch.mul(0.04, torch.pow(self.v, 2)),
+                    torch.mul(5, self.v),
+                    140,
+                    torch.mul(-1.0, self.u),
+                    x,
+                ),
+            ),
+        )
+        self.v = torch.add(
+            self.v,
+            torch.mul(
+                self.dt,
+                0.5,
+                torch.add(
+                    torch.mul(0.04, torch.pow(self.v, 2)),
+                    torch.mul(5, self.v),
+                    140,
+                    torch.mul(-1.0, self.u),
+                    x,
+                ),
+            ),
+        )
+        self.u = torch.add(
+            self.u,
+            torch.mul(self.dt, self.a, torch.sub(torch.mul(self.b, self.v), self.u)),
+        )
 
         # Voltage clipping to lower bound.
         if self.lbound is not None:
@@ -1358,8 +1435,10 @@ class IzhikevichNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.mul(self.rest, torch.ones(batch_size, *self.shape, device=self.v.device))
-        self.u = torch.mul(self.b,  self.v)
+        self.v = torch.mul(
+            self.rest, torch.ones(batch_size, *self.shape, device=self.v.device)
+        )
+        self.u = torch.mul(self.b, self.v)
 
 
 class CSRMNodes(Nodes):
@@ -1495,11 +1574,17 @@ class CSRMNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh + self.theta
-        self.s = torch.where(self.v >= torch.add(self.thresh, self.theta), torch.zeros(self.v.shape), torch.ones(self.v.shape))
+        self.s = torch.where(
+            self.v >= torch.add(self.thresh, self.theta),
+            torch.zeros(self.v.shape),
+            torch.ones(self.v.shape),
+        )
 
         if self.learning:
             # self.theta += self.theta_plus * self.s.float().sum(0)
-            self.theta = torch.add(self.theta, torch.mul(self.theta_plus, self.s.float().sum(0)))
+            self.theta = torch.add(
+                self.theta, torch.mul(self.theta_plus, self.s.float().sum(0))
+            )
 
         # Add the spike vector into the first in first out matrix of windowed (ref) spike trains
         self.last_spikes = torch.cat(
@@ -1530,7 +1615,9 @@ class CSRMNodes(Nodes):
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
-        self.theta_decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay))
+        self.theta_decay = torch.exp(
+            torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay)
+        )
         # self.theta_decay = torch.exp(
         #     -self.dt / self.tc_theta_decay
         # )  # Adaptive threshold decay (per timestep).
@@ -1543,7 +1630,9 @@ class CSRMNodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.mul(self.rest, torch.ones(batch_size, *self.shape, device=self.v.device))
+        self.v = torch.mul(
+            self.rest, torch.ones(batch_size, *self.shape, device=self.v.device)
+        )
         self.last_spikes = torch.zeros(batch_size, self.ref_window_size, *self.shape)
 
         resKernels = {
@@ -1570,25 +1659,38 @@ class CSRMNodes(Nodes):
     def AlphaKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
         # kernelVec = (1 / (self.tau ** 2)) * t * torch.exp(-t / self.tau)
-        kernelVec = torch.mul(torch.div(1.0, torch.pow(self.tau, 2)), t, torch.exp(torch.div(torch.mul(-1.0, t), self.tau)))
+        kernelVec = torch.mul(
+            torch.div(1.0, torch.pow(self.tau, 2)),
+            t,
+            torch.exp(torch.div(torch.mul(-1.0, t), self.tau)),
+        )
         return torch.flip(kernelVec, [0])
 
     def AlphaKernelSLAYER(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
         # kernelVec = (1 / self.tau) * t * torch.exp(1 - t / self.tau)
-        kernelVec = torch.mul(torch.div(1.0, self.tau), t, torch.exp(torch.sub(1.0, torch.div(t, self.tau))))
+        kernelVec = torch.mul(
+            torch.div(1.0, self.tau),
+            t,
+            torch.exp(torch.sub(1.0, torch.div(t, self.tau))),
+        )
         return torch.flip(kernelVec, [0])
 
     def LaplacianKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
         # kernelVec = (1 / (self.tau * 2)) * torch.exp(-1 * torch.abs(t / self.tau))
-        kernelVec = torch.mul(torch.div(1.0, torch.mul(self.tau, 2)), torch.exp(torch.mul(-1, torch.abs(torch.div(t, self.tau)))))
+        kernelVec = torch.mul(
+            torch.div(1.0, torch.mul(self.tau, 2)),
+            torch.exp(torch.mul(-1, torch.abs(torch.div(t, self.tau)))),
+        )
         return torch.flip(kernelVec, [0])
 
     def ExponentialKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
         # kernelVec = (1 / self.tau) * torch.exp(-t / self.tau)
-        kernelVec = torch.mul(torch.div(1, self.tau), torch.exp(torch.div(torch.mul(-1, t), self.tau)))
+        kernelVec = torch.mul(
+            torch.div(1, self.tau), torch.exp(torch.div(torch.mul(-1, t), self.tau))
+        )
         return torch.flip(kernelVec, [0])
 
     def RectangularKernel(self, dt):
@@ -1600,13 +1702,17 @@ class CSRMNodes(Nodes):
     def TriangularKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
         # kernelVec = (1 / self.tau) * (1 - (t / self.tau))
-        kernelVec = torch.mul(torch.div(1, self.tau), torch.sub(1, torch.div(t, self.tau)))
+        kernelVec = torch.mul(
+            torch.div(1, self.tau), torch.sub(1, torch.div(t, self.tau))
+        )
         return torch.flip(kernelVec, [0])
 
     def EtaKernel(self, dt):
         t = torch.arange(0, self.ref_window_size, dt)
         # kernelVec = -self.reset_const * torch.exp(-t / self.tau)
-        kernelVec = torch.mul(-1 * self.reset_const, torch.exp(torch.div(torch.mul(-1, t), self.tau)))
+        kernelVec = torch.mul(
+            -1 * self.reset_const, torch.exp(torch.div(torch.mul(-1, t), self.tau))
+        )
         return torch.flip(kernelVec, [0])
 
 
@@ -1703,14 +1809,19 @@ class SRM0Nodes(Nodes):
         """
         # Decay voltages.
         # self.v = self.decay * (self.v - self.rest) + self.rest
-        self.v = torch.add(torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest)
+        self.v = torch.add(
+            torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest
+        )
 
         # Integrate inputs.
         self.v += (self.refrac_count <= 0).float() * self.eps_0 * x
 
         # Compute (instantaneous) probabilities of spiking, clamp between 0 and 1 using exponentials.
         # Also known as 'escape noise', this simulates nearby neurons.
-        self.rho = torch.mul(self.rho_0, torch.exp(torch.div(torch.sub(self.v, self.thresh), self.d_thresh)))
+        self.rho = torch.mul(
+            self.rho_0,
+            torch.exp(torch.div(torch.sub(self.v, self.thresh), self.d_thresh)),
+        )
         self.s_prob = torch.sub(1.0, torch.exp(torch.mul(-1.0 * self.rho, self.dt)))
         # self.rho = self.rho_0 * torch.exp((self.v - self.thresh) / self.d_thresh)
         # self.s_prob = 1.0 - torch.exp(-self.rho * self.dt)
@@ -1760,5 +1871,7 @@ class SRM0Nodes(Nodes):
         :param batch_size: Mini-batch size.
         """
         super().set_batch_size(batch_size=batch_size)
-        self.v = torch.mul(self.rest, torch.ones(batch_size, *self.shape, device=self.v.device))
+        self.v = torch.mul(
+            self.rest, torch.ones(batch_size, *self.shape, device=self.v.device)
+        )
         self.refrac_count = torch.zeros_like(self.v, device=self.refrac_count.device)
