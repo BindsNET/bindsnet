@@ -240,9 +240,11 @@ class Network(torch.nn.Module):
 
                 # Add to input: source's spikes multiplied by connection weights.
                 if isinstance(target, CSRMNodes):
-                    inputs[c[1]] += self.connections[c].compute_window(source.s)
+                    # inputs[c[1]] += self.connections[c].compute_window(source.s)
+                    inputs[c[1]] = torch.add(inputs[c[1]], self.connections[c].compute_window(source.s))
                 else:
-                    inputs[c[1]] += self.connections[c].compute(source.s)
+                    # inputs[c[1]] += self.connections[c].compute(source.s)
+                    inputs[c[1]] = torch.add(inputs[c[1]], self.connections[c].compute(source.s))
 
         return inputs
 
@@ -357,7 +359,8 @@ class Network(torch.nn.Module):
                 # Update each layer of nodes.
                 if l in inputs:
                     if l in current_inputs:
-                        current_inputs[l] += inputs[l][t]
+                        current_inputs[l] = torch.add(current_inputs[l], inputs[l][t])
+                        # current_inputs[l] += inputs[l][t]
                     else:
                         current_inputs[l] = inputs[l][t]
 
@@ -390,9 +393,11 @@ class Network(torch.nn.Module):
                 inject_v = injects_v.get(l, None)
                 if inject_v is not None:
                     if inject_v.ndimension() == 1:
-                        self.layers[l].v += inject_v
+                        # self.layers[l].v += inject_v
+                        self.layers[l].v = torch.add(self.layers[l].v, inject_v)
                     else:
-                        self.layers[l].v += inject_v[t]
+                        # self.layers[l].v += inject_v[t]
+                        self.layers[l].v = torch.add(self.layers[l].v, inject_v[t])
 
             # Run synapse updates.
             for c in self.connections:
