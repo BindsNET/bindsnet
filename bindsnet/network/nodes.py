@@ -96,7 +96,7 @@ class Nodes(torch.nn.Module):
         """
         if self.traces:
             # Decay and set spike traces.
-            self.x = torch.matmul(self.x, self.trace_decay)
+            self.x = torch.mul(self.trace_decay, self.x)
 
             if self.traces_additive:
                 self.x = torch.add(self.x, torch.mul(self.s.float(), self.trace_scale))
@@ -287,8 +287,8 @@ class McCullochPitts(Nodes):
         :param x: Inputs to the layer.
         """
         self.v = x  # Voltages are equal to the inputs.
-        self.s = torch.nn.functional.threshold(self.v, self.thresh)
         # self.s = self.v >= self.thresh  # Check for spiking neurons.
+        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         super().forward(x)
 
@@ -382,7 +382,7 @@ class IFNodes(Nodes):
         """
         # Integrate input voltages.
         # self.v += (self.refrac_count <= 0).float() * x
-        self.v = torch.add(self.v, self.mul((self.refrac_count <= 0.0).float(), x))
+        self.v = torch.add(self.v, torch.mul((self.refrac_count <= 0.0).float(), x))
 
         # Decrement refractory counters.
         # self.refrac_count -= self.dt
@@ -390,7 +390,7 @@ class IFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.nn.functional.threshold(self.v, self.thresh)
+        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -514,7 +514,7 @@ class LIFNodes(Nodes):
         """
         # Decay voltages.
         # self.v = self.decay * (self.v - self.rest) + self.rest
-        self.v = torch.add(torch.mul(self.decay, self.sub(self.v, self.rest)), self.rest)
+        self.v = torch.add(torch.mul(self.decay, torch.sub(self.v, self.rest)), self.rest)
 
         # Integrate inputs.
         x.masked_fill_(self.refrac_count > 0, 0.0)
@@ -527,7 +527,7 @@ class LIFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.nn.functional.threshold(self.v, self.thresh)
+        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -554,7 +554,7 @@ class LIFNodes(Nodes):
         Sets the relevant decays.
         """
         super().compute_decays(dt=dt)
-        self.decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_decay))
+        self.decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_decay))
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
@@ -655,7 +655,7 @@ class BoostedLIFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.nn.functional.threshold(self.v, self.thresh)
+        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -678,7 +678,7 @@ class BoostedLIFNodes(Nodes):
         Sets the relevant decays.
         """
         super().compute_decays(dt=dt)        
-        self.decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_decay))
+        self.decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_decay))
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
@@ -801,7 +801,7 @@ class CurrentLIFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.nn.functional.threshold(self.v, self.thresh)
+        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -829,11 +829,11 @@ class CurrentLIFNodes(Nodes):
         Sets the relevant decays.
         """
         super().compute_decays(dt=dt)
-        self.decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_decay))
+        self.decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_decay))
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
-        self.i_decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_i_decay))
+        self.i_decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_i_decay))
         # self.i_decay = torch.exp(
         #     -self.dt / self.tc_i_decay
         # )  # Synaptic input current decay (per timestep).
@@ -960,7 +960,7 @@ class AdaptiveLIFNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh + self.theta
-        self.s = torch.nn.functional.threshold(self.v, torch.add(self.thresh, self.theta))
+        self.s = torch.where(self.v >= torch.add(self.thresh, self.theta), torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -990,11 +990,11 @@ class AdaptiveLIFNodes(Nodes):
         Sets the relevant decays.
         """
         super().compute_decays(dt=dt)
-        self.decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_decay))
+        self.decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_decay))
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
-        self.theta_decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_theta_decay))
+        self.theta_decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay))
         # self.theta_decay = torch.exp(
         #     -self.dt / self.tc_theta_decay
         # )  # Adaptive threshold decay (per timestep).
@@ -1123,7 +1123,7 @@ class DiehlAndCookNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh + self.theta
-        self.s = torch.nn.functional.threshold(self.v, torch.add(self.thresh, self.theta))
+        self.s = torch.where(self.v >= torch.add(self.thresh, self.theta), torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -1164,11 +1164,11 @@ class DiehlAndCookNodes(Nodes):
         Sets the relevant decays.
         """
         super().compute_decays(dt=dt)
-        self.decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_decay))
+        self.decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_decay))
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
-        self.theta_decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_theta_decay))
+        self.theta_decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay))
         # self.theta_decay = torch.exp(
         #     -self.dt / self.tc_theta_decay
         # )  # Adaptive threshold decay (per timestep).
@@ -1312,7 +1312,7 @@ class IzhikevichNodes(Nodes):
         """
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh
-        self.s = torch.nn.functional.threshold(self.v, torch.add(self.thresh, self.theta))
+        self.s = torch.where(self.v >= self.thresh, torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         # Voltage and recovery reset.
         self.v = torch.where(self.s, self.c, self.v)
@@ -1495,7 +1495,7 @@ class CSRMNodes(Nodes):
 
         # Check for spiking neurons.
         # self.s = self.v >= self.thresh + self.theta
-        self.s = torch.nn.functional.threshold(self.v, torch.add(self.thresh, self.theta))
+        self.s = torch.where(self.v >= torch.add(self.thresh, self.theta), torch.zeros(self.v.shape), torch.ones(self.v.shape))
 
         if self.learning:
             # self.theta += self.theta_plus * self.s.float().sum(0)
@@ -1526,11 +1526,11 @@ class CSRMNodes(Nodes):
         Sets the relevant decays.
         """
         super().compute_decays(dt=dt)
-        self.decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_decay))
+        self.decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_decay))
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
-        self.theta_decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_theta_decay))
+        self.theta_decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_theta_decay))
         # self.theta_decay = torch.exp(
         #     -self.dt / self.tc_theta_decay
         # )  # Adaptive threshold decay (per timestep).
@@ -1606,7 +1606,7 @@ class CSRMNodes(Nodes):
     def EtaKernel(self, dt):
         t = torch.arange(0, self.ref_window_size, dt)
         # kernelVec = -self.reset_const * torch.exp(-t / self.tau)
-        kernelVec = torch.mul(-1, self.reset_const, torch.exp(torch.div(torch.mul(-1, t), self.tau)))
+        kernelVec = torch.mul(-1 * self.reset_const, torch.exp(torch.div(torch.mul(-1, t), self.tau)))
         return torch.flip(kernelVec, [0])
 
 
@@ -1711,7 +1711,7 @@ class SRM0Nodes(Nodes):
         # Compute (instantaneous) probabilities of spiking, clamp between 0 and 1 using exponentials.
         # Also known as 'escape noise', this simulates nearby neurons.
         self.rho = torch.mul(self.rho_0, torch.exp(torch.div(torch.sub(self.v, self.thresh), self.d_thresh)))
-        self.s_prob(torch.sub(1.0, torch.exp(torch.mul(-1, self.rho, self.dt))))
+        self.s_prob = torch.sub(1.0, torch.exp(torch.mul(-1.0 * self.rho, self.dt)))
         # self.rho = self.rho_0 * torch.exp((self.v - self.thresh) / self.d_thresh)
         # self.s_prob = 1.0 - torch.exp(-self.rho * self.dt)
 
@@ -1747,7 +1747,7 @@ class SRM0Nodes(Nodes):
         Sets the relevant decays.
         """
         super().compute_decays(dt=dt)
-        self.decay = torch.exp(self.div(self.mul(-1.0, self.dt), self.tc_decay))
+        self.decay = torch.exp(torch.div(torch.mul(-1.0, self.dt), self.tc_decay))
         # self.decay = torch.exp(
         #     -self.dt / self.tc_decay
         # )  # Neuron voltage decay (per timestep).
