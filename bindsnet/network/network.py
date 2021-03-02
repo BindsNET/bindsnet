@@ -241,10 +241,14 @@ class Network(torch.nn.Module):
                 # Add to input: source's spikes multiplied by connection weights.
                 if isinstance(target, CSRMNodes):
                     # inputs[c[1]] += self.connections[c].compute_window(source.s)
-                    inputs[c[1]] = torch.add(inputs[c[1]], self.connections[c].compute_window(source.s))
+                    inputs[c[1]] = torch.add(
+                        inputs[c[1]], self.connections[c].compute_window(source.s)
+                    )
                 else:
                     # inputs[c[1]] += self.connections[c].compute(source.s)
-                    inputs[c[1]] = torch.add(inputs[c[1]], self.connections[c].compute(source.s))
+                    inputs[c[1]] = torch.add(
+                        inputs[c[1]], self.connections[c].compute(source.s)
+                    )
 
         return inputs
 
