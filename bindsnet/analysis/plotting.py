@@ -140,13 +140,13 @@ def plot_spikes(
             axes[i].set_title(
                 "%s spikes for neurons (%d - %d) from t = %d to %d " % args
             )
+            axes[i].set_yticks([n_neurons[datum[0]][0], n_neurons[datum[0]][1]])
         for ax in axes:
             ax.set_aspect("auto")
 
         plt.setp(
             axes,
             xticks=[],
-            yticks=[],
             xlabel="Simulation time",
             ylabel="Neuron index",
         )
@@ -174,6 +174,7 @@ def plot_spikes(
             axes[i].set_title(
                 "%s spikes for neurons (%d - %d) from t = %d to %d " % args
             )
+            axes[i].set_yticks([n_neurons[datum[0]][0], n_neurons[datum[0]][1]])
 
     plt.draw()
 
