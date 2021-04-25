@@ -77,7 +77,7 @@ print("Running on Device = ", device)
 
 # Determines number of workers to use
 if n_workers == -1:
-    n_workers = torch.cuda.is_available() * 4 * torch.cuda.device_count()
+    n_workers = 0  # torch.cuda.is_available() * 4 * torch.cuda.device_count()
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity

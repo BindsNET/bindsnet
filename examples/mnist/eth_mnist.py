@@ -48,7 +48,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=False)
+parser.set_defaults(plot=True, gpu=True)
 
 args = parser.parse_args()
 
@@ -85,7 +85,7 @@ print("Running on Device = ", device)
 
 # Determines number of workers to use
 if n_workers == -1:
-    n_workers = gpu * 4 * torch.cuda.device_count()
+    n_workers = 0  # gpu * 4 * torch.cuda.device_count()
 
 if not train:
     update_interval = n_test
