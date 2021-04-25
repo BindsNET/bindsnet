@@ -2,8 +2,8 @@ foolbox
 scipy>=1.1.0
 numpy>=1.14.2
 cython>=0.28.5
-torch==1.7.1
-torchvision==0.8.2
+torch==1.8.1
+torchvision==0.9.1
 tqdm>=4.19.9
 setuptools>=39.0.1
 matplotlib>=2.1.0
