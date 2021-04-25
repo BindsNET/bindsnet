@@ -107,8 +107,8 @@ if gpu:
     network.to("cuda")
 
 # Voltage recording for excitatory and inhibitory layers.
-exc_voltage_monitor = Monitor(network.layers["Ae"], ["v"], time=time)
-inh_voltage_monitor = Monitor(network.layers["Ai"], ["v"], time=time)
+exc_voltage_monitor = Monitor(network.layers["Ae"], ["v"], time=time, device=device)
+inh_voltage_monitor = Monitor(network.layers["Ai"], ["v"], time=time, device=device)
 network.add_monitor(exc_voltage_monitor, name="exc_voltage")
 network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 

@@ -86,10 +86,10 @@ network.add_connection(C2, source="O", target="O")
 
 spikes = {}
 for l in network.layers:
-    spikes[l] = Monitor(network.layers[l], ["s"], time=time)
+    spikes[l] = Monitor(network.layers[l], ["s"], time=time, device=device)
     network.add_monitor(spikes[l], name="%s_spikes" % l)
 
-voltages = {"O": Monitor(network.layers["O"], ["v"], time=time)}
+voltages = {"O": Monitor(network.layers["O"], ["v"], time=time, device=device)}
 network.add_monitor(voltages["O"], name="O_voltages")
 
 # Directs network to GPU
