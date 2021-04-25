@@ -141,7 +141,7 @@ def poisson(
 
         # Create Poisson distribution and sample inter-spike intervals
         # (incrementing by 1 to avoid zero intervals).
-        dist = torch.distributions.Poisson(rate=rate)
+        dist = torch.distributions.Poisson(rate=rate, validate_args=False)
         intervals = dist.sample(sample_shape=torch.Size([time + 1]))
         intervals[:, datum != 0] += (intervals[:, datum != 0] == 0).float()
 

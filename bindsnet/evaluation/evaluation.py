@@ -207,7 +207,7 @@ def ngram(
 
         predictions.append(torch.argmax(score))
 
-    return torch.tensor(predictions).long()
+    return torch.tensor(predictions, device=spikes.device).long()
 
 
 def update_ngram_scores(
@@ -246,7 +246,7 @@ def update_ngram_scores(
         for order in zip(*(fire_order[k:] for k in range(n))):
             for sequence in product(*order):
                 if sequence not in ngram_scores:
-                    ngram_scores[sequence] = torch.zeros(n_labels)
+                    ngram_scores[sequence] = torch.zeros(n_labels, device=spikes.device)
 
                 ngram_scores[sequence][int(labels[i])] += 1
 

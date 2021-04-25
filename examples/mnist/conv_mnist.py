@@ -41,7 +41,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=False, train=True)
+parser.set_defaults(plot=True, gpu=True, train=True)
 
 args = parser.parse_args()
 
@@ -164,7 +164,7 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=1, shuffle=True, num_workers=4, pin_memory=gpu
+        train_dataset, batch_size=1, shuffle=True, num_workers=0, pin_memory=gpu
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):

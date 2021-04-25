@@ -46,7 +46,7 @@ parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
 parser.add_argument("--device_id", type=int, default=0)
-parser.set_defaults(plot=True, gpu=False, train=True)
+parser.set_defaults(plot=True, gpu=True, train=True)
 
 args = parser.parse_args()
 

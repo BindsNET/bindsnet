@@ -794,12 +794,12 @@ class SparseConnection(AbstractConnection):
             )
             if self.wmin == -np.inf or self.wmax == np.inf:
                 v = torch.clamp(
-                    torch.rand(*source.shape, *target.shape)[i.byte()],
+                    torch.rand(*source.shape, *target.shape)[i.bool()],
                     self.wmin,
                     self.wmax,
                 )
             else:
-                v = self.wmin + torch.rand(*source.shape, *target.shape)[i.byte()] * (
+                v = self.wmin + torch.rand(*source.shape, *target.shape)[i.bool()] * (
                     self.wmax - self.wmin
                 )
             w = torch.sparse.FloatTensor(i.nonzero().t(), v)

@@ -228,6 +228,7 @@ def plot_weights(
             save = a[0] + a[1]
 
         plt.savefig(save, bbox_inches="tight")
+        plt.savefig(a[0] + ".png", bbox_inches="tight")
 
         plt.close(fig)
         plt.ion()
@@ -407,6 +408,13 @@ def plot_assignments(
     if save is not None:
         plt.ioff()
 
+        a = save.split(".")
+        if len(a) == 2:
+            save = a[0] + ".1." + a[1]
+        else:
+            a[1] = "." + str(1 + int(a[1])) + ".png"
+            save = a[0] + a[1]
+
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title("Categorical assignments")
 
@@ -440,7 +448,7 @@ def plot_assignments(
         plt.close()
 
         plt.ion()
-        return im
+        return im, save
     else:
         if not im:
             fig, ax = plt.subplots(figsize=figsize)
@@ -749,8 +757,7 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            time[0] : time[1],
-                            n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1]
                         ]
                     )
                     if thresholds is not None and thresholds[v[0]].size() == torch.Size(
@@ -764,8 +771,7 @@ def plot_voltages(
                         v[1]
                         .cpu()
                         .numpy()[
-                            time[0] : time[1],
-                            n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1]
                         ]
                         .T,
                         cmap=cmap,
