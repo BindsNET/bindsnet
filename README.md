@@ -1,12 +1,3 @@
-# Important:
-
-If you are using BindsNET for your research, please consider answering a short survey on the value of a standardized format that could be used for the exchange of computational models in neuroscience, cognitive science, and computer science.
-
-[Survey link](https://docs.google.com/forms/d/e/1FAIpQLSfOZSyoWL4J_MfHTIq5Jx0dnJSVHNFH7UP3AHG_x7ddlMvBPA/viewform?usp=sf_link)
-
-Data from this survey will be used exclusively for our own internal purposes, and will not be shared beyond our small group other than summary form for any purpose. The survey is anonymous unless you chose to add an email address for follow-up correspondence. 
-
-
 <p align="center"><img width="25%" src="docs/logo.png"/></p>
 
 A Python package used for simulating spiking neural networks (SNNs) on CPUs or GPUs using [PyTorch](http://pytorch.org/) `Tensor` functionality.
