@@ -341,7 +341,7 @@ start = t()
 
 pbar = tqdm(total=n_test)
 for step, batch in enumerate(test_dataset):
-    if step > n_test:
+    if step >= n_test:
         break
     # Get next input sample.
     inputs = {"X": batch["encoded_image"].view(int(time / dt), 1, 1, 28, 28)}
