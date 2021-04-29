@@ -191,7 +191,7 @@ class Connection(AbstractConnection):
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
-        """"""
+        """ """
 
         if self.s_w == None:
             # Construct a matrix of shape batch size * window size * dimension of layer
