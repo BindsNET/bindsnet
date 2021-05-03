@@ -129,10 +129,7 @@ def shift_crop_training_sample(sample, bb_params):
     bbox_curr_gt = BoundingBox(currbb[0], currbb[1], currbb[2], currbb[3])
     bbox_gt_recentered = BoundingBox(0, 0, 0, 0)
     bbox_gt_recentered = bbox_curr_gt.recenter(
-        rand_search_location,
-        edge_spacing_x,
-        edge_spacing_y,
-        bbox_gt_recentered,
+        rand_search_location, edge_spacing_x, edge_spacing_y, bbox_gt_recentered
     )
     output_sample["image"] = rand_search_region
     output_sample["bb"] = bbox_gt_recentered.get_bb_list()
@@ -155,12 +152,9 @@ def crop_sample(sample):
     opts = {}
     image, bb = sample["image"], sample["bb"]
     orig_bbox = BoundingBox(bb[0], bb[1], bb[2], bb[3])
-    (
-        output_image,
-        pad_image_location,
-        edge_spacing_x,
-        edge_spacing_y,
-    ) = cropPadImage(orig_bbox, image)
+    (output_image, pad_image_location, edge_spacing_x, edge_spacing_y) = cropPadImage(
+        orig_bbox, image
+    )
     new_bbox = BoundingBox(0, 0, 0, 0)
     new_bbox = new_bbox.recenter(
         pad_image_location, edge_spacing_x, edge_spacing_y, new_bbox
@@ -198,8 +192,7 @@ def cropPadImage(bbox_tight, image):
     output_height = max(math.ceil(bbox_tight.compute_output_height()), roi_height)
     if image.ndim > 2:
         output_image = np.zeros(
-            (int(output_height), int(output_width), image.shape[2]),
-            dtype=image.dtype,
+            (int(output_height), int(output_width), image.shape[2]), dtype=image.dtype
         )
     else:
         output_image = np.zeros(
@@ -392,8 +385,7 @@ class BoundingBox:
         ):
             if shift_motion_model:
                 width_scale_factor = max(
-                    min_scale,
-                    min(max_scale, sample_exp_two_sides(lambda_scale_frac)),
+                    min_scale, min(max_scale, sample_exp_two_sides(lambda_scale_frac))
                 )
             else:
                 rand_num = sample_rand_uniform()
@@ -410,8 +402,7 @@ class BoundingBox:
         ):
             if shift_motion_model:
                 height_scale_factor = max(
-                    min_scale,
-                    min(max_scale, sample_exp_two_sides(lambda_scale_frac)),
+                    min_scale, min(max_scale, sample_exp_two_sides(lambda_scale_frac))
                 )
             else:
                 rand_num = sample_rand_uniform()
@@ -464,8 +455,7 @@ class BoundingBox:
                 new_y_temp = center_y + rand_num * (2 * new_height) - new_height
 
             new_center_y = min(
-                image.shape[0] - new_height / 2,
-                max(new_height / 2, new_y_temp),
+                image.shape[0] - new_height / 2, max(new_height / 2, new_y_temp)
             )
             first_time_y = False
             num_tries_y = num_tries_y + 1

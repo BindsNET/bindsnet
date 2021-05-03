@@ -405,9 +405,7 @@ class IncreasingInhibitionNetwork(Network):
         w = w / w.max()
         w = (w * self.max_inhib) + self.start_inhib
         recurrent_output_conn = Connection(
-            source=self.layers["Y"],
-            target=self.layers["Y"],
-            w=w,
+            source=self.layers["Y"], target=self.layers["Y"], w=w
         )
         self.add_connection(recurrent_output_conn, source="Y", target="Y")
 
