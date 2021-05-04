@@ -344,8 +344,7 @@ class Conv2dConnection(AbstractConnection):
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(
-            kwargs.get("b", torch.zeros(self.out_channels)),
-            requires_grad=False,
+            kwargs.get("b", torch.zeros(self.out_channels)), requires_grad=False
         )
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:

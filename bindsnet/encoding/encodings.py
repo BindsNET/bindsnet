@@ -1,7 +1,6 @@
 from typing import Optional
 
 import torch
-import numpy as np
 
 
 def single(
@@ -27,10 +26,10 @@ def single(
     """
     time = int(time / dt)
     shape = list(datum.shape)
-    datum = np.copy(datum)
-    quantile = np.quantile(datum, 1 - sparsity)
-    s = np.zeros([time, *shape], device=device)
-    s[0] = np.where(datum > quantile, np.ones(shape), np.zeros(shape))
+    datum = torch.tensor(datum)
+    quantile = torch.quantile(datum, 1 - sparsity)
+    s = torch.zeros([time, *shape], device=device)
+    s[0] = torch.where(datum > quantile, torch.ones(shape), torch.zeros(shape))
     return torch.Tensor(s).byte()
 
 
