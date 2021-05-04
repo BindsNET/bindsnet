@@ -185,7 +185,7 @@ criterion = torch.nn.MSELoss(reduction="sum")
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
 
 # Training the Model
-print("\n Training the read out")
+print("\n Training the read out ")
 pbar = tqdm(enumerate(range(n_epochs)))
 for epoch, _ in pbar:
     avg_loss = 0
