@@ -138,10 +138,7 @@ class ALOV300(Dataset):
         bbox_curr_gt = BoundingBox(currbb[0], currbb[1], currbb[2], currbb[3])
         bbox_gt_recentered = BoundingBox(0, 0, 0, 0)
         bbox_gt_recentered = bbox_curr_gt.recenter(
-            rand_search_location,
-            edge_spacing_x,
-            edge_spacing_y,
-            bbox_gt_recentered,
+            rand_search_location, edge_spacing_x, edge_spacing_y, bbox_gt_recentered
         )
         curr_sample["image"] = rand_search_region
         curr_sample["bb"] = bbox_gt_recentered.get_bb_list()

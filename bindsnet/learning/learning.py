@@ -552,11 +552,17 @@ class MSTDP(LearningRule):
         # Initialize eligibility, P^+, and P^-.
         if not hasattr(self, "p_plus"):
             self.p_plus = torch.zeros(
-                batch_size, *self.source.shape, device=self.source.s.device
+                # batch_size, *self.source.shape, device=self.source.s.device
+                batch_size,
+                self.source.n,
+                device=self.source.s.device,
             )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
-                batch_size, *self.target.shape, device=self.target.s.device
+                # batch_size, *self.target.shape, device=self.target.s.device
+                batch_size,
+                self.target.n,
+                device=self.target.s.device,
             )
         if not hasattr(self, "eligibility"):
             self.eligibility = torch.zeros(
