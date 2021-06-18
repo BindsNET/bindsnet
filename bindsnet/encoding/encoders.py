@@ -115,3 +115,18 @@ class RankOrderEncoder(Encoder):
         super().__init__(time, dt=dt, **kwargs)
 
         self.enc = encodings.rank_order
+
+
+class DelayEncoder(Encoder):
+    def __init__(self, time: int, dt: float = 1.0, **kwargs):
+        # language=rst
+        """
+        Creates a callable DelayEncoder which encodes as defined in
+        :code:`bindsnet.encoding.delay`
+
+        :param time: Length of delay spike train per input variable.
+        :param dt: Simulation time step.
+        """
+        super().__init__(time, dt=dt, **kwargs)
+
+        self.enc = encodings.delay
