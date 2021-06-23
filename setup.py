@@ -17,9 +17,9 @@ setup(
     zip_safe=False,
     install_requires=[
         "numpy>=1.14.2",
-        "torch>=1.5.1",
-        "torchvision>=0.6.1",
-        "tensorboardX>=1.7",
+        "torch==1.8.1",
+        "torchvision==0.9.1",
+        "tensorboardX==2.2",
         "tqdm>=4.19.9",
         "matplotlib>=2.1.0",
         "gym>=0.10.4",
