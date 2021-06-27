@@ -28,7 +28,7 @@ setup(
         "scikit_learn>=0.19.1",
         "opencv-python>=3.4.0.12",
         "pytest>=6.2.0",
-        "scipy>=1.7.0",
+        "scipy>=1.6.0",
         "cython>=0.29.0",
         "pandas>=0.23.4",
     ],
