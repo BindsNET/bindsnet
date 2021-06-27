@@ -25,11 +25,11 @@ def recursive_to(item, device):
         return item.to(device)
     elif isinstance(item, (string_classes, int, float, bool)):
         return item
-    elif isinstance(item, container_abcs.Mapping):
+    elif isinstance(item, collections.Mapping):
         return {key: recursive_to(item[key], device) for key in item}
     elif isinstance(item, tuple) and hasattr(item, "_fields"):
         return type(item)(*(recursive_to(i, device) for i in item))
-    elif isinstance(item, container_abcs.Sequence):
+    elif isinstance(item, collections.Sequence):
         return [recursive_to(i, device) for i in item]
     else:
         raise NotImplementedError(f"Target type {type(item)} not supported.")
