@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -24,14 +25,20 @@ class FullyConnectedNetwork(nn.Module):
         return x
 
 
-def test_conversion():
+def test_conversion_1():
     ann = FullyConnectedNetwork()
     snn = ann_to_snn(ann, input_shape=(784,))
 
 
-def main():
+def test_conversion_2():
+    data = torch.rand(784, 20)
     ann = FullyConnectedNetwork()
-    return ann_to_snn(ann, input_shape=(28, 28))
+    snn = ann_to_snn(ann, data=data, input_shape=(784,))
+
+
+def main():
+    test_conversion_1()
+    test_conversion_2()
 
 
 if __name__ == "__main__":
