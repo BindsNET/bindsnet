@@ -16,7 +16,7 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=[
-        "numpy>=1.20.2",
+        "numpy>=1.19.5",
         "torch==1.9.0",
         "torchvision==0.10.0",
         "tensorboardX==2.2",
