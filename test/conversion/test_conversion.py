@@ -29,8 +29,9 @@ def test_conversion_1():
     ann = FullyConnectedNetwork()
     snn = ann_to_snn(ann, input_shape=(784,))
 
+
 def test_conversion_2():
-    data = torch.rand(784,20)
+    data = torch.rand(784, 20)
     ann = FullyConnectedNetwork()
     snn = ann_to_snn(ann, data=data, input_shape=(784,))
 
