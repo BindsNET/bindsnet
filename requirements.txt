@@ -1,11 +1,11 @@
 foolbox
-scipy>=1.1.0
-numpy>=1.14.2
-cython>=0.28.5
-torch==1.8.1
-torchvision==0.9.1
+scipy>=1.7.0
+numpy>=1.20.2
+cython>=0.29.5
+torch==1.9.0
+torchvision==0.10.0
 tensorboardX==2.2
-tqdm>=4.19.9
+tqdm>=4.60.0
 setuptools>=39.0.1
 matplotlib>=2.1.0
 gym>=0.10.4

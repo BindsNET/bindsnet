@@ -2,7 +2,8 @@ import time
 from typing import Tuple, Dict, Any
 
 import torch
-from torch._six import container_abcs, string_classes
+from torch._six import string_classes
+import collections
 
 from ..network import Network
 from ..network.monitors import Monitor
