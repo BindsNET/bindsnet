@@ -70,10 +70,9 @@ class Nodes(torch.nn.Module):
             self.register_buffer(
                 "tc_trace", torch.tensor(tc_trace)
             )  # Time constant of spike trace decay.
-            if self.traces_additive:
-                self.register_buffer(
-                    "trace_scale", torch.tensor(trace_scale)
-                )  # Scaling factor for spike trace.
+            self.register_buffer(
+                "trace_scale", torch.tensor(trace_scale)
+            )  # Scaling factor for spike trace.
             self.register_buffer(
                 "trace_decay", torch.empty_like(self.tc_trace)
             )  # Set in compute_decays.
