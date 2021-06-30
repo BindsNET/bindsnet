@@ -49,7 +49,7 @@ class LearningRule(ABC):
         # Learning rate(s).
         if nu is None:
             nu = [0.0, 0.0]
-        elif isinstance(nu, float) or isinstance(nu, int):
+        elif isinstance(nu, (float, int)):
             nu = [nu, nu]
 
         self.nu = torch.zeros(2, dtype=torch.float)
@@ -134,7 +134,7 @@ class PostPre(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs
@@ -788,7 +788,7 @@ class MSTDPET(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.ger(self.p_plus, target_s) + torch.ger(
+        self.eligibility = torch.outer(self.p_plus, target_s) + torch.outer(
             source_s, self.p_minus
         )
 

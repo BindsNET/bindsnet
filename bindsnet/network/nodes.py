@@ -101,7 +101,7 @@ class Nodes(torch.nn.Module):
             if self.traces_additive:
                 self.x += self.trace_scale * self.s.float()
             else:
-                self.x.masked_fill_(self.s.bool(), 1)
+                self.x.masked_fill_(self.s.bool(), self.trace_scale)
 
         if self.sum_input:
             # Add current input to running sum.
@@ -1538,7 +1538,7 @@ class CSRMNodes(Nodes):
 
     def RectangularKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
-        kernelVec = 1 / (selftau * 2)
+        kernelVec = 1 / (self.tau * 2)
         return torch.flip(kernelVec, [0])
 
     def TriangularKernel(self, dt):
