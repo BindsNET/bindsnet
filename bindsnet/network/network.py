@@ -2,6 +2,7 @@ import tempfile
 from typing import Dict, Optional, Type, Iterable
 
 import torch
+from tqdm import tqdm
 
 from .monitors import AbstractMonitor
 from .nodes import Nodes, CSRMNodes
@@ -275,6 +276,7 @@ class Network(torch.nn.Module):
             learning.
         :param Dict[Tuple[str], torch.Tensor] masks: Mapping of connection names to
             boolean masks determining which weights to clamp to zero.
+        :param Bool progress_bar: Show a progress bar while running the network.
 
         **Example:**
 
@@ -306,6 +308,10 @@ class Network(torch.nn.Module):
             plt.title('Input spiking')
             plt.show()
         """
+        # Check input type
+        assert type(inputs) == dict, ("'inputs' must be a dict of names of layers " + 
+        f"(str) and relevant input tensors. Got {type(inputs).__name__} instead."
+        )
         # Parse keyword arguments.
         clamps = kwargs.get("clamp", {})
         unclamps = kwargs.get("unclamp", {})
@@ -347,7 +353,9 @@ class Network(torch.nn.Module):
         timesteps = int(time / self.dt)
 
         # Simulate network activity for `time` timesteps.
-        for t in range(timesteps):
+        for t in (tqdm(range(timesteps)) if kwargs.get('progress_bar', False)
+        else range(timesteps)
+        ):
             # Get input to all layers (synchronous mode).
             current_inputs = {}
             if not one_step:
