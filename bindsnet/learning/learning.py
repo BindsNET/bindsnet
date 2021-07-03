@@ -1,5 +1,6 @@
 from abc import ABC
 from typing import Union, Optional, Sequence
+import warnings
 
 import torch
 import numpy as np
@@ -55,6 +56,12 @@ class LearningRule(ABC):
         self.nu = torch.zeros(2, dtype=torch.float)
         self.nu[0] = nu[0]
         self.nu[1] = nu[1]
+
+        if (self.nu == torch.zeros(2)).all() and not isinstance(self, NoOp):
+            warnings.warn(
+                f"nu is set to [0., 0.] for {type(self).__name__} learning rule. " +
+                "It will disable the learning process."
+                )
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
@@ -134,7 +141,7 @@ class PostPre(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = (1e-4, 1e-2),
+        nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs

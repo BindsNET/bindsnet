@@ -2,7 +2,6 @@ import tempfile
 from typing import Dict, Optional, Type, Iterable
 
 import torch
-from tqdm import tqdm
 
 from .monitors import AbstractMonitor
 from .nodes import Nodes, CSRMNodes
@@ -353,9 +352,7 @@ class Network(torch.nn.Module):
         timesteps = int(time / self.dt)
 
         # Simulate network activity for `time` timesteps.
-        for t in (tqdm(range(timesteps)) if kwargs.get('progress_bar', False)
-        else range(timesteps)
-        ):
+        for t in range(timesteps):
             # Get input to all layers (synchronous mode).
             current_inputs = {}
             if not one_step:
