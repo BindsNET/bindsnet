@@ -122,6 +122,9 @@ examples/saved_checkpoints
 # PyCharm project folder.
 .idea/
 
+# VS Code workspace
+.vscode/
+
 # macOS
 .DS_Store
 
@@ -129,3 +132,6 @@ figures/
 
 # Analyzer log default directory.
 logs/
+
+# PyTorch tensorboard log default directory.
+runs/
