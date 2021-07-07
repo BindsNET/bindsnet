@@ -1,7 +1,6 @@
 from typing import Optional
 
 import torch
-import numpy as np
 
 
 def single(
@@ -16,21 +15,21 @@ def single(
     """
     Generates timing based single-spike encoding. Spike occurs earlier if the
     intensity of the input feature is higher. Features whose value is lower than
-    threshold remain silent.
+    threshold is remain silent.
 
     :param datum: Tensor of shape ``[n_1, ..., n_k]``.
     :param time: Length of the input and output.
     :param dt: Simulation time step.
-    :param sparsity: Sparsity of the input representation. 0 for no spikes 
-        and 1 for all spikes.
+    :param sparsity: Sparsity of the input representation. 0 for no spikes and 1 for all
+        spikes.
     :return: Tensor of shape ``[time, n_1, ..., n_k]``.
     """
     time = int(time / dt)
     shape = list(datum.shape)
-    datum = np.copy(datum)
-    quantile = np.quantile(datum, 1 - sparsity)
-    s = np.zeros([time, *shape], device=device)
-    s[0] = np.where(datum > quantile, np.ones(shape), np.zeros(shape))
+    datum = torch.tensor(datum)
+    quantile = torch.quantile(datum, 1 - sparsity)
+    s = torch.zeros([time, *shape], device=device)
+    s[0] = torch.where(datum > quantile, torch.ones(shape), torch.zeros(shape))
     return torch.Tensor(s).byte()
 
 
@@ -141,7 +140,7 @@ def poisson(
 
         # Create Poisson distribution and sample inter-spike intervals
         # (incrementing by 1 to avoid zero intervals).
-        dist = torch.distributions.Poisson(rate=rate)
+        dist = torch.distributions.Poisson(rate=rate, validate_args=False)
         intervals = dist.sample(sample_shape=torch.Size([time + 1]))
         intervals[:, datum != 0] += (intervals[:, datum != 0] == 0).float()
 
