@@ -20,7 +20,7 @@ The simulator supports multiple bounds-handling schemes. By default, dots will s
 To add further complexity, additional targets can be added as desired via the dots parameter, and the herrs parameter can be set to generate multiple "red herrings" as distraction dots. The speed of the dots' movements can also be set; it is 1 by default.
 
 <p align="middle">
-<img src="https://github.com/kamue1a/bindsnet/blob/dot_sim/examples/dotTracing/DotTraceSample.png" alt="DotSim%20Example"  width="503" height="403">
+<img src="https://github.com/kamue1a/bindsnet/blob/dot_sim/docs/DotTraceSample.png" alt="DotTraceSample"  width="503" height="403">
 </p>
 >The grid visuals provided by the render function will double the value of the network dot; this is a visual aid only, invisible to the network.
 

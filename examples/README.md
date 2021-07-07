@@ -144,7 +144,9 @@ parameters|default|description
 
 ## Dot Tracing example
 */examples/dotTracing/*  
-dot_tracing.py trains a basic RNN network on the Dot Simulator environment and demonstrates how to record reward and performance data (if desired) and plot spiking activity via monitors.
+dot_tracing.py trains a basic RNN on the Dot Simulator environment and demonstrates how to record reward and performance data (if desired) and plot spiking activity via monitors.
+
+See the environments directory for documentation on the Dot Simulator.
 
 parameters|default|description
 -|:-:|-
