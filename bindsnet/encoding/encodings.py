@@ -15,7 +15,7 @@ def single(
     """
     Generates timing based single-spike encoding. Spike occurs earlier if the
     intensity of the input feature is higher. Features whose value is lower than
-    threshold is remain silent.
+    the threshold remain silent.
 
     :param datum: Tensor of shape ``[n_1, ..., n_k]``.
     :param time: Length of the input and output.
