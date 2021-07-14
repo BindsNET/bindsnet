@@ -121,10 +121,10 @@ def data_based_normalization(
 
             extractor2 = FeatureExtractor(module)
             all_activations2 = extractor2.forward(data)
-            for name2, module2 in module.named_children():
+            for name2, module in module.named_children():
                 activations = all_activations2[name2]
 
-                if isinstance(module2, nn.ReLU):
+                if isinstance(module, nn.ReLU):
                     if prev_module is not None:
                         scale_factor = np.percentile(activations.cpu(), percentile)
 
@@ -136,7 +136,7 @@ def data_based_normalization(
                 elif isinstance(module2, nn.Linear) or isinstance(module2, nn.Conv2d):
                     prev_module = module2
 
-        if isinstance(module2, nn.Linear):
+        if isinstance(module, nn.Linear):
             if prev_module is not None:
                 scale_factor = np.percentile(activations.cpu(), percentile)
                 prev_module.weight *= prev_factor / scale_factor
