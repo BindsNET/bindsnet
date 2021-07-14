@@ -40,11 +40,15 @@ class AbstractConnection(ABC, Module):
 
         :param LearningRule update_rule: Modifies connection parameters according to
             some rule.
-        :param float wmin: The minimum value on the connection weights.
-        :param float wmax: The maximum value on the connection weights.
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection delays. Single value, or
+            tensor of same size as w
+        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection delays. Single value, or
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization.
         """
         super().__init__()
+
+        # TODO: Implement tensor for norm, similar to that of wmin/wmax
 
         assert isinstance(source, Nodes), "Source is not a Nodes object"
         assert isinstance(target, Nodes), "Target is not a Nodes object"
@@ -146,8 +150,10 @@ class Connection(AbstractConnection):
             some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
-        :param float wmin: Minimum allowed value on the connection weights.
-        :param float wmax: Maximum allowed value on the connection weights.
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection delays. Single value, or
+            tensor of same size as w
+        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection delays. Single value, or
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
         super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
