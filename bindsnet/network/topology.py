@@ -59,8 +59,8 @@ class AbstractConnection(ABC, Module):
         from ..learning import NoOp
 
         self.update_rule = kwargs.get("update_rule", NoOp)
-        self.wmin = kwargs.get("wmin", -np.inf)
-        self.wmax = kwargs.get("wmax", np.inf)
+        self.wmin = torch.as_tensor(kwargs.get("wmin", -np.inf))
+        self.wmax = torch.as_tensor(kwargs.get("wmax", np.inf))
         self.norm = kwargs.get("norm", None)
         self.decay = kwargs.get("decay", None)
 
@@ -153,13 +153,14 @@ class Connection(AbstractConnection):
         super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
 
         w = kwargs.get("w", None)
+        inf = torch.tensor(np.inf)
         if w is None:
-            if self.wmin == -np.inf or self.wmax == np.inf:
+            if (self.wmin == -inf).all() or (self.wmax == inf).all():
                 w = torch.clamp(torch.rand(source.n, target.n), self.wmin, self.wmax)
             else:
                 w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
         else:
-            if self.wmin != -np.inf or self.wmax != np.inf:
+            if (self.wmin != -inf).all() or (self.wmax != inf).all():
                 w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
