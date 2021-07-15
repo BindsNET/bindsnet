@@ -40,9 +40,9 @@ class AbstractConnection(ABC, Module):
 
         :param LearningRule update_rule: Modifies connection parameters according to
             some rule.
-        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection delays. Single value, or
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
-        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection delays. Single value, or
+        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
         :param float norm: Total weight per target neuron normalization.
         """
@@ -150,9 +150,9 @@ class Connection(AbstractConnection):
             some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
-        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection delays. Single value, or
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
-        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection delays. Single value, or
+        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
@@ -290,10 +290,10 @@ class Conv2dConnection(AbstractConnection):
             some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
-        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection delays. Single value, or
-            tensor of same size as w
-        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection delays. Single value, or
-            tensor of same size as w
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
+            tensor of same shape/size as (target.shape[0], source.shape[0], *kernel_size)
+        :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
+            tensor of same shape/size as (target.shape[0], source.shape[0], *kernel_size)
         :param float norm: Total weight per target neuron normalization constant.
         """
         super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
