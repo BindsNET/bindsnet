@@ -63,8 +63,8 @@ class AbstractConnection(ABC, Module):
         from ..learning import NoOp
 
         self.update_rule = kwargs.get("update_rule", NoOp)
-        self.wmin = torch.as_tensor(kwargs.get("wmin", -np.inf))
-        self.wmax = torch.as_tensor(kwargs.get("wmax", np.inf))
+        self.wmin = Parameter(torch.as_tensor(kwargs.get("wmin", -np.inf)), requires_grad=False)
+        self.wmax = Parameter(torch.as_tensor(kwargs.get("wmax", np.inf)), requires_grad=False)
         self.norm = kwargs.get("norm", None)
         self.decay = kwargs.get("decay", None)
 
@@ -290,8 +290,10 @@ class Conv2dConnection(AbstractConnection):
             some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
-        :param float wmin: Minimum allowed value on the connection weights.
-        :param float wmax: Maximum allowed value on the connection weights.
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection delays. Single value, or
+            tensor of same size as w
+        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection delays. Single value, or
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
         super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
@@ -333,8 +335,9 @@ class Conv2dConnection(AbstractConnection):
         ), error
 
         w = kwargs.get("w", None)
+        inf = torch.tensor(np.inf)
         if w is None:
-            if self.wmin == -np.inf or self.wmax == np.inf:
+            if (self.wmin == -inf).all() or (self.wmax == inf).all():
                 w = torch.clamp(
                     torch.rand(self.out_channels, self.in_channels, *self.kernel_size),
                     self.wmin,
@@ -353,6 +356,7 @@ class Conv2dConnection(AbstractConnection):
         self.b = Parameter(
             kwargs.get("b", torch.zeros(self.out_channels)), requires_grad=False
         )
+
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst

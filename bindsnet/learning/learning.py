@@ -86,7 +86,7 @@ class LearningRule(ABC):
 
         # Bound weights.
         if (
-            self.connection.wmin != -np.inf or self.connection.wmax != np.inf
+            (self.connection.wmin != -np.inf).all() or (self.connection.wmax != np.inf).all()
         ) and not isinstance(self, NoOp):
             self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
 
