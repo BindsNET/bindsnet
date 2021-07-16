@@ -349,7 +349,7 @@ class Conv2dConnection(AbstractConnection):
                 )
                 w += self.wmin
         else:
-            if self.wmin != -np.inf or self.wmax != np.inf:
+            if (self.wmin == -inf).all() or (self.wmax == inf).all():
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
