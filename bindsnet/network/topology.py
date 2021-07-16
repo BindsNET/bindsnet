@@ -291,9 +291,9 @@ class Conv2dConnection(AbstractConnection):
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
         :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
-            tensor of same shape/size as (target.shape[0], source.shape[0], *kernel_size)
+            tensor of same size as w
         :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
-            tensor of same shape/size as (target.shape[0], source.shape[0], *kernel_size)
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
         super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
@@ -495,6 +495,7 @@ class MaxPool2dConnection(AbstractConnection):
         self.firing_rates = torch.zeros(self.source.s.shape)
 
 
+# TODO: Add wmin/wmax tensor functionality to this one
 class LocalConnection(AbstractConnection):
     # language=rst
     """
@@ -694,21 +695,23 @@ class MeanFieldConnection(AbstractConnection):
         Keyword arguments:
         :param LearningRule update_rule: Modifies connection parameters according to
             some rule.
-        :param torch.Tensor w: Strengths of synapses.
-        :param float wmin: Minimum allowed value on the connection weights.
-        :param float wmax: Maximum allowed value on the connection weights.
+        :param Union[float, torch.Tensor] w: Strengths of synapses. Can be single value or tensor of size ``target``
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
+        :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
         w = kwargs.get("w", None)
         if w is None:
-            if self.wmin == -np.inf or self.wmax == np.inf:
+            if (self.wmin == -np.inf).all() or (self.wmax == np.inf).all():
                 w = torch.clamp((torch.randn(1)[0] + 1) / 10, self.wmin, self.wmax)
             else:
                 w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (self.wmax - self.wmin)
         else:
-            if self.wmin != -np.inf or self.wmax != np.inf:
+            if (self.wmin == -np.inf).all() or (self.wmax == np.inf).all():
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
