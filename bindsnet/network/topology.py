@@ -63,8 +63,14 @@ class AbstractConnection(ABC, Module):
         from ..learning import NoOp
 
         self.update_rule = kwargs.get("update_rule", NoOp)
-        self.wmin = Parameter(torch.as_tensor(kwargs.get("wmin", -np.inf)), requires_grad=False)
-        self.wmax = Parameter(torch.as_tensor(kwargs.get("wmax", np.inf)), requires_grad=False)
+
+        # Float32 necessary for comparisons with +/-inf
+        self.wmin = Parameter(
+            torch.as_tensor(kwargs.get("wmin", -np.inf), dtype=torch.float32),
+            requires_grad=False)
+        self.wmax = Parameter(
+            torch.as_tensor(kwargs.get("wmax", np.inf), dtype=torch.float32),
+            requires_grad=False)
         self.norm = kwargs.get("norm", None)
         self.decay = kwargs.get("decay", None)
 
