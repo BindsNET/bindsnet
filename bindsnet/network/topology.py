@@ -167,12 +167,12 @@ class Connection(AbstractConnection):
         w = kwargs.get("w", None)
         inf = torch.tensor(np.inf)
         if w is None:
-            if (self.wmin == -inf).all() or (self.wmax == inf).all():
+            if (self.wmin == -inf).any() or (self.wmax == inf).any():
                 w = torch.clamp(torch.rand(source.n, target.n), self.wmin, self.wmax)
             else:
                 w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
         else:
-            if (self.wmin != -inf).all() or (self.wmax != inf).all():
+            if (self.wmin != -inf).any() or (self.wmax != inf).any():
                 w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
@@ -759,6 +759,7 @@ class MeanFieldConnection(AbstractConnection):
         super().reset_state_variables()
 
 
+# TODO: Potential tensor functionality for 'sparsity' kwarg
 class SparseConnection(AbstractConnection):
     # language=rst
     """
@@ -787,7 +788,7 @@ class SparseConnection(AbstractConnection):
 
         Keyword arguments:
 
-        :param torch.Tensor w: Strengths of synapses.
+        :param torch.Tensor w: Strengths of synapses. Must be in ``torch.sparse`` format
         :param float sparsity: Fraction of sparse connections to use.
         :param LearningRule update_rule: Modifies connection parameters according to
             some rule.
@@ -811,16 +812,15 @@ class SparseConnection(AbstractConnection):
             i = torch.bernoulli(
                 1 - self.sparsity * torch.ones(*source.shape, *target.shape)
             )
-            if self.wmin == -np.inf or self.wmax == np.inf:
+            if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
                 v = torch.clamp(
-                    torch.rand(*source.shape, *target.shape)[i.bool()],
+                    torch.rand(*source.shape, *target.shape),
                     self.wmin,
                     self.wmax,
-                )
+                )[i.bool()]
             else:
-                v = self.wmin + torch.rand(*source.shape, *target.shape)[i.bool()] * (
-                    self.wmax - self.wmin
-                )
+                v = (self.wmin + torch.rand(*source.shape, *target.shape)
+                     * (self.wmax - self.wmin))[i.bool()]
             w = torch.sparse.FloatTensor(i.nonzero().t(), v)
         elif w is not None and self.sparsity is None:
             assert w.is_sparse, "Weight matrix is not sparse (see torch.sparse module)"
@@ -838,7 +838,8 @@ class SparseConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        return torch.mm(self.w, s.unsqueeze(-1).float()).squeeze(-1)
+        return torch.mm(self.w, s.view(s.shape[1], 1).float()).squeeze(-1)
+        # return torch.mm(self.w, s.unsqueeze(-1).float()).squeeze(-1)
 
     def update(self, **kwargs) -> None:
         # language=rst
