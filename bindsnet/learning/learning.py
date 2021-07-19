@@ -1,5 +1,6 @@
 from abc import ABC
 from typing import Union, Optional, Sequence
+import warnings
 
 import torch
 import numpy as np
@@ -26,7 +27,7 @@ class LearningRule(ABC):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -49,12 +50,18 @@ class LearningRule(ABC):
         # Learning rate(s).
         if nu is None:
             nu = [0.0, 0.0]
-        elif isinstance(nu, float) or isinstance(nu, int):
+        elif isinstance(nu, (float, int)):
             nu = [nu, nu]
 
         self.nu = torch.zeros(2, dtype=torch.float)
         self.nu[0] = nu[0]
         self.nu[1] = nu[1]
+
+        if (self.nu == torch.zeros(2)).all() and not isinstance(self, NoOp):
+            warnings.warn(
+                f"nu is set to [0., 0.] for {type(self).__name__} learning rule. "
+                + "It will disable the learning process."
+            )
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
@@ -96,7 +103,7 @@ class NoOp(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -113,7 +120,7 @@ class NoOp(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
     def update(self, **kwargs) -> None:
@@ -137,7 +144,7 @@ class PostPre(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -155,7 +162,7 @@ class PostPre(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         assert (
@@ -253,7 +260,7 @@ class WeightDependentPostPre(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -271,7 +278,7 @@ class WeightDependentPostPre(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         assert self.source.traces, "Pre-synaptic nodes must record spike traces."
@@ -391,7 +398,7 @@ class Hebbian(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -409,7 +416,7 @@ class Hebbian(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         assert (
@@ -496,7 +503,7 @@ class MSTDP(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -520,7 +527,7 @@ class MSTDP(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         if isinstance(connection, (Connection, LocalConnection)):
@@ -690,7 +697,7 @@ class MSTDPET(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -715,7 +722,7 @@ class MSTDPET(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         if isinstance(connection, (Connection, LocalConnection)):
@@ -788,7 +795,7 @@ class MSTDPET(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.ger(self.p_plus, target_s) + torch.ger(
+        self.eligibility = torch.outer(self.p_plus, target_s) + torch.outer(
             source_s, self.p_minus
         )
 
@@ -894,7 +901,7 @@ class Rmax(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -919,7 +926,7 @@ class Rmax(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         # Trace is needed for computing epsilon.

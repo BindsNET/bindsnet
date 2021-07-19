@@ -391,7 +391,7 @@ class IncreasingInhibitionNetwork(Network):
         )
         self.add_connection(input_output_conn, source="X", target="Y")
 
-        # add internal inhibetory connections
+        # add internal inhibitory connections
         w = torch.ones(self.n_neurons, self.n_neurons) - torch.diag(
             torch.ones(self.n_neurons)
         )
