@@ -343,7 +343,7 @@ class Conv2dConnection(AbstractConnection):
         w = kwargs.get("w", None)
         inf = torch.tensor(np.inf)
         if w is None:
-            if (self.wmin == -inf).all() or (self.wmax == inf).all():
+            if (self.wmin == -inf).any() or (self.wmax == inf).any():
                 w = torch.clamp(
                     torch.rand(self.out_channels, self.in_channels, *self.kernel_size),
                     self.wmin,
@@ -355,7 +355,7 @@ class Conv2dConnection(AbstractConnection):
                 )
                 w += self.wmin
         else:
-            if (self.wmin == -inf).all() or (self.wmax == inf).all():
+            if (self.wmin == -inf).any() or (self.wmax == inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
@@ -608,8 +608,7 @@ class LocalConnection(AbstractConnection):
             for f in range(n_filters):
                 for c in range(conv_prod):
                     for k in range(kernel_prod):
-                        ind1, ind2 = self.locations[k, c], f * conv_prod + c
-                        w[ind1, ind2] = np.random.rand()
+                        w[self.locations[k, c], f * conv_prod + c] = np.random.rand()
 
             # Bind weights to given range
             if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
@@ -715,12 +714,12 @@ class MeanFieldConnection(AbstractConnection):
 
         w = kwargs.get("w", None)
         if w is None:
-            if (self.wmin == -np.inf).all() or (self.wmax == np.inf).all():
+            if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
                 w = torch.clamp((torch.randn(1)[0] + 1) / 10, self.wmin, self.wmax)
             else:
                 w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (self.wmax - self.wmin)
         else:
-            if (self.wmin == -np.inf).all() or (self.wmax == np.inf).all():
+            if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
