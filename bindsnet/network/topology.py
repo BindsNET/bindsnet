@@ -165,14 +165,13 @@ class Connection(AbstractConnection):
         super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
 
         w = kwargs.get("w", None)
-        inf = torch.tensor(np.inf)
         if w is None:
-            if (self.wmin == -inf).any() or (self.wmax == inf).any():
+            if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
                 w = torch.clamp(torch.rand(source.n, target.n), self.wmin, self.wmax)
             else:
                 w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
         else:
-            if (self.wmin != -inf).any() or (self.wmax != inf).any():
+            if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
                 w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
@@ -579,9 +578,10 @@ class LocalConnection(AbstractConnection):
         conv_prod = int(np.prod(conv_size))
         kernel_prod = int(np.prod(kernel_size))
 
-        assert (
-            target.n == n_filters * conv_prod
-        ), "Target layer size must be n_filters * (kernel_size ** 2)."
+        assert target.n == n_filters * conv_prod, (
+            f"Total neurons in target layer must be {n_filters * conv_prod}. "
+            f"Got {target.n}."
+        )
 
         locations = torch.zeros(
             kernel_size[0], kernel_size[1], conv_size[0], conv_size[1]
@@ -602,7 +602,6 @@ class LocalConnection(AbstractConnection):
         w = kwargs.get("w", None)
 
         if w is None:
-
             # Calculate unbounded weights
             w = torch.zeros(source.n, target.n)
             for f in range(n_filters):
