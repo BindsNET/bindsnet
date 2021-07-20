@@ -72,7 +72,7 @@ class TestConnection:
         for w in weights:
             for wmin in wmins:
                 for wmax in wmaxes:
-                    print(f"Testing {conn_type} with: w={w}, wmin={wmax}, wmax={wmax}")
+                    print(f"Testing {conn_type} with: w={w}, wmin={wmin}, wmax={wmax}")
                     l_a = LIFNodes(shape= shape_a, traces = True)
                     l_b = LIFNodes(shape= shape_b, traces = True)
                     conn = conn_type(l_a, l_b, w = w, wmin =wmin, wmax =wmax,

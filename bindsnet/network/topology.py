@@ -602,20 +602,23 @@ class LocalConnection(AbstractConnection):
         w = kwargs.get("w", None)
 
         if w is None:
+
+            # Calculate unbounded weights
             w = torch.zeros(source.n, target.n)
             for f in range(n_filters):
                 for c in range(conv_prod):
                     for k in range(kernel_prod):
-                        if self.wmin == -np.inf or self.wmax == np.inf:
-                            w[self.locations[k, c], f * conv_prod + c] = np.clip(
-                                np.random.rand(), self.wmin, self.wmax
-                            )
-                        else:
-                            w[
-                                self.locations[k, c], f * conv_prod + c
-                            ] = self.wmin + np.random.rand() * (self.wmax - self.wmin)
+                        ind1, ind2 = self.locations[k, c], f * conv_prod + c
+                        w[ind1, ind2] = np.random.rand()
+
+            # Bind weights to given range
+            if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
+                w = torch.clamp(w, self.wmin, self.wmax)
+            else:
+                w = self.wmin + w * (self.wmax - self.wmin)
+
         else:
-            if self.wmin != -np.inf or self.wmax != np.inf:
+            if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
