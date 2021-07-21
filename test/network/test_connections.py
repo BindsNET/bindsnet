@@ -75,8 +75,12 @@ class TestConnection:
         print("Testing:", conn_type)
         time = 100
         weights = [None, torch.Tensor(*shape_w)]
-        wmins = [-np.inf, 0, torch.zeros(*shape_w)]
-        wmaxes = [np.inf, 0, torch.zeros(*shape_w)]
+        wmins = [-np.inf, 0, torch.zeros(*shape_w), torch.zeros(*shape_w).masked_fill(
+                                                    torch.bernoulli(torch.rand(*shape_w)) == 1,
+                                                    -np.inf)]
+        wmaxes = [np.inf, 0, torch.ones(*shape_w), torch.randn(*shape_w).masked_fill(
+                                                    torch.bernoulli(torch.rand(*shape_w)) == 1,
+                                                    np.inf)]
         update_rule = kwargs.get("update_rule", None)
         for w in weights:
             for wmin in wmins:
