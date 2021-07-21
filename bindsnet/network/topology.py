@@ -48,8 +48,6 @@ class AbstractConnection(ABC, Module):
         """
         super().__init__()
 
-        # TODO: Implement tensor for norm, similar to that of wmin/wmax
-
         assert isinstance(source, Nodes), "Source is not a Nodes object"
         assert isinstance(target, Nodes), "Target is not a Nodes object"
 
@@ -500,7 +498,6 @@ class MaxPool2dConnection(AbstractConnection):
         self.firing_rates = torch.zeros(self.source.s.shape)
 
 
-# TODO: Add wmin/wmax tensor functionality to this one
 class LocalConnection(AbstractConnection):
     # language=rst
     """
@@ -545,8 +542,10 @@ class LocalConnection(AbstractConnection):
             some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
-        :param float wmin: Minimum allowed value on the connection weights.
-        :param float wmax: Maximum allowed value on the connection weights.
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
+        :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         :param Tuple[int, int] input_shape: Shape of input population if it's not
             ``[sqrt, sqrt]``.
@@ -760,7 +759,6 @@ class MeanFieldConnection(AbstractConnection):
         super().reset_state_variables()
 
 
-# TODO: Potential tensor functionality for 'sparsity' kwarg
 class SparseConnection(AbstractConnection):
     # language=rst
     """
