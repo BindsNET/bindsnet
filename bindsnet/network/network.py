@@ -231,7 +231,7 @@ class Network(torch.nn.Module):
                             self.batch_size,
                             target.res_window_size,
                             *target.shape,
-                            device=target.s.device
+                            device=target.s.device,
                         )
                     else:
                         inputs[c[1]] = torch.zeros(
@@ -308,8 +308,9 @@ class Network(torch.nn.Module):
             plt.show()
         """
         # Check input type
-        assert type(inputs) == dict, ("'inputs' must be a dict of names of layers " + 
-        f"(str) and relevant input tensors. Got {type(inputs).__name__} instead."
+        assert type(inputs) == dict, (
+            "'inputs' must be a dict of names of layers "
+            + f"(str) and relevant input tensors. Got {type(inputs).__name__} instead."
         )
         # Parse keyword arguments.
         clamps = kwargs.get("clamp", {})

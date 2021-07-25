@@ -23,7 +23,7 @@ class AbstractConnection(ABC, Module):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -65,10 +65,12 @@ class AbstractConnection(ABC, Module):
         # Float32 necessary for comparisons with +/-inf
         self.wmin = Parameter(
             torch.as_tensor(kwargs.get("wmin", -np.inf), dtype=torch.float32),
-            requires_grad=False)
+            requires_grad=False,
+        )
         self.wmax = Parameter(
             torch.as_tensor(kwargs.get("wmax", np.inf), dtype=torch.float32),
-            requires_grad=False)
+            requires_grad=False,
+        )
         self.norm = kwargs.get("norm", None)
         self.decay = kwargs.get("decay", None)
 
@@ -80,7 +82,7 @@ class AbstractConnection(ABC, Module):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
     @abstractmethod
@@ -135,7 +137,7 @@ class Connection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -270,7 +272,7 @@ class Conv2dConnection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -360,7 +362,6 @@ class Conv2dConnection(AbstractConnection):
             kwargs.get("b", torch.zeros(self.out_channels)), requires_grad=False
         )
 
-
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
         """
@@ -424,7 +425,7 @@ class MaxPool2dConnection(AbstractConnection):
         stride: Union[int, Tuple[int, int]] = 1,
         padding: Union[int, Tuple[int, int]] = 0,
         dilation: Union[int, Tuple[int, int]] = 1,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -514,7 +515,7 @@ class LocalConnection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -689,7 +690,7 @@ class MeanFieldConnection(AbstractConnection):
         target: Nodes,
         nu: Optional[Union[float, Sequence[float]]] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -772,7 +773,7 @@ class SparseConnection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -818,8 +819,10 @@ class SparseConnection(AbstractConnection):
                     self.wmax,
                 )[i.bool()]
             else:
-                v = (self.wmin + torch.rand(*source.shape, *target.shape)
-                     * (self.wmax - self.wmin))[i.bool()]
+                v = (
+                    self.wmin
+                    + torch.rand(*source.shape, *target.shape) * (self.wmax - self.wmin)
+                )[i.bool()]
             w = torch.sparse.FloatTensor(i.nonzero().t(), v)
         elif w is not None and self.sparsity is None:
             assert w.is_sparse, "Weight matrix is not sparse (see torch.sparse module)"

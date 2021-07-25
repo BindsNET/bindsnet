@@ -27,7 +27,7 @@ class LearningRule(ABC):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -59,9 +59,9 @@ class LearningRule(ABC):
 
         if (self.nu == torch.zeros(2)).all() and not isinstance(self, NoOp):
             warnings.warn(
-                f"nu is set to [0., 0.] for {type(self).__name__} learning rule. " +
-                "It will disable the learning process."
-                )
+                f"nu is set to [0., 0.] for {type(self).__name__} learning rule. "
+                + "It will disable the learning process."
+            )
 
         # Parameter update reduction across minibatch dimension.
         if reduction is None:
@@ -86,7 +86,8 @@ class LearningRule(ABC):
 
         # Bound weights.
         if (
-            (self.connection.wmin != -np.inf).any() or (self.connection.wmax != np.inf).any()
+            (self.connection.wmin != -np.inf).any()
+            or (self.connection.wmax != np.inf).any()
         ) and not isinstance(self, NoOp):
             self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
 
@@ -103,7 +104,7 @@ class NoOp(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -120,7 +121,7 @@ class NoOp(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
     def update(self, **kwargs) -> None:
@@ -144,7 +145,7 @@ class PostPre(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -162,7 +163,7 @@ class PostPre(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         assert (
@@ -260,7 +261,7 @@ class WeightDependentPostPre(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -278,13 +279,13 @@ class WeightDependentPostPre(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         assert self.source.traces, "Pre-synaptic nodes must record spike traces."
-        assert (
-            (connection.wmin != -np.inf).any() and (connection.wmax != np.inf).any()
-        ), "Connection must define finite wmin and wmax."
+        assert (connection.wmin != -np.inf).any() and (
+            connection.wmax != np.inf
+        ).any(), "Connection must define finite wmin and wmax."
 
         self.wmin = connection.wmin
         self.wmax = connection.wmax
@@ -398,7 +399,7 @@ class Hebbian(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -416,7 +417,7 @@ class Hebbian(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         assert (
@@ -503,7 +504,7 @@ class MSTDP(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -527,7 +528,7 @@ class MSTDP(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         if isinstance(connection, (Connection, LocalConnection)):
@@ -697,7 +698,7 @@ class MSTDPET(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -722,7 +723,7 @@ class MSTDPET(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         if isinstance(connection, (Connection, LocalConnection)):
@@ -901,7 +902,7 @@ class Rmax(LearningRule):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -926,7 +927,7 @@ class Rmax(LearningRule):
             nu=nu,
             reduction=reduction,
             weight_decay=weight_decay,
-            **kwargs
+            **kwargs,
         )
 
         # Trace is needed for computing epsilon.
