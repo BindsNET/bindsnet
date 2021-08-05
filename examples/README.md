@@ -139,3 +139,33 @@ parameters|default|description
 --dt |1| SNN simulation time increment (in ms)
 --seed |0| initial random seed
 --tensorboard |True| whether to use **Tensorboard** or **Matplotlib** analyzer as output
+
+***
+
+## Dot Tracing example
+*/examples/dotTracing/*  
+dot_tracing.py trains a basic RNN on the Dot Simulator environment and demonstrates how to record reward and performance data (if desired) and plot spiking activity via monitors.
+
+See the environments directory for documentation on the Dot Simulator.
+
+parameters|default|description
+-|:-:|-
+--steps |100| number of timesteps in an episode
+--dim |28| square dimensions of grid (actual simulator can specify rows vs columns)
+--dt |1| SNN simulation time increment (in ms)
+--seed |0| initial random seed
+--granularity |100| spike train granularity
+--trn_eps |1000| training episodes
+--tst_eps |100| test episodes
+--decay |4| length of decaying trail behind target dot
+--diag |False| enables diagonal movements
+--randr |.15| determines rate of randomization of movement
+--boundh |'bounce'| bounds handling mode
+--fit_func |'dir'| fitness function, defaulted to directional
+--allow_stay |False| disable option for targets to remain in place
+--pandas |False| true = pandas Dataframe printout; false = heatmap
+--mute |False| prohibit graphical rendering
+--write |True| save observed grids to file
+--fcycle |100| number of episodes per save file
+--gpu |True| Utilize cuda
+--herrs |0| number of distraction dots
