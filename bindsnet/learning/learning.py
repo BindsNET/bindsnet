@@ -86,7 +86,8 @@ class LearningRule(ABC):
 
         # Bound weights.
         if (
-            self.connection.wmin != -np.inf or self.connection.wmax != np.inf
+            (self.connection.wmin != -np.inf).any()
+            or (self.connection.wmax != np.inf).any()
         ) and not isinstance(self, NoOp):
             self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
 
@@ -282,9 +283,9 @@ class WeightDependentPostPre(LearningRule):
         )
 
         assert self.source.traces, "Pre-synaptic nodes must record spike traces."
-        assert (
-            connection.wmin != -np.inf and connection.wmax != np.inf
-        ), "Connection must define finite wmin and wmax."
+        assert (connection.wmin != -np.inf).any() and (
+            connection.wmax != np.inf
+        ).any(), "Connection must define finite wmin and wmax."
 
         self.wmin = connection.wmin
         self.wmax = connection.wmax
