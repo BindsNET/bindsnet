@@ -1,0 +1,7 @@
+*
+!.python-version
+!bindsnet
+!test
+!pyproject.toml
+!poetry.lock
+!Dockerfile
