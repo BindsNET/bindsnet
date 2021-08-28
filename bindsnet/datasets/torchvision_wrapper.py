@@ -34,7 +34,7 @@ def create_torchvision_dataset_wrapper(ds_type):
             image_encoder: Optional[Encoder] = None,
             label_encoder: Optional[Encoder] = None,
             *args,
-            **kwargs
+            **kwargs,
         ):
             # language=rst
             """

@@ -9,7 +9,7 @@ def bernoulli_loader(
     data: Union[torch.Tensor, Iterable[torch.Tensor]],
     time: Optional[int] = None,
     dt: float = 1.0,
-    **kwargs
+    **kwargs,
 ) -> Iterator[torch.Tensor]:
     # language=rst
     """
@@ -37,7 +37,7 @@ def poisson_loader(
     data: Union[torch.Tensor, Iterable[torch.Tensor]],
     time: int,
     dt: float = 1.0,
-    **kwargs
+    **kwargs,
 ) -> Iterator[torch.Tensor]:
     # language=rst
     """
@@ -58,7 +58,7 @@ def rank_order_loader(
     data: Union[torch.Tensor, Iterable[torch.Tensor]],
     time: int,
     dt: float = 1.0,
-    **kwargs
+    **kwargs,
 ) -> Iterator[torch.Tensor]:
     # language=rst
     """
