@@ -15,21 +15,33 @@ Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/mast
 
 ## Requirements
 
-- Python 3.6
-- `requirements.txt`
+- Python >=3.7.10,<3.10
+- [Poetry](https://python-poetry.org/) 1.1.8
 
 ## Setting things up
 
-### Using pip
-BindsNET is available through its git repository. Issue
+## Using Pip
+From PyPI:
+```
+pip install bindsnet
+```
+
+### Using Poetry
+From PyPI:
+```
+poetry add bindsnet
+```
+
+Or, to install the most recent stable release from the GitHub repository
 
 ```
-pip install git+https://github.com/BindsNET/bindsnet.git
+poetry add git+https://github.com/BindsNET/bindsnet.git
 ```
 
-to get the most recent stable release. Or, to build the `bindsnet` package from source, clone the GitHub repository, change directory to the top level of this project, and issue
+Or, to build the `bindsnet` package from source, clone the GitHub repository, change directory to the top level of this project, and issue
 
 ```
+poetry build
 pip install .
 ```
 
@@ -47,7 +59,7 @@ To install the packages necessary to interface with the [OpenAI gym RL environme
 We also provide a Dockerfile in which BindsNET and all of its dependencies come installed in. Issue
 
 ```
-docker image build .
+docker build .
 ```
 at the top level directory of this project to create a docker image. 
 
