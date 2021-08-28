@@ -16,7 +16,6 @@ Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/mast
 ## Requirements
 
 - Python >=3.7.10,<3.10
-- [Poetry](https://python-poetry.org/) 1.1.8
 
 ## Setting things up
 
@@ -35,7 +34,6 @@ pip install git+https://github.com/BindsNET/bindsnet.git
 Or, to build the `bindsnet` package from source, clone the GitHub repository, change directory to the top level of this project, and issue
 
 ```
-poetry build
 pip install .
 ```
 
