@@ -26,16 +26,10 @@ From PyPI:
 pip install bindsnet
 ```
 
-### Using Poetry
-From PyPI:
-```
-poetry add bindsnet
-```
-
 Or, to install the most recent stable release from the GitHub repository
 
 ```
-poetry add git+https://github.com/BindsNET/bindsnet.git
+pip install git+https://github.com/BindsNET/bindsnet.git
 ```
 
 Or, to build the `bindsnet` package from source, clone the GitHub repository, change directory to the top level of this project, and issue
