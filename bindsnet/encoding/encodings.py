@@ -9,7 +9,7 @@ def single(
     dt: float = 1.0,
     sparsity: float = 0.5,
     device="cpu",
-    **kwargs
+    **kwargs,
 ) -> torch.Tensor:
     # language=rst
     """
@@ -52,7 +52,7 @@ def bernoulli(
     time: Optional[int] = None,
     dt: float = 1.0,
     device="cpu",
-    **kwargs
+    **kwargs,
 ) -> torch.Tensor:
     # language=rst
     """
@@ -102,7 +102,7 @@ def poisson(
     dt: float = 1.0,
     device="cpu",
     approx=False,
-    **kwargs
+    **kwargs,
 ) -> torch.Tensor:
     # language=rst
     """

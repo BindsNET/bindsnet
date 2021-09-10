@@ -24,7 +24,7 @@ class DataLoaderPipeline(BasePipeline):
         network: Network,
         train_ds: Dataset,
         test_ds: Optional[Dataset] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -87,7 +87,7 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         network: Network,
         train_ds: Dataset,
         pipeline_analyzer: Optional[PipelineAnalyzer] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
