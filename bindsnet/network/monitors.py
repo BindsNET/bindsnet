@@ -9,8 +9,10 @@ from .nodes import Nodes
 from .topology import AbstractConnection
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .network import Network
+
 
 class AbstractMonitor(ABC):
     # language=rst
