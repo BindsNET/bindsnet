@@ -113,7 +113,7 @@ class NetworkMonitor(AbstractMonitor):
 
     def __init__(
         self,
-        network: "bindsnet.network.Network",
+        network: "Network",
         layers: Optional[Iterable[str]] = None,
         connections: Optional[Iterable[str]] = None,
         state_vars: Optional[Iterable[str]] = None,
