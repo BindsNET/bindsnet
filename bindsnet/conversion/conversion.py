@@ -133,8 +133,8 @@ def data_based_normalization(
 
                         prev_factor = scale_factor
 
-                elif isinstance(module2, nn.Linear) or isinstance(module2, nn.Conv2d):
-                    prev_module = module2
+                elif isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
+                    prev_module = module
 
         if isinstance(module, nn.Linear):
             if prev_module is not None:

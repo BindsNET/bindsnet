@@ -7,6 +7,7 @@ from typing import Union, Optional, Iterable, Dict
 
 from .nodes import Nodes
 from .topology import AbstractConnection
+from .network import Network
 
 
 class AbstractMonitor(ABC):
