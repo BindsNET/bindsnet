@@ -8,7 +8,7 @@ This package is used as part of ongoing research on applying SNNs to machine lea
 
 Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/master/examples) for a collection of experiments, functions for the analysis of results, plots of experiment outcomes, and more. Documentation for the package can be found [here](https://bindsnet-docs.readthedocs.io).
 
-[![Build Status](https://travis-ci.com/BindsNET/bindsnet.svg?branch=master)](https://travis-ci.com/BindsNET/bindsnet)
+![Build Status](https://github.com/github/BindsNET/actions/workflows/main.yml/badge.svg?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
 [![HitCount](http://hits.dwyl.io/Hananel-Hazan/bindsnet.svg)](http://hits.dwyl.io/Hananel-Hazan/bindsnet)
 [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/bindsnet_/community)
