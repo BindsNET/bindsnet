@@ -7,8 +7,10 @@ from typing import Union, Optional, Iterable, Dict
 
 from .nodes import Nodes
 from .topology import AbstractConnection
-from .network import Network
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .network import Network
 
 class AbstractMonitor(ABC):
     # language=rst
@@ -109,7 +111,7 @@ class NetworkMonitor(AbstractMonitor):
 
     def __init__(
         self,
-        network: "Network",
+        network: "bindsnet.network.Network",
         layers: Optional[Iterable[str]] = None,
         connections: Optional[Iterable[str]] = None,
         state_vars: Optional[Iterable[str]] = None,
