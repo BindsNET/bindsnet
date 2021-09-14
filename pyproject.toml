@@ -63,9 +63,3 @@ exclude = '''
   | logs
   )/
 '''
-
-[tool.mypy]
-python_version = 3.7
-warn_return_any = true
-warn_unused_configs = true
-files = "bindsnet/,test/"
