@@ -1,7 +1,6 @@
 import torch
-import numpy as np
 
-from . import EnvironmentPipeline
+from bindsnet.pipeline.environment_pipeline import EnvironmentPipeline
 
 
 def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:

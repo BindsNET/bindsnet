@@ -1,5 +1,6 @@
-import os
 import argparse
+import os
+
 import numpy as np
 
 from bindsnet.environment import GymEnvironment

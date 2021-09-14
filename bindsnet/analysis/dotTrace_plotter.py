@@ -1,8 +1,8 @@
-import numpy as np
 import glob
 import sys
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Define grid dimensions globally
 ROWS = 28

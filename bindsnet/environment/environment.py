@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Dict, Any
+from typing import Any, Dict, Tuple
 
 import gym
 import numpy as np
 import torch
 
-from ..datasets.preprocess import subsample, gray_scale, binary_image, crop
-from ..encoding import Encoder, NullEncoder
+from bindsnet.datasets.preprocess import binary_image, crop, gray_scale, subsample
+from bindsnet.encoding import Encoder, NullEncoder
 
 
 class Environment(ABC):
@@ -23,7 +23,6 @@ class Environment(ABC):
 
         :param a: Integer action to take in environment.
         """
-        pass
 
     @abstractmethod
     def reset(self) -> None:
@@ -31,7 +30,6 @@ class Environment(ABC):
         """
         Abstract method header for ``reset()``.
         """
-        pass
 
     @abstractmethod
     def render(self) -> None:
@@ -39,7 +37,6 @@ class Environment(ABC):
         """
         Abstract method header for ``render()``.
         """
-        pass
 
     @abstractmethod
     def close(self) -> None:
@@ -47,7 +44,6 @@ class Environment(ABC):
         """
         Abstract method header for ``close()``.
         """
-        pass
 
     @abstractmethod
     def preprocess(self) -> None:
@@ -55,7 +51,6 @@ class Environment(ABC):
         """
         Abstract method header for ``preprocess()``.
         """
-        pass
 
 
 class GymEnvironment(Environment):

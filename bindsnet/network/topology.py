@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Union, Tuple, Optional, Sequence
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
-from torch.nn import Module, Parameter
 import torch.nn.functional as F
+from torch.nn import Module, Parameter
 from torch.nn.modules.utils import _pair
 
-from .nodes import Nodes, CSRMNodes
+from bindsnet.network.nodes import CSRMNodes, Nodes
 
 
 class AbstractConnection(ABC, Module):
@@ -93,7 +93,6 @@ class AbstractConnection(ABC, Module):
 
         :param s: Incoming spikes.
         """
-        pass
 
     @abstractmethod
     def update(self, **kwargs) -> None:
@@ -121,7 +120,6 @@ class AbstractConnection(ABC, Module):
         """
         Contains resetting logic for the connection.
         """
-        pass
 
 
 class Connection(AbstractConnection):
@@ -487,7 +485,6 @@ class MaxPool2dConnection(AbstractConnection):
         """
         No weights -> no normalization.
         """
-        pass
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -848,7 +845,6 @@ class SparseConnection(AbstractConnection):
         """
         Compute connection's update rule.
         """
-        pass
 
     def normalize(self) -> None:
         # language=rst
@@ -856,7 +852,6 @@ class SparseConnection(AbstractConnection):
         Normalize weights along the first axis according to total weight per target
         neuron.
         """
-        pass
 
     def reset_state_variables(self) -> None:
         # language=rst

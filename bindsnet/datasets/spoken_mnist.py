@@ -1,15 +1,12 @@
-from typing import Optional, Tuple, List, Iterable
 import os
-import torch
-import numpy as np
 import shutil
 import zipfile
-
-
+from typing import Iterable, List, Tuple
 from urllib.request import urlretrieve
-from scipy.io import wavfile
 
-import warnings
+import numpy as np
+import torch
+from scipy.io import wavfile
 
 
 class SpokenMNIST(torch.utils.data.Dataset):

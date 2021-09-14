@@ -1,16 +1,16 @@
 import torch
 
-from bindsnet.network import Network
-from bindsnet.network.nodes import Input, LIFNodes, CSRMNodes, SRM0Nodes
-from bindsnet.network.topology import Connection, Conv2dConnection
 from bindsnet.learning import (
-    Hebbian,
-    PostPre,
-    WeightDependentPostPre,
     MSTDP,
     MSTDPET,
+    Hebbian,
+    PostPre,
     Rmax,
+    WeightDependentPostPre,
 )
+from bindsnet.network import Network
+from bindsnet.network.nodes import CSRMNodes, Input, LIFNodes, SRM0Nodes
+from bindsnet.network.topology import Connection, Conv2dConnection
 
 
 class TestLearningRules:

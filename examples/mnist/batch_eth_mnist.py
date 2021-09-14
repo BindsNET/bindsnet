@@ -1,29 +1,28 @@
-import os
-import torch
 import argparse
-import numpy as np
-import matplotlib.pyplot as plt
+import os
+from time import time as t
 
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 from torchvision import transforms
 from tqdm import tqdm
 
-from time import time as t
-
 from bindsnet import ROOT_DIR
+from bindsnet.analysis.plotting import (
+    plot_assignments,
+    plot_input,
+    plot_performance,
+    plot_spikes,
+    plot_voltages,
+    plot_weights,
+)
 from bindsnet.datasets import MNIST, DataLoader
 from bindsnet.encoding import PoissonEncoder
-from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
+from bindsnet.evaluation import all_activity, assign_labels, proportion_weighting
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
-from bindsnet.utils import get_square_weights, get_square_assignments
-from bindsnet.analysis.plotting import (
-    plot_input,
-    plot_spikes,
-    plot_weights,
-    plot_performance,
-    plot_assignments,
-    plot_voltages,
-)
+from bindsnet.utils import get_square_assignments, get_square_weights
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)

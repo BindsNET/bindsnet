@@ -1,20 +1,25 @@
 import argparse
-from tqdm import tqdm
+from typing import Iterable, Optional, Union
+
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
+from tqdm import tqdm
 
-
-from bindsnet.network import Network
-from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.encoding import bernoulli, poisson
-from bindsnet.network.topology import Connection
 from bindsnet.environment import GymEnvironment
-from bindsnet.network.nodes import Input, LIFNodes, IzhikevichNodes, IFNodes
+from bindsnet.network import Network
+from bindsnet.network.nodes import (
+    AbstractInput,
+    IFNodes,
+    Input,
+    IzhikevichNodes,
+    LIFNodes,
+    Nodes,
+)
+from bindsnet.network.topology import Connection
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.pipeline.action import *
-
-from bindsnet.network.nodes import Nodes, AbstractInput
-from typing import Iterable, Optional, Union
 
 parser = argparse.ArgumentParser(prefix_chars="@")
 parser.add_argument("@@seed", type=int, default=42)

@@ -1,8 +1,8 @@
-from typing import Optional, Union, Iterable, Iterator
+from typing import Iterable, Iterator, Optional, Union
 
 import torch
 
-from .encodings import bernoulli, poisson, rank_order
+from bindsnet.encoding.encodings import bernoulli, poisson, rank_order
 
 
 def bernoulli_loader(

@@ -1,24 +1,22 @@
-import os
-import nengo
-import torch
 import argparse
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-
-from brian2 import *
-from nest import *
+import os
 from time import time as t
-from experiments import ROOT_DIR
 
 import brian2genn
-
-from bindsnet.network import Network
-from bindsnet.network.topology import Connection
-from bindsnet.network.nodes import Input, LIFNodes
-from bindsnet.encoding import poisson
-
+import matplotlib.pyplot as plt
+import nengo
+import numpy as np
+import pandas as pd
+import torch
+from brian2 import *
+from experiments import ROOT_DIR
 from experiments.benchmark import plot_benchmark
+from nest import *
+
+from bindsnet.encoding import poisson
+from bindsnet.network import Network
+from bindsnet.network.nodes import Input, LIFNodes
+from bindsnet.network.topology import Connection
 
 plots_path = os.path.join(ROOT_DIR, "figures")
 benchmark_path = os.path.join(ROOT_DIR, "benchmark")

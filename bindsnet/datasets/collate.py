@@ -7,10 +7,10 @@ https://github.com/pytorch/pytorch/blob/master/torch/utils/data/_utils/collate.p
 Modifications exist to have [time, batch, n_0, ... n_k] instead of batch in dimension 0.
 """
 
-import torch
-from torch._six import string_classes
 import collections
 
+import torch
+from torch._six import string_classes
 from torch.utils.data._utils import collate as pytorch_collate
 
 

@@ -2,7 +2,7 @@ import torch
 
 from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor, NetworkMonitor
-from bindsnet.network.nodes import Input, IFNodes
+from bindsnet.network.nodes import IFNodes, Input
 from bindsnet.network.topology import Connection
 
 

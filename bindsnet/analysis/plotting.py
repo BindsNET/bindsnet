@@ -1,15 +1,15 @@
-import torch
-import numpy as np
+from typing import Dict, List, Optional, Sized, Tuple, Union
+
 import matplotlib.pyplot as plt
-
+import numpy as np
+import torch
 from matplotlib.axes import Axes
-from matplotlib.image import AxesImage
-from torch.nn.modules.utils import _pair
 from matplotlib.collections import PathCollection
+from matplotlib.image import AxesImage
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from typing import Tuple, List, Optional, Sized, Dict, Union
+from torch.nn.modules.utils import _pair
 
-from ..utils import reshape_locally_connected_weights, reshape_conv2d_weights
+from bindsnet.utils import reshape_conv2d_weights, reshape_locally_connected_weights
 
 plt.ion()
 

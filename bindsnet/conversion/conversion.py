@@ -1,19 +1,16 @@
-import torch
-import numpy as np
-import torch.nn as nn
-import torch.nn.functional as F
-
-from torch.nn.modules.utils import _pair
-
 from copy import deepcopy
-from typing import Union, Sequence, Optional, Tuple, Dict, Iterable
+from typing import Dict, Optional, Sequence, Union
+
+import numpy as np
+import torch
+import torch.nn as nn
+from torch.nn.modules.utils import _pair
 
 import bindsnet.network.nodes as nodes
 import bindsnet.network.topology as topology
-
+from bindsnet.conversion.nodes import PassThroughNodes, SubtractiveResetIFNodes
+from bindsnet.conversion.topology import ConstantPad2dConnection, PermuteConnection
 from bindsnet.network import Network
-from .nodes import SubtractiveResetIFNodes, PassThroughNodes
-from .topology import PermuteConnection, ConstantPad2dConnection
 
 
 class Permute(nn.Module):

@@ -1,20 +1,18 @@
-import os
 import argparse
+import os
+from time import time as t
 
 import torch
 from torchvision import transforms
-
-from time import time as t
 from tqdm import tqdm
 
 import bindsnet.datasets
-from bindsnet.encoding import PoissonEncoder, NullEncoder
-
-from bindsnet.network import Network
+from bindsnet.analysis.pipeline_analysis import MatplotlibAnalyzer, TensorboardAnalyzer
+from bindsnet.encoding import NullEncoder, PoissonEncoder
 from bindsnet.learning import PostPre
-from bindsnet.network.nodes import LIFNodes, Input
-from bindsnet.network.topology import Conv2dConnection, Connection
-from bindsnet.analysis.pipeline_analysis import TensorboardAnalyzer, MatplotlibAnalyzer
+from bindsnet.network import Network
+from bindsnet.network.nodes import Input, LIFNodes
+from bindsnet.network.topology import Connection, Conv2dConnection
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

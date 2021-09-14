@@ -1,25 +1,25 @@
-import os
-import torch
 import argparse
-import matplotlib.pyplot as plt
-from torchvision import transforms
-
+import os
 from time import time as t
+
+import matplotlib.pyplot as plt
+import torch
+from torchvision import transforms
 from tqdm import tqdm
 
-from bindsnet.datasets import MNIST
-from bindsnet.encoding import PoissonEncoder
-from bindsnet.network import Network
-from bindsnet.learning import PostPre
-from bindsnet.network.monitors import Monitor
-from bindsnet.network.nodes import DiehlAndCookNodes, Input
-from bindsnet.network.topology import Conv2dConnection, Connection
 from bindsnet.analysis.plotting import (
+    plot_conv2d_weights,
     plot_input,
     plot_spikes,
-    plot_conv2d_weights,
     plot_voltages,
 )
+from bindsnet.datasets import MNIST
+from bindsnet.encoding import PoissonEncoder
+from bindsnet.learning import PostPre
+from bindsnet.network import Network
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.nodes import DiehlAndCookNodes, Input
+from bindsnet.network.topology import Connection, Conv2dConnection
 
 print()
 

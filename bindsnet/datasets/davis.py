@@ -1,14 +1,14 @@
 import os
+import shutil
 import sys
 import time
-import shutil
 import zipfile
-from glob import glob
 from collections import defaultdict
+from glob import glob
 from urllib.request import urlretrieve
 
-import torch
 import numpy as np
+import torch
 from PIL import Image
 from tqdm import tqdm
 

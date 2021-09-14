@@ -1,4 +1,4 @@
-from . import encodings
+from bindsnet.encoding import encodings
 
 
 class Encoder:
