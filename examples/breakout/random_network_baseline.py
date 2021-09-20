@@ -1,14 +1,15 @@
-import torch
 import argparse
 
-from bindsnet.network import Network
-from bindsnet.learning import Hebbian
-from bindsnet.pipeline import EnvironmentPipeline
+import torch
+
 from bindsnet.encoding import bernoulli
-from bindsnet.network.monitors import Monitor
 from bindsnet.environment import GymEnvironment
-from bindsnet.network.topology import Connection
+from bindsnet.learning import Hebbian
+from bindsnet.network import Network
+from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import Input, LIFNodes
+from bindsnet.network.topology import Connection
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.pipeline.action import select_multinomial
 
 parser = argparse.ArgumentParser()

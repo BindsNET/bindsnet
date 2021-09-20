@@ -1,13 +1,12 @@
-import numpy as np
 import os
-import pandas as pd
 import random
 from time import time
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import torch
 from gym import spaces
-import matplotlib.pyplot as plt
-
 
 # Mappings for changing direction if reflected.
 # Cannot cross a row boundary moving right or left.

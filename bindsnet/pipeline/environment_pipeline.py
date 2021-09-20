@@ -1,16 +1,15 @@
 import itertools
-from typing import Callable, Optional, Tuple, Dict
+from typing import Callable, Dict, Optional, Tuple
 
 import torch
-
 from tqdm import tqdm
 
-from .base_pipeline import BasePipeline
-from ..analysis.pipeline_analysis import MatplotlibAnalyzer
-from ..environment import Environment
-from ..network import Network
-from ..network.nodes import AbstractInput
-from ..network.monitors import Monitor
+from bindsnet.analysis.pipeline_analysis import MatplotlibAnalyzer
+from bindsnet.environment import Environment
+from bindsnet.network import Network
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.nodes import AbstractInput
+from bindsnet.pipeline.base_pipeline import BasePipeline
 
 
 class EnvironmentPipeline(BasePipeline):

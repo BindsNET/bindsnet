@@ -1,12 +1,12 @@
+import collections
 import time
-from typing import Tuple, Dict, Any
+from typing import Any, Dict, Tuple
 
 import torch
 from torch._six import string_classes
-import collections
 
-from ..network import Network
-from ..network.monitors import Monitor
+from bindsnet.network import Network
+from bindsnet.network.monitors import Monitor
 
 
 def recursive_to(item, device):

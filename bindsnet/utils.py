@@ -1,11 +1,10 @@
 import math
-import torch
-import numpy as np
-
-from torch import Tensor
-import torch.nn.functional as F
-from numpy import ndarray
 from typing import Tuple, Union
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch import Tensor
 from torch.nn.modules.utils import _pair
 
 

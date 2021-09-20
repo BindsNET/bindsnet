@@ -1,9 +1,9 @@
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+from typing import List, Optional, Tuple
 
-from typing import List, Tuple, Optional
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 
 
 def plot_weights_movie(ws: np.ndarray, sample_every: int = 1) -> None:

@@ -32,8 +32,10 @@ pytest = "^6.2.4"
 pre-commit = "^2.14.0"
 notebook = "^6.4.3"
 jupyterlab = "^3.1.9"
+isort = "^5.9.3"
 black = "^21.7b0"
 autoflake = "^1.4"
+
 Sphinx = "3.4.3"
 sphinx-rtd-theme = "0.5.1"
 imagecodecs = "^2021.8.26"
@@ -42,6 +44,10 @@ imagecodecs = "^2021.8.26"
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.isort]
+profile = "black"
+line_length = 88
+src_paths = ["bindsnet", "test"]
 
 [tool.black]
 target-version = ['py37']

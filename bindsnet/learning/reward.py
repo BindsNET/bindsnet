@@ -15,7 +15,6 @@ class AbstractReward(ABC):
         """
         Computes/modifies reward.
         """
-        pass
 
     @abstractmethod
     def update(self, **kwargs) -> None:
@@ -24,7 +23,6 @@ class AbstractReward(ABC):
         Updates internal variables needed to modify reward. Usually called once per
         episode.
         """
-        pass
 
 
 class MovingAvgRPE(AbstractReward):

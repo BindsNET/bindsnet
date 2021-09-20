@@ -1,9 +1,11 @@
-from abc import ABC
-from typing import Union, Optional, Sequence
 import warnings
+from abc import ABC
+from typing import Optional, Sequence, Union
 
-import torch
 import numpy as np
+import torch
+
+from bindsnet.utils import im2col_indices
 
 from ..network.nodes import SRM0Nodes
 from ..network.topology import (
@@ -12,7 +14,6 @@ from ..network.topology import (
     Conv2dConnection,
     LocalConnection,
 )
-from ..utils import im2col_indices
 
 
 class LearningRule(ABC):

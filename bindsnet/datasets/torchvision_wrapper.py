@@ -1,9 +1,9 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import torch
 import torchvision
 
-from ..encoding import Encoder, NullEncoder
+from bindsnet.encoding import Encoder, NullEncoder
 
 
 def create_torchvision_dataset_wrapper(ds_type):

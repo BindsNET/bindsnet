@@ -1,14 +1,12 @@
 import os
-import torch
-import numpy as np
-
 from abc import ABC
-from typing import Union, Optional, Iterable, Dict
+from typing import TYPE_CHECKING, Dict, Iterable, Optional, Union
 
-from .nodes import Nodes
-from .topology import AbstractConnection
+import numpy as np
+import torch
 
-from typing import TYPE_CHECKING
+from bindsnet.network.nodes import Nodes
+from bindsnet.network.topology import AbstractConnection
 
 if TYPE_CHECKING:
     from .network import Network

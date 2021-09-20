@@ -1,16 +1,14 @@
-from typing import Optional, Union, Tuple, List, Sequence, Iterable
+from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 from scipy.spatial.distance import euclidean
 from torch.nn.modules.utils import _pair
-import torch.nn as nn
-from torchvision import models
 
-from ..learning import PostPre
-from ..network import Network
-from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes, AdaptiveLIFNodes
-from ..network.topology import Connection, LocalConnection
+from bindsnet.learning import PostPre
+from bindsnet.network import Network
+from bindsnet.network.nodes import DiehlAndCookNodes, Input, LIFNodes
+from bindsnet.network.topology import Connection, LocalConnection
 
 
 class TwoLayerNetwork(Network):

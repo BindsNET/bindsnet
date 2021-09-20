@@ -2,12 +2,12 @@ import torch
 
 from bindsnet.network import Network
 from bindsnet.network.nodes import (
-    Nodes,
-    Input,
-    McCullochPitts,
-    IFNodes,
-    LIFNodes,
     AdaptiveLIFNodes,
+    IFNodes,
+    Input,
+    LIFNodes,
+    McCullochPitts,
+    Nodes,
     SRM0Nodes,
 )
 

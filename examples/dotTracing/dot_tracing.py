@@ -1,29 +1,25 @@
-from bindsnet.network import Network
+import argparse
+import time
 
-# from bindsnet.pipeline import EnvironmentPipeline
-# from bindsnet.learning import MSTDP
-from bindsnet.learning import MSTDPET
-from bindsnet.learning import PostPre
+import numpy as np
+import torch
+
+from bindsnet.analysis.plotting import plot_spikes  # plot_performance
 
 # from bindsnet.encoding import bernoulli
 from bindsnet.encoding import poisson
-from bindsnet.network.topology import Connection
 from bindsnet.environment.dot_simulator import DotSimulator
-from bindsnet.network.nodes import Input, LIFNodes
+
+# from bindsnet.pipeline import EnvironmentPipeline
+# from bindsnet.learning import MSTDP
+from bindsnet.learning import MSTDPET, PostPre
+from bindsnet.network import Network
 
 # from bindsnet.pipeline.action import select_softmax
 # from bindsnet.network.nodes import AbstractInput
 from bindsnet.network.monitors import Monitor
-from bindsnet.analysis.plotting import (
-    plot_spikes,
-    # plot_performance
-)
-
-import argparse
-import numpy as np
-import time
-import torch
-
+from bindsnet.network.nodes import Input, LIFNodes
+from bindsnet.network.topology import Connection
 
 # Handle arguments for dot tracing params.
 parser = argparse.ArgumentParser()

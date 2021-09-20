@@ -1,9 +1,9 @@
 import hashlib
 import os
 import pickle
-import torch
+from abc import ABC, abstractmethod
 
-from abc import abstractmethod, ABC
+import torch
 
 
 class AbstractPreprocessor(ABC):
@@ -50,7 +50,6 @@ class AbstractPreprocessor(ABC):
         :param cache: Dictionary for caching 'data' needs to be updated for caching to
             work.
         """
-        pass
 
     def __gen_hash(self, filename: str) -> str:
         # language=rst
