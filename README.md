@@ -19,12 +19,7 @@ Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/mast
 ## Setting things up
 
 ## Using Pip
-From PyPI:
-```
-pip install bindsnet
-```
-
-Or, to install the most recent stable release from the GitHub repository
+To install the most recent stable release from the GitHub repository
 
 ```
 pip install git+https://github.com/BindsNET/bindsnet.git
