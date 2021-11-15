@@ -1,7 +1,7 @@
 from typing import Optional
 
 import torch
-
+import matplotlib.pyplot as plt
 
 def single(
     datum: torch.Tensor,
@@ -142,6 +142,8 @@ def poisson(
         # (incrementing by 1 to avoid zero intervals).
         dist = torch.distributions.Poisson(rate=rate, validate_args=False)
         intervals = dist.sample(sample_shape=torch.Size([time + 1]))
+        # count, bins, ignored = plt.hist(intervals.T[datum.argmax()], 20, density=True)
+        # plt.show()
         intervals[:, datum != 0] += (intervals[:, datum != 0] == 0).float()
 
         # Calculate spike times by cumulatively summing over time dimension.
