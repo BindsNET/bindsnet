@@ -4,7 +4,6 @@ import argparse
 import os
 from time import time as t
 
-import matplotlib.pyplot as plt
 import torch
 from torchvision import transforms
 from tqdm import tqdm
