@@ -1611,7 +1611,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "torch"
-version = "1.9.0"
+version = "1.10.0"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 category = "main"
 optional = false
@@ -1622,7 +1622,7 @@ typing-extensions = "*"
 
 [[package]]
 name = "torchvision"
-version = "0.10.0"
+version = "0.11.1"
 description = "image and video datasets and models for torch deep learning"
 category = "main"
 optional = false
@@ -1631,7 +1631,7 @@ python-versions = "*"
 [package.dependencies]
 numpy = "*"
 pillow = ">=5.3.0"
-torch = "1.9.0"
+torch = "1.10.0"
 
 [package.extras]
 scipy = ["scipy"]
