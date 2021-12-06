@@ -1,4 +1,4 @@
-### Toy example to test Conv3dConnection (the dataset used is MNIST but with a dimension replicated 
+### Toy example to test Conv3dConnection (the dataset used is MNIST but with a dimension replicated
 ### for each image (each sample has size (28, 28, 28))
 
 import argparse
@@ -80,7 +80,7 @@ per_class = int((n_filters * conv_size) / 10)
 
 # Build network.
 network = Network()
-input_layer = Input(n=28*28*28, shape=(1, 28, 28, 28), traces=True)
+input_layer = Input(n=28 * 28 * 28, shape=(1, 28, 28, 28), traces=True)
 
 conv_layer = DiehlAndCookNodes(
     n=n_filters * conv_size * conv_size * conv_size,
@@ -99,7 +99,16 @@ conv_conn = Conv3dConnection(
     wmax=1.0,
 )
 
-w = torch.zeros(n_filters, conv_size, conv_size, conv_size, n_filters, conv_size, conv_size, conv_size)
+w = torch.zeros(
+    n_filters,
+    conv_size,
+    conv_size,
+    conv_size,
+    n_filters,
+    conv_size,
+    conv_size,
+    conv_size,
+)
 for fltr1 in range(n_filters):
     for fltr2 in range(n_filters):
         if fltr1 != fltr2:
@@ -108,7 +117,10 @@ for fltr1 in range(n_filters):
                     for k in range(conv_size):
                         w[fltr1, i, j, k, fltr2, i, j, k] = -100.0
 
-w = w.view(n_filters * conv_size * conv_size * conv_size, n_filters * conv_size * conv_size * conv_size)
+w = w.view(
+    n_filters * conv_size * conv_size * conv_size,
+    n_filters * conv_size * conv_size * conv_size,
+)
 recurrent_conn = Connection(conv_layer, conv_layer, w=w)
 
 network.add_layer(input_layer, name="X")
@@ -122,7 +134,6 @@ network.add_monitor(voltage_monitor, name="output_voltage")
 
 if gpu:
     network.to("cuda")
-
 
 
 # Load MNIST data.
@@ -165,14 +176,24 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=gpu
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=gpu,
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
         # Get next input sample (expanded to have shape (time, batch_size, 1, 28, 28))
         if step > n_train:
             break
-        inputs = {"X": batch["encoded_image"].view(time, batch_size, 1, 28, 28).unsqueeze(3).repeat(1,1,1,28,1,1).float()}
+        inputs = {
+            "X": batch["encoded_image"]
+            .view(time, batch_size, 1, 28, 28)
+            .unsqueeze(3)
+            .repeat(1, 1, 1, 28, 1, 1)
+            .float()
+        }
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
         label = batch["label"]

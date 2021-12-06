@@ -166,7 +166,11 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=gpu
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=gpu,
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):

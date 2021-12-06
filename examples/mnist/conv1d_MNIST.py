@@ -24,7 +24,7 @@ parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_train", type=int, default=60000)
 parser.add_argument("--batch_size", type=int, default=1)
-parser.add_argument("--kernel_size", type=int, default=28*2)
+parser.add_argument("--kernel_size", type=int, default=28 * 2)
 parser.add_argument("--stride", type=int, default=28)
 parser.add_argument("--n_filters", type=int, default=25)
 parser.add_argument("--padding", type=int, default=0)
@@ -74,12 +74,12 @@ print("Running on Device = ", device)
 if not train:
     update_interval = n_test
 
-conv_size = int((28*28 - kernel_size + 2 * padding) / stride) + 1
+conv_size = int((28 * 28 - kernel_size + 2 * padding) / stride) + 1
 per_class = int((n_filters * conv_size) / 10)
 
 # Build network.
 network = Network()
-input_layer = Input(n=28*28, shape=(1, 28*28), traces=True)
+input_layer = Input(n=28 * 28, shape=(1, 28 * 28), traces=True)
 
 conv_layer = DiehlAndCookNodes(
     n=n_filters * conv_size,
@@ -159,14 +159,18 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=gpu
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=gpu,
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
         # Get next input sample (raveled to have shape (time, batch_size, 1, 28*28))
         if step > n_train:
             break
-        inputs = {"X": batch["encoded_image"].view(time, batch_size, 1, 28*28)}
+        inputs = {"X": batch["encoded_image"].view(time, batch_size, 1, 28 * 28)}
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
         label = batch["label"]

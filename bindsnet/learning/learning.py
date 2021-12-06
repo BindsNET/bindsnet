@@ -226,24 +226,24 @@ class PostPre(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = F.pad(self.source.x, _pair(padding))
-        source_x = source_x.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+        source_x = source_x.unfold(-1, kernel_size, stride).reshape(
+            batch_size, -1, in_channels * kernel_size
+        )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = F.pad(self.source.s.float(), _pair(padding))
-        source_s = source_s.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+        source_s = source_s.unfold(-1, kernel_size, stride).reshape(
+            batch_size, -1, in_channels * kernel_size
+        )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(
-                torch.bmm(target_x, source_s), dim=0
-            )
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(
-                torch.bmm(target_s, source_x), dim=0
-            )
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -296,35 +296,60 @@ class PostPre(LearningRule):
         ``AbstractConnection`` class.
         """
         # Get convolutional layer parameters.
-        out_channels, in_channels, kernel_depth, kernel_height, kernel_width = self.connection.w.size()
+        (
+            out_channels,
+            in_channels,
+            kernel_depth,
+            kernel_height,
+            kernel_width,
+        ) = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
         batch_size = self.source.batch_size
 
         # Reshaping spike traces and spike occurrences.
-        source_x = F.pad(self.source.x, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-        source_x = source_x.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+        source_x = F.pad(
+            self.source.x,
+            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
+        )
+        source_x = (
+            source_x.unfold(-3, kernel_width, stride[0])
+            .unfold(-3, kernel_height, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                -1,
+                in_channels * kernel_width * kernel_height * kernel_depth,
+            )
+        )
         target_x = self.target.x.view(batch_size, out_channels, -1)
-        source_s = F.pad(self.source.s, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-        source_s = source_s.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+        source_s = F.pad(
+            self.source.s,
+            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
+        )
+        source_s = (
+            source_s.unfold(-3, kernel_width, stride[0])
+            .unfold(-3, kernel_height, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                -1,
+                in_channels * kernel_width * kernel_height * kernel_depth,
+            )
+        )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(
-                torch.bmm(target_x, source_s), dim=0
-            )
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(
-                torch.bmm(target_s, source_x), dim=0
-            )
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
+
 
 class WeightDependentPostPre(LearningRule):
     # language=rst
@@ -428,19 +453,21 @@ class WeightDependentPostPre(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = F.pad(self.source.x, _pair(padding))
-        source_x = source_x.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+        source_x = source_x.unfold(-1, kernel_size, stride).reshape(
+            batch_size, -1, in_channels * kernel_size
+        )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = F.pad(self.source.s.float(), _pair(padding))
-        source_s = source_s.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+        source_s = source_s.unfold(-1, kernel_size, stride).reshape(
+            batch_size, -1, in_channels * kernel_size
+        )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         update = 0
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(
-                torch.bmm(target_x, source_s), dim=0
-            )
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
                 * pre.view(self.connection.w.size())
@@ -449,9 +476,7 @@ class WeightDependentPostPre(LearningRule):
 
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(
-                torch.bmm(target_s, source_x), dim=0
-            )
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
                 * post.view(self.connection.w.size())
@@ -538,22 +563,42 @@ class WeightDependentPostPre(LearningRule):
         batch_size = self.source.batch_size
 
         # Reshaping spike traces and spike occurrences.
-        source_x = F.pad(self.source.x, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-        source_x = source_x.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+        source_x = F.pad(
+            self.source.x,
+            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
+        )
+        source_x = (
+            source_x.unfold(-3, kernel_width, stride[0])
+            .unfold(-3, kernel_height, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                -1,
+                in_channels * kernel_width * kernel_height * kernel_depth,
+            )
+        )
         target_x = self.target.x.view(batch_size, out_channels, -1)
-        source_s = F.pad(self.source.s, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-        source_s = source_s.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+        source_s = F.pad(
+            self.source.s,
+            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
+        )
+        source_s = (
+            source_s.unfold(-3, kernel_width, stride[0])
+            .unfold(-3, kernel_height, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                -1,
+                in_channels * kernel_width * kernel_height * kernel_depth,
+            )
+        )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         update = 0
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(
-                torch.bmm(target_x, source_s), dim=0
-            )
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
                 * pre.view(self.connection.w.size())
@@ -562,9 +607,7 @@ class WeightDependentPostPre(LearningRule):
 
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(
-                torch.bmm(target_s, source_x), dim=0
-            )
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
                 * post.view(self.connection.w.size())
@@ -574,6 +617,7 @@ class WeightDependentPostPre(LearningRule):
         self.connection.w += update
 
         super().update()
+
 
 class Hebbian(LearningRule):
     # language=rst
@@ -660,10 +704,14 @@ class Hebbian(LearningRule):
 
         # Reshaping spike traces and spike occurrences.
         source_x = F.pad(self.source.x, _pair(padding))
-        source_x = source_x.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+        source_x = source_x.unfold(-1, kernel_size, stride).reshape(
+            batch_size, -1, in_channels * kernel_size
+        )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = F.pad(self.source.s.float(), _pair(padding))
-        source_s = source_s.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+        source_s = source_s.unfold(-1, kernel_size, stride).reshape(
+            batch_size, -1, in_channels * kernel_size
+        )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Pre-synaptic update.
@@ -716,20 +764,47 @@ class Hebbian(LearningRule):
         Hebbian learning rule for ``Conv2dConnection`` subclass of
         ``AbstractConnection`` class.
         """
-        out_channels, in_channels, kernel_depth, kernel_height, kernel_width = self.connection.w.size()
+        (
+            out_channels,
+            in_channels,
+            kernel_depth,
+            kernel_height,
+            kernel_width,
+        ) = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
         batch_size = self.source.batch_size
 
         # Reshaping spike traces and spike occurrences.
-        source_x = F.pad(self.source.x, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-        source_x = source_x.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+        source_x = F.pad(
+            self.source.x,
+            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
+        )
+        source_x = (
+            source_x.unfold(-3, kernel_width, stride[0])
+            .unfold(-3, kernel_height, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                -1,
+                in_channels * kernel_width * kernel_height * kernel_depth,
+            )
+        )
         target_x = self.target.x.view(batch_size, out_channels, -1)
-        source_s = F.pad(self.source.s, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-        source_s = source_s.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+        source_s = F.pad(
+            self.source.s,
+            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
+        )
+        source_s = (
+            source_s.unfold(-3, kernel_width, stride[0])
+            .unfold(-3, kernel_height, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                -1,
+                in_channels * kernel_width * kernel_height * kernel_depth,
+            )
+        )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
-
 
         # Pre-synaptic update.
         pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
@@ -740,6 +815,7 @@ class Hebbian(LearningRule):
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
+
 
 class MSTDP(LearningRule):
     # language=rst
@@ -904,7 +980,9 @@ class MSTDP(LearningRule):
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
             self.p_plus = F.pad(self.p_plus, _pair(padding))
-            self.p_plus = self.p_plus.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+            self.p_plus = self.p_plus.unfold(-1, kernel_size, stride).reshape(
+                batch_size, -1, in_channels * kernel_size
+            )
 
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
@@ -914,7 +992,9 @@ class MSTDP(LearningRule):
 
         # Reshaping spike occurrences.
         source_s = F.pad(self.source.s.float(), _pair(padding))
-        source_s = source_s.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+        source_s = source_s.unfold(-1, kernel_size, stride).reshape(
+            batch_size, -1, in_channels * kernel_size
+        )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Update P^+ and P^- values.
@@ -924,9 +1004,9 @@ class MSTDP(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
         self.eligibility = self.eligibility.view(self.connection.w.size())
 
         super().update()
@@ -1040,7 +1120,13 @@ class MSTDP(LearningRule):
         update = reward * self.eligibility
         self.connection.w += self.nu[0] * torch.sum(update, dim=0)
 
-        out_channels, in_channels, kernel_depth, kernel_height, kernel_width = self.connection.w.size()
+        (
+            out_channels,
+            in_channels,
+            kernel_depth,
+            kernel_height,
+            kernel_width,
+        ) = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
 
         # Initialize P^+ and P^-.
@@ -1048,9 +1134,27 @@ class MSTDP(LearningRule):
             self.p_plus = torch.zeros(
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
-            self.p_plus = F.pad(self.p_plus, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-            self.p_plus = self.p_plus.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+            self.p_plus = F.pad(
+                self.p_plus,
+                (
+                    padding[0],
+                    padding[0],
+                    padding[1],
+                    padding[1],
+                    padding[2],
+                    padding[2],
+                ),
+            )
+            self.p_plus = (
+                self.p_plus.unfold(-3, kernel_width, stride[0])
+                .unfold(-3, kernel_height, stride[1])
+                .unfold(-3, kernel_depth, stride[2])
+                .reshape(
+                    batch_size,
+                    -1,
+                    in_channels * kernel_width * kernel_height * kernel_depth,
+                )
+            )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
@@ -1058,9 +1162,20 @@ class MSTDP(LearningRule):
             self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
 
         # Reshaping spike occurrences.
-        source_s = F.pad(self.source.s, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-        source_s = source_s.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+        source_s = F.pad(
+            self.source.s,
+            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
+        )
+        source_s = (
+            source_s.unfold(-3, kernel_width, stride[0])
+            .unfold(-3, kernel_height, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                -1,
+                in_channels * kernel_width * kernel_height * kernel_depth,
+            )
+        )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Update P^+ and P^- values.
@@ -1070,12 +1185,13 @@ class MSTDP(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
         self.eligibility = self.eligibility.view(self.connection.w.size())
 
         super().update()
+
 
 class MSTDPET(LearningRule):
     # language=rst
@@ -1249,18 +1365,20 @@ class MSTDPET(LearningRule):
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
             self.p_plus = F.pad(self.p_plus.float(), _pair(padding))
-            self.p_plus = self.p_plus.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+            self.p_plus = self.p_plus.unfold(-1, kernel_size, stride).reshape(
+                batch_size, -1, in_channels * kernel_size
+            )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
             )
             self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
 
-
-
         # Reshaping spike occurrences.
         source_s = F.pad(self.source.s.float(), _pair(padding))
-        source_s = source_s.unfold(-1, kernel_size, stride).reshape(batch_size, -1, in_channels*kernel_size)
+        source_s = source_s.unfold(-1, kernel_size, stride).reshape(
+            batch_size, -1, in_channels * kernel_size
+        )
         target_s = (
             self.target.s.permute(1, 2, 0).view(batch_size, out_channels, -1).float()
         )
@@ -1272,9 +1390,9 @@ class MSTDPET(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
         self.eligibility = self.eligibility.view(self.connection.w.size())
 
         super().update()
@@ -1406,7 +1524,13 @@ class MSTDPET(LearningRule):
         update = reward * self.eligibility_trace
         self.connection.w += self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
 
-        out_channels, in_channels, kernel_depth, kernel_height, kernel_width = self.connection.w.size()
+        (
+            out_channels,
+            in_channels,
+            kernel_depth,
+            kernel_height,
+            kernel_width,
+        ) = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
 
         # Initialize P^+ and P^-.
@@ -1414,9 +1538,27 @@ class MSTDPET(LearningRule):
             self.p_plus = torch.zeros(
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
-            self.p_plus = F.pad(self.p_plus, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-            self.p_plus = self.p_plus.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+            self.p_plus = F.pad(
+                self.p_plus,
+                (
+                    padding[0],
+                    padding[0],
+                    padding[1],
+                    padding[1],
+                    padding[2],
+                    padding[2],
+                ),
+            )
+            self.p_plus = (
+                self.p_plus.unfold(-3, kernel_width, stride[0])
+                .unfold(-3, kernel_height, stride[1])
+                .unfold(-3, kernel_depth, stride[2])
+                .reshape(
+                    batch_size,
+                    -1,
+                    in_channels * kernel_width * kernel_height * kernel_depth,
+                )
+            )
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
@@ -1424,11 +1566,24 @@ class MSTDPET(LearningRule):
             self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
 
         # Reshaping spike occurrences.
-        source_s = F.pad(self.source.s, (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]))
-        source_s = source_s.unfold(-3, kernel_width, stride[0]).unfold(-3, kernel_height, \
-            stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(batch_size, -1, in_channels*kernel_width*kernel_height*kernel_depth)
+        source_s = F.pad(
+            self.source.s,
+            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
+        )
+        source_s = (
+            source_s.unfold(-3, kernel_width, stride[0])
+            .unfold(-3, kernel_height, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                -1,
+                in_channels * kernel_width * kernel_height * kernel_depth,
+            )
+        )
         target_s = (
-            self.target.s.permute(1, 2, 3, 4, 0).view(batch_size, out_channels, -1).float()
+            self.target.s.permute(1, 2, 3, 4, 0)
+            .view(batch_size, out_channels, -1)
+            .float()
         )
 
         # Update P^+ and P^- values.
@@ -1438,12 +1593,13 @@ class MSTDPET(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
         self.eligibility = self.eligibility.view(self.connection.w.size())
 
         super().update()
+
 
 class Rmax(LearningRule):
     # language=rst

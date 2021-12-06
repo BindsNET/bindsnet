@@ -252,6 +252,7 @@ class Connection(AbstractConnection):
         """
         super().reset_state_variables()
 
+
 class Conv1dConnection(AbstractConnection):
     # language=rst
     """
@@ -304,7 +305,7 @@ class Conv1dConnection(AbstractConnection):
             raise NotImplementedError(
                 "Dilation is not currently supported for 1-D spiking convolution."
             )
-            
+
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
@@ -319,9 +320,7 @@ class Conv1dConnection(AbstractConnection):
             target.shape[1],
         )
 
-        conv_size = (
-            input_size - self.kernel_size + 2 * self.padding
-        ) / self.stride + 1
+        conv_size = (input_size - self.kernel_size + 2 * self.padding) / self.stride + 1
         shape = (self.in_channels, self.out_channels, int(conv_size))
 
         error = (
@@ -329,10 +328,7 @@ class Conv1dConnection(AbstractConnection):
             "(input_size - filter_size + 2 * padding) / stride + 1,"
         )
 
-        assert (
-            target.shape[0] == shape[1]
-            and target.shape[1] == shape[2]
-        ), error
+        assert target.shape[0] == shape[1] and target.shape[1] == shape[2], error
 
         w = kwargs.get("w", None)
         inf = torch.tensor(np.inf)
@@ -390,9 +386,7 @@ class Conv1dConnection(AbstractConnection):
         """
         if self.norm is not None:
             # get a view and modify in place
-            w = self.w.view(
-                self.w.shape[0] * self.w.shape[1], self.w.shape[2]
-            )
+            w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
             for fltr in range(w.shape[0]):
                 w[fltr] *= self.norm / w[fltr].sum(0)
@@ -403,6 +397,7 @@ class Conv1dConnection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
+
 
 class Conv2dConnection(AbstractConnection):
     # language=rst
@@ -558,6 +553,7 @@ class Conv2dConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
+
 class Conv3dConnection(AbstractConnection):
     # language=rst
     """
@@ -620,26 +616,32 @@ class Conv3dConnection(AbstractConnection):
             source.shape[0],
             source.shape[1],
             source.shape[2],
-            source.shape[3]
+            source.shape[3],
         )
         self.out_channels, output_depth, output_height, output_width = (
             target.shape[0],
             target.shape[1],
             target.shape[2],
-            target.shape[3]
+            target.shape[3],
         )
 
-        depth = (
-            input_depth - self.kernel_size[0] + 2 * self.padding[0]
-        ) / self.stride[0] + 1
+        depth = (input_depth - self.kernel_size[0] + 2 * self.padding[0]) / self.stride[
+            0
+        ] + 1
         width = (
             input_height - self.kernel_size[1] + 2 * self.padding[1]
         ) / self.stride[1] + 1
         height = (
             input_width - self.kernel_size[2] + 2 * self.padding[2]
         ) / self.stride[2] + 1
-        
-        shape = (self.in_channels, self.out_channels, int(depth), int(width), int(height))
+
+        shape = (
+            self.in_channels,
+            self.out_channels,
+            int(depth),
+            int(width),
+            int(height),
+        )
 
         error = (
             "Target dimensionality must be (out_channels, ?,"
@@ -712,7 +714,8 @@ class Conv3dConnection(AbstractConnection):
         if self.norm is not None:
             # get a view and modify in place
             w = self.w.view(
-                self.w.shape[0] * self.w.shape[1], self.w.shape[2] * self.w.shape[3] * self.w.shape[4]
+                self.w.shape[0] * self.w.shape[1],
+                self.w.shape[2] * self.w.shape[3] * self.w.shape[4],
             )
 
             for fltr in range(w.shape[0]):
@@ -724,7 +727,8 @@ class Conv3dConnection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
-        
+
+
 class MaxPool1dConnection(AbstractConnection):
     # language=rst
     """
@@ -811,6 +815,7 @@ class MaxPool1dConnection(AbstractConnection):
         super().reset_state_variables()
 
         self.firing_rates = torch.zeros(self.source.s.shape)
+
 
 class MaxPool2dConnection(AbstractConnection):
     # language=rst
@@ -899,6 +904,7 @@ class MaxPool2dConnection(AbstractConnection):
 
         self.firing_rates = torch.zeros(self.source.s.shape)
 
+
 class MaxPoo3dConnection(AbstractConnection):
     # language=rst
     """
@@ -985,6 +991,7 @@ class MaxPoo3dConnection(AbstractConnection):
         super().reset_state_variables()
 
         self.firing_rates = torch.zeros(self.source.s.shape)
+
 
 class LocalConnection(AbstractConnection):
     # language=rst
@@ -1162,6 +1169,7 @@ class LocalConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
+
 class MeanFieldConnection(AbstractConnection):
     # language=rst
     """
@@ -1244,6 +1252,7 @@ class MeanFieldConnection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
+
 
 class SparseConnection(AbstractConnection):
     # language=rst
