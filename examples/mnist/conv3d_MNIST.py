@@ -1,25 +1,21 @@
+### Toy example to test Conv3dConnection (the dataset used is MNIST but with a dimension replicated
+### for each image (each sample has size (28, 28, 28))
+
 import argparse
 import os
 from time import time as t
 
-import matplotlib.pyplot as plt
 import torch
 from torchvision import transforms
 from tqdm import tqdm
 
-from bindsnet.analysis.plotting import (
-    plot_conv2d_weights,
-    plot_input,
-    plot_spikes,
-    plot_voltages,
-)
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.learning import PostPre
 from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import DiehlAndCookNodes, Input
-from bindsnet.network.topology import Connection, Conv2dConnection
+from bindsnet.network.topology import Connection, Conv3dConnection
 
 print()
 
@@ -80,38 +76,51 @@ if not train:
     update_interval = n_test
 
 conv_size = int((28 - kernel_size + 2 * padding) / stride) + 1
-per_class = int((n_filters * conv_size * conv_size) / 10)
+per_class = int((n_filters * conv_size) / 10)
 
 # Build network.
 network = Network()
-input_layer = Input(n=784, shape=(1, 28, 28), traces=True)
+input_layer = Input(n=28 * 28 * 28, shape=(1, 28, 28, 28), traces=True)
 
 conv_layer = DiehlAndCookNodes(
-    n=n_filters * conv_size * conv_size,
-    shape=(n_filters, conv_size, conv_size),
+    n=n_filters * conv_size * conv_size * conv_size,
+    shape=(n_filters, conv_size, conv_size, conv_size),
     traces=True,
 )
 
-conv_conn = Conv2dConnection(
+conv_conn = Conv3dConnection(
     input_layer,
     conv_layer,
     kernel_size=kernel_size,
     stride=stride,
     update_rule=PostPre,
-    norm=0.4 * kernel_size ** 2,
+    norm=0.4 * kernel_size ** 3,
     nu=[1e-4, 1e-2],
     wmax=1.0,
 )
 
-w = torch.zeros(n_filters, conv_size, conv_size, n_filters, conv_size, conv_size)
+w = torch.zeros(
+    n_filters,
+    conv_size,
+    conv_size,
+    conv_size,
+    n_filters,
+    conv_size,
+    conv_size,
+    conv_size,
+)
 for fltr1 in range(n_filters):
     for fltr2 in range(n_filters):
         if fltr1 != fltr2:
             for i in range(conv_size):
                 for j in range(conv_size):
-                    w[fltr1, i, j, fltr2, i, j] = -100.0
+                    for k in range(conv_size):
+                        w[fltr1, i, j, k, fltr2, i, j, k] = -100.0
 
-w = w.view(n_filters * conv_size * conv_size, n_filters * conv_size * conv_size)
+w = w.view(
+    n_filters * conv_size * conv_size * conv_size,
+    n_filters * conv_size * conv_size * conv_size,
+)
 recurrent_conn = Connection(conv_layer, conv_layer, w=w)
 
 network.add_layer(input_layer, name="X")
@@ -125,6 +134,7 @@ network.add_monitor(voltage_monitor, name="output_voltage")
 
 if gpu:
     network.to("cuda")
+
 
 # Load MNIST data.
 train_dataset = MNIST(
@@ -174,39 +184,22 @@ for epoch in range(n_epochs):
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
-        # Get next input sample.
+        # Get next input sample (expanded to have shape (time, batch_size, 1, 28, 28))
         if step > n_train:
             break
-        inputs = {"X": batch["encoded_image"].view(time, batch_size, 1, 28, 28)}
+        inputs = {
+            "X": batch["encoded_image"]
+            .view(time, batch_size, 1, 28, 28)
+            .unsqueeze(3)
+            .repeat(1, 1, 1, 28, 1, 1)
+            .float()
+        }
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
         label = batch["label"]
 
         # Run the network on the input.
         network.run(inputs=inputs, time=time, input_time_dim=1)
-
-        # Optionally plot various simulation information.
-        if plot and batch_size == 1:
-            image = batch["image"].view(28, 28)
-
-            inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
-            weights1 = conv_conn.w
-            _spikes = {
-                "X": spikes["X"].get("s").view(time, -1),
-                "Y": spikes["Y"].get("s").view(time, -1),
-            }
-            _voltages = {"Y": voltages["Y"].get("v").view(time, -1)}
-
-            inpt_axes, inpt_ims = plot_input(
-                image, inpt, label=label, axes=inpt_axes, ims=inpt_ims
-            )
-            spike_ims, spike_axes = plot_spikes(_spikes, ims=spike_ims, axes=spike_axes)
-            weights1_im = plot_conv2d_weights(weights1, im=weights1_im)
-            voltage_ims, voltage_axes = plot_voltages(
-                _voltages, ims=voltage_ims, axes=voltage_axes
-            )
-
-            plt.pause(1)
 
         network.reset_state_variables()  # Reset state variables.
 
