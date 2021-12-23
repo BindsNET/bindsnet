@@ -1289,10 +1289,10 @@ class IzhikevichNodes(Nodes):
         # Voltage clipping to lower bound.
         if self.lbound is not None:
             self.v.masked_fill_(self.v < self.lbound, self.lbound)
-            
+
         # Check for spiking neurons.
         self.s = self.v >= self.thresh
-        
+
         super().forward(x)
 
     def reset_state_variables(self) -> None:
