@@ -1269,8 +1269,6 @@ class IzhikevichNodes(Nodes):
 
         :param x: Inputs to the layer.
         """
-        # Check for spiking neurons.
-        self.s = self.v >= self.thresh
 
         # Voltage and recovery reset.
         self.v = torch.where(self.s, self.c, self.v)
@@ -1291,6 +1289,9 @@ class IzhikevichNodes(Nodes):
         # Voltage clipping to lower bound.
         if self.lbound is not None:
             self.v.masked_fill_(self.v < self.lbound, self.lbound)
+
+        # Check for spiking neurons.
+        self.s = self.v >= self.thresh
 
         super().forward(x)
 

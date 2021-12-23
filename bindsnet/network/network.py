@@ -371,6 +371,14 @@ class Network(torch.nn.Module):
                     # Get input to this layer (one-step mode).
                     current_inputs.update(self._get_inputs(layers=[l]))
 
+                # Inject voltage to neurons.
+                inject_v = injects_v.get(l, None)
+                if inject_v is not None:
+                    if inject_v.ndimension() == 1:
+                        self.layers[l].v += inject_v
+                    else:
+                        self.layers[l].v += inject_v[t]
+
                 if l in current_inputs:
                     self.layers[l].forward(x=current_inputs[l])
                 else:
@@ -391,14 +399,6 @@ class Network(torch.nn.Module):
                         self.layers[l].s[:, unclamp] = 0
                     else:
                         self.layers[l].s[:, unclamp[t]] = 0
-
-                # Inject voltage to neurons.
-                inject_v = injects_v.get(l, None)
-                if inject_v is not None:
-                    if inject_v.ndimension() == 1:
-                        self.layers[l].v += inject_v
-                    else:
-                        self.layers[l].v += inject_v[t]
 
             # Run synapse updates.
             for c in self.connections:
