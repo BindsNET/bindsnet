@@ -538,7 +538,7 @@ class WeightDependentPostPre(LearningRule):
             update += (
                 self.nu[1]
                 * post.view(self.connection.w.size())
-                * (self.wmax - self.connection.wmin)
+                * (self.wmax - self.connection.w)
             )
 
         self.connection.w += update
