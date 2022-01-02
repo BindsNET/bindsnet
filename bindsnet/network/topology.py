@@ -42,7 +42,7 @@ class AbstractConnection(ABC, Module):
             some rule.
         :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
-        :param Union[float, torch.Tensor] wmax: Minimum allowed value(s) on the connection weights. Single value, or
+        :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
         :param float norm: Total weight per target neuron normalization.
         """
