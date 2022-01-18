@@ -28,7 +28,7 @@ parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_train", type=int, default=60000)
-parser.add_argument("--batch_size", type=int, default=1)
+parser.add_argument("--batch_size", type=int, default=10)
 parser.add_argument("--kernel_size", type=int, default=16)
 parser.add_argument("--stride", type=int, default=4)
 parser.add_argument("--n_filters", type=int, default=25)
@@ -159,6 +159,8 @@ spike_axes = None
 weights1_im = None
 voltage_ims = None
 voltage_axes = None
+
+plot = False
 
 for epoch in range(n_epochs):
     if epoch % progress_interval == 0:
