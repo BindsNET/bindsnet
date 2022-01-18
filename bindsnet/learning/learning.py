@@ -1199,7 +1199,7 @@ class Hebbian(LearningRule):
     def _conv1d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
-        Hebbian learning rule for ``Conv2dConnection`` subclass of
+        Hebbian learning rule for ``Conv1dConnection`` subclass of
         ``AbstractConnection`` class.
         """
         out_channels, in_channels, kernel_size = self.connection.w.size()
