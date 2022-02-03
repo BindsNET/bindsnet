@@ -813,7 +813,7 @@ class MaxPool1dConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
-        self.firing_rates = torch.zeros(self.source.s.shape)
+        self.firing_rates = torch.zeros(self.source.batch_size,*(self.source.s.shape[1:]))
 
 
 class MaxPool2dConnection(AbstractConnection):
@@ -901,7 +901,7 @@ class MaxPool2dConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
-        self.firing_rates = torch.zeros(self.source.s.shape)
+        self.firing_rates = torch.zeros(self.source.batch_size,*(self.source.s.shape[1:]))
 
 
 class MaxPoo3dConnection(AbstractConnection):
@@ -989,7 +989,7 @@ class MaxPoo3dConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
-        self.firing_rates = torch.zeros(self.source.s.shape)
+        self.firing_rates = torch.zeros(self.source.batch_size,*(self.source.s.shape[1:]))
 
 
 class LocalConnection(AbstractConnection):
