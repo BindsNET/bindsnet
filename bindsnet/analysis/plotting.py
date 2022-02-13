@@ -9,7 +9,11 @@ from matplotlib.image import AxesImage
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from torch.nn.modules.utils import _pair
 
-from bindsnet.utils import reshape_conv2d_weights, reshape_locally_connected_weights, reshape_local_connection_2d_weights
+from bindsnet.utils import (
+    reshape_conv2d_weights,
+    reshape_locally_connected_weights,
+    reshape_local_connection_2d_weights,
+)
 
 plt.ion()
 
@@ -377,15 +381,17 @@ def plot_locally_connected_weights(
 
     return im
 
-def plot_local_connection_2d_weights(lc : object,
+
+def plot_local_connection_2d_weights(
+    lc: object,
     input_channel: int = 0,
     output_channel: int = None,
     im: Optional[AxesImage] = None,
     lines: bool = True,
     figsize: Tuple[int, int] = (5, 5),
     cmap: str = "hot_r",
-    color: str='r',
-    ) -> AxesImage:
+    color: str = "r",
+) -> AxesImage:
     # language=rst
     """
     Plot a connection weight matrix of a :code:`Connection` with `locally connected
@@ -400,15 +406,26 @@ def plot_local_connection_2d_weights(lc : object,
     """
 
     n_sqrt = int(np.ceil(np.sqrt(lc.n_filters)))
-    sel_slice = lc.w.view(lc.in_channels, lc.n_filters, lc.conv_size[0], lc.conv_size[1], lc.kernel_size[0], lc.kernel_size[1]).cpu()
+    sel_slice = lc.w.view(
+        lc.in_channels,
+        lc.n_filters,
+        lc.conv_size[0],
+        lc.conv_size[1],
+        lc.kernel_size[0],
+        lc.kernel_size[1],
+    ).cpu()
     input_size = _pair(int(np.sqrt(lc.source.n)))
     if output_channel is None:
         sel_slice = sel_slice[input_channel, ...]
-        reshaped = reshape_local_connection_2d_weights(sel_slice, lc.n_filters, lc.kernel_size, lc.conv_size, input_size)
+        reshaped = reshape_local_connection_2d_weights(
+            sel_slice, lc.n_filters, lc.kernel_size, lc.conv_size, input_size
+        )
     else:
         sel_slice = sel_slice[input_channel, output_channel, ...]
         sel_slice = sel_slice.unsqueeze(0)
-        reshaped = reshape_local_connection_2d_weights(sel_slice, 1, lc.kernel_size, lc.conv_size, input_size)
+        reshaped = reshape_local_connection_2d_weights(
+            sel_slice, 1, lc.kernel_size, lc.conv_size, input_size
+        )
     if im == None:
         fig, ax = plt.subplots(figsize=figsize)
 
@@ -416,7 +433,7 @@ def plot_local_connection_2d_weights(lc : object,
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
-        if lines and  output_channel is None:
+        if lines and output_channel is None:
             for i in range(
                 n_sqrt * lc.kernel_size[0],
                 n_sqrt * lc.conv_size[0] * lc.kernel_size[0],
@@ -430,7 +447,7 @@ def plot_local_connection_2d_weights(lc : object,
                 n_sqrt * lc.kernel_size[1],
             ):
                 ax.axvline(i - 0.5, color=color, linestyle="--")
-            
+
         ax.set_xticks(())
         ax.set_yticks(())
         ax.set_aspect("auto")
@@ -441,7 +458,7 @@ def plot_local_connection_2d_weights(lc : object,
     else:
         im.set_data(reshaped.cpu())
     return im
-    
+
 
 def plot_assignments(
     assignments: torch.Tensor,
@@ -825,5 +842,3 @@ def plot_voltages(
         plt.tight_layout()
 
     return ims, axes
-
-

@@ -246,8 +246,7 @@ def reshape_local_connection_2d_weights(
         for n2 in range(c2):
             for feature in range(n_filters):
                 n = n1 * c2 + n2
-                filter_ = w[feature, n1, n2, :, :
-                ].view(k1, k2)
+                filter_ = w[feature, n1, n2, :, :].view(k1, k2)
                 w_[feature * k1 : (feature + 1) * k1, n * k2 : (n + 1) * k2] = filter_
 
     if c1 == 1 and c2 == 1:

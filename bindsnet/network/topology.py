@@ -253,6 +253,7 @@ class Connection(AbstractConnection):
         """
         super().reset_state_variables()
 
+
 class Conv1dConnection(AbstractConnection):
     # language=rst
     """
@@ -397,6 +398,7 @@ class Conv1dConnection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
+
 
 class Conv2dConnection(AbstractConnection):
     # language=rst
@@ -813,7 +815,9 @@ class MaxPool1dConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
-        self.firing_rates = torch.zeros(self.source.batch_size,*(self.source.s.shape[1:]))
+        self.firing_rates = torch.zeros(
+            self.source.batch_size, *(self.source.s.shape[1:])
+        )
 
 
 class MaxPool2dConnection(AbstractConnection):
@@ -901,7 +905,9 @@ class MaxPool2dConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
-        self.firing_rates = torch.zeros(self.source.batch_size,*(self.source.s.shape[1:]))
+        self.firing_rates = torch.zeros(
+            self.source.batch_size, *(self.source.s.shape[1:])
+        )
 
 
 class MaxPoo3dConnection(AbstractConnection):
@@ -989,7 +995,9 @@ class MaxPoo3dConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
-        self.firing_rates = torch.zeros(self.source.batch_size,*(self.source.s.shape[1:]))
+        self.firing_rates = torch.zeros(
+            self.source.batch_size, *(self.source.s.shape[1:])
+        )
 
 
 class LocalConnection(AbstractConnection):
@@ -1012,7 +1020,7 @@ class LocalConnection(AbstractConnection):
     ) -> None:
         # language=rst
         """
-        Instantiates a ``LocalConnection2D`` object. Source population should have 
+        Instantiates a ``LocalConnection2D`` object. Source population should have
         square size
 
         Neurons in the post-synaptic population are ordered by receptive field; that is,
@@ -1169,9 +1177,10 @@ class LocalConnection(AbstractConnection):
         """
         super().reset_state_variables()
 
+
 class LocalConnection1D(AbstractConnection):
     """
-    Specifies a one-dimensional local connection between one or two population of neurons supporting multi-channel inputs with shape (C, H); 
+    Specifies a one-dimensional local connection between one or two population of neurons supporting multi-channel inputs with shape (C, H);
     The logic is different from the original LocalConnection implementation (where masks were used with normal dense connections).
     """
 
@@ -1185,7 +1194,7 @@ class LocalConnection1D(AbstractConnection):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Instantiates a 'LocalConnection1D` object. Source population can be multi-channel.
@@ -1212,7 +1221,6 @@ class LocalConnection1D(AbstractConnection):
 
         super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
 
-
         self.kernel_size = kernel_size
         self.stride = stride
         self.n_filters = n_filters
@@ -1222,16 +1230,13 @@ class LocalConnection1D(AbstractConnection):
             source.shape[1],
         )
 
-        height = int((
-            input_height - self.kernel_size
-        ) / self.stride) + 1
-
+        height = int((input_height - self.kernel_size) / self.stride) + 1
 
         self.conv_size = height
 
         w = kwargs.get("w", None)
 
-        error =  (
+        error = (
             "Target dimensionality must be (in_channels,"
             "n_filters*conv_size,"
             "kernel_size)"
@@ -1239,23 +1244,20 @@ class LocalConnection1D(AbstractConnection):
 
         if w is None:
             w = torch.rand(
-                self.in_channels, 
-                self.n_filters * self.conv_size,
-                self.kernel_size
+                self.in_channels, self.n_filters * self.conv_size, self.kernel_size
             )
         else:
             assert w.shape == (
-                self.in_channels, 
+                self.in_channels,
                 self.out_channels * self.conv_size,
-                self.kernel_size
-                ), error
+                self.kernel_size,
+            ), error
 
         if self.wmin != -np.inf or self.wmax != np.inf:
             w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(kwargs.get("b", None), requires_grad=False)
-
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         """
@@ -1271,20 +1273,22 @@ class LocalConnection1D(AbstractConnection):
 
         batch_size = s.shape[0]
 
-        self.s_unfold = s.unfold(
-            -1,self.kernel_size,self.stride
-        ).reshape(
-            s.shape[0], 
-            self.in_channels,
-            self.conv_size,
-            self.kernel_size,
-        ).repeat(
-            1,
-            1,
-            self.n_filters,
-            1,
+        self.s_unfold = (
+            s.unfold(-1, self.kernel_size, self.stride)
+            .reshape(
+                s.shape[0],
+                self.in_channels,
+                self.conv_size,
+                self.kernel_size,
+            )
+            .repeat(
+                1,
+                1,
+                self.n_filters,
+                1,
+            )
         )
-        
+
         a_post = self.s_unfold.to(self.w.device) * self.w
 
         return a_post.sum(-1).sum(1).view(batch_size, *self.target.shape)
@@ -1303,13 +1307,10 @@ class LocalConnection1D(AbstractConnection):
         if self.norm is not None:
             # get a view and modify in-place
             # w: ch_in, ch_out * h_out, k
-            w = self.w.view(
-                self.w.shape[0]*self.w.shape[1], self.w.shape[2]
-            )
+            w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
             for fltr in range(w.shape[0]):
-                w[fltr,:] *= self.norm / w[fltr,:].sum(0)
-
+                w[fltr, :] *= self.norm / w[fltr, :].sum(0)
 
     def reset_state_variables(self) -> None:
         """
@@ -1319,9 +1320,10 @@ class LocalConnection1D(AbstractConnection):
 
         self.target.reset_state_variables()
 
+
 class LocalConnection2D(AbstractConnection):
     """
-    Specifies a two-dimensional local connection between one or two population of neurons supporting multi-channel inputs with shape (C, H, W); 
+    Specifies a two-dimensional local connection between one or two population of neurons supporting multi-channel inputs with shape (C, H, W);
     The logic is different from the original LocalConnection implementation (where masks were used with normal dense connections)
     """
 
@@ -1335,7 +1337,7 @@ class LocalConnection2D(AbstractConnection):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Instantiates a 'LocalConnection2D` object. Source population can be multi-channel.
@@ -1375,13 +1377,8 @@ class LocalConnection2D(AbstractConnection):
             source.shape[2],
         )
 
-        height = int((
-            input_height - self.kernel_size[0]
-        ) / self.stride[0]) + 1
-        width = int((
-            input_width - self.kernel_size[1]
-        ) / self.stride[1]) + 1
-
+        height = int((input_height - self.kernel_size[0]) / self.stride[0]) + 1
+        width = int((input_width - self.kernel_size[1]) / self.stride[1]) + 1
 
         self.conv_size = (height, width)
         self.conv_prod = int(np.prod(self.conv_size))
@@ -1389,7 +1386,7 @@ class LocalConnection2D(AbstractConnection):
 
         w = kwargs.get("w", None)
 
-        error =  (
+        error = (
             "Target dimensionality must be (in_channels,"
             "n_filters*conv_prod,"
             "kernel_prod)"
@@ -1397,23 +1394,20 @@ class LocalConnection2D(AbstractConnection):
 
         if w is None:
             w = torch.rand(
-                self.in_channels, 
-                self.n_filters * self.conv_prod,
-                self.kernel_prod
+                self.in_channels, self.n_filters * self.conv_prod, self.kernel_prod
             )
         else:
             assert w.shape == (
-                self.in_channels, 
+                self.in_channels,
                 self.out_channels * self.conv_prod,
-                self.kernel_prod
-                ), error
+                self.kernel_prod,
+            ), error
 
         if self.wmin != -np.inf or self.wmax != np.inf:
             w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(kwargs.get("b", None), requires_grad=False)
-
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         """
@@ -1429,22 +1423,23 @@ class LocalConnection2D(AbstractConnection):
 
         batch_size = s.shape[0]
 
-        self.s_unfold = s.unfold(
-            -2,self.kernel_size[0],self.stride[0]
-        ).unfold(
-            -2,self.kernel_size[1],self.stride[1]
-        ).reshape(
-            s.shape[0], 
-            self.in_channels,
-            self.conv_prod,
-            self.kernel_prod,
-        ).repeat(
-            1,
-            1,
-            self.n_filters,
-            1,
+        self.s_unfold = (
+            s.unfold(-2, self.kernel_size[0], self.stride[0])
+            .unfold(-2, self.kernel_size[1], self.stride[1])
+            .reshape(
+                s.shape[0],
+                self.in_channels,
+                self.conv_prod,
+                self.kernel_prod,
+            )
+            .repeat(
+                1,
+                1,
+                self.n_filters,
+                1,
+            )
         )
-        
+
         a_post = self.s_unfold.to(self.w.device) * self.w
 
         return a_post.sum(-1).sum(1).view(batch_size, *self.target.shape)
@@ -1463,13 +1458,10 @@ class LocalConnection2D(AbstractConnection):
         if self.norm is not None:
             # get a view and modify in-place
             # w: ch_in, ch_out * w_out * h_out, k1 * k2
-            w = self.w.view(
-                self.w.shape[0]*self.w.shape[1], self.w.shape[2]
-            )
+            w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
             for fltr in range(w.shape[0]):
-                w[fltr,:] *= self.norm / w[fltr,:].sum(0)
-
+                w[fltr, :] *= self.norm / w[fltr, :].sum(0)
 
     def reset_state_variables(self) -> None:
         """
@@ -1496,7 +1488,7 @@ class LocalConnection3D(AbstractConnection):
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Instantiates a 'LocalConnection3D` object. Source population can be multi-channel.
@@ -1534,19 +1526,12 @@ class LocalConnection3D(AbstractConnection):
             source.shape[0],
             source.shape[1],
             source.shape[2],
-            source.shape[3]
+            source.shape[3],
         )
 
-        height = int((
-            input_height - self.kernel_size[0]
-        ) / self.stride[0]) + 1
-        width = int((
-            input_width - self.kernel_size[1]
-        ) / self.stride[1]) + 1
-        depth = int((
-            input_depth - self.kernel_size[2]
-        ) / self.stride[2]) + 1
-
+        height = int((input_height - self.kernel_size[0]) / self.stride[0]) + 1
+        width = int((input_width - self.kernel_size[1]) / self.stride[1]) + 1
+        depth = int((input_depth - self.kernel_size[2]) / self.stride[2]) + 1
 
         self.conv_size = (height, width, depth)
         self.conv_prod = int(np.prod(self.conv_size))
@@ -1554,7 +1539,7 @@ class LocalConnection3D(AbstractConnection):
 
         w = kwargs.get("w", None)
 
-        error =  (
+        error = (
             "Target dimensionality must be (in_channels,"
             "n_filters*conv_prod,"
             "kernel_prod)"
@@ -1562,23 +1547,20 @@ class LocalConnection3D(AbstractConnection):
 
         if w is None:
             w = torch.rand(
-                self.in_channels, 
-                self.n_filters * self.conv_prod,
-                self.kernel_prod
+                self.in_channels, self.n_filters * self.conv_prod, self.kernel_prod
             )
         else:
             assert w.shape == (
-                self.in_channels, 
+                self.in_channels,
                 self.out_channels * self.conv_prod,
-                self.kernel_prod
-                ), error
+                self.kernel_prod,
+            ), error
 
         if self.wmin != -np.inf or self.wmax != np.inf:
             w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(kwargs.get("b", None), requires_grad=False)
-
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         """
@@ -1594,24 +1576,24 @@ class LocalConnection3D(AbstractConnection):
 
         batch_size = s.shape[0]
 
-        self.s_unfold = s.unfold(
-            -3,self.kernel_size[0],self.stride[0]
-        ).unfold(
-            -3,self.kernel_size[1],self.stride[1]
-        ).unfold(
-            -3,self.kernel_size[2],self.stride[2]
-        ).reshape(
-            s.shape[0], 
-            self.in_channels,
-            self.conv_prod,
-            self.kernel_prod,
-        ).repeat(
-            1,
-            1,
-            self.n_filters,
-            1,
+        self.s_unfold = (
+            s.unfold(-3, self.kernel_size[0], self.stride[0])
+            .unfold(-3, self.kernel_size[1], self.stride[1])
+            .unfold(-3, self.kernel_size[2], self.stride[2])
+            .reshape(
+                s.shape[0],
+                self.in_channels,
+                self.conv_prod,
+                self.kernel_prod,
+            )
+            .repeat(
+                1,
+                1,
+                self.n_filters,
+                1,
+            )
         )
-        
+
         a_post = self.s_unfold.to(self.w.device) * self.w
 
         return a_post.sum(-1).sum(1).view(batch_size, *self.target.shape)
@@ -1630,13 +1612,10 @@ class LocalConnection3D(AbstractConnection):
         if self.norm is not None:
             # get a view and modify in-place
             # w: ch_in, ch_out * w_out * h_out * d_out, k1*k2*k3
-            w = self.w.view(
-                self.w.shape[0]*self.w.shape[1], self.w.shape[2]
-            )
+            w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
             for fltr in range(w.shape[0]):
-                w[fltr,:] *= self.norm / w[fltr,:].sum(0)
-
+                w[fltr, :] *= self.norm / w[fltr, :].sum(0)
 
     def reset_state_variables(self) -> None:
         """
@@ -1645,7 +1624,8 @@ class LocalConnection3D(AbstractConnection):
         super().reset_state_variables()
 
         self.target.reset_state_variables()
-        
+
+
 class MeanFieldConnection(AbstractConnection):
     # language=rst
     """

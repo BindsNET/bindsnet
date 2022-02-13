@@ -195,7 +195,7 @@ class PostPre(LearningRule):
             raise NotImplementedError(
                 "This learning rule is not supported for this Connection type."
             )
-    
+
     def _local_connection1d_update(self, **kwargs) -> None:
         # language=rst
         """
@@ -210,39 +210,54 @@ class PostPre(LearningRule):
         out_channels = self.connection.n_filters
         height_out = self.connection.conv_size
 
+        target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1)
+        target_x = target_x * torch.eye(out_channels * height_out).to(
+            self.connection.w.device
+        )
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-1, kernel_height, stride)
+            .reshape(
+                batch_size,
+                height_out,
+                in_channels * kernel_height,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1) 
-        target_x = target_x * torch.eye(out_channels * height_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-1, kernel_height, stride).reshape(
-            batch_size, 
-            height_out,
-            in_channels * kernel_height,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
-        
-
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-1, kernel_height, stride).reshape(
-            batch_size, 
-            height_out,
-            in_channels * kernel_height,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out).to(
+            self.connection.w.device
+        )
+        source_x = (
+            self.source.x.unfold(-1, kernel_height, stride)
+            .reshape(
+                batch_size,
+                height_out,
+                in_channels * kernel_height,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(torch.bmm(target_s, source_x),dim=0)
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -263,37 +278,58 @@ class PostPre(LearningRule):
         height_out = self.connection.conv_size[0]
         width_out = self.connection.conv_size[1]
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out * width_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-2, kernel_height,stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-            batch_size, 
-            height_out*width_out,
-            in_channels * kernel_height * kernel_width,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_x = self.target.x.reshape(
+            batch_size, out_channels * height_out * width_out, 1
+        )
+        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(
+            self.connection.w.device
+        )
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-2, kernel_height, stride[0])
+            .unfold(-2, kernel_width, stride[1])
+            .reshape(
+                batch_size,
+                height_out * width_out,
+                in_channels * kernel_height * kernel_width,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out*width_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-2, kernel_height,stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-            batch_size, 
-            height_out*width_out,
-            in_channels * kernel_height * kernel_width,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
+            self.connection.w.device
+        )
+        source_x = (
+            self.source.x.unfold(-2, kernel_height, stride[0])
+            .unfold(-2, kernel_width, stride[1])
+            .reshape(
+                batch_size,
+                height_out * width_out,
+                in_channels * kernel_height * kernel_width,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(torch.bmm(target_s, source_x),dim=0)
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -316,39 +352,60 @@ class PostPre(LearningRule):
         width_out = self.connection.conv_size[1]
         depth_out = self.connection.conv_size[2]
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out * width_out * depth_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-3, kernel_height,stride[0]).unfold(
-            -3, kernel_width, stride[1]).unfold(-3, kernel_depth,stride[2]).reshape(
-            batch_size, 
-            height_out*width_out*depth_out,
-            in_channels * kernel_height * kernel_width * kernel_depth,
-        ).repeat(
-            1,
-            out_channels,
-            1,
+        target_x = self.target.x.reshape(
+            batch_size, out_channels * height_out * width_out * depth_out, 1
+        )
+        target_x = target_x * torch.eye(
+            out_channels * height_out * width_out * depth_out
         ).to(self.connection.w.device)
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-3, kernel_height, stride[0])
+            .unfold(-3, kernel_width, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                height_out * width_out * depth_out,
+                in_channels * kernel_height * kernel_width * kernel_depth,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out*width_out*depth_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-3, kernel_height,stride[0]).unfold(
-            -3, kernel_width, stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(
-            batch_size, 
-            height_out*width_out*depth_out,
-            in_channels * kernel_height * kernel_width * kernel_depth,
-        ).repeat(
-            1,
-            out_channels,
-            1,
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out * depth_out, 1
+        )
+        target_s = target_s * torch.eye(
+            out_channels * height_out * width_out * depth_out
         ).to(self.connection.w.device)
+        source_x = (
+            self.source.x.unfold(-3, kernel_height, stride[0])
+            .unfold(-3, kernel_width, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                height_out * width_out * depth_out,
+                in_channels * kernel_height * kernel_width * kernel_depth,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(torch.bmm(target_s, source_x),dim=0)
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -623,42 +680,65 @@ class WeightDependentPostPre(LearningRule):
         out_channels = self.connection.n_filters
         height_out = self.connection.conv_size
 
+        target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1)
+        target_x = target_x * torch.eye(out_channels * height_out).to(
+            self.connection.w.device
+        )
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-1, kernel_height, stride)
+            .reshape(
+                batch_size,
+                height_out,
+                in_channels * kernel_height,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1) 
-        target_x = target_x * torch.eye(out_channels * height_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-1, kernel_height, stride).reshape(
-            batch_size, 
-            height_out,
-            in_channels * kernel_height,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
-        
-
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-1, kernel_height, stride).reshape(
-            batch_size, 
-            height_out,
-            in_channels * kernel_height,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out).to(
+            self.connection.w.device
+        )
+        source_x = (
+            self.source.x.unfold(-1, kernel_height, stride)
+            .reshape(
+                batch_size,
+                height_out,
+                in_channels * kernel_height,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         update = 0
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
-            update -= self.nu[0] * pre.view(self.connection.w.size()) * (self.connection.w - self.wmin)
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            update -= (
+                self.nu[0]
+                * pre.view(self.connection.w.size())
+                * (self.connection.w - self.wmin)
+            )
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(torch.bmm(target_s, source_x),dim=0)
-            update += self.nu[1] * post.view(self.connection.w.size()) * (self.wmax - self.connection.w)
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            update += (
+                self.nu[1]
+                * post.view(self.connection.w.size())
+                * (self.wmax - self.connection.w)
+            )
 
         self.connection.w += update
 
@@ -680,40 +760,69 @@ class WeightDependentPostPre(LearningRule):
         height_out = self.connection.conv_size[0]
         width_out = self.connection.conv_size[1]
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out * width_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-2, kernel_height,stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-            batch_size, 
-            height_out*width_out,
-            in_channels * kernel_height * kernel_width,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_x = self.target.x.reshape(
+            batch_size, out_channels * height_out * width_out, 1
+        )
+        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(
+            self.connection.w.device
+        )
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-2, kernel_height, stride[0])
+            .unfold(-2, kernel_width, stride[1])
+            .reshape(
+                batch_size,
+                height_out * width_out,
+                in_channels * kernel_height * kernel_width,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out*width_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-2, kernel_height,stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-            batch_size, 
-            height_out*width_out,
-            in_channels * kernel_height * kernel_width,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
+            self.connection.w.device
+        )
+        source_x = (
+            self.source.x.unfold(-2, kernel_height, stride[0])
+            .unfold(-2, kernel_width, stride[1])
+            .reshape(
+                batch_size,
+                height_out * width_out,
+                in_channels * kernel_height * kernel_width,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         update = 0
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
-            update -= self.nu[0] * pre.view(self.connection.w.size()) * (self.connection.w - self.wmin)
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            update -= (
+                self.nu[0]
+                * pre.view(self.connection.w.size())
+                * (self.connection.w - self.wmin)
+            )
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(torch.bmm(target_s, source_x),dim=0)
-            update += self.nu[1] * post.view(self.connection.w.size()) * (self.wmax - self.connection.w)
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            update += (
+                self.nu[1]
+                * post.view(self.connection.w.size())
+                * (self.wmax - self.connection.w)
+            )
 
         self.connection.w += update
 
@@ -737,42 +846,71 @@ class WeightDependentPostPre(LearningRule):
         width_out = self.connection.conv_size[1]
         depth_out = self.connection.conv_size[2]
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out * width_out * depth_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-3, kernel_height,stride[0]).unfold(
-            -3, kernel_width, stride[1]).unfold(-3, kernel_depth,stride[2]).reshape(
-            batch_size, 
-            height_out*width_out*depth_out,
-            in_channels * kernel_height * kernel_width * kernel_depth,
-        ).repeat(
-            1,
-            out_channels,
-            1,
+        target_x = self.target.x.reshape(
+            batch_size, out_channels * height_out * width_out * depth_out, 1
+        )
+        target_x = target_x * torch.eye(
+            out_channels * height_out * width_out * depth_out
         ).to(self.connection.w.device)
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-3, kernel_height, stride[0])
+            .unfold(-3, kernel_width, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                height_out * width_out * depth_out,
+                in_channels * kernel_height * kernel_width * kernel_depth,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out*width_out*depth_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-3, kernel_height,stride[0]).unfold(
-            -3, kernel_width, stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(
-            batch_size, 
-            height_out*width_out*depth_out,
-            in_channels * kernel_height * kernel_width * kernel_depth,
-        ).repeat(
-            1,
-            out_channels,
-            1,
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out * depth_out, 1
+        )
+        target_s = target_s * torch.eye(
+            out_channels * height_out * width_out * depth_out
         ).to(self.connection.w.device)
+        source_x = (
+            self.source.x.unfold(-3, kernel_height, stride[0])
+            .unfold(-3, kernel_width, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                height_out * width_out * depth_out,
+                in_channels * kernel_height * kernel_width * kernel_depth,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         update = 0
 
         # Pre-synaptic update.
         if self.nu[0]:
-            pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
-            update -= self.nu[0] * pre.view(self.connection.w.size()) * (self.connection.w - self.wmin)
+            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            update -= (
+                self.nu[0]
+                * pre.view(self.connection.w.size())
+                * (self.connection.w - self.wmin)
+            )
         # Post-synaptic update.
         if self.nu[1]:
-            post = self.reduction(torch.bmm(target_s, source_x),dim=0)
-            update += self.nu[1] * post.view(self.connection.w.size()) * (self.wmax - self.connection.w)
+            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            update += (
+                self.nu[1]
+                * post.view(self.connection.w.size())
+                * (self.wmax - self.connection.w)
+            )
 
         self.connection.w += update
 
@@ -828,8 +966,6 @@ class WeightDependentPostPre(LearningRule):
         self.connection.w += update
 
         super().update()
-
-
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -1056,38 +1192,53 @@ class Hebbian(LearningRule):
         out_channels = self.connection.n_filters
         height_out = self.connection.conv_size
 
+        target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1)
+        target_x = target_x * torch.eye(out_channels * height_out).to(
+            self.connection.w.device
+        )
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-1, kernel_height, stride)
+            .reshape(
+                batch_size,
+                height_out,
+                in_channels * kernel_height,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1) 
-        target_x = target_x * torch.eye(out_channels * height_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-1, kernel_height, stride).reshape(
-            batch_size, 
-            height_out,
-            in_channels * kernel_height,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
-        
-
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-1, kernel_height, stride).reshape(
-            batch_size, 
-            height_out,
-            in_channels * kernel_height,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out).to(
+            self.connection.w.device
+        )
+        source_x = (
+            self.source.x.unfold(-1, kernel_height, stride)
+            .reshape(
+                batch_size,
+                height_out,
+                in_channels * kernel_height,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         # Pre-synaptic update.
-        pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
+        pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
         self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = self.reduction(torch.bmm(target_s, source_x),dim=0)
+        post = self.reduction(torch.bmm(target_s, source_x), dim=0)
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -1108,36 +1259,57 @@ class Hebbian(LearningRule):
         height_out = self.connection.conv_size[0]
         width_out = self.connection.conv_size[1]
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out * width_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-2, kernel_height,stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-            batch_size, 
-            height_out*width_out,
-            in_channels * kernel_height * kernel_width,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_x = self.target.x.reshape(
+            batch_size, out_channels * height_out * width_out, 1
+        )
+        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(
+            self.connection.w.device
+        )
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-2, kernel_height, stride[0])
+            .unfold(-2, kernel_width, stride[1])
+            .reshape(
+                batch_size,
+                height_out * width_out,
+                in_channels * kernel_height * kernel_width,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out*width_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-2, kernel_height,stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-            batch_size, 
-            height_out*width_out,
-            in_channels * kernel_height * kernel_width,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
+            self.connection.w.device
+        )
+        source_x = (
+            self.source.x.unfold(-2, kernel_height, stride[0])
+            .unfold(-2, kernel_width, stride[1])
+            .reshape(
+                batch_size,
+                height_out * width_out,
+                in_channels * kernel_height * kernel_width,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         # Pre-synaptic update.
-        pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
+        pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
         self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = self.reduction(torch.bmm(target_s, source_x),dim=0)
+        post = self.reduction(torch.bmm(target_s, source_x), dim=0)
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -1160,38 +1332,59 @@ class Hebbian(LearningRule):
         width_out = self.connection.conv_size[1]
         depth_out = self.connection.conv_size[2]
 
-        target_x = self.target.x.reshape(batch_size, out_channels * height_out * width_out * depth_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
-        source_s = self.source.s.type(torch.float).unfold(-3, kernel_height,stride[0]).unfold(
-            -3, kernel_width, stride[1]).unfold(-3, kernel_depth,stride[2]).reshape(
-            batch_size, 
-            height_out*width_out*depth_out,
-            in_channels * kernel_height * kernel_width * kernel_depth,
-        ).repeat(
-            1,
-            out_channels,
-            1,
+        target_x = self.target.x.reshape(
+            batch_size, out_channels * height_out * width_out * depth_out, 1
+        )
+        target_x = target_x * torch.eye(
+            out_channels * height_out * width_out * depth_out
         ).to(self.connection.w.device)
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-3, kernel_height, stride[0])
+            .unfold(-3, kernel_width, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                height_out * width_out * depth_out,
+                in_channels * kernel_height * kernel_width * kernel_depth,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out*width_out*depth_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
-        source_x = self.source.x.unfold(-3, kernel_height,stride[0]).unfold(
-            -3, kernel_width, stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(
-            batch_size, 
-            height_out*width_out*depth_out,
-            in_channels * kernel_height * kernel_width * kernel_depth,
-        ).repeat(
-            1,
-            out_channels,
-            1,
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out * depth_out, 1
+        )
+        target_s = target_s * torch.eye(
+            out_channels * height_out * width_out * depth_out
         ).to(self.connection.w.device)
+        source_x = (
+            self.source.x.unfold(-3, kernel_height, stride[0])
+            .unfold(-3, kernel_width, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                height_out * width_out * depth_out,
+                in_channels * kernel_height * kernel_width * kernel_depth,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
         # Pre-synaptic update.
-        pre = self.reduction(torch.bmm(target_x,source_s), dim=0)
+        pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
         self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = self.reduction(torch.bmm(target_s, source_x),dim=0)
+        post = self.reduction(torch.bmm(target_s, source_x), dim=0)
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -1486,39 +1679,56 @@ class MSTDP(LearningRule):
             self.p_plus = torch.zeros(
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
-            self.p_plus = self.p_plus.unfold(-1, kernel_height,stride).reshape(
-                batch_size, 
-                height_out,
-                in_channels *  kernel_height,
-            ).repeat(
-                1,
-                out_channels,
-                1,
-            ).to(self.connection.w.device)
-            
+            self.p_plus = (
+                self.p_plus.unfold(-1, kernel_height, stride)
+                .reshape(
+                    batch_size,
+                    height_out,
+                    in_channels * kernel_height,
+                )
+                .repeat(
+                    1,
+                    out_channels,
+                    1,
+                )
+                .to(self.connection.w.device)
+            )
+
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
             )
-            self.p_minus = self.p_minus.reshape(batch_size,\
-                 out_channels * height_out, 1)
-            self.p_minus = self.p_minus *\
-                 torch.eye(out_channels * height_out).to(self.connection.w.device)
+            self.p_minus = self.p_minus.reshape(
+                batch_size, out_channels * height_out, 1
+            )
+            self.p_minus = self.p_minus * torch.eye(out_channels * height_out).to(
+                self.connection.w.device
+            )
 
         # Reshaping spike occurrences.
-        source_s = self.source.s.type(torch.float).unfold(-1, kernel_height, stride).reshape(
-            batch_size, 
-            height_out,
-            in_channels*kernel_height,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-1, kernel_height, stride)
+            .reshape(
+                batch_size,
+                height_out,
+                in_channels * kernel_height,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out,1)
-        target_s = target_s * torch.eye(out_channels*height_out).to(self.connection.w.device)
-        
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out).to(
+            self.connection.w.device
+        )
+
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
         self.p_plus += a_plus * source_s
@@ -1526,14 +1736,13 @@ class MSTDP(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
 
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
 
         super().update()
-
 
     def _local_connection2d_update(self, **kwargs) -> None:
         # language=rst
@@ -1550,7 +1759,6 @@ class MSTDP(LearningRule):
         out_channels = self.connection.n_filters
         height_out = self.connection.conv_size[0]
         width_out = self.connection.conv_size[1]
-
 
         # Initialize eligibility.
         if not hasattr(self, "eligibility"):
@@ -1577,39 +1785,58 @@ class MSTDP(LearningRule):
             self.p_plus = torch.zeros(
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
-            self.p_plus = self.p_plus.unfold(-2, kernel_height,stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-                batch_size, 
-                height_out * width_out,
-                in_channels * kernel_height * kernel_width,
-            ).repeat(
-                1,
-                out_channels,
-                1,
-            ).to(self.connection.w.device)
-            
+            self.p_plus = (
+                self.p_plus.unfold(-2, kernel_height, stride[0])
+                .unfold(-2, kernel_width, stride[1])
+                .reshape(
+                    batch_size,
+                    height_out * width_out,
+                    in_channels * kernel_height * kernel_width,
+                )
+                .repeat(
+                    1,
+                    out_channels,
+                    1,
+                )
+                .to(self.connection.w.device)
+            )
+
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
             )
-            self.p_minus = self.p_minus.reshape(batch_size,\
-                 out_channels * height_out * width_out, 1)
-            self.p_minus = self.p_minus *\
-                 torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
+            self.p_minus = self.p_minus.reshape(
+                batch_size, out_channels * height_out * width_out, 1
+            )
+            self.p_minus = self.p_minus * torch.eye(
+                out_channels * height_out * width_out
+            ).to(self.connection.w.device)
 
         # Reshaping spike occurrences.
-        source_s = self.source.s.type(torch.float).unfold(-2, kernel_height, stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-            batch_size, 
-            height_out*width_out,
-            in_channels*kernel_height*kernel_width,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-2, kernel_height, stride[0])
+            .unfold(-2, kernel_width, stride[1])
+            .reshape(
+                batch_size,
+                height_out * width_out,
+                in_channels * kernel_height * kernel_width,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out*width_out, 1)
-        target_s = target_s * torch.eye(out_channels*height_out*width_out).to(self.connection.w.device)
-        
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
+            self.connection.w.device
+        )
+
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
         self.p_plus += a_plus * source_s
@@ -1617,14 +1844,13 @@ class MSTDP(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
 
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
 
         super().update()
-
 
     def _local_connection3d_update(self, **kwargs) -> None:
         # language=rst
@@ -1645,7 +1871,6 @@ class MSTDP(LearningRule):
         width_out = self.connection.conv_size[1]
         depth_out = self.connection.conv_size[2]
 
-
         # Initialize eligibility.
         if not hasattr(self, "eligibility"):
             self.eligibility = torch.zeros(
@@ -1670,41 +1895,60 @@ class MSTDP(LearningRule):
             self.p_plus = torch.zeros(
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
-            self.p_plus = self.p_plus.unfold(-3, kernel_height,stride[0]).unfold(
-                -3, kernel_width, stride[1]).unfold(-3, kernel_depth,stride[2]).reshape(
-                batch_size, 
-                height_out * width_out * depth_out,
-                in_channels *  kernel_height * kernel_width * kernel_depth,
-            ).repeat(
-                1,
-                out_channels,
-                1,
-            ).to(self.connection.w.device)
-            
+            self.p_plus = (
+                self.p_plus.unfold(-3, kernel_height, stride[0])
+                .unfold(-3, kernel_width, stride[1])
+                .unfold(-3, kernel_depth, stride[2])
+                .reshape(
+                    batch_size,
+                    height_out * width_out * depth_out,
+                    in_channels * kernel_height * kernel_width * kernel_depth,
+                )
+                .repeat(
+                    1,
+                    out_channels,
+                    1,
+                )
+                .to(self.connection.w.device)
+            )
+
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
             )
-            self.p_minus = self.p_minus.reshape(batch_size,\
-                 out_channels * height_out * width_out * depth_out, 1)
-            self.p_minus = self.p_minus *\
-                 torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
+            self.p_minus = self.p_minus.reshape(
+                batch_size, out_channels * height_out * width_out * depth_out, 1
+            )
+            self.p_minus = self.p_minus * torch.eye(
+                out_channels * height_out * width_out * depth_out
+            ).to(self.connection.w.device)
 
         # Reshaping spike occurrences.
-        source_s = self.source.s.type(torch.float).unfold(-3, kernel_height, stride[0]).unfold(
-            -3, kernel_width, stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(
-            batch_size, 
-            height_out*width_out*depth_out,
-            in_channels*kernel_height*kernel_width*kernel_depth,
-        ).repeat(
-            1,
-            out_channels,
-            1,
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-3, kernel_height, stride[0])
+            .unfold(-3, kernel_width, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                height_out * width_out * depth_out,
+                in_channels * kernel_height * kernel_width * kernel_depth,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
+
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out * depth_out, 1
+        )
+        target_s = target_s * torch.eye(
+            out_channels * height_out * width_out * depth_out
         ).to(self.connection.w.device)
 
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels*height_out*width_out*depth_out,1)
-        target_s = target_s * torch.eye(out_channels*height_out*width_out*depth_out).to(self.connection.w.device)
-        
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
         self.p_plus += a_plus * source_s
@@ -1712,14 +1956,13 @@ class MSTDP(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
 
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
 
         super().update()
-
 
     def _conv1d_connection_update(self, **kwargs) -> None:
         # language=rst
@@ -2153,40 +2396,57 @@ class MSTDPET(LearningRule):
             self.p_plus = torch.zeros(
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
-            self.p_plus = self.p_plus.unfold(-1, kernel_height, stride).reshape(
-                batch_size, 
-                height_out,
-                in_channels * kernel_height,
-            ).repeat(
-                1,
-                out_channels,
-                1,
-            ).to(self.connection.w.device)
-            
+            self.p_plus = (
+                self.p_plus.unfold(-1, kernel_height, stride)
+                .reshape(
+                    batch_size,
+                    height_out,
+                    in_channels * kernel_height,
+                )
+                .repeat(
+                    1,
+                    out_channels,
+                    1,
+                )
+                .to(self.connection.w.device)
+            )
+
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
             )
-            self.p_minus = self.p_minus.reshape(batch_size,\
-                 out_channels * height_out, 1)
-            self.p_minus = self.p_minus *\
-                 torch.eye(out_channels * height_out).to(self.connection.w.device)
+            self.p_minus = self.p_minus.reshape(
+                batch_size, out_channels * height_out, 1
+            )
+            self.p_minus = self.p_minus * torch.eye(out_channels * height_out).to(
+                self.connection.w.device
+            )
 
         # Reshaping spike occurrences.
-        source_s = self.source.s.type(torch.float).unfold(-1, kernel_height,stride).reshape(
-            batch_size, 
-            height_out,
-            in_channels * kernel_height,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
-        
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-1, kernel_height, stride)
+            .reshape(
+                batch_size,
+                height_out,
+                in_channels * kernel_height,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
+
         # print(target_x.shape, source_s.shape)
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels * height_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out).to(self.connection.w.device)
-        
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out).to(
+            self.connection.w.device
+        )
+
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
         self.p_plus += a_plus * source_s
@@ -2194,9 +2454,9 @@ class MSTDPET(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
 
         super().update()
@@ -2217,8 +2477,6 @@ class MSTDPET(LearningRule):
         out_channels = self.connection.n_filters
         height_out = self.connection.conv_size[0]
         width_out = self.connection.conv_size[1]
-
-
 
         # Initialize eligibility.
         if not hasattr(self, "eligibility"):
@@ -2253,40 +2511,59 @@ class MSTDPET(LearningRule):
             self.p_plus = torch.zeros(
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
-            self.p_plus = self.p_plus.unfold(-2, kernel_height, stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-                batch_size, 
-                height_out*width_out,
-                in_channels * kernel_height * kernel_width,
-            ).repeat(
-                1,
-                out_channels,
-                1,
-            ).to(self.connection.w.device)
-            
+            self.p_plus = (
+                self.p_plus.unfold(-2, kernel_height, stride[0])
+                .unfold(-2, kernel_width, stride[1])
+                .reshape(
+                    batch_size,
+                    height_out * width_out,
+                    in_channels * kernel_height * kernel_width,
+                )
+                .repeat(
+                    1,
+                    out_channels,
+                    1,
+                )
+                .to(self.connection.w.device)
+            )
+
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
             )
-            self.p_minus = self.p_minus.reshape(batch_size,\
-                 out_channels * height_out * width_out, 1)
-            self.p_minus = self.p_minus *\
-                 torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
+            self.p_minus = self.p_minus.reshape(
+                batch_size, out_channels * height_out * width_out, 1
+            )
+            self.p_minus = self.p_minus * torch.eye(
+                out_channels * height_out * width_out
+            ).to(self.connection.w.device)
 
         # Reshaping spike occurrences.
-        source_s = self.source.s.type(torch.float).unfold(-2, kernel_height,stride[0]).unfold(-2, kernel_width, stride[1]).reshape(
-            batch_size, 
-            height_out*width_out,
-            in_channels *  kernel_height * kernel_width,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
-        
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-2, kernel_height, stride[0])
+            .unfold(-2, kernel_width, stride[1])
+            .reshape(
+                batch_size,
+                height_out * width_out,
+                in_channels * kernel_height * kernel_width,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
+
         # print(target_x.shape, source_s.shape)
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels * height_out * width_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(self.connection.w.device)
-        
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out, 1
+        )
+        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
+            self.connection.w.device
+        )
+
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
         self.p_plus += a_plus * source_s
@@ -2294,9 +2571,9 @@ class MSTDPET(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
 
         super().update()
@@ -2353,42 +2630,61 @@ class MSTDPET(LearningRule):
             self.p_plus = torch.zeros(
                 batch_size, *self.source.shape, device=self.connection.w.device
             )
-            self.p_plus = self.p_plus.unfold(-3, kernel_height, stride[0]).unfold(
-                -3, kernel_width, stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(
-                batch_size, 
-                height_out*width_out*depth_out,
-                in_channels * kernel_height * kernel_width*kernel_depth,
-            ).repeat(
-                1,
-                out_channels,
-                1,
-            ).to(self.connection.w.device)
-            
+            self.p_plus = (
+                self.p_plus.unfold(-3, kernel_height, stride[0])
+                .unfold(-3, kernel_width, stride[1])
+                .unfold(-3, kernel_depth, stride[2])
+                .reshape(
+                    batch_size,
+                    height_out * width_out * depth_out,
+                    in_channels * kernel_height * kernel_width * kernel_depth,
+                )
+                .repeat(
+                    1,
+                    out_channels,
+                    1,
+                )
+                .to(self.connection.w.device)
+            )
+
         if not hasattr(self, "p_minus"):
             self.p_minus = torch.zeros(
                 batch_size, *self.target.shape, device=self.connection.w.device
             )
-            self.p_minus = self.p_minus.reshape(batch_size,\
-                 out_channels * height_out * width_out * depth_out, 1)
-            self.p_minus = self.p_minus *\
-                 torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
+            self.p_minus = self.p_minus.reshape(
+                batch_size, out_channels * height_out * width_out * depth_out, 1
+            )
+            self.p_minus = self.p_minus * torch.eye(
+                out_channels * height_out * width_out * depth_out
+            ).to(self.connection.w.device)
 
         # Reshaping spike occurrences.
-        source_s = self.source.s.type(torch.float).unfold(-3, kernel_height,stride[0]).unfold(
-            -3, kernel_width, stride[1]).unfold(-3, kernel_depth, stride[2]).reshape(
-            batch_size, 
-            height_out*width_out*depth_out,
-            in_channels *  kernel_height * kernel_width * kernel_depth,
-        ).repeat(
-            1,
-            out_channels,
-            1,
-        ).to(self.connection.w.device)
-        
+        source_s = (
+            self.source.s.type(torch.float)
+            .unfold(-3, kernel_height, stride[0])
+            .unfold(-3, kernel_width, stride[1])
+            .unfold(-3, kernel_depth, stride[2])
+            .reshape(
+                batch_size,
+                height_out * width_out * depth_out,
+                in_channels * kernel_height * kernel_width * kernel_depth,
+            )
+            .repeat(
+                1,
+                out_channels,
+                1,
+            )
+            .to(self.connection.w.device)
+        )
+
         # print(target_x.shape, source_s.shape)
-        target_s = self.target.s.type(torch.float).reshape(batch_size, out_channels * height_out * width_out * depth_out,1)
-        target_s = target_s * torch.eye(out_channels * height_out * width_out * depth_out).to(self.connection.w.device)
-        
+        target_s = self.target.s.type(torch.float).reshape(
+            batch_size, out_channels * height_out * width_out * depth_out, 1
+        )
+        target_s = target_s * torch.eye(
+            out_channels * height_out * width_out * depth_out
+        ).to(self.connection.w.device)
+
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
         self.p_plus += a_plus * source_s
@@ -2396,9 +2692,9 @@ class MSTDPET(LearningRule):
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus
-        ) + torch.bmm(self.p_minus, source_s)
+        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+            self.p_minus, source_s
+        )
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
 
         super().update()

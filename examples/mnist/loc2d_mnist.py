@@ -1,4 +1,3 @@
-
 import torch
 from torch.nn.modules.utils import _pair
 
@@ -34,10 +33,10 @@ kernel_size = _pair(12)
 stride = _pair(4)
 tc_theta_decay = 1e6
 theta_plus = 0.05
-norm = 0.2*kernel_size[0]*kernel_size[1]
+norm = 0.2 * kernel_size[0] * kernel_size[1]
 wmin = 0.0
 wmax = 1.0
-nu = (0.0001,0.01)
+nu = (0.0001, 0.01)
 inh = 25.0
 dt = 1.0
 time = 250
@@ -53,9 +52,7 @@ plot = True
 network = Network()
 
 input_layer = Input(
-    shape=[in_channels, input_shape[0], input_shape[1]],
-    traces=True,
-    tc_trace=20
+    shape=[in_channels, input_shape[0], input_shape[1]], traces=True, tc_trace=20
 )
 
 compute_conv_size = lambda inp_size, k, s: int((inp_size - k) / s) + 1
@@ -78,7 +75,7 @@ input_output_conn = LocalConnection2D(
     output_layer,
     kernel_size=kernel_size,
     stride=stride,
-    n_filters = n_filters,
+    n_filters=n_filters,
     nu=nu,
     update_rule=PostPre,
     wmin=wmin,
@@ -86,7 +83,9 @@ input_output_conn = LocalConnection2D(
     norm=norm,
 )
 
-w_inh_LC = torch.zeros(n_filters, conv_size[0], conv_size[1], n_filters, conv_size[0], conv_size[1])
+w_inh_LC = torch.zeros(
+    n_filters, conv_size[0], conv_size[1], n_filters, conv_size[0], conv_size[1]
+)
 for c in range(n_filters):
     for w1 in range(conv_size[0]):
         for w2 in range(conv_size[0]):
@@ -126,7 +125,11 @@ train_dataset = MNIST(
     download=True,
     train=True,
     transform=transforms.Compose(
-        [transforms.ToTensor(), transforms.CenterCrop((input_shape[0], input_shape[1])), transforms.Lambda(lambda x: x * intensity)]
+        [
+            transforms.ToTensor(),
+            transforms.CenterCrop((input_shape[0], input_shape[1])),
+            transforms.Lambda(lambda x: x * intensity),
+        ]
     ),
 )
 
@@ -152,14 +155,22 @@ for epoch in range(n_epochs):
         start = t()
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=gpu
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=gpu,
     )
 
     for step, batch in enumerate(tqdm(train_dataloader)):
         # Get next input sample.
         if step > n_train:
             break
-        inputs = {"X": batch["encoded_image"].view(time, batch_size, 1, input_shape[0], input_shape[1])}
+        inputs = {
+            "X": batch["encoded_image"].view(
+                time, batch_size, 1, input_shape[0], input_shape[1]
+            )
+        }
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
         label = batch["label"]
@@ -169,7 +180,9 @@ for epoch in range(n_epochs):
 
         # Optionally plot various simulation information.
         if plot:
-            weights1_im = plot_local_connection_2d_weights(network.connections[("X", "Y")], im=weights1_im)
+            weights1_im = plot_local_connection_2d_weights(
+                network.connections[("X", "Y")], im=weights1_im
+            )
             plt.pause(1)
 
         network.reset_state_variables()  # Reset state variables.
@@ -178,5 +191,5 @@ print("Progress: %d / %d (%.4f seconds)\n" % (n_epochs, n_epochs, t() - start))
 print("Training complete.\n")
 
 weights1_im = plot_local_connection_2d_weights(network.connections[("X", "Y")])
-plt.savefig('test.png')
+plt.savefig("test.png")
 plt.pause(100)
