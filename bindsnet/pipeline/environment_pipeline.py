@@ -252,10 +252,7 @@ class EnvironmentPipeline(BasePipeline):
             obs = obs.unsqueeze(0).unsqueeze(0)
             obs_shape = torch.tensor([1] * len(obs.shape[1:]), device=self.device)
             inputs = {
-                k: self.encoding(
-                    obs.repeat(self.time, *obs_shape).to(self.device),
-                    device=self.device,
-                )
+                k: obs.repeat(self.time, *obs_shape).to(self.device)
                 for k in self.inputs
             }
         else:
