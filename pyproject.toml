@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bindsnet"
-version = "0.3.0"
+version = "0.3.0.1"
 description = "Spiking neural networks for ML in Python"
 authors = [ "Hananel Hazan <hananel@hazan.org.il>", "Daniel Saunders", "Darpan Sanghavi", "Hassaan Khan" ]
 license = "AGPL-3.0-only"
