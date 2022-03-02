@@ -1,0 +1,20 @@
+repos:
+-   repo: local
+    hooks:
+    -   id: isort
+        name: isort
+        entry: isort . --settings-file pyproject.toml
+        language: system
+        pass_filenames: false
+    -   id: black
+        name: black
+        entry: black .
+        language: system
+        pass_filenames: false
+    -   id: autoflake
+        name: autoflake
+        entry: autoflake
+        language: system
+        types: [ python ]
+        args: [ --in-place, --remove-all-unused-imports, --remove-duplicate-keys ]
+        files: ^bindsnet/|test/
