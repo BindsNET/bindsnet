@@ -489,7 +489,7 @@ class DotSimulator:
             self.fileCnt = newInt
         else:
             self.fileCnt += 1
-        self.filename = self.filename[:underScore+1] + str(self.fileCnt) + ".csv"       
+        self.filename = self.filename[: underScore + 1] + str(self.fileCnt) + ".csv"
 
     def addFileSuffix(self, suffix):
         """
