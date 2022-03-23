@@ -484,12 +484,12 @@ class DotSimulator:
         """
         Increments numbered suffix on output file to start a new one.
         """
-        oldStr = "_" + str(self.fileCnt)
+        underScore = self.filename.rfind("_")
         if 0 <= newInt:
             self.fileCnt = newInt
         else:
             self.fileCnt += 1
-        self.filename = self.filename.replace(oldStr, "_" + str(self.fileCnt))
+        self.filename = self.filename[: underScore + 1] + str(self.fileCnt) + ".csv"
 
     def addFileSuffix(self, suffix):
         """
