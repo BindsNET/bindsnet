@@ -679,24 +679,23 @@ traitlets = "*"
 
 [[package]]
 name = "jupyter-server"
-version = "1.13.5"
+version = "1.15.4"
 description = "The backend—i.e. core services, APIs, and REST endpoints—to Jupyter web applications."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-anyio = ">=3.1.0,<4"
+anyio = ">=3.1.0"
 argon2-cffi = "*"
-ipython-genutils = "*"
 jinja2 = "*"
 jupyter-client = ">=6.1.1"
 jupyter-core = ">=4.6.0"
 nbconvert = "*"
-nbformat = "*"
+nbformat = ">=5.2.0"
 packaging = "*"
 prometheus-client = "*"
-pywinpty = {version = "<2", markers = "os_name == \"nt\""}
+pywinpty = {version = "*", markers = "os_name == \"nt\""}
 pyzmq = ">=17"
 Send2Trash = "*"
 terminado = ">=0.8.3"
@@ -888,21 +887,20 @@ webpdf = ["pyppeteer (>=1,<1.1)"]
 
 [[package]]
 name = "nbformat"
-version = "5.1.3"
+version = "5.2.0"
 description = "The Jupyter Notebook format"
 category = "dev"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.7"
 
 [package.dependencies]
-ipython-genutils = "*"
 jsonschema = ">=2.4,<2.5.0 || >2.5.0"
 jupyter-core = "*"
 traitlets = ">=4.1"
 
 [package.extras]
 fast = ["fastjsonschema"]
-test = ["check-manifest", "fastjsonschema", "testpath", "pytest", "pytest-cov"]
+test = ["check-manifest", "fastjsonschema", "testpath", "pytest"]
 
 [[package]]
 name = "nest-asyncio"
@@ -2165,8 +2163,8 @@ jupyter-core = [
     {file = "jupyter_core-4.9.2.tar.gz", hash = "sha256:d69baeb9ffb128b8cd2657fcf2703f89c769d1673c851812119e3a2a0e93ad9a"},
 ]
 jupyter-server = [
-    {file = "jupyter_server-1.13.5-py3-none-any.whl", hash = "sha256:a3eb9d397df2de26134cb24fe7cb5da60ec28b4f8b292e0bdefd450b1f062dd3"},
-    {file = "jupyter_server-1.13.5.tar.gz", hash = "sha256:9e3e9717eea3bffab8cfb2ff330011be6c8bbd9cdae5b71cef169fcece2f19d3"},
+    {file = "jupyter_server-1.15.4-py3-none-any.whl", hash = "sha256:94a136b6ed4826ac6a1fab3bfeff8a698a7833578548f78f302ed1ba90b1e534"},
+    {file = "jupyter_server-1.15.4.tar.gz", hash = "sha256:1983a2a71d8709a77da6804ece67ded776c201ba11126de7002d088fb3418c85"},
 ]
 jupyterlab = [
     {file = "jupyterlab-3.2.9-py3-none-any.whl", hash = "sha256:729d1f06e97733070badc04152aecf9fb2cd036783eebbd9123ff58aab83a8f5"},
@@ -2330,8 +2328,8 @@ nbconvert = [
     {file = "nbconvert-6.4.2.tar.gz", hash = "sha256:eb2803db18f6facce6bf3b01b684fe47907994bd156d15eaccdf011e3d7f8164"},
 ]
 nbformat = [
-    {file = "nbformat-5.1.3-py3-none-any.whl", hash = "sha256:eb8447edd7127d043361bc17f2f5a807626bc8e878c7709a1c647abda28a9171"},
-    {file = "nbformat-5.1.3.tar.gz", hash = "sha256:b516788ad70771c6250977c1374fcca6edebe6126fd2adb5a69aa5c2356fd1c8"},
+    {file = "nbformat-5.2.0-py3-none-any.whl", hash = "sha256:3e30424e8291b2188347f5c3ba5273ed3766f12f8c5137c2e456a0815f36e785"},
+    {file = "nbformat-5.2.0.tar.gz", hash = "sha256:93df0b9c67221d38fb970c48f6d361819a6c388299a0ef3171bbb912edfe1324"},
 ]
 nest-asyncio = [
     {file = "nest_asyncio-1.5.4-py3-none-any.whl", hash = "sha256:3fdd0d6061a2bb16f21fe8a9c6a7945be83521d81a0d15cff52e9edee50101d6"},
