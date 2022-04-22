@@ -312,14 +312,8 @@ class Conv1dConnection(AbstractConnection):
         self.padding = padding
         self.dilation = dilation
 
-        self.in_channels, input_size = (
-            source.shape[0],
-            source.shape[1],
-        )
-        self.out_channels, output_size = (
-            target.shape[0],
-            target.shape[1],
-        )
+        self.in_channels, input_size = (source.shape[0], source.shape[1])
+        self.out_channels, output_size = (target.shape[0], target.shape[1])
 
         conv_size = (input_size - self.kernel_size + 2 * self.padding) / self.stride + 1
         shape = (self.in_channels, self.out_channels, int(conv_size))
@@ -1225,10 +1219,7 @@ class LocalConnection1D(AbstractConnection):
         self.stride = stride
         self.n_filters = n_filters
 
-        self.in_channels, input_height = (
-            source.shape[0],
-            source.shape[1],
-        )
+        self.in_channels, input_height = (source.shape[0], source.shape[1])
 
         height = int((input_height - self.kernel_size) / self.stride) + 1
 
@@ -1275,18 +1266,8 @@ class LocalConnection1D(AbstractConnection):
 
         self.s_unfold = (
             s.unfold(-1, self.kernel_size, self.stride)
-            .reshape(
-                s.shape[0],
-                self.in_channels,
-                self.conv_size,
-                self.kernel_size,
-            )
-            .repeat(
-                1,
-                1,
-                self.n_filters,
-                1,
-            )
+            .reshape(s.shape[0], self.in_channels, self.conv_size, self.kernel_size)
+            .repeat(1, 1, self.n_filters, 1)
         )
 
         a_post = self.s_unfold.to(self.w.device) * self.w
@@ -1426,18 +1407,8 @@ class LocalConnection2D(AbstractConnection):
         self.s_unfold = (
             s.unfold(-2, self.kernel_size[0], self.stride[0])
             .unfold(-2, self.kernel_size[1], self.stride[1])
-            .reshape(
-                s.shape[0],
-                self.in_channels,
-                self.conv_prod,
-                self.kernel_prod,
-            )
-            .repeat(
-                1,
-                1,
-                self.n_filters,
-                1,
-            )
+            .reshape(s.shape[0], self.in_channels, self.conv_prod, self.kernel_prod)
+            .repeat(1, 1, self.n_filters, 1)
         )
 
         a_post = self.s_unfold.to(self.w.device) * self.w
@@ -1580,18 +1551,8 @@ class LocalConnection3D(AbstractConnection):
             s.unfold(-3, self.kernel_size[0], self.stride[0])
             .unfold(-3, self.kernel_size[1], self.stride[1])
             .unfold(-3, self.kernel_size[2], self.stride[2])
-            .reshape(
-                s.shape[0],
-                self.in_channels,
-                self.conv_prod,
-                self.kernel_prod,
-            )
-            .repeat(
-                1,
-                1,
-                self.n_filters,
-                1,
-            )
+            .reshape(s.shape[0], self.in_channels, self.conv_prod, self.kernel_prod)
+            .repeat(1, 1, self.n_filters, 1)
         )
 
         a_post = self.s_unfold.to(self.w.device) * self.w
@@ -1764,9 +1725,7 @@ class SparseConnection(AbstractConnection):
             )
             if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
                 v = torch.clamp(
-                    torch.rand(*source.shape, *target.shape),
-                    self.wmin,
-                    self.wmax,
+                    torch.rand(*source.shape, *target.shape), self.wmin, self.wmax
                 )[i.bool()]
             else:
                 v = (
