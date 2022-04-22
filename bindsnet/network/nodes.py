@@ -1212,8 +1212,8 @@ class IzhikevichNodes(Nodes):
             self.r = torch.rand(n)
             self.a = 0.02 * torch.ones(n)
             self.b = 0.2 * torch.ones(n)
-            self.c = -65.0 + 15 * (self.r ** 2)
-            self.d = 8 - 6 * (self.r ** 2)
+            self.c = -65.0 + 15 * (self.r**2)
+            self.d = 8 - 6 * (self.r**2)
             self.S = 0.5 * torch.rand(n, n)
             self.excitatory = torch.ones(n).byte()
 
@@ -1282,8 +1282,8 @@ class IzhikevichNodes(Nodes):
             )
 
         # Apply v and u updates.
-        self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
-        self.v += self.dt * 0.5 * (0.04 * self.v ** 2 + 5 * self.v + 140 - self.u + x)
+        self.v += self.dt * 0.5 * (0.04 * self.v**2 + 5 * self.v + 140 - self.u + x)
+        self.v += self.dt * 0.5 * (0.04 * self.v**2 + 5 * self.v + 140 - self.u + x)
         self.u += self.dt * self.a * (self.b * self.v - self.u)
 
         # Voltage clipping to lower bound.
@@ -1518,7 +1518,7 @@ class CSRMNodes(Nodes):
 
     def AlphaKernel(self, dt):
         t = torch.arange(0, self.res_window_size, dt)
-        kernelVec = (1 / (self.tau ** 2)) * t * torch.exp(-t / self.tau)
+        kernelVec = (1 / (self.tau**2)) * t * torch.exp(-t / self.tau)
         return torch.flip(kernelVec, [0])
 
     def AlphaKernelSLAYER(self, dt):
