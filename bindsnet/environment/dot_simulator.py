@@ -10,24 +10,10 @@ from gym import spaces
 
 # Mappings for changing direction if reflected.
 # Cannot cross a row boundary moving right or left.
-ROW_CROSSING = {
-    1: 2,
-    3: -2,
-    5: 1,
-    6: -1,
-    7: 1,
-    8: -1,
-}
+ROW_CROSSING = {1: 2, 3: -2, 5: 1, 6: -1, 7: 1, 8: -1}
 
 # Cannot cross a column boundary moving up or down.
-COL_CROSSING = {
-    2: 2,
-    4: -2,
-    5: 3,
-    6: 1,
-    7: -1,
-    8: -3,
-}
+COL_CROSSING = {2: 2, 4: -2, 5: 3, 6: 1, 7: -1, 8: -3}
 
 
 class Dot:

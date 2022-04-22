@@ -250,7 +250,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
             # Fast Fourier Transform and Power Spectrum
             NFFT = 512
             mag_frames = np.absolute(np.fft.rfft(frames, NFFT))  # Magnitude of the FFT
-            pow_frames = (1.0 / NFFT) * (mag_frames**2)  # Power Spectrum
+            pow_frames = (1.0 / NFFT) * (mag_frames ** 2)  # Power Spectrum
 
             # Log filter banks
             nfilt = 40

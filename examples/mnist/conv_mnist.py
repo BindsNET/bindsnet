@@ -98,7 +98,7 @@ conv_conn = Conv2dConnection(
     kernel_size=kernel_size,
     stride=stride,
     update_rule=PostPre,
-    norm=0.4 * kernel_size**2,
+    norm=0.4 * kernel_size ** 2,
     nu=[1e-4, 1e-2],
     wmax=1.0,
 )

@@ -167,29 +167,10 @@ if __name__ == "__main__":
     conn_types = [Connection, Conv2dConnection, LocalConnection]
     args = [
         [[100], [50], (100, 50)],
-        [
-            [1, 28, 28],
-            [1, 26, 26],
-            (1, 1, 3, 3),
-            3,
-        ],
-        [
-            [1, 28, 28],
-            [1, 26, 26],
-            (784, 676),
-            3,
-            1,
-            1,
-        ],
+        [[1, 28, 28], [1, 26, 26], (1, 1, 3, 3), 3],
+        [[1, 28, 28], [1, 26, 26], (784, 676), 3, 1, 1],
     ]
-    for update_rule in (
-        Hebbian,
-        PostPre,
-        WeightDependentPostPre,
-        MSTDP,
-        MSTDPET,
-        Rmax,
-    ):
+    for update_rule in (Hebbian, PostPre, WeightDependentPostPre, MSTDP, MSTDPET, Rmax):
         print("Learning Rule:", update_rule)
         for conn_type, arg in zip(conn_types, args):
             tester.test_weights(conn_type, nu=1e-2, update_rule=update_rule, *arg)
@@ -198,8 +179,6 @@ if __name__ == "__main__":
     # Note: Does not include MaxPool2dConnection because this connection
     # does not utilize weights and wmin/wmax
     conn_types = [MeanFieldConnection]
-    args = [
-        [[1, 28, 28], [1, 26, 26], (1, 26), 3, 1],
-    ]
+    args = [[[1, 28, 28], [1, 26, 26], (1, 26), 3, 1]]
     for conn_type, arg in zip(conn_types, args):
         tester.test_weights(conn_type, decay=1, update_rule=NoOp, *arg)

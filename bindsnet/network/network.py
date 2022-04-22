@@ -382,7 +382,11 @@ class Network(torch.nn.Module):
                 if l in current_inputs:
                     self.layers[l].forward(x=current_inputs[l])
                 else:
-                    self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape, device=self.layers[l].s.device))
+                    self.layers[l].forward(
+                        x=torch.zeros(
+                            self.layers[l].s.shape, device=self.layers[l].s.device
+                        )
+                    )
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
