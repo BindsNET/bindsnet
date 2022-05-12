@@ -724,12 +724,15 @@ optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-anyio = ">=3.1.0,<4"
+anyio = ">=3.1.0"
 argon2-cffi = "*"
 jinja2 = "*"
 jupyter-client = ">=6.1.12"
 jupyter-core = ">=4.7.0"
 nbconvert = ">=6.4.4"
+jupyter-client = ">=6.1.1"
+jupyter-core = ">=4.6.0"
+nbconvert = "*"
 nbformat = ">=5.2.0"
 packaging = "*"
 prometheus-client = "*"

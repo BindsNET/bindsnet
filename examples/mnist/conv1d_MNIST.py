@@ -82,9 +82,7 @@ network = Network()
 input_layer = Input(n=28 * 28, shape=(1, 28 * 28), traces=True)
 
 conv_layer = DiehlAndCookNodes(
-    n=n_filters * conv_size,
-    shape=(n_filters, conv_size),
-    traces=True,
+    n=n_filters * conv_size, shape=(n_filters, conv_size), traces=True
 )
 
 conv_conn = Conv1dConnection(

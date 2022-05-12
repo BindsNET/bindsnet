@@ -217,16 +217,8 @@ class PostPre(LearningRule):
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-1, kernel_height, stride)
-            .reshape(
-                batch_size,
-                height_out,
-                in_channels * kernel_height,
-            )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .reshape(batch_size, height_out, in_channels * kernel_height)
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -238,16 +230,8 @@ class PostPre(LearningRule):
         )
         source_x = (
             self.source.x.unfold(-1, kernel_height, stride)
-            .reshape(
-                batch_size,
-                height_out,
-                in_channels * kernel_height,
-            )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .reshape(batch_size, height_out, in_channels * kernel_height)
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -293,11 +277,7 @@ class PostPre(LearningRule):
                 height_out * width_out,
                 in_channels * kernel_height * kernel_width,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -315,11 +295,7 @@ class PostPre(LearningRule):
                 height_out * width_out,
                 in_channels * kernel_height * kernel_width,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -368,11 +344,7 @@ class PostPre(LearningRule):
                 height_out * width_out * depth_out,
                 in_channels * kernel_height * kernel_width * kernel_depth,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -391,11 +363,7 @@ class PostPre(LearningRule):
                 height_out * width_out * depth_out,
                 in_channels * kernel_height * kernel_width * kernel_depth,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -687,16 +655,8 @@ class WeightDependentPostPre(LearningRule):
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-1, kernel_height, stride)
-            .reshape(
-                batch_size,
-                height_out,
-                in_channels * kernel_height,
-            )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .reshape(batch_size, height_out, in_channels * kernel_height)
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -708,16 +668,8 @@ class WeightDependentPostPre(LearningRule):
         )
         source_x = (
             self.source.x.unfold(-1, kernel_height, stride)
-            .reshape(
-                batch_size,
-                height_out,
-                in_channels * kernel_height,
-            )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .reshape(batch_size, height_out, in_channels * kernel_height)
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -775,11 +727,7 @@ class WeightDependentPostPre(LearningRule):
                 height_out * width_out,
                 in_channels * kernel_height * kernel_width,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -797,11 +745,7 @@ class WeightDependentPostPre(LearningRule):
                 height_out * width_out,
                 in_channels * kernel_height * kernel_width,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -862,11 +806,7 @@ class WeightDependentPostPre(LearningRule):
                 height_out * width_out * depth_out,
                 in_channels * kernel_height * kernel_width * kernel_depth,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -885,11 +825,7 @@ class WeightDependentPostPre(LearningRule):
                 height_out * width_out * depth_out,
                 in_channels * kernel_height * kernel_width * kernel_depth,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -923,11 +859,7 @@ class WeightDependentPostPre(LearningRule):
         ``AbstractConnection`` class.
         """
         # Get convolutional layer parameters.
-        (
-            out_channels,
-            in_channels,
-            kernel_size,
-        ) = self.connection.w.size()
+        (out_channels, in_channels, kernel_size) = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
         batch_size = self.source.batch_size
 
@@ -1199,16 +1131,8 @@ class Hebbian(LearningRule):
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-1, kernel_height, stride)
-            .reshape(
-                batch_size,
-                height_out,
-                in_channels * kernel_height,
-            )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .reshape(batch_size, height_out, in_channels * kernel_height)
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -1220,16 +1144,8 @@ class Hebbian(LearningRule):
         )
         source_x = (
             self.source.x.unfold(-1, kernel_height, stride)
-            .reshape(
-                batch_size,
-                height_out,
-                in_channels * kernel_height,
-            )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .reshape(batch_size, height_out, in_channels * kernel_height)
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -1274,11 +1190,7 @@ class Hebbian(LearningRule):
                 height_out * width_out,
                 in_channels * kernel_height * kernel_width,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -1296,11 +1208,7 @@ class Hebbian(LearningRule):
                 height_out * width_out,
                 in_channels * kernel_height * kernel_width,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -1348,11 +1256,7 @@ class Hebbian(LearningRule):
                 height_out * width_out * depth_out,
                 in_channels * kernel_height * kernel_width * kernel_depth,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -1371,11 +1275,7 @@ class Hebbian(LearningRule):
                 height_out * width_out * depth_out,
                 in_channels * kernel_height * kernel_width * kernel_depth,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -1681,16 +1581,8 @@ class MSTDP(LearningRule):
             )
             self.p_plus = (
                 self.p_plus.unfold(-1, kernel_height, stride)
-                .reshape(
-                    batch_size,
-                    height_out,
-                    in_channels * kernel_height,
-                )
-                .repeat(
-                    1,
-                    out_channels,
-                    1,
-                )
+                .reshape(batch_size, height_out, in_channels * kernel_height)
+                .repeat(1, out_channels, 1)
                 .to(self.connection.w.device)
             )
 
@@ -1709,16 +1601,8 @@ class MSTDP(LearningRule):
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-1, kernel_height, stride)
-            .reshape(
-                batch_size,
-                height_out,
-                in_channels * kernel_height,
-            )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .reshape(batch_size, height_out, in_channels * kernel_height)
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -1793,11 +1677,7 @@ class MSTDP(LearningRule):
                     height_out * width_out,
                     in_channels * kernel_height * kernel_width,
                 )
-                .repeat(
-                    1,
-                    out_channels,
-                    1,
-                )
+                .repeat(1, out_channels, 1)
                 .to(self.connection.w.device)
             )
 
@@ -1822,11 +1702,7 @@ class MSTDP(LearningRule):
                 height_out * width_out,
                 in_channels * kernel_height * kernel_width,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -1904,11 +1780,7 @@ class MSTDP(LearningRule):
                     height_out * width_out * depth_out,
                     in_channels * kernel_height * kernel_width * kernel_depth,
                 )
-                .repeat(
-                    1,
-                    out_channels,
-                    1,
-                )
+                .repeat(1, out_channels, 1)
                 .to(self.connection.w.device)
             )
 
@@ -1934,11 +1806,7 @@ class MSTDP(LearningRule):
                 height_out * width_out * depth_out,
                 in_channels * kernel_height * kernel_width * kernel_depth,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -2398,16 +2266,8 @@ class MSTDPET(LearningRule):
             )
             self.p_plus = (
                 self.p_plus.unfold(-1, kernel_height, stride)
-                .reshape(
-                    batch_size,
-                    height_out,
-                    in_channels * kernel_height,
-                )
-                .repeat(
-                    1,
-                    out_channels,
-                    1,
-                )
+                .reshape(batch_size, height_out, in_channels * kernel_height)
+                .repeat(1, out_channels, 1)
                 .to(self.connection.w.device)
             )
 
@@ -2426,16 +2286,8 @@ class MSTDPET(LearningRule):
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-1, kernel_height, stride)
-            .reshape(
-                batch_size,
-                height_out,
-                in_channels * kernel_height,
-            )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .reshape(batch_size, height_out, in_channels * kernel_height)
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -2519,11 +2371,7 @@ class MSTDPET(LearningRule):
                     height_out * width_out,
                     in_channels * kernel_height * kernel_width,
                 )
-                .repeat(
-                    1,
-                    out_channels,
-                    1,
-                )
+                .repeat(1, out_channels, 1)
                 .to(self.connection.w.device)
             )
 
@@ -2548,11 +2396,7 @@ class MSTDPET(LearningRule):
                 height_out * width_out,
                 in_channels * kernel_height * kernel_width,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
@@ -2639,11 +2483,7 @@ class MSTDPET(LearningRule):
                     height_out * width_out * depth_out,
                     in_channels * kernel_height * kernel_width * kernel_depth,
                 )
-                .repeat(
-                    1,
-                    out_channels,
-                    1,
-                )
+                .repeat(1, out_channels, 1)
                 .to(self.connection.w.device)
             )
 
@@ -2669,11 +2509,7 @@ class MSTDPET(LearningRule):
                 height_out * width_out * depth_out,
                 in_channels * kernel_height * kernel_width * kernel_depth,
             )
-            .repeat(
-                1,
-                out_channels,
-                1,
-            )
+            .repeat(1, out_channels, 1)
             .to(self.connection.w.device)
         )
 
