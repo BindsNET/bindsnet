@@ -724,15 +724,12 @@ optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-anyio = ">=3.1.0"
+anyio = ">=3.1.0,<4"
 argon2-cffi = "*"
 jinja2 = "*"
 jupyter-client = ">=6.1.12"
 jupyter-core = ">=4.7.0"
 nbconvert = ">=6.4.4"
-jupyter-client = ">=6.1.1"
-jupyter-core = ">=4.6.0"
-nbconvert = "*"
 nbformat = ">=5.2.0"
 packaging = "*"
 prometheus-client = "*"
@@ -749,7 +746,7 @@ test = ["coverage", "ipykernel", "pre-commit", "pytest-console-scripts", "pytest
 
 [[package]]
 name = "jupyterlab"
-version = "3.4.0"
+version = "3.4.1"
 description = "JupyterLab computational environment"
 category = "dev"
 optional = false
@@ -1256,7 +1253,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "pyglet"
-version = "1.5.23"
+version = "1.5.24"
 description = "Cross-platform windowing and multimedia library"
 category = "main"
 optional = false
@@ -1900,7 +1897,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.10,<3.10"
-content-hash = "09f0f332eb03c8b0ddcc6cd6c3af5fde487e54041b5ca7bb2b18b12b75864b9d"
+content-hash = "0b06213dbd39c17fc359f29e6c9d143eab8336ce31b38b4e9822fc6b2d04b3c0"
 
 [metadata.files]
 alabaster = [
@@ -2283,8 +2280,8 @@ jupyter-server = [
     {file = "jupyter_server-1.17.0.tar.gz", hash = "sha256:7b3aa524790ab0da64f06dfe0b2af149d0a3f59aad71fdedcf1d8bae6508018c"},
 ]
 jupyterlab = [
-    {file = "jupyterlab-3.4.0-py3-none-any.whl", hash = "sha256:a50e5f400652def16d8a7edf10dfab177c03cf20427678fac09922de1055cf58"},
-    {file = "jupyterlab-3.4.0.tar.gz", hash = "sha256:0b504cef99c5eeb4058e554aa90733370d2b4b1ba5a275e267a5a144f43daa55"},
+    {file = "jupyterlab-3.4.1-py3-none-any.whl", hash = "sha256:b4af3bd0856f060abe9fb8cbc43e885d9b00a4ea740390fe5b0f29c7c1f6c8ea"},
+    {file = "jupyterlab-3.4.1.tar.gz", hash = "sha256:65e078022916f3c096fddcf843cdb593527b55d36ca30817bf1fc7d35f823630"},
 ]
 jupyterlab-pygments = [
     {file = "jupyterlab_pygments-0.2.2-py2.py3-none-any.whl", hash = "sha256:2405800db07c9f770863bcf8049a529c3dd4d3e28536638bd7c1c01d2748309f"},
@@ -2696,8 +2693,8 @@ pyflakes = [
     {file = "pyflakes-2.4.0.tar.gz", hash = "sha256:05a85c2872edf37a4ed30b0cce2f6093e1d0581f8c19d7393122da7e25b2b24c"},
 ]
 pyglet = [
-    {file = "pyglet-1.5.23-py3-none-any.whl", hash = "sha256:086317c022612bf0aa28f32134a8cbe3d11de96787f5412d38d9c6abb6cfc771"},
-    {file = "pyglet-1.5.23.zip", hash = "sha256:dee920203cf306159c503babb62f38787268708977f5c945d28337594b797c46"},
+    {file = "pyglet-1.5.24-py3-none-any.whl", hash = "sha256:1268a604b2268419cad94e95e42711553463f602c101f2bd48eb6eacaf9c306c"},
+    {file = "pyglet-1.5.24.zip", hash = "sha256:5b4a4d5e5ad54946e31492eac67f7292e51a6577244641a277180f90a0192a8e"},
 ]
 pygments = [
     {file = "Pygments-2.12.0-py3-none-any.whl", hash = "sha256:dc9c10fb40944260f6ed4c688ece0cd2048414940f1cea51b8b226318411c519"},
