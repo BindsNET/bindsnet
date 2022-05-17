@@ -31,7 +31,7 @@ class LearningRule(ABC):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -39,9 +39,11 @@ class LearningRule(ABC):
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
-
+        
         :param connection: An ``AbstractConnection`` object.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the batch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
@@ -53,20 +55,20 @@ class LearningRule(ABC):
 
         self.wmin = connection.wmin
         self.wmax = connection.wmax
-
+        
         # Learning rate(s).
         if nu is None:
-            nu = [0.0, 0.0]
+            self.nu = torch.tensor([0.0, 0.0], dtype=torch.float)
         elif isinstance(nu, (float, int)):
-            nu = [nu, nu]
+            self.nu = torch.tensor([nu, nu], dtype=torch.float)
+        elif all(isinstance(element, (float, int)) for element in nu):
+            self.nu = torch.tensor(nu, dtype=torch.float)
+        else:
+            self.nu = torch.stack(nu, dim=0).to(dtype=torch.float)
 
-        self.nu = torch.zeros(2, dtype=torch.float)
-        self.nu[0] = nu[0]
-        self.nu[1] = nu[1]
-
-        if (self.nu == torch.zeros(2)).all() and not isinstance(self, NoOp):
+        if not self.nu.any() and not isinstance(self, NoOp):
             warnings.warn(
-                f"nu is set to [0., 0.] for {type(self).__name__} learning rule. "
+                f"nu is set to zeros for {type(self).__name__} learning rule. "
                 + "It will disable the learning process."
             )
 
@@ -108,7 +110,7 @@ class NoOp(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -116,9 +118,11 @@ class NoOp(LearningRule):
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
-
+        
         :param connection: An ``AbstractConnection`` object.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the batch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
@@ -149,7 +153,7 @@ class PostPre(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -157,10 +161,12 @@ class PostPre(LearningRule):
         # language=rst
         """
         Constructor for ``PostPre`` learning rule.
-
+        
         :param connection: An ``AbstractConnection`` object whose weights the
             ``PostPre`` learning rule will modify.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the batch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
@@ -236,11 +242,11 @@ class PostPre(LearningRule):
         )
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
@@ -300,11 +306,11 @@ class PostPre(LearningRule):
         )
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
@@ -368,11 +374,11 @@ class PostPre(LearningRule):
         )
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
@@ -387,14 +393,14 @@ class PostPre(LearningRule):
         batch_size = self.source.batch_size
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
             target_x = self.target.x.view(batch_size, -1).unsqueeze(1) * self.nu[0]
             self.connection.w -= self.reduction(torch.bmm(source_s, target_x), dim=0)
             del source_s, target_x
 
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             target_s = (
                 self.target.s.view(batch_size, -1).unsqueeze(1).float() * self.nu[1]
             )
@@ -428,12 +434,12 @@ class PostPre(LearningRule):
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
@@ -465,14 +471,15 @@ class PostPre(LearningRule):
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(
                 torch.bmm(target_x, source_s.permute((0, 2, 1))), dim=0
             )
+            print(self.nu[0].shape, self.connection.w.size())
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(
                 torch.bmm(target_s, source_x.permute((0, 2, 1))), dim=0
             )
@@ -531,12 +538,12 @@ class PostPre(LearningRule):
         print(target_x.shape, source_s.shape, self.connection.w.shape)
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
@@ -554,7 +561,7 @@ class WeightDependentPostPre(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -562,10 +569,12 @@ class WeightDependentPostPre(LearningRule):
         # language=rst
         """
         Constructor for ``WeightDependentPostPre`` learning rule.
-
+        
         :param connection: An ``AbstractConnection`` object whose weights the
             ``WeightDependentPostPre`` learning rule will modify.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the batch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
@@ -621,12 +630,12 @@ class WeightDependentPostPre(LearningRule):
         update = 0
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             outer_product = self.reduction(torch.bmm(source_s, target_x), dim=0)
             update -= self.nu[0] * outer_product * (self.connection.w - self.wmin)
 
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             outer_product = self.reduction(torch.bmm(source_x, target_s), dim=0)
             update += self.nu[1] * outer_product * (self.wmax - self.connection.w)
 
@@ -676,7 +685,7 @@ class WeightDependentPostPre(LearningRule):
         update = 0
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
@@ -684,7 +693,7 @@ class WeightDependentPostPre(LearningRule):
                 * (self.connection.w - self.wmin)
             )
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
@@ -752,7 +761,7 @@ class WeightDependentPostPre(LearningRule):
         update = 0
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
@@ -760,7 +769,7 @@ class WeightDependentPostPre(LearningRule):
                 * (self.connection.w - self.wmin)
             )
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
@@ -832,7 +841,7 @@ class WeightDependentPostPre(LearningRule):
         update = 0
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
@@ -840,7 +849,7 @@ class WeightDependentPostPre(LearningRule):
                 * (self.connection.w - self.wmin)
             )
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
@@ -878,7 +887,7 @@ class WeightDependentPostPre(LearningRule):
         update = 0
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
@@ -887,7 +896,7 @@ class WeightDependentPostPre(LearningRule):
             )
 
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
@@ -932,7 +941,7 @@ class WeightDependentPostPre(LearningRule):
         update = 0
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(
                 torch.bmm(target_x, source_s.permute((0, 2, 1))), dim=0
             )
@@ -943,7 +952,7 @@ class WeightDependentPostPre(LearningRule):
             )
 
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(
                 torch.bmm(target_s, source_x.permute((0, 2, 1))), dim=0
             )
@@ -1009,7 +1018,7 @@ class WeightDependentPostPre(LearningRule):
         update = 0
 
         # Pre-synaptic update.
-        if self.nu[0]:
+        if self.nu[0].any():
             pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
@@ -1018,7 +1027,7 @@ class WeightDependentPostPre(LearningRule):
             )
 
         # Post-synaptic update.
-        if self.nu[1]:
+        if self.nu[1].any():
             post = self.reduction(torch.bmm(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
@@ -1040,7 +1049,7 @@ class Hebbian(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -1048,10 +1057,12 @@ class Hebbian(LearningRule):
         # language=rst
         """
         Constructor for ``Hebbian`` learning rule.
-
+        
         :param connection: An ``AbstractConnection`` object whose weights the
             ``Hebbian`` learning rule will modify.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the batch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
@@ -1424,7 +1435,7 @@ class MSTDP(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -1432,17 +1443,18 @@ class MSTDP(LearningRule):
         # language=rst
         """
         Constructor for ``MSTDP`` learning rule.
-
+        
         :param connection: An ``AbstractConnection`` object whose weights the ``MSTDP``
             learning rule will modify.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
-            respectively.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
-
+        
         Keyword arguments:
-
+        
         :param tc_plus: Time constant for pre-synaptic firing trace.
         :param tc_minus: Time constant for post-synaptic firing trace.
         """
@@ -1480,9 +1492,9 @@ class MSTDP(LearningRule):
         # language=rst
         """
         MSTDP learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -1837,9 +1849,9 @@ class MSTDP(LearningRule):
         """
         MSTDP learning rule for ``Conv1dConnection`` subclass of ``AbstractConnection``
         class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -1911,9 +1923,9 @@ class MSTDP(LearningRule):
         """
         MSTDP learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection``
         class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -1986,9 +1998,9 @@ class MSTDP(LearningRule):
         """
         MSTDP learning rule for ``Conv3dConnection`` subclass of ``AbstractConnection``
         class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2098,7 +2110,7 @@ class MSTDPET(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -2106,17 +2118,16 @@ class MSTDPET(LearningRule):
         # language=rst
         """
         Constructor for ``MSTDPET`` learning rule.
-
+        
         :param connection: An ``AbstractConnection`` object whose weights the
             ``MSTDPET`` learning rule will modify.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
-            respectively.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
-
         Keyword arguments:
-
         :param float tc_plus: Time constant for pre-synaptic firing trace.
         :param float tc_minus: Time constant for post-synaptic firing trace.
         :param float tc_e_trace: Time constant for the eligibility trace.
@@ -2157,9 +2168,9 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Connection`` subclass of ``AbstractConnection``
         class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2540,9 +2551,9 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Conv1dConnection`` subclass of
         ``AbstractConnection`` class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2623,9 +2634,9 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Conv2dConnection`` subclass of
         ``AbstractConnection`` class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2708,9 +2719,9 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Conv3dConnection`` subclass of
         ``AbstractConnection`` class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2833,7 +2844,7 @@ class Rmax(LearningRule):
     def __init__(
         self,
         connection: AbstractConnection,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -2841,17 +2852,18 @@ class Rmax(LearningRule):
         # language=rst
         """
         Constructor for ``R-max`` learning rule.
-
+        
         :param connection: An ``AbstractConnection`` object whose weights the ``R-max``
             learning rule will modify.
-        :param nu: Single or pair of learning rates for pre- and post-synaptic events,
-            respectively.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
-
+        
         Keyword arguments:
-
+        
         :param float tc_c: Time constant for balancing naive Hebbian and policy gradient
             learning.
         :param float tc_e_trace: Time constant for the eligibility trace.
@@ -2890,9 +2902,9 @@ class Rmax(LearningRule):
         # language=rst
         """
         R-max learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
-
+        
         Keyword arguments:
-
+        
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         """
