@@ -21,7 +21,7 @@ class AbstractConnection(ABC, Module):
         self,
         source: Nodes,
         target: Nodes,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -32,7 +32,9 @@ class AbstractConnection(ABC, Module):
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
@@ -133,7 +135,7 @@ class Connection(AbstractConnection):
         self,
         source: Nodes,
         target: Nodes,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -144,7 +146,9 @@ class Connection(AbstractConnection):
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
@@ -268,7 +272,7 @@ class Conv1dConnection(AbstractConnection):
         stride: int = 1,
         padding: int = 0,
         dilation: int = 1,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -283,7 +287,9 @@ class Conv1dConnection(AbstractConnection):
         :param stride: stride for convolution.
         :param padding: padding for convolution.
         :param dilation: dilation for convolution.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
@@ -408,7 +414,7 @@ class Conv2dConnection(AbstractConnection):
         stride: Union[int, Tuple[int, int]] = 1,
         padding: Union[int, Tuple[int, int]] = 0,
         dilation: Union[int, Tuple[int, int]] = 1,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -423,7 +429,9 @@ class Conv2dConnection(AbstractConnection):
         :param stride: Horizontal and vertical stride for convolution.
         :param padding: Horizontal and vertical padding for convolution.
         :param dilation: Horizontal and vertical dilation for convolution.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
@@ -563,7 +571,7 @@ class Conv3dConnection(AbstractConnection):
         stride: Union[int, Tuple[int, int, int]] = 1,
         padding: Union[int, Tuple[int, int, int]] = 0,
         dilation: Union[int, Tuple[int, int, int]] = 1,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -578,7 +586,9 @@ class Conv3dConnection(AbstractConnection):
         :param stride: Depth-wise, horizontal, and vertical stride for convolution.
         :param padding: Depth-wise, horizontal, and vertical  padding for convolution.
         :param dilation: Depth-wise, horizontal and vertical dilation for convolution.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
@@ -1007,7 +1017,7 @@ class LocalConnection(AbstractConnection):
         kernel_size: Union[int, Tuple[int, int]],
         stride: Union[int, Tuple[int, int]],
         n_filters: int,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -1027,7 +1037,9 @@ class LocalConnection(AbstractConnection):
         :param kernel_size: Horizontal and vertical size of convolutional kernels.
         :param stride: Horizontal and vertical stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
@@ -1185,7 +1197,7 @@ class LocalConnection1D(AbstractConnection):
         kernel_size: int,
         stride: int,
         n_filters: int,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -1201,7 +1213,9 @@ class LocalConnection1D(AbstractConnection):
         :param kernel_size: size of convolutional kernels.
         :param stride: stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         Keyword arguments:
@@ -1315,7 +1329,7 @@ class LocalConnection2D(AbstractConnection):
         kernel_size: Union[int, Tuple[int, int]],
         stride: Union[int, Tuple[int, int]],
         n_filters: int,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -1331,7 +1345,9 @@ class LocalConnection2D(AbstractConnection):
         :param kernel_size: Horizontal and vertical size of convolutional kernels.
         :param stride: Horizontal and vertical stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         Keyword arguments:
@@ -1456,7 +1472,7 @@ class LocalConnection3D(AbstractConnection):
         kernel_size: Union[int, Tuple[int, int, int]],
         stride: Union[int, Tuple[int, int, int]],
         n_filters: int,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
         **kwargs,
@@ -1472,7 +1488,9 @@ class LocalConnection3D(AbstractConnection):
         :param kernel_size: Horizontal, vertical, and depth-wise size of convolutional kernels.
         :param stride: Horizontal, vertical, and depth-wise stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         Keyword arguments:
@@ -1599,7 +1617,7 @@ class MeanFieldConnection(AbstractConnection):
         self,
         source: Nodes,
         target: Nodes,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         weight_decay: float = 0.0,
         **kwargs,
     ) -> None:
@@ -1608,7 +1626,9 @@ class MeanFieldConnection(AbstractConnection):
         Instantiates a :code:`MeanFieldConnection` object.
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         Keyword arguments:
         :param LearningRule update_rule: Modifies connection parameters according to
@@ -1681,7 +1701,7 @@ class SparseConnection(AbstractConnection):
         self,
         source: Nodes,
         target: Nodes,
-        nu: Optional[Union[float, Sequence[float]]] = None,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = None,
         **kwargs,
@@ -1692,7 +1712,9 @@ class SparseConnection(AbstractConnection):
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
-        :param nu: Learning rate for both pre- and post-synaptic events.
+         :param nu: Learning rate for both pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
