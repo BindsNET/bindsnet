@@ -39,7 +39,7 @@ class LearningRule(ABC):
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
-        
+
         :param connection: An ``AbstractConnection`` object.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
@@ -55,7 +55,7 @@ class LearningRule(ABC):
 
         self.wmin = connection.wmin
         self.wmax = connection.wmax
-        
+
         # Learning rate(s).
         if nu is None:
             self.nu = torch.tensor([0.0, 0.0], dtype=torch.float)
@@ -118,7 +118,7 @@ class NoOp(LearningRule):
         # language=rst
         """
         Abstract constructor for the ``LearningRule`` object.
-        
+
         :param connection: An ``AbstractConnection`` object.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
@@ -161,7 +161,7 @@ class PostPre(LearningRule):
         # language=rst
         """
         Constructor for ``PostPre`` learning rule.
-        
+
         :param connection: An ``AbstractConnection`` object whose weights the
             ``PostPre`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
@@ -569,7 +569,7 @@ class WeightDependentPostPre(LearningRule):
         # language=rst
         """
         Constructor for ``WeightDependentPostPre`` learning rule.
-        
+
         :param connection: An ``AbstractConnection`` object whose weights the
             ``WeightDependentPostPre`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
@@ -1057,7 +1057,7 @@ class Hebbian(LearningRule):
         # language=rst
         """
         Constructor for ``Hebbian`` learning rule.
-        
+
         :param connection: An ``AbstractConnection`` object whose weights the
             ``Hebbian`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
@@ -1443,7 +1443,7 @@ class MSTDP(LearningRule):
         # language=rst
         """
         Constructor for ``MSTDP`` learning rule.
-        
+
         :param connection: An ``AbstractConnection`` object whose weights the ``MSTDP``
             learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively. It also
@@ -1452,9 +1452,9 @@ class MSTDP(LearningRule):
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
-        
+
         Keyword arguments:
-        
+
         :param tc_plus: Time constant for pre-synaptic firing trace.
         :param tc_minus: Time constant for post-synaptic firing trace.
         """
@@ -1492,9 +1492,9 @@ class MSTDP(LearningRule):
         # language=rst
         """
         MSTDP learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -1849,9 +1849,9 @@ class MSTDP(LearningRule):
         """
         MSTDP learning rule for ``Conv1dConnection`` subclass of ``AbstractConnection``
         class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -1923,9 +1923,9 @@ class MSTDP(LearningRule):
         """
         MSTDP learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection``
         class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -1998,9 +1998,9 @@ class MSTDP(LearningRule):
         """
         MSTDP learning rule for ``Conv3dConnection`` subclass of ``AbstractConnection``
         class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2118,7 +2118,7 @@ class MSTDPET(LearningRule):
         # language=rst
         """
         Constructor for ``MSTDPET`` learning rule.
-        
+
         :param connection: An ``AbstractConnection`` object whose weights the
             ``MSTDPET`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively. It also
@@ -2168,9 +2168,9 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Connection`` subclass of ``AbstractConnection``
         class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2551,9 +2551,9 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Conv1dConnection`` subclass of
         ``AbstractConnection`` class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2634,9 +2634,9 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Conv2dConnection`` subclass of
         ``AbstractConnection`` class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2719,9 +2719,9 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Conv3dConnection`` subclass of
         ``AbstractConnection`` class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         :param float a_plus: Learning rate (post-synaptic).
@@ -2852,7 +2852,7 @@ class Rmax(LearningRule):
         # language=rst
         """
         Constructor for ``R-max`` learning rule.
-        
+
         :param connection: An ``AbstractConnection`` object whose weights the ``R-max``
             learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events, respectively. It also
@@ -2861,9 +2861,9 @@ class Rmax(LearningRule):
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
-        
+
         Keyword arguments:
-        
+
         :param float tc_c: Time constant for balancing naive Hebbian and policy gradient
             learning.
         :param float tc_e_trace: Time constant for the eligibility trace.
@@ -2902,9 +2902,9 @@ class Rmax(LearningRule):
         # language=rst
         """
         R-max learning rule for ``Connection`` subclass of ``AbstractConnection`` class.
-        
+
         Keyword arguments:
-        
+
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         """
