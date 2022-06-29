@@ -186,7 +186,7 @@ for epoch in range(n_epochs):
     for step, batch in enumerate(train_dataloader):
         if step * batch_size > n_train:
             break
-        
+
         # Assign labels to excitatory neurons.
         if step % update_steps == 0 and step > 0:
             # Convert the array of labels into a tensor
@@ -242,12 +242,12 @@ for epoch in range(n_epochs):
             )
 
             labels = []
-        
+
         # Get next input sample.
         inputs = {"X": batch["encoded_image"]}
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
-        
+
         # Remember labels.
         labels.extend(batch["label"].tolist())
 
