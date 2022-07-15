@@ -10,7 +10,7 @@ documentation = "https://bindsnet-docs.readthedocs.io/"
 keywords = ["spiking", "neural", "networks", "pytorch"]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.10"
+python = ">=3.8,<3.10.4"
 numpy = "^1.23.1"
 scipy = "^1.8.1"
 Cython = "^0.29.24"
@@ -31,7 +31,7 @@ foolbox = "^3.3.1"
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
 pre-commit = "^2.14.0"
-notebook = "^6.4.10"
+notebook = "^6.4.12"
 jupyterlab = "^3.1.9"
 isort = "^5.9.3"
 black = "^22.3.0"
