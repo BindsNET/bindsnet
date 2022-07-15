@@ -1,8 +1,0 @@
-*
-!.python-version
-!bindsnet
-!test
-!pyproject.toml
-!poetry.lock
-!README.md
-!Dockerfile
