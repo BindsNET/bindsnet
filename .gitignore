@@ -20,3 +20,5 @@ test/analysis/__pycache__/*
 dist/*
 logs/*
 .pytest_cache/*
+.vscode/*
+data/*
