@@ -475,7 +475,7 @@ class PostPre(LearningRule):
             pre = self.reduction(
                 torch.bmm(target_x, source_s.permute((0, 2, 1))), dim=0
             )
-            print(self.nu[0].shape, self.connection.w.size())
+            # print(self.nu[0].shape, self.connection.w.size())
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
@@ -535,7 +535,7 @@ class PostPre(LearningRule):
             )
         )
         target_s = self.target.s.view(batch_size, out_channels, -1).float()
-        print(target_x.shape, source_s.shape, self.connection.w.shape)
+        # print(target_x.shape, source_s.shape, self.connection.w.shape)
 
         # Pre-synaptic update.
         if self.nu[0].any():
