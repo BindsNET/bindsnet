@@ -66,7 +66,7 @@ class TwoLayerNetwork(Network):
             name="Y",
         )
 
-        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
+        w = 0.6 * torch.rand(self.n_inpt, self.n_neurons)
         self.add_connection(
             Connection(
                 source=self.layers["X"],
@@ -167,7 +167,7 @@ class DiehlAndCook2015(Network):
         )
 
         # Connections
-        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
+        w = 3.0 * torch.rand(self.n_inpt, self.n_neurons)
         input_exc_conn = Connection(
             source=input_layer,
             target=exc_layer,
