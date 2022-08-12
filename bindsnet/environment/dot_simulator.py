@@ -436,9 +436,8 @@ class DotSimulator:
 
         # Write to file if requested.
         if self.write2F:
-            f = open(self.filename, "ab")
-            np.savetxt(f, temp, delimiter=",")
-            f.close()
+            with open(self.filename, "ab") as f:
+                np.savetxt(f, temp, delimiter=",")
 
         # Print as pandas dataframe if requested.
         if self.pandas:
