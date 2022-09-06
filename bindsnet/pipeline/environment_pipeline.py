@@ -177,7 +177,7 @@ class EnvironmentPipeline(BasePipeline):
                 else:
                     self.action = torch.randint(
                         low=0, high=self.env.action_space.n, size=(1,)
-                    )[0]
+                    )[0].item()
                     tqdm.write(f"too many times {self.last_action} ")
             else:
                 self.action = self.action_function(self, output=self.output)
