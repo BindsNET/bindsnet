@@ -161,9 +161,8 @@ def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
 
                 # Save rewards thus far to file
                 if rfname != "":
-                    f = open(rfname, "ab")
-                    np.savetxt(f, rewards, delimiter=",", fmt="%.6f")
-                    f.close()
+                    with open(rfname, "ab") as f:
+                        np.savetxt(f, rewards, delimiter=",", fmt="%.6f")
 
             spikes_ = {layer: spikes[layer].get("s").view(gran, -1) for layer in spikes}
             spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
@@ -181,12 +180,11 @@ def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
         print(f"Episode {ep} total reward:{total_reward}")
         # Save intcercepts thus far to file
         if pfname != "":
-            f = open(pfname, "a+")
-            if 0 < ep:
-                f.write("," + str(intercepts))
-            else:
-                f.write(str(intercepts))
-            f.close()
+            with open(pfname, "a+") as f:
+                if 0 < ep:
+                    f.write("," + str(intercepts))
+                else:
+                    f.write(str(intercepts))
 
         # Cycle output files every 10000 iterations
         if ep % fcycle == 0:
