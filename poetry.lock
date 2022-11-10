@@ -726,7 +726,7 @@ format-nongpl = ["fqdn", "idna", "isoduration", "jsonpointer (>1.13)", "rfc3339-
 
 [[package]]
 name = "jupyter-client"
-version = "7.4.4"
+version = "7.4.5"
 description = "Jupyter protocol implementation and client libraries"
 category = "dev"
 optional = false
