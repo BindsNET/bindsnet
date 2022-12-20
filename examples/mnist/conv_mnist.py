@@ -183,7 +183,7 @@ for epoch in range(n_epochs):
         label = batch["label"]
 
         # Run the network on the input.
-        network.run(inputs=inputs, time=time, input_time_dim=1)
+        network.run(inputs=inputs, time=time)
 
         # Optionally plot various simulation information.
         if plot and batch_size == 1:
