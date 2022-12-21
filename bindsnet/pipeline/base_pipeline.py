@@ -1,4 +1,4 @@
-import collections
+import collections.abc
 import time
 from typing import Any, Dict, Tuple
 
@@ -25,11 +25,11 @@ def recursive_to(item, device):
         return item.to(device)
     elif isinstance(item, (string_classes, int, float, bool)):
         return item
-    elif isinstance(item, collections.Mapping):
+    elif isinstance(item, collections.abc.Mapping):
         return {key: recursive_to(item[key], device) for key in item}
     elif isinstance(item, tuple) and hasattr(item, "_fields"):
         return type(item)(*(recursive_to(i, device) for i in item))
-    elif isinstance(item, collections.Sequence):
+    elif isinstance(item, collections.abc.Sequence):
         return [recursive_to(i, device) for i in item]
     else:
         raise NotImplementedError(f"Target type {type(item)} not supported.")
@@ -89,6 +89,7 @@ class BasePipeline:
 
         self.print_interval = kwargs.get("print_interval", None)
         self.test_interval = kwargs.get("test_interval", None)
+        self.plot_interval = kwargs.get("plot_interval", None)
         self.step_count = 0
         self.init_fn()
         self.clock = time.time()
@@ -133,7 +134,11 @@ class BasePipeline:
             )
             self.clock = time.time()
 
-        self.plots(batch, step_out)
+        if (
+            self.plot_interval is not None
+            and self.step_count % self.plot_interval == 0
+        ):
+            self.plots(batch, step_out)
 
         if self.save_interval is not None and self.step_count % self.save_interval == 0:
             self.network.save(self.save_dir)
