@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from gym import spaces
+from gymnasium import spaces
 
 # Mappings for changing direction if reflected.
 # Cannot cross a row boundary moving right or left.
