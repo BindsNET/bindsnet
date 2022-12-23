@@ -139,7 +139,7 @@ for (i, dataPoint) in pbar:
     pbar.set_description_str("Train progress: (%d / %d)" % (i, n_iters))
 
     # Run network on sample image
-    network.run(inputs={"I": datum}, time=time, input_time_dim=1)
+    network.run(inputs={"I": datum}, time=time)
     training_pairs.append([spikes["O"].get("s").sum(0), label])
 
     # Plot spiking activity using monitors
@@ -237,7 +237,7 @@ for (i, dataPoint) in pbar:
     label = dataPoint["label"]
     pbar.set_description_str("Testing progress: (%d / %d)" % (i, n_iters))
 
-    network.run(inputs={"I": datum}, time=time, input_time_dim=1)
+    network.run(inputs={"I": datum}, time=time)
     test_pairs.append([spikes["O"].get("s").sum(0), label])
 
     if plot:

@@ -281,7 +281,7 @@ for step, batch in enumerate(test_dataset):
         inputs = {k: v.cuda() for k, v in inputs.items()}
 
     # Run the network on the input.
-    network.run(inputs=inputs, time=time, input_time_dim=1)
+    network.run(inputs=inputs, time=time)
 
     # Add to spikes recording.
     spike_record[0] = spikes["Ae"].get("s").squeeze()

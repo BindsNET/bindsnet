@@ -114,7 +114,7 @@ for step, batch in enumerate(tqdm(train_dataloader)):
 
     # Run the network on the input.
     # Specify the location of the time dimension
-    network.run(inputs=inputs, time=time, input_time_dim=1)
+    network.run(inputs=inputs, time=time)
 
     network.reset_state_variables()  # Reset state variables.
 
