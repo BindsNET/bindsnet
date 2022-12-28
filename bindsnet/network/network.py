@@ -426,13 +426,13 @@ class Network(torch.nn.Module):
                 A_Plus = None
             
             for c in self.connections:
-                if A_Minus != None and c in A_Minus:
+                if A_Minus != None and ((isinstance(A_Minus, float)) or (c in A_Minus)):
                     if A_MD:
                         kwargs['a_minus'] = A_Minus[c]
                     else:
                         kwargs['a_minus'] = A_Minus                   
                 
-                if A_Plus != None and c in A_Plus:
+                if A_Plus != None and ((isinstance(A_Plus, float)) or (c in A_Plus)):
                     if A_PD:
                         kwargs['a_plus'] = A_Plus[c]
                     else:
