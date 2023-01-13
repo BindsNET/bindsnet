@@ -95,7 +95,7 @@ for layer in layers:
         network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
 # Load the Breakout environment.
-environment = GymEnvironment("BreakoutDeterministic-v4", render_mode='human')
+environment = GymEnvironment("BreakoutDeterministic-v4", render_mode="human")
 environment.reset()
 
 pipeline = EnvironmentPipeline(

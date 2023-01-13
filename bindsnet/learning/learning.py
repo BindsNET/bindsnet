@@ -1530,13 +1530,13 @@ class MSTDP(LearningRule):
         reward = kwargs["reward"]
         a_plus = kwargs.get("a_plus", 1.0)
         if isinstance(a_plus, dict):
-            for k,v in a_plus.items():
+            for k, v in a_plus.items():
                 a_plus[k] = torch.tensor(v, device=self.feature_value.device)
         else:
             a_plus = torch.tensor(a_plus, device=self.feature_value.device)
-        a_minus =kwargs.get("a_minus", -1.0)
+        a_minus = kwargs.get("a_minus", -1.0)
         if isinstance(a_minus, dict):
-            for k,v in a_minus.items():
+            for k, v in a_minus.items():
                 a_minus[k] = torch.tensor(v, device=self.feature_value.device)
         else:
             a_minus = torch.tensor(a_minus, device=self.feature_value.device)

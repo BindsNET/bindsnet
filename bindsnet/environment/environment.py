@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Tuple
 
-import gymnasium as gym 
+import gymnasium as gym
 import numpy as np
 import torch
 
@@ -59,7 +59,13 @@ class GymEnvironment(Environment):
     A wrapper around the OpenAI ``gym`` environments.
     """
 
-    def __init__(self, name: str, render_mode: str = 'rgb_array', encoder: Encoder = NullEncoder(), **kwargs) -> None:
+    def __init__(
+        self,
+        name: str,
+        render_mode: str = "rgb_array",
+        encoder: Encoder = NullEncoder(),
+        **kwargs,
+    ) -> None:
         # language=rst
         """
         Initializes the environment wrapper. This class makes the

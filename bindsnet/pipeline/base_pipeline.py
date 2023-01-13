@@ -134,10 +134,7 @@ class BasePipeline:
             )
             self.clock = time.time()
 
-        if (
-            self.plot_interval is not None
-            and self.step_count % self.plot_interval == 0
-        ):
+        if self.plot_interval is not None and self.step_count % self.plot_interval == 0:
             self.plots(batch, step_out)
 
         if self.save_interval is not None and self.step_count % self.save_interval == 0:
