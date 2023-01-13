@@ -186,7 +186,7 @@ for epoch in range(n_epochs):
         label = batch["label"]
 
         # Run the network on the input.
-        network.run(inputs=inputs, time=time, input_time_dim=1)
+        network.run(inputs=inputs, time=time)
 
 
 print("Progress: %d / %d (%.4f seconds)\n" % (n_epochs, n_epochs, t() - start))
