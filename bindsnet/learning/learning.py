@@ -1531,15 +1531,15 @@ class MSTDP(LearningRule):
         a_plus = kwargs.get("a_plus", 1.0)
         if isinstance(a_plus, dict):
             for k, v in a_plus.items():
-                a_plus[k] = torch.tensor(v, device=self.feature_value.device)
+                a_plus[k] = torch.tensor(v, device=self.connection.w.device)
         else:
-            a_plus = torch.tensor(a_plus, device=self.feature_value.device)
+            a_plus = torch.tensor(a_plus, device=self.connection.w.device)
         a_minus = kwargs.get("a_minus", -1.0)
         if isinstance(a_minus, dict):
             for k, v in a_minus.items():
-                a_minus[k] = torch.tensor(v, device=self.feature_value.device)
+                a_minus[k] = torch.tensor(v, device=self.connection.w.device)
         else:
-            a_minus = torch.tensor(a_minus, device=self.feature_value.device)
+            a_minus = torch.tensor(a_minus, device=self.connection.w.device)
 
         # Compute weight update based on the eligibility value of the past timestep.
         update = reward * self.eligibility
