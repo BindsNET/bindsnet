@@ -405,7 +405,39 @@ class Network(torch.nn.Module):
                         self.layers[l].s[:, unclamp[t]] = 0
 
             # Run synapse updates.
+            if "a_minus" in kwargs:
+                A_Minus = kwargs["a_minus"]
+                kwargs.pop("a_minus")
+                if isinstance(A_Minus, dict):
+                    A_MD = True
+                else:
+                    A_MD = False
+            else:
+                A_Minus = None
+
+            if "a_plus" in kwargs:
+                A_Plus = kwargs["a_plus"]
+                kwargs.pop("a_plus")
+                if isinstance(A_Plus, dict):
+                    A_PD = True
+                else:
+                    A_PD = False
+            else:
+                A_Plus = None
+
             for c in self.connections:
+                if A_Minus != None and ((isinstance(A_Minus, float)) or (c in A_Minus)):
+                    if A_MD:
+                        kwargs["a_minus"] = A_Minus[c]
+                    else:
+                        kwargs["a_minus"] = A_Minus
+
+                if A_Plus != None and ((isinstance(A_Plus, float)) or (c in A_Plus)):
+                    if A_PD:
+                        kwargs["a_plus"] = A_Plus[c]
+                    else:
+                        kwargs["a_plus"] = A_Plus
+
                 self.connections[c].update(
                     mask=masks.get(c, None), learning=self.learning, **kwargs
                 )

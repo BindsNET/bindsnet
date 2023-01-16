@@ -55,7 +55,7 @@ w = 0.01 * torch.rand(layers["X"].n, layers["E"].n)
 input_exc_conn = Connection(
     source=layers["X"],
     target=layers["E"],
-    w=0.01 * torch.rand(layers["X"].n, layers["E"].n),
+    w=0.1 * torch.rand(layers["X"].n, layers["E"].n),
     wmax=0.02,
     norm=0.01 * layers["X"].n,
 )
@@ -64,7 +64,7 @@ input_exc_conn = Connection(
 exc_readout_conn = Connection(
     source=layers["E"],
     target=layers["R"],
-    w=0.01 * torch.rand(layers["E"].n, layers["R"].n),
+    w=0.1 * torch.rand(layers["E"].n, layers["R"].n),
     update_rule=Hebbian,
     nu=[1e-2, 1e-2],
     norm=0.5 * layers["E"].n,
@@ -95,16 +95,16 @@ for layer in layers:
         network.add_monitor(voltages[layer], name="%s_voltages" % layer)
 
 # Load the Breakout environment.
-environment = GymEnvironment("BreakoutDeterministic-v4")
+environment = GymEnvironment("BreakoutDeterministic-v4", render_mode="human")
 environment.reset()
 
 pipeline = EnvironmentPipeline(
     network,
     environment,
     encoding=bernoulli,
-    time=1,
-    history=5,
-    delta=10,
+    history_length=1,
+    delta=1,
+    time=100,
     plot_interval=plot_interval,
     print_interval=print_interval,
     render_interval=render_interval,
@@ -119,6 +119,7 @@ lengths = []
 avg_lengths = []
 
 i = 0
+# pipeline.reset_state_variables()
 try:
     while i < n:
         result = pipeline.env_step()
