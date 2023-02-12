@@ -154,7 +154,7 @@ voltage_axes = None
 voltage_ims = None
 
 pbar = tqdm(total=n_train)
-for (i, datum) in enumerate(dataloader):
+for i, datum in enumerate(dataloader):
     if i > n_train:
         break
 
@@ -315,6 +315,5 @@ for step, batch in enumerate(test_dataset):
 
 print("\nAll activity accuracy: %.2f" % (accuracy["all"] / n_test))
 print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_test))
-
 
 print("Testing complete.\n")

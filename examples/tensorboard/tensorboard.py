@@ -92,7 +92,6 @@ conv_conn = Conv2dConnection(
     wmax=1.0,
 )
 
-
 network.add_layer(input_layer, name="X")
 network.add_layer(conv_layer, name="Y")
 network.add_connection(conv_conn, source="X", target="Y")

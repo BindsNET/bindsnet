@@ -1,7 +1,6 @@
 import torch
 from torch.nn.modules.utils import _pair
 
-
 from tqdm import tqdm
 import os
 from bindsnet.network.monitors import Monitor
@@ -9,7 +8,6 @@ import matplotlib.pyplot as plt
 import torch
 from torchvision import transforms
 from tqdm import tqdm
-
 
 from bindsnet.analysis.plotting import plot_local_connection_2d_weights
 
@@ -23,7 +21,6 @@ from bindsnet.network.network import Network
 from bindsnet.network.topology import Connection, LocalConnection2D
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.datasets import MNIST
-
 
 # Hyperparameters
 in_channels = 1

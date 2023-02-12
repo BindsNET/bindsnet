@@ -72,7 +72,6 @@ def run_pipeline(pipeline, episode_count):
 # enable MSTDP
 environment_pipeline.network.learning = True
 
-
 print("Training: ")
 run_pipeline(environment_pipeline, episode_count=100)
 

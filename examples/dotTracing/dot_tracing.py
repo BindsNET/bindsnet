@@ -100,7 +100,6 @@ def genFileName(ftype, suffix=""):
 
 
 def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
-
     steps = env.timesteps
     dt = net.dt
     spike_ims, spike_axes = None, None
@@ -127,7 +126,6 @@ def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
 
         # Run through episode.
         while not done:
-
             step += 1
             obs, reward, done, intercept = env.step(action)
             obs = torch.Tensor(obs).to(DEVICE)
@@ -192,7 +190,6 @@ def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
 
 
 def main():
-
     # Build network.
     network = Network(dt=dt)
 

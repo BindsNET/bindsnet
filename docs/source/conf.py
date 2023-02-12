@@ -22,7 +22,6 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
 
-
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -88,7 +87,6 @@ pygments_style = "sphinx"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
-
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -122,12 +120,10 @@ html_sidebars = {
     ]
 }
 
-
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = "bindsnetdoc"
-
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -159,13 +155,11 @@ latex_documents = [
     )
 ]
 
-
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [(master_doc, "bindsnet", "bindsnet Documentation", [author], 1)]
-
 
 # -- Options for Texinfo output -------------------------------------------
 
