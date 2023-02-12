@@ -263,7 +263,6 @@ def sample_exp_two_sides(lambda_):
 
 class BoundingBox:
     def __init__(self, x1, y1, x2, y2):
-
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
@@ -422,7 +421,6 @@ class BoundingBox:
             or ((new_center_x - new_width / 2) < 0)
             or ((new_center_x + new_width / 2) > image.shape[1])
         ) and (num_tries_x < kMaxNumTries):
-
             if shift_motion_model:
                 new_x_temp = center_x + width * sample_exp_two_sides(lambda_shift_frac)
             else:
@@ -446,7 +444,6 @@ class BoundingBox:
             or ((new_center_y - new_height / 2) < 0)
             or ((new_center_y + new_height / 2) > image.shape[0])
         ) and (num_tries_y < kMaxNumTries):
-
             if shift_motion_model:
                 new_y_temp = center_y + height * sample_exp_two_sides(lambda_shift_frac)
             else:

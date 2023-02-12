@@ -115,7 +115,6 @@ def data_based_normalization(
     prev_factor = 1
     for name, module in ann._modules.items():
         if isinstance(module, nn.Sequential):
-
             extractor2 = FeatureExtractor(module)
             all_activations2 = extractor2.forward(data)
             for name2, module in module.named_children():

@@ -127,7 +127,7 @@ dataloader = torch.utils.data.DataLoader(
 n_iters = examples
 training_pairs = []
 pbar = tqdm(enumerate(dataloader))
-for (i, dataPoint) in pbar:
+for i, dataPoint in pbar:
     if i > n_iters:
         break
 
@@ -144,7 +144,6 @@ for (i, dataPoint) in pbar:
 
     # Plot spiking activity using monitors
     if plot:
-
         inpt_axes, inpt_ims = plot_input(
             dataPoint["image"].view(28, 28),
             datum.view(int(time / dt), 784).sum(0).view(28, 28),
@@ -169,6 +168,7 @@ for (i, dataPoint) in pbar:
 
         plt.pause(1e-8)
     network.reset_state_variables()
+
 
 # Define logistic regression model using PyTorch.
 # These neurons will take the reservoirs output as its input, and be trained to classify the images.
@@ -202,7 +202,6 @@ for epoch, _ in pbar:
     #       s   -> Reservoir output spikes
     #       l   -> Image label
     for i, (s, l) in enumerate(training_pairs):
-
         # Reset gradients to 0
         optimizer.zero_grad()
 
@@ -229,7 +228,7 @@ for epoch, _ in pbar:
 n_iters = examples
 test_pairs = []
 pbar = tqdm(enumerate(dataloader))
-for (i, dataPoint) in pbar:
+for i, dataPoint in pbar:
     if i > n_iters:
         break
     datum = dataPoint["encoded_image"].view(int(time / dt), 1, 1, 28, 28).to(device)
