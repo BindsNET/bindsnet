@@ -135,7 +135,6 @@ network.add_monitor(voltage_monitor, name="output_voltage")
 if gpu:
     network.to("cuda")
 
-
 # Load MNIST data.
 train_dataset = MNIST(
     PoissonEncoder(time=time, dt=dt),

@@ -30,7 +30,6 @@ SVHN = create_torchvision_dataset_wrapper("SVHN")
 VOCDetection = create_torchvision_dataset_wrapper("VOCDetection")
 VOCSegmentation = create_torchvision_dataset_wrapper("VOCSegmentation")
 
-
 __all__ = [
     "torchvision_wrapper",
     "create_torchvision_dataset_wrapper",

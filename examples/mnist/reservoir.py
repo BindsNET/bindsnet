@@ -170,7 +170,6 @@ for (i, dataPoint) in pbar:
         plt.pause(1e-8)
     network.reset_state_variables()
 
-
 # Define logistic regression model using PyTorch.
 # These neurons will take the reservoirs output as its input, and be trained to classify the images.
 class NN(nn.Module):

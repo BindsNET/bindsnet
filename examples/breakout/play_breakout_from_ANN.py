@@ -37,7 +37,6 @@ locals().update(vars(parser.parse_args()))
 device = torch.device("cuda" if torch.cuda.is_available() and gpu else "cpu")
 torch.random.manual_seed(seed)
 
-
 # Build ANN
 class Net(nn.Module):
     def __init__(self):
