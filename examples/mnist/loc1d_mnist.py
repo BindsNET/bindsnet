@@ -3,7 +3,6 @@
 import torch
 from torch.nn.modules.utils import _pair
 
-
 from tqdm import tqdm
 import os
 from bindsnet.network.monitors import Monitor
@@ -11,7 +10,6 @@ from bindsnet.network.monitors import Monitor
 import torch
 from torchvision import transforms
 from tqdm import tqdm
-
 
 from time import time as t
 from torchvision import transforms
@@ -23,7 +21,6 @@ from bindsnet.network.network import Network
 from bindsnet.network.topology import Connection, LocalConnection1D
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.datasets import MNIST
-
 
 # Hyperparameters
 in_channels = 1

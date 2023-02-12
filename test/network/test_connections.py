@@ -94,7 +94,6 @@ class TestConnection:
         for w in weights:
             for wmin in wmins:
                 for wmax in wmaxes:
-
                     ### Conditional checks ###
                     # WeightDependentPostPre does not handle infinite ranges
                     if (

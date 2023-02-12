@@ -67,7 +67,6 @@ def plotRewards(rewData, fname):
 
 
 def plotPerformance(perfData, fname):
-
     # Set bins to a tenth of the episodes, rounded up.
     binIdx = np.array(range(len(perfData))) // 10
     bins = np.bincount(binIdx, perfData).astype("uint32")

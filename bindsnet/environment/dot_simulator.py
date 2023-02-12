@@ -89,7 +89,6 @@ class DotSimulator:
     """
 
     def __init__(self, t: int, **kwargs) -> None:
-
         self.timesteps = t  # total timesteps
         self.ts = 0  # initialize current timestep to 0
 

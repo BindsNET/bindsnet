@@ -4,7 +4,6 @@
 import torch
 from torch.nn.modules.utils import _triple
 
-
 from tqdm import tqdm
 import os
 from bindsnet.network.monitors import Monitor
@@ -12,7 +11,6 @@ from bindsnet.network.monitors import Monitor
 import torch
 from torchvision import transforms
 from tqdm import tqdm
-
 
 from time import time as t
 from torchvision import transforms
@@ -24,7 +22,6 @@ from bindsnet.network.network import Network
 from bindsnet.network.topology import Connection, LocalConnection3D
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.datasets import MNIST
-
 
 # Hyperparameters
 in_channels = 1
@@ -187,7 +184,6 @@ for epoch in range(n_epochs):
 
         # Run the network on the input.
         network.run(inputs=inputs, time=time)
-
 
 print("Progress: %d / %d (%.4f seconds)\n" % (n_epochs, n_epochs, t() - start))
 print("Training complete.\n")
