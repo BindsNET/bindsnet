@@ -10,7 +10,7 @@ Modifications exist to have [time, batch, n_0, ... n_k] instead of batch in dime
 import collections
 
 import torch
-from torch._six import string_classes
+# from torch._six import string_classes
 from torch.utils.data._utils import collate as pytorch_collate
 
 

@@ -3,8 +3,7 @@ import time
 from typing import Any, Dict, Tuple
 
 import torch
-from torch._six import string_classes
-
+# from torch._six import string_classes
 from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor
 
