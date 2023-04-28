@@ -3,7 +3,6 @@ import time
 from typing import Any, Dict, Tuple
 
 import torch
-# from torch._six import string_classes
 from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor
 
@@ -22,7 +21,7 @@ def recursive_to(item, device):
 
     if isinstance(item, torch.Tensor):
         return item.to(device)
-    elif isinstance(item, (string_classes, int, float, bool)):
+    elif isinstance(item, (int, float, bool)):
         return item
     elif isinstance(item, collections.abc.Mapping):
         return {key: recursive_to(item[key], device) for key in item}

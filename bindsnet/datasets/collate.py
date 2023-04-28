@@ -10,7 +10,6 @@ Modifications exist to have [time, batch, n_0, ... n_k] instead of batch in dime
 import collections
 
 import torch
-# from torch._six import string_classes
 from torch.utils.data._utils import collate as pytorch_collate
 
 
@@ -75,8 +74,6 @@ def time_aware_collate(batch):
         return torch.tensor(batch, dtype=torch.float64)
     elif isinstance(elem, int):
         return torch.tensor(batch)
-    elif isinstance(elem, string_classes):
-        return batch
     elif isinstance(elem, collections.Mapping):
         return {key: time_aware_collate([d[key] for d in batch]) for key in elem}
     elif isinstance(elem, tuple) and hasattr(elem, "_fields"):  # namedtuple
