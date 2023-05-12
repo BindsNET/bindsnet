@@ -140,7 +140,7 @@ for i, dataPoint in pbar:
 
     # Run network on sample image
     network.run(inputs={"I": datum}, time=time)
-    training_pairs.append([spikes["O"].get("s").sum(0), label])
+    training_pairs.append([spikes["O"].get("s"), label])
 
     # Plot spiking activity using monitors
     if plot:
@@ -187,7 +187,7 @@ class NN(nn.Module):
 
 
 # Create and train logistic regression model on reservoir outputs.
-model = NN(n_neurons, 10).to(device)
+model = NN(n_neurons * args.time, 10).to(device)
 criterion = torch.nn.MSELoss(reduction="sum")
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
 
