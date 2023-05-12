@@ -316,14 +316,14 @@ css = ["tinycss2 (>=1.1.0,<1.2)"]
 
 [[package]]
 name = "certifi"
-version = "2022.12.7"
+version = "2023.5.7"
 description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "certifi-2022.12.7-py3-none-any.whl", hash = "sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18"},
-    {file = "certifi-2022.12.7.tar.gz", hash = "sha256:35824b4c3a97115964b408844d64aa14db1cc518f6562e8d7261699d1350a9e3"},
+    {file = "certifi-2023.5.7-py3-none-any.whl", hash = "sha256:c6c2e98f5c7869efca1f8916fed228dd91539f9f1b444c314c06eef02980c716"},
+    {file = "certifi-2023.5.7.tar.gz", hash = "sha256:0f0d56dc5a6ad56fd4ba36484d6cc34451e1c6548c61daad8c320169f91eddc7"},
 ]
 
 [[package]]
@@ -804,14 +804,14 @@ files = [
 
 [[package]]
 name = "docutils"
-version = "0.19"
+version = "0.20"
 description = "Docutils -- Python Documentation Utilities"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "docutils-0.19-py3-none-any.whl", hash = "sha256:5e1de4d849fee02c63b040a4a3fd567f4ab104defd8a5511fbbc24a8a017efbc"},
-    {file = "docutils-0.19.tar.gz", hash = "sha256:33995a6753c30b7f577febfc2c50411fec6aac7f7ffeb7c4cfe5991072dcf9e6"},
+    {file = "docutils-0.20-py3-none-any.whl", hash = "sha256:a428f10de4de4774389734c986a01b4af2d802d26717108b0f1b9356862937c5"},
+    {file = "docutils-0.20.tar.gz", hash = "sha256:f75a5a52fbcacd81b47e42888ad2b380748aaccfb3f13af0fe69deb759f01eb6"},
 ]
 
 [[package]]
@@ -908,14 +908,14 @@ testing = ["covdefaults (>=2.3)", "coverage (>=7.2.3)", "diff-cover (>=7.5)", "p
 
 [[package]]
 name = "fonttools"
-version = "4.39.3"
+version = "4.39.4"
 description = "Tools to manipulate font files"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "fonttools-4.39.3-py3-none-any.whl", hash = "sha256:64c0c05c337f826183637570ac5ab49ee220eec66cf50248e8df527edfa95aeb"},
-    {file = "fonttools-4.39.3.zip", hash = "sha256:9234b9f57b74e31b192c3fc32ef1a40750a8fbc1cd9837a7b7bfc4ca4a5c51d7"},
+    {file = "fonttools-4.39.4-py3-none-any.whl", hash = "sha256:106caf6167c4597556b31a8d9175a3fdc0356fdcd70ab19973c3b0d4c893c461"},
+    {file = "fonttools-4.39.4.zip", hash = "sha256:dba8d7cdb8e2bac1b3da28c5ed5960de09e59a2fe7e63bb73f5a59e57b0430d2"},
 ]
 
 [package.extras]
@@ -1193,14 +1193,14 @@ files = [
 
 [[package]]
 name = "ipykernel"
-version = "6.22.0"
+version = "6.23.0"
 description = "IPython Kernel for Jupyter"
 category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "ipykernel-6.22.0-py3-none-any.whl", hash = "sha256:1ae6047c1277508933078163721bbb479c3e7292778a04b4bacf0874550977d6"},
-    {file = "ipykernel-6.22.0.tar.gz", hash = "sha256:302558b81f1bc22dc259fb2a0c5c7cf2f4c0bdb21b50484348f7bafe7fb71421"},
+    {file = "ipykernel-6.23.0-py3-none-any.whl", hash = "sha256:fc886f1dcdc0ec17f277e4d21fd071c857d381adcb04f3f3735d25325ca323c6"},
+    {file = "ipykernel-6.23.0.tar.gz", hash = "sha256:bd6f487d9e2744c84f6e667d46462d7647a4c862e70e08282f05a52b9d4b705f"},
 ]
 
 [package.dependencies]
@@ -1786,13 +1786,13 @@ test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
 
 [[package]]
 name = "lit"
-version = "16.0.2"
+version = "16.0.3"
 description = "A Software Testing Tool"
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "lit-16.0.2.tar.gz", hash = "sha256:d743ef55cb58764bba85768c502e2d68d87aeb4303d508a18abaa8a35077ab25"},
+    {file = "lit-16.0.3.tar.gz", hash = "sha256:25524fe51fa3261212cfd86a8891429ed0460e247384c5a2001612d08e362e00"},
 ]
 
 [[package]]
@@ -2036,14 +2036,14 @@ test = ["flaky", "ipykernel", "ipython", "ipywidgets", "nbconvert (>=7.0.0)", "p
 
 [[package]]
 name = "nbconvert"
-version = "7.3.1"
+version = "7.4.0"
 description = "Converting Jupyter Notebooks"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "nbconvert-7.3.1-py3-none-any.whl", hash = "sha256:d2e95904666f1ff77d36105b9de4e0801726f93b862d5b28f69e93d99ad3b19c"},
-    {file = "nbconvert-7.3.1.tar.gz", hash = "sha256:78685362b11d2e8058e70196fe83b09abed8df22d3e599cf271f4d39fdc48b9e"},
+    {file = "nbconvert-7.4.0-py3-none-any.whl", hash = "sha256:af5064a9db524f9f12f4e8be7f0799524bd5b14c1adea37e34e83c95127cc818"},
+    {file = "nbconvert-7.4.0.tar.gz", hash = "sha256:51b6c77b507b177b73f6729dba15676e42c4e92bcb00edc8cc982ee72e7d89d7"},
 ]
 
 [package.dependencies]
@@ -2128,14 +2128,14 @@ test = ["codecov (>=2.1)", "pytest (>=7.2)", "pytest-cov (>=4.0)"]
 
 [[package]]
 name = "nodeenv"
-version = "1.7.0"
+version = "1.8.0"
 description = "Node.js virtual environment builder"
 category = "dev"
 optional = false
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*"
 files = [
-    {file = "nodeenv-1.7.0-py2.py3-none-any.whl", hash = "sha256:27083a7b96a25f2f5e1d8cb4b6317ee8aeda3bdd121394e5ac54e498028a042e"},
-    {file = "nodeenv-1.7.0.tar.gz", hash = "sha256:e0e7f7dfb85fc5394c6fe1e8fa98131a2473e04311a45afb6508f7cf1836fa2b"},
+    {file = "nodeenv-1.8.0-py2.py3-none-any.whl", hash = "sha256:df865724bb3c3adc86b3876fa209771517b0cfe596beff01a92700e0e8be4cec"},
+    {file = "nodeenv-1.8.0.tar.gz", hash = "sha256:d51e0c37e64fbf47d017feac3145cdbb58836d7eee8c6f6d3b6880c5456227d2"},
 ]
 
 [package.dependencies]
@@ -2649,18 +2649,18 @@ files = [
 
 [[package]]
 name = "platformdirs"
-version = "3.5.0"
+version = "3.5.1"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "platformdirs-3.5.0-py3-none-any.whl", hash = "sha256:47692bc24c1958e8b0f13dd727307cff1db103fca36399f457da8e05f222fdc4"},
-    {file = "platformdirs-3.5.0.tar.gz", hash = "sha256:7954a68d0ba23558d753f73437c55f89027cf8f5108c19844d4b82e5af396335"},
+    {file = "platformdirs-3.5.1-py3-none-any.whl", hash = "sha256:e2378146f1964972c03c085bb5662ae80b2b8c06226c54b2ff4aa9483e8a13a5"},
+    {file = "platformdirs-3.5.1.tar.gz", hash = "sha256:412dae91f52a6f84830f39a8078cecd0e866cb72294a5c66808e74d5e88d251f"},
 ]
 
 [package.extras]
-docs = ["furo (>=2023.3.27)", "proselint (>=0.13)", "sphinx (>=6.1.3)", "sphinx-autodoc-typehints (>=1.23,!=1.23.4)"]
+docs = ["furo (>=2023.3.27)", "proselint (>=0.13)", "sphinx (>=6.2.1)", "sphinx-autodoc-typehints (>=1.23,!=1.23.4)"]
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.3.1)", "pytest-cov (>=4)", "pytest-mock (>=3.10)"]
 
 [[package]]
@@ -3695,14 +3695,14 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
 name = "sympy"
-version = "1.11.1"
+version = "1.12"
 description = "Computer algebra system (CAS) in Python"
 category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "sympy-1.11.1-py3-none-any.whl", hash = "sha256:938f984ee2b1e8eae8a07b884c8b7a1146010040fccddc6539c54f401c8f6fcf"},
-    {file = "sympy-1.11.1.tar.gz", hash = "sha256:e32380dce63cb7c0108ed525570092fd45168bdae2faa17e528221ef72e88658"},
+    {file = "sympy-1.12-py3-none-any.whl", hash = "sha256:c3588cd4295d0c0f603d0f2ae780587e64e2efeedb3521e46b9bb1d08d184fa5"},
+    {file = "sympy-1.12.tar.gz", hash = "sha256:ebf595c8dac3e0fdc4152c51878b498396ec7f30e7a914d6071e674d49420fb8"},
 ]
 
 [package.dependencies]
