@@ -842,3 +842,230 @@ def plot_voltages(
         plt.tight_layout()
 
     return ims, axes
+
+# I added this plot_traces which is completely based on voltage_plot, just changed the word voltage 
+def plot_traces(
+    traces: Dict[str, torch.Tensor],
+    ims: Optional[List[AxesImage]] = None,
+    axes: Optional[List[Axes]] = None,
+    time: Tuple[int, int] = None,
+    n_neurons: Optional[Dict[str, Tuple[int, int]]] = None,
+    cmap: Optional[str] = "jet",
+    plot_type: str = "color",
+    thresholds: Dict[str, torch.Tensor] = None,
+    figsize: Tuple[float, float] = (8.0, 4.5),
+) -> Tuple[List[AxesImage], List[Axes]]:
+    # language=rst
+    """
+    Plot traces for any group(s) of neurons.
+
+    :param traces: Contains trace data by neuron layers.
+    :param ims: Used for re-drawing the plots.
+    :param axes: Used for re-drawing the plots.
+    :param time: Plot traces of neurons in given time range. Default is entire
+        simulation time.
+    :param n_neurons: Plot traces of neurons in given range of neurons. Default is all
+        neurons.
+    :param cmap: Matplotlib colormap to use.
+    :param figsize: Horizontal, vertical figure size in inches.
+    :param plot_type: The way how to draw graph. 'color' for pcolormesh, 'line' for
+        curved lines.
+    :param thresholds: Thresholds of the neurons in each layer.
+    :return: ``ims, axes``: Used for re-drawing the plots.
+    """
+    n_subplots = len(traces.keys())
+
+    # for key in traces.keys():
+    #     traces[key] = traces[key].view(-1, traces[key].size(-1))
+    traces = {k: v.view(v.size(0), -1) for (k, v) in traces.items()}
+
+    if time is None:
+        for key in traces.keys():
+            time = (0, traces[key].size(0))
+            break
+
+    if n_neurons is None:
+        n_neurons = {}
+
+    for key, val in traces.items():
+        if key not in n_neurons.keys():
+            n_neurons[key] = (0, val.size(1))
+
+    if not ims:
+        fig, axes = plt.subplots(n_subplots, 1, figsize=figsize)
+        ims = []
+        if n_subplots == 1:  # Plotting only one image
+            for v in traces.items():
+                if plot_type == "line":
+                    ims.append(
+                        axes.plot(
+                            v[1]
+                            .detach()
+                            .clone()
+                            .cpu()
+                            .numpy()[
+                                time[0] : time[1],
+                                n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            ]
+                        )
+                    )
+
+                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
+                        []
+                    ):
+                        ims.append(
+                            axes.axhline(
+                                y=thresholds[v[0]].item(), c="r", linestyle="--"
+                            )
+                        )
+                else:
+                    ims.append(
+                        axes.pcolormesh(
+                            v[1]
+                            .cpu()
+                            .numpy()[
+                                time[0] : time[1],
+                                n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            ]
+                            .T,
+                            cmap=cmap,
+                        )
+                    )
+
+                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                plt.title("%s traces for neurons (%d - %d) from t = %d to %d " % args)
+                plt.xlabel("Time (ms)")
+
+                if plot_type == "line":
+                    plt.ylabel("trace")
+                else:
+                    plt.ylabel("Neuron index")
+
+                axes.set_aspect("auto")
+
+        else:  # Plot each layer at a time
+            for i, v in enumerate(traces.items()):
+                if plot_type == "line":
+                    ims.append(
+                        axes[i].plot(
+                            v[1]
+                            .cpu()
+                            .numpy()[
+                                time[0] : time[1],
+                                n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            ]
+                        )
+                    )
+                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
+                        []
+                    ):
+                        ims.append(
+                            axes[i].axhline(
+                                y=thresholds[v[0]].item(), c="r", linestyle="--"
+                            )
+                        )
+                else:
+                    ims.append(
+                        axes[i].matshow(
+                            v[1]
+                            .cpu()
+                            .numpy()[
+                                time[0] : time[1],
+                                n_neurons[v[0]][0] : n_neurons[v[0]][1],
+                            ]
+                            .T,
+                            cmap=cmap,
+                        )
+                    )
+                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                axes[i].set_title(
+                    "%s traces for neurons (%d - %d) from t = %d to %d " % args
+                )
+
+            for ax in axes:
+                ax.set_aspect("auto")
+
+        if plot_type == "color":
+            plt.setp(axes, xlabel="Simulation time", ylabel="Neuron index")
+        elif plot_type == "line":
+            plt.setp(axes, xlabel="Simulation time", ylabel="trace")
+
+        plt.tight_layout()
+
+    else:
+        # Plotting figure given
+        if n_subplots == 1:  # Plotting only one image
+            for v in traces.items():
+                axes.clear()
+                if plot_type == "line":
+                    axes.plot(
+                        v[1]
+                        .cpu()
+                        .numpy()[
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1]
+                        ]
+                    )
+                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
+                        []
+                    ):
+                        axes.axhline(y=thresholds[v[0]].item(), c="r", linestyle="--")
+                else:
+                    axes.matshow(
+                        v[1]
+                        .cpu()
+                        .numpy()[
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1]
+                        ]
+                        .T,
+                        cmap=cmap,
+                    )
+                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                axes.set_title(
+                    "%s traces for neurons (%d - %d) from t = %d to %d " % args
+                )
+                axes.set_aspect("auto")
+
+        else:
+            # Plot each layer at a time
+            for i, v in enumerate(traces.items()):
+                axes[i].clear()
+                if plot_type == "line":
+                    axes[i].plot(
+                        v[1]
+                        .cpu()
+                        .numpy()[
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1]
+                        ]
+                    )
+                    if thresholds is not None and thresholds[v[0]].size() == torch.Size(
+                        []
+                    ):
+                        axes[i].axhline(
+                            y=thresholds[v[0]].item(), c="r", linestyle="--"
+                        )
+                else:
+                    axes[i].matshow(
+                        v[1]
+                        .cpu()
+                        .numpy()[
+                            time[0] : time[1], n_neurons[v[0]][0] : n_neurons[v[0]][1]
+                        ]
+                        .T,
+                        cmap=cmap,
+                    )
+                args = (v[0], n_neurons[v[0]][0], n_neurons[v[0]][1], time[0], time[1])
+                axes[i].set_title(
+                    "%s traces for neurons (%d - %d) from t = %d to %d " % args
+                )
+
+            for ax in axes:
+                ax.set_aspect("auto")
+
+        if plot_type == "color":
+            plt.setp(axes, xlabel="Simulation time", ylabel="Neuron index")
+        elif plot_type == "line":
+            plt.setp(axes, xlabel="Simulation time", ylabel="trace")
+
+        plt.tight_layout()
+
+    return ims, axes
