@@ -43,7 +43,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=True)
+parser.set_defaults(plot=False, gpu=True)    # plot was True
 
 args = parser.parse_args()
 
@@ -80,7 +80,7 @@ print("Running on Device = ", device)
 
 # Determines number of workers to use
 if n_workers == -1:
-    n_workers = 0  # gpu * 4 * torch.cuda.device_count()
+    n_workers =  gpu * 4 * torch.cuda.device_count()  # it was 0
 
 if not train:
     update_interval = n_test
@@ -333,7 +333,7 @@ accuracy = {"all": 0, "proportion": 0}
 # Record spikes during the simulation.
 spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
 
-# Train the network.
+# Test the network.
 print("\nBegin testing\n")
 network.train(mode=False)
 start = t()
