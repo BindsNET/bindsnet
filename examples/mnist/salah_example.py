@@ -292,29 +292,32 @@ for epoch in range(n_epochs):
             spikes_ = {layer: spikes[layer].get("s") for layer in spikes}
             voltages = {"Ae": exc_voltages, "Ai": inh_voltages}
             traces = {"X": inp_traces, "Ae": exc_traces}   # added
-           # inpt_axes, inpt_ims = plot_input(
-           #     image, inpt, label=batch["label"], axes=inpt_axes, ims=inpt_ims
-           # )
-            #spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
+            inpt_axes, inpt_ims = plot_input(
+                image, inpt, label=batch["label"], axes=inpt_axes, ims=inpt_ims
+            )
+            spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
             weights_im = plot_weights(square_weights, im=weights_im)
-            #assigns_im = plot_assignments(square_assignments, im=assigns_im)
-            #perf_ax = plot_performance(accuracy, x_scale=update_interval, ax=perf_ax)
-            #voltage_ims, voltage_axes = plot_voltages(
-            #    voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line")
+            assigns_im = plot_assignments(square_assignments, im=assigns_im)
+            perf_ax = plot_performance(accuracy, x_scale=update_interval, ax=perf_ax)
+            voltage_ims, voltage_axes = plot_voltages(
+                voltages, ims=voltage_ims, axes=voltage_axes, plot_type="line")
 
             #added
-            #trace_ims, trace_axes = plot_traces( 
-            #    traces, n_neurons = {"X": (250, 280)}, ims=trace_ims, axes=trace_axes, plot_type="line")
+            trace_ims, trace_axes = plot_traces( 
+                traces, n_neurons = {"X": (250, 280)}, ims=trace_ims, axes=trace_axes, plot_type="line")
 
             plt.pause(1e-8)
 
         network.reset_state_variables()  # Reset state variables.
 
-network.save('./network.pt')   # added
+network.save('./net_27_5.pt')   # added
+assign_labels_fn = {"assignments": assignments, "proportions": proportions, "rates": rates}
+torch.save(assign_labels_fn, "./assign_labels.pt")
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")
 
+'''
 # Load MNIST data.
 test_dataset = MNIST(
     PoissonEncoder(time=time, dt=dt),
@@ -382,3 +385,4 @@ print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_tes
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Testing complete.\n")
+'''
