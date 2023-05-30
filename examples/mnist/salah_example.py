@@ -38,14 +38,15 @@ parser.add_argument("--time", type=int, default=250)
 parser.add_argument("--dt", type=int, default=1.0)
 parser.add_argument("--intensity", type=float, default=128)
 parser.add_argument("--progress_interval", type=int, default=10)
-parser.add_argument("--update_interval", type=int, default=250)
+parser.add_argument("--update_interval", type=int, default=250) 
 parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=False, gpu=True)    # plot was True
-
+parser.set_defaults(plot=False, gpu=True, train="True", n_train=20000, n_epochs=1)
 args = parser.parse_args()
+
+save_as = "exp_7"
 
 seed = args.seed
 n_neurons = args.n_neurons
@@ -81,9 +82,6 @@ print("Running on Device = ", device)
 # Determines number of workers to use
 if n_workers == -1:
     n_workers =  gpu * 4 * torch.cuda.device_count()  # it was 0
-
-if not train:
-    update_interval = n_test
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
@@ -197,8 +195,7 @@ for epoch in range(n_epochs):
 
     # Create a dataloader to iterate and batch data
     dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=1, shuffle=True, num_workers=n_workers, pin_memory=gpu
-    )
+        train_dataset, batch_size=1, shuffle=True, num_workers=n_workers, pin_memory=gpu)
 
     for step, batch in enumerate(tqdm(dataloader)):
         if step > n_train:
@@ -207,7 +204,7 @@ for epoch in range(n_epochs):
         inputs = {"X": batch["encoded_image"].view(int(time / dt), 1, 1, 28, 28)}
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
-
+        
         if step % update_interval == 0 and step > 0:
             # Convert the array of labels into a tensor
             label_tensor = torch.tensor(labels, device=device)
@@ -310,79 +307,11 @@ for epoch in range(n_epochs):
 
         network.reset_state_variables()  # Reset state variables.
 
-network.save('./net_27_5.pt')   # added
-assign_labels_fn = {"assignments": assignments, "proportions": proportions, "rates": rates}
-torch.save(assign_labels_fn, "./assign_labels.pt")
+train_time = t()-start
+network.save(f"./net_{save_as}.pt")   # added
+train_details = {"assignments": assignments, "proportions": proportions, "rates": rates,"train_accur":accuracy, "train_time": train_time}
+torch.save(train_details, f"./details_{save_as}.pt")
 
-print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
+print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, train_time))
 print("Training complete.\n")
 
-'''
-# Load MNIST data.
-test_dataset = MNIST(
-    PoissonEncoder(time=time, dt=dt),
-    None,
-    root=os.path.join("..", "..", "data", "MNIST"),
-    download=True,
-    train=False,
-    transform=transforms.Compose(
-        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
-    ),
-)
-
-# Sequence of accuracy estimates.
-accuracy = {"all": 0, "proportion": 0}
-
-# Record spikes during the simulation.
-spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
-
-# Test the network.
-print("\nBegin testing\n")
-network.train(mode=False)
-start = t()
-
-pbar = tqdm(total=n_test)
-for step, batch in enumerate(test_dataset):
-    if step >= n_test:
-        break
-    # Get next input sample.
-    inputs = {"X": batch["encoded_image"].view(int(time / dt), 1, 1, 28, 28)}
-    if gpu:
-        inputs = {k: v.cuda() for k, v in inputs.items()}
-
-    # Run the network on the input.
-    network.run(inputs=inputs, time=time)
-
-    # Add to spikes recording.
-    spike_record[0] = spikes["Ae"].get("s").squeeze()
-
-    # Convert the array of labels into a tensor
-    label_tensor = torch.tensor(batch["label"], device=device)
-
-    # Get network predictions.
-    all_activity_pred = all_activity(
-        spikes=spike_record, assignments=assignments, n_labels=n_classes
-    )
-    proportion_pred = proportion_weighting(
-        spikes=spike_record,
-        assignments=assignments,
-        proportions=proportions,
-        n_labels=n_classes,
-    )
-
-    # Compute network accuracy according to available classification strategies.
-    accuracy["all"] += float(torch.sum(label_tensor.long() == all_activity_pred).item())
-    accuracy["proportion"] += float(
-        torch.sum(label_tensor.long() == proportion_pred).item()
-    )
-
-    network.reset_state_variables()  # Reset state variables.
-    pbar.set_description_str("Test progress: ")
-    pbar.update()
-
-print("\nAll activity accuracy: %.2f" % (accuracy["all"] / n_test))
-print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_test))
-
-print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
-print("Testing complete.\n")
-'''

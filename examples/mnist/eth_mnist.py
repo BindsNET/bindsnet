@@ -296,7 +296,7 @@ accuracy = {"all": 0, "proportion": 0}
 # Record spikes during the simulation.
 spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
 
-# Train the network.
+# Testing the network.
 print("\nBegin testing\n")
 network.train(mode=False)
 start = t()
