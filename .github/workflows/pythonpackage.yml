@@ -19,7 +19,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Poetry
       env:
-        POETRY_VERSION: 1.4.2
+        POETRY_VERSION: 1.5.1
       run: |
         curl -sSL https://install.python-poetry.org | python - &&\
             poetry config virtualenvs.create false

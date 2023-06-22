@@ -10,7 +10,7 @@ documentation = "https://bindsnet-docs.readthedocs.io/"
 keywords = ["spiking", "neural", "networks", "pytorch"]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.8.1,<3.11"
 numpy = "^1.24.3"
 scipy = "^1.10.1"
 Cython = "^0.29.33"
@@ -51,7 +51,7 @@ line_length = 88
 src_paths = ["bindsnet", "test"]
 
 [tool.black]
-target-version = ['py38']
+target-version = ['py39']
 include = '\.pyi?$'
 exclude = '''
 /(
