@@ -21,7 +21,7 @@ jobs:
       env:
         POETRY_VERSION: 1.5.1
       run: |
-        curl -sSL https://install.python-poetry.org | python - &&\
+        curl -sSL https://install.python-poetry.org | python - -y &&\
             poetry config virtualenvs.create false
     - name: Install dependencies
       run: |
