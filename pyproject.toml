@@ -51,7 +51,7 @@ line_length = 88
 src_paths = ["bindsnet", "test"]
 
 [tool.black]
-target-version = ['py39']
+target-version = ['py38']
 include = '\.pyi?$'
 exclude = '''
 /(
