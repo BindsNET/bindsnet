@@ -728,13 +728,13 @@ files = [
 
 [[package]]
 name = "docutils"
-version = "0.20.1"
+version = "0.18.1"
 description = "Docutils -- Python Documentation Utilities"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 files = [
-    {file = "docutils-0.20.1-py3-none-any.whl", hash = "sha256:96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6"},
-    {file = "docutils-0.20.1.tar.gz", hash = "sha256:f08a4e276c3a1583a86dce3e34aba3fe04d02bba2dd51ed16106244e8a923e3b"},
+    {file = "docutils-0.18.1-py2.py3-none-any.whl", hash = "sha256:23010f129180089fbcd3bc08cfefccb3b890b0050e1ca00c867036e9d161b98c"},
+    {file = "docutils-0.18.1.tar.gz", hash = "sha256:679987caf361a7539d76e584cbeddc311e3aee937877c87346f31debc63e9d06"},
 ]
 
 [[package]]
@@ -1001,40 +1001,42 @@ files = [
 
 [[package]]
 name = "imagecodecs"
-version = "2021.11.20"
+version = "2023.3.16"
 description = "Image transformation, compression, and decompression codecs"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "imagecodecs-2021.11.20-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:69c154ca16b92d5db99093648d6a4be83616a475a10ceb5ba465b72fb9b17aae"},
-    {file = "imagecodecs-2021.11.20-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d18a6a92eadbe195dced25a9736e7897dd958929c167634dd62a64994be4f158"},
-    {file = "imagecodecs-2021.11.20-cp310-cp310-win32.whl", hash = "sha256:079fe05120a8d2209595c405369f712904b3885fd03c882905204b008424fd9f"},
-    {file = "imagecodecs-2021.11.20-cp310-cp310-win_amd64.whl", hash = "sha256:d7b224a65c7cff7bed2b080630594ce19785579af11cd817fbe23cbb931d3e7c"},
-    {file = "imagecodecs-2021.11.20-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:740131d71b4b9dfc9190768870d9cea31091ca196034811b7f871decffb745aa"},
-    {file = "imagecodecs-2021.11.20-cp37-cp37m-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:b9b00fa5f834627a1d15bb48be86fe0925f35b0a6863c5af6347a1af0c9c0596"},
-    {file = "imagecodecs-2021.11.20-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:044a498ae8b854d59090c4dbd7ff2dbf8c1fbda16d504861a0eddc33b2d58a4a"},
-    {file = "imagecodecs-2021.11.20-cp37-cp37m-win32.whl", hash = "sha256:97802935e93e0d57cb404cb0371fcff31467ab31dc2ae165d50c584c17c87cb0"},
-    {file = "imagecodecs-2021.11.20-cp37-cp37m-win_amd64.whl", hash = "sha256:fe0405eb85e3f9c6ec6f18ebd12a0e151c6bb687dd1dbfbd3b64fc09750cbcee"},
-    {file = "imagecodecs-2021.11.20-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:7fcdb139fdec2941c536680adc9a923f635da7bd2c026bc0fef5627dcda6bcf9"},
-    {file = "imagecodecs-2021.11.20-cp38-cp38-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:115d28d3827513333af6edb7eb0e5c51f9f18296572ba05aa23ad99cfbea9e9e"},
-    {file = "imagecodecs-2021.11.20-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b5bc913197cd587303b178cdd95477bf5f12d68526f94d4a83f5140a6efd86a0"},
-    {file = "imagecodecs-2021.11.20-cp38-cp38-win32.whl", hash = "sha256:b80630f5c8d5131b1e5399816e8f93990e6e165fc332f0bf294a9c22650bdc5c"},
-    {file = "imagecodecs-2021.11.20-cp38-cp38-win_amd64.whl", hash = "sha256:ed5d68e08b013046d10319d80699f95a4f5933d15a6d09e0fab01428aaeadc58"},
-    {file = "imagecodecs-2021.11.20-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:3e305f655bb887b2739d4a36a19741da565bd2f539f3d13c1e7b3e65ecfc2e7a"},
-    {file = "imagecodecs-2021.11.20-cp39-cp39-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:14efa2310a1257c902a0b860b66369c569b36a6296d215b02e303c9df4ae74bc"},
-    {file = "imagecodecs-2021.11.20-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4d020a02db7c419e41fd1eb8b7ee1e9622e384a21c72476936348fae4d4fadc8"},
-    {file = "imagecodecs-2021.11.20-cp39-cp39-win32.whl", hash = "sha256:8993b7134f9fa5f63343cabaea20a5273a09359646693929ac8382c071d31a54"},
-    {file = "imagecodecs-2021.11.20-cp39-cp39-win_amd64.whl", hash = "sha256:539bf438d5b5e6f2d68829057304be729948b8e154e2d1e0195bb58bc361ed52"},
-    {file = "imagecodecs-2021.11.20-pp37-pypy37_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8df54fb17925cb22eed608ece6f5121db6025f4527ea899dc58417f30ffc13a1"},
-    {file = "imagecodecs-2021.11.20-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:1e9c0e5d52c122e3ca7ee745fa1cae600469704d72134983a10adc818e03c543"},
-    {file = "imagecodecs-2021.11.20.tar.gz", hash = "sha256:04b378ddaafa3178d079b1a84f3d8fdce0980f85a17b89cb6c68bf3de687293c"},
+    {file = "imagecodecs-2023.3.16-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:0c0b67874d766baebb5da9b5f0a33ac5d8dacfbf05f976727b046f48edd943cb"},
+    {file = "imagecodecs-2023.3.16-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:bc99d390650234a6f74d4b90c32de01ca4e582d6d3b9c8e33986c7780264f08a"},
+    {file = "imagecodecs-2023.3.16-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dc874c3975f17fc6150b5609e877fa13cb7d90ce70e5d04faab765368164888e"},
+    {file = "imagecodecs-2023.3.16-cp310-cp310-win32.whl", hash = "sha256:ede44d9645f38d6bdef8a46b0dcbd7307655e994dcba4213f2ec60366cc06270"},
+    {file = "imagecodecs-2023.3.16-cp310-cp310-win_amd64.whl", hash = "sha256:623d294a3f053aa009bcdf1eb1e08db1fbc28e265b7039f730ab2de3419cb690"},
+    {file = "imagecodecs-2023.3.16-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:cf40e814d256efec9472536e89529b56cd21137ff8932c74196d4be2ac6c4616"},
+    {file = "imagecodecs-2023.3.16-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:380a5a2e6ea400aee2d26e4683ba5d440aa359dd0262f0f97f7c7b101f218c59"},
+    {file = "imagecodecs-2023.3.16-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:82f21a16f240e4ede51fab967c9cecd262b368e756663f897de3603e3ccc043b"},
+    {file = "imagecodecs-2023.3.16-cp311-cp311-win32.whl", hash = "sha256:a2ddddfab0d144f03285c15015617b65c3d21cde90e75e8af724e191243c16d3"},
+    {file = "imagecodecs-2023.3.16-cp311-cp311-win_amd64.whl", hash = "sha256:229e6f6fffcb7f5394f208f6d04af999748cdea65481f368ec6b4166ad93e1bf"},
+    {file = "imagecodecs-2023.3.16-cp311-cp311-win_arm64.whl", hash = "sha256:7af50a9c873b0791b00184a5f29bc18341a3d0b39d39594da5973c9fff18294e"},
+    {file = "imagecodecs-2023.3.16-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:c17d9c6164f42e6f04d0f50f8e996d32986006d9a103dc5e3d55800e6bd832f7"},
+    {file = "imagecodecs-2023.3.16-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0e8b6d6649f18a83991e45847a1491d81042c132a896a826a8be171b7fa96886"},
+    {file = "imagecodecs-2023.3.16-cp38-cp38-win32.whl", hash = "sha256:563d84977fd689d96b1121f098cdbdf92bdd45cd01caa3a841a251131aff1e49"},
+    {file = "imagecodecs-2023.3.16-cp38-cp38-win_amd64.whl", hash = "sha256:f04fac421b3cdc37c6e8fa7a109b34e82988e5532874b7558002e6b0f1677ac0"},
+    {file = "imagecodecs-2023.3.16-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:f20d6a04f039262df6f309be631ddba473bc950942ca5166077d39082a9ad1f6"},
+    {file = "imagecodecs-2023.3.16-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:a97dca69c2113a65acbe034487ddf7cae54804a56b0707d61beddeca8cd62bd0"},
+    {file = "imagecodecs-2023.3.16-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c5687a264fb66929a406512d384a1b082fa2256f556860ddbfb13b0ac268c942"},
+    {file = "imagecodecs-2023.3.16-cp39-cp39-win32.whl", hash = "sha256:50540c3ac53e8091ee38f1d5ca9f831b43d4eaa4844af40a7efdf660e031b041"},
+    {file = "imagecodecs-2023.3.16-cp39-cp39-win_amd64.whl", hash = "sha256:1f89030182d3028975b651686bc67bb37a3105ceeb2d031cb9e24ec2df40e13e"},
+    {file = "imagecodecs-2023.3.16-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ae167ff5f89fb5e2edaddb5f939557320ff4f8e5121d6c98452134957b71b44f"},
+    {file = "imagecodecs-2023.3.16-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:052a39f8159afd2ed7b632bd5e3a203ccb5c29e5b388d697c7cae7985c768672"},
+    {file = "imagecodecs-2023.3.16-pp39-pypy39_pp73-win_amd64.whl", hash = "sha256:d390f2400103178329b27a88990bf390e0e6a371904dd87d15b86a50d8a39ece"},
+    {file = "imagecodecs-2023.3.16.tar.gz", hash = "sha256:e39c2a63f7f5b9bee0ba4961db8c1e7f2518ce07d2fd10a56624d17f1407efc1"},
 ]
 
 [package.dependencies]
-numpy = ">=1.16.5"
+numpy = "*"
 
 [package.extras]
-all = ["matplotlib (>=3.2)", "numcodecs", "tifffile (>=2021.1.11)"]
+all = ["matplotlib", "numcodecs", "tifffile"]
 
 [[package]]
 name = "imageio"
@@ -3176,55 +3178,57 @@ files = [
 
 [[package]]
 name = "sphinx"
-version = "3.4.3"
+version = "6.2.1"
 description = "Python documentation generator"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.8"
 files = [
-    {file = "Sphinx-3.4.3-py3-none-any.whl", hash = "sha256:c314c857e7cd47c856d2c5adff514ac2e6495f8b8e0f886a8a37e9305dfea0d8"},
-    {file = "Sphinx-3.4.3.tar.gz", hash = "sha256:41cad293f954f7d37f803d97eb184158cfd90f51195131e94875bc07cd08b93c"},
+    {file = "Sphinx-6.2.1.tar.gz", hash = "sha256:6d56a34697bb749ffa0152feafc4b19836c755d90a7c59b72bc7dfd371b9cc6b"},
+    {file = "sphinx-6.2.1-py3-none-any.whl", hash = "sha256:97787ff1fa3256a3eef9eda523a63dbf299f7b47e053cfcf684a1c2a8380c912"},
 ]
 
 [package.dependencies]
 alabaster = ">=0.7,<0.8"
-babel = ">=1.3"
-colorama = {version = ">=0.3.5", markers = "sys_platform == \"win32\""}
-docutils = ">=0.12"
-imagesize = "*"
-Jinja2 = ">=2.3"
-packaging = "*"
-Pygments = ">=2.0"
-requests = ">=2.5.0"
-setuptools = "*"
-snowballstemmer = ">=1.1"
+babel = ">=2.9"
+colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
+docutils = ">=0.18.1,<0.20"
+imagesize = ">=1.3"
+importlib-metadata = {version = ">=4.8", markers = "python_version < \"3.10\""}
+Jinja2 = ">=3.0"
+packaging = ">=21.0"
+Pygments = ">=2.13"
+requests = ">=2.25.0"
+snowballstemmer = ">=2.0"
 sphinxcontrib-applehelp = "*"
 sphinxcontrib-devhelp = "*"
-sphinxcontrib-htmlhelp = "*"
+sphinxcontrib-htmlhelp = ">=2.0.0"
 sphinxcontrib-jsmath = "*"
 sphinxcontrib-qthelp = "*"
-sphinxcontrib-serializinghtml = "*"
+sphinxcontrib-serializinghtml = ">=1.1.5"
 
 [package.extras]
 docs = ["sphinxcontrib-websupport"]
-lint = ["docutils-stubs", "flake8 (>=3.5.0)", "isort", "mypy (>=0.790)"]
-test = ["cython", "html5lib", "pytest", "pytest-cov", "typed-ast"]
+lint = ["docutils-stubs", "flake8 (>=3.5.0)", "flake8-simplify", "isort", "mypy (>=0.990)", "ruff", "sphinx-lint", "types-requests"]
+test = ["cython", "filelock", "html5lib", "pytest (>=4.6)"]
 
 [[package]]
 name = "sphinx-rtd-theme"
-version = "0.5.1"
+version = "1.2.2"
 description = "Read the Docs theme for Sphinx"
 optional = false
-python-versions = "*"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
 files = [
-    {file = "sphinx_rtd_theme-0.5.1-py2.py3-none-any.whl", hash = "sha256:fa6bebd5ab9a73da8e102509a86f3fcc36dec04a0b52ea80e5a033b2aba00113"},
-    {file = "sphinx_rtd_theme-0.5.1.tar.gz", hash = "sha256:eda689eda0c7301a80cf122dad28b1861e5605cbf455558f3775e1e8200e83a5"},
+    {file = "sphinx_rtd_theme-1.2.2-py2.py3-none-any.whl", hash = "sha256:6a7e7d8af34eb8fc57d52a09c6b6b9c46ff44aea5951bc831eeb9245378f3689"},
+    {file = "sphinx_rtd_theme-1.2.2.tar.gz", hash = "sha256:01c5c5a72e2d025bd23d1f06c59a4831b06e6ce6c01fdd5ebfe9986c0a880fc7"},
 ]
 
 [package.dependencies]
-sphinx = "*"
+docutils = "<0.19"
+sphinx = ">=1.6,<7"
+sphinxcontrib-jquery = ">=4,<5"
 
 [package.extras]
-dev = ["bump2version", "sphinxcontrib-httpdomain", "transifex-client"]
+dev = ["bump2version", "sphinxcontrib-httpdomain", "transifex-client", "wheel"]
 
 [[package]]
 name = "sphinxcontrib-applehelp"
@@ -3270,6 +3274,20 @@ files = [
 [package.extras]
 lint = ["docutils-stubs", "flake8", "mypy"]
 test = ["html5lib", "pytest"]
+
+[[package]]
+name = "sphinxcontrib-jquery"
+version = "4.1"
+description = "Extension to include jQuery on newer Sphinx releases"
+optional = false
+python-versions = ">=2.7"
+files = [
+    {file = "sphinxcontrib-jquery-4.1.tar.gz", hash = "sha256:1620739f04e36a2c779f1a131a2dfd49b2fd07351bf1968ced074365933abc7a"},
+    {file = "sphinxcontrib_jquery-4.1-py2.py3-none-any.whl", hash = "sha256:f936030d7d0147dd026a4f2b5a57343d233f1fc7b363f68b3d4f1cb0993878ae"},
+]
+
+[package.dependencies]
+Sphinx = ">=1.8"
 
 [[package]]
 name = "sphinxcontrib-jsmath"
@@ -3889,4 +3907,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<3.11"
-content-hash = "70c860119528082d0573254dee4e3e521467d9108bceb0aefdc7b3a271039b8a"
+content-hash = "9a85ea23db6df6826e3c89cc07fbb98eed3a66756d3bf1f42ea3d64b49340687"
