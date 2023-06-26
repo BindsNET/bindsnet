@@ -15,16 +15,11 @@ numpy = "^1.24.3"
 scipy = "^1.10.1"
 Cython = "^0.29.33"
 torch = [
-    {url = "https://download.pytorch.org/whl/cu118/torch-2.0.1%2Bcu118-cp38-cp38-linux_x86_64.whl", platform = "linux", python = ">=3.8 <3.9"},
-    {url = "https://download.pytorch.org/whl/cu118/torch-2.0.1%2Bcu118-cp39-cp39-linux_x86_64.whl", platform = "linux", python = ">=3.9 <3.10"},
-    {url = "https://download.pytorch.org/whl/cu118/torch-2.0.1%2Bcu118-cp310-cp310-linux_x86_64.whl", platform = "linux", python = ">=3.10 <3.11"},
-    {url = "https://download.pytorch.org/whl/cu118/torch-2.0.1%2Bcu118-cp38-cp38-win_amd64.whl", platform = "win_amd64", python = ">=3.8 <3.9"},
-    {url = "https://download.pytorch.org/whl/cu118/torch-2.0.1%2Bcu118-cp39-cp39-win_amd64.whl", platform = "win_amd64", python = ">=3.9 <3.10"},
-    {url = "https://download.pytorch.org/whl/cu118/torch-2.0.1%2Bcu118-cp310-cp310-win_amd64.whl", platform = "win_amd64", python = ">=3.10 <3.11"},
-    {url = "https://download.pytorch.org/whl/cpu/torch-2.0.1-cp38-none-macosx_11_0_arm64.whl", platform = "darwin", python = ">=3.8 <3.9"},
-    {url = "https://download.pytorch.org/whl/cpu/torch-2.0.1-cp39-none-macosx_11_0_arm64.whl", platform = "darwin", python = ">=3.9 <3.10"},
-    {url = "https://download.pytorch.org/whl/cpu/torch-2.0.1-cp310-none-macosx_11_0_arm64.whl", platform = "darwin", python = ">=3.10 <3.11"},
-]
+     {version = "^2.0.1", platform = "darwin"},
+     {version = "^2.0.1", platform = "linux", source = "torch"},
+     {version = "^2.0.1", platform = "win32", source = "torch"},
+     {version = "^2.0.1", platform = "win_amd64", source = "torch"},
+ ]
 torchvision = "0.15.2"
 torchaudio = "2.0.2"
 tensorboardX = "2.6.1"
@@ -37,6 +32,11 @@ scikit-learn = "^1.2.2"
 opencv-python = "^4.7.0.72"
 pandas = "^2.0.2"
 foolbox = "^3.3.3"
+
+[[tool.poetry.source]]
+ name = "torch"
+ url = "https://download.pytorch.org/whl/cpu"
+ priority = "explicit"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.2"
