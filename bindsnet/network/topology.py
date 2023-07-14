@@ -776,10 +776,10 @@ class MaxPool1dConnection(AbstractConnection):
         self.register_buffer("firing_rates", torch.zeros(source.s.shape))
 
         from ..learning import NoOp
+
         # Initialize learning rule
         if self.update_rule is not None and (self.update_rule == NoOp):
             self.update_rule = self.update_rule()
-
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
