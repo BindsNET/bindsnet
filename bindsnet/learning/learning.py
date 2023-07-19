@@ -391,12 +391,18 @@ class PostPre(LearningRule):
         class.
         """
         batch_size = self.source.batch_size
-
+        print('connection update:')
         # Pre-synaptic update.
         if self.nu[0].any():
             source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
             target_x = self.target.x.view(batch_size, -1).unsqueeze(1) * self.nu[0]
             self.connection.w -= self.reduction(torch.bmm(source_s, target_x), dim=0)
+            print("update to pre")
+            print(f'source_s: {source_s} \n')
+            print(f'source_s.size : {source_s.size()} \n')
+            print(f'target_x: {target_x} \n')
+            print(f'target_x.size: {target_x.size()} \n')
+            print(f'connection_w: {self.connection.w.size()}')
             del source_s, target_x
 
         # Post-synaptic update.
@@ -406,6 +412,12 @@ class PostPre(LearningRule):
             )
             source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
             self.connection.w += self.reduction(torch.bmm(source_x, target_s), dim=0)
+            print("update to post")
+            print(f'source_x: {source_x} \n')
+            print(f'source_x.size : {source_x.size()} \n')
+            print(f'target_s: {target_s} \n')
+            print(f'target_s.size: {target_s.size()} \n')
+            print(f'connection_w: {self.connection.w.size()}')
             del source_x, target_s
 
         super().update()
