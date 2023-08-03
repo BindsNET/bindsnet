@@ -467,7 +467,7 @@ def plot_local_connection_2d_weights(
         ax.set_yticks(())
         ax.set_aspect("auto")
         if title != None:
-                ax.set_title(title + " Weights")
+            ax.set_title(title + " Weights")
 
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
