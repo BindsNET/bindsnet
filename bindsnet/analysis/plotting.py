@@ -44,8 +44,8 @@ def plot_input(
     if axes is None:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
         ims = (
-            axes[0].imshow(local_image, cmap="binary", aspect="auto", aspect="auto"),
-            axes[1].imshow(local_inpy, cmap="binary", aspect="auto", aspect="auto"),
+            axes[0].imshow(local_image, cmap="binary", aspect="auto"),
+            axes[1].imshow(local_inpy, cmap="binary", aspect="auto"),
         )
 
         if label is None:
