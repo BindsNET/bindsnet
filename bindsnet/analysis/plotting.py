@@ -238,7 +238,9 @@ def plot_weights(
         if not im:
             fig, ax = plt.subplots(figsize=figsize)
 
-            im = ax.imshow(local_weights, cmap=cmap, vmin=wmin, vmax=wmax, aspect="auto")
+            im = ax.imshow(
+                local_weights, cmap=cmap, vmin=wmin, vmax=wmax, aspect="auto"
+            )
             div = make_axes_locatable(ax)
             cax = div.append_axes("right", size="5%", pad=0.05)
 
@@ -444,7 +446,9 @@ def plot_local_connection_2d_weights(
     if im == None:
         fig, ax = plt.subplots(figsize=figsize)
 
-        im = ax.imshow(reshaped.cpu(), cmap=cmap, vmin=lc.wmin, vmax=lc.wmax, aspect="auto")
+        im = ax.imshow(
+            reshaped.cpu(), cmap=cmap, vmin=lc.wmin, vmax=lc.wmax, aspect="auto"
+        )
         div = make_axes_locatable(ax)
         cax = div.append_axes("right", size="5%", pad=0.05)
 
