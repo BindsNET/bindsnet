@@ -63,7 +63,7 @@ class AbstractConnection(ABC, Module):
 
         from ..learning import NoOp
 
-        self.update_rule = kwargs.get("update_rule", NoOp)
+        self.update_rule = kwargs.get("update_rule", None)
 
         # Float32 necessary for comparisons with +/-inf
         self.wmin = Parameter(
@@ -774,6 +774,12 @@ class MaxPool1dConnection(AbstractConnection):
         self.dilation = dilation
 
         self.register_buffer("firing_rates", torch.zeros(source.s.shape))
+
+        from ..learning import NoOp
+
+        # Initialize learning rule
+        if self.update_rule is not None and (self.update_rule == NoOp):
+            self.update_rule = self.update_rule()
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst

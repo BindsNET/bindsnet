@@ -186,6 +186,7 @@ def plot_weights(
     figsize: Tuple[int, int] = (5, 5),
     cmap: str = "hot_r",
     save: Optional[str] = None,
+    title: Optional[str] = None,
 ) -> AxesImage:
     # language=rst
     """
@@ -198,6 +199,7 @@ def plot_weights(
     :param figsize: Horizontal, vertical figure size in inches.
     :param cmap: Matplotlib colormap.
     :param save: file name to save fig, if None = not saving fig.
+    :param title: Title of the plot.
     :return: ``AxesImage`` for re-drawing the weights plot.
     """
     local_weights = weights.detach().clone().cpu().numpy()
@@ -213,6 +215,8 @@ def plot_weights(
         ax.set_xticks(())
         ax.set_yticks(())
         ax.set_aspect("auto")
+        if title != None:
+            ax.set_title(title + " Weights")
 
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
@@ -241,6 +245,8 @@ def plot_weights(
             ax.set_xticks(())
             ax.set_yticks(())
             ax.set_aspect("auto")
+            if title != None:
+                ax.set_title(title + " Weights")
 
             plt.colorbar(im, cax=cax)
             fig.tight_layout()
@@ -257,6 +263,7 @@ def plot_conv2d_weights(
     im: Optional[AxesImage] = None,
     figsize: Tuple[int, int] = (5, 5),
     cmap: str = "hot_r",
+    title: Optional[str] = None,
 ) -> AxesImage:
     # language=rst
     """
@@ -268,6 +275,7 @@ def plot_conv2d_weights(
     :param im: Used for re-drawing the weights plot.
     :param figsize: Horizontal, vertical figure size in inches.
     :param cmap: Matplotlib colormap.
+    :param title: Title of the plot.
     :return: Used for re-drawing the weights plot.
     """
 
@@ -295,6 +303,8 @@ def plot_conv2d_weights(
         ax.set_xticks(())
         ax.set_yticks(())
         ax.set_aspect("auto")
+        if title != None:
+            ax.set_title(title + " Weights")
 
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
@@ -317,6 +327,7 @@ def plot_locally_connected_weights(
     lines: bool = True,
     figsize: Tuple[int, int] = (5, 5),
     cmap: str = "hot_r",
+    title: Optional[str] = None,
 ) -> AxesImage:
     # language=rst
     """
@@ -337,6 +348,7 @@ def plot_locally_connected_weights(
         regions.
     :param figsize: Horizontal, vertical figure size in inches.
     :param cmap: Matplotlib colormap.
+    :param title: Title of the plot.
     :return: Used for re-drawing the weights plot.
     """
     kernel_size = _pair(kernel_size)
@@ -373,6 +385,8 @@ def plot_locally_connected_weights(
         ax.set_xticks(())
         ax.set_yticks(())
         ax.set_aspect("auto")
+        if title != None:
+            ax.set_title(title + " Weights")
 
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
@@ -391,6 +405,7 @@ def plot_local_connection_2d_weights(
     figsize: Tuple[int, int] = (5, 5),
     cmap: str = "hot_r",
     color: str = "r",
+    title: Optional[str] = None,
 ) -> AxesImage:
     # language=rst
     """
@@ -451,6 +466,8 @@ def plot_local_connection_2d_weights(
         ax.set_xticks(())
         ax.set_yticks(())
         ax.set_aspect("auto")
+        if title != None:
+            ax.set_title(title + " Weights")
 
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
