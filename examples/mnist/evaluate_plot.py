@@ -44,7 +44,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=False, train="False", n_test=1000 ) 
+parser.set_defaults(plot=True, gpu=False, train="False", n_test=10000 ) 
 args = parser.parse_args()
 
 seed = args.seed
@@ -63,7 +63,7 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-saved_as = "exp_7"
+saved_as = "exp_9"
 #================================================
 # Sets up Gpu use (not used)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -138,7 +138,7 @@ spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
 
 print("\nBegin testing\n")
 start = t()
-#'''
+'''
 pbar = tqdm(total=n_test)
 for step, batch in enumerate(test_dataset):
     if step >= n_test:
@@ -181,7 +181,7 @@ for step, batch in enumerate(test_dataset):
 print("\nAll activity accuracy:         %.2f \n" % (100*accuracy["all"] / n_test))
 print("Proportion weighting accuracy:   %.2f \n" % (100*accuracy["proportion"] / n_test))
 print("Testing complete after:          %.4f seconds \n" % (t() - start))
-
+'''
 #==================================================================================
 #**********************************  Ploting **************************************
 
@@ -195,8 +195,8 @@ train_accur = train_details["train_accur"]
 weights_im = plot_weights(square_weights, im=None)
 assigns_im = plot_assignments(square_assignments, im=None)
 perf_ax = plot_performance(train_accur, x_scale=update_interval, ax=None)
-plt.pause(400)
-#'''
+plt.pause(300)
+
 #print(train_details['train_time'])
 #print(train_details["train_accur"])
 

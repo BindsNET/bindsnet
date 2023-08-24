@@ -590,7 +590,7 @@ class Modified_PostPre(LearningRule):
             self.source.traces and self.target.traces
         ), "Both pre- and post-synaptic nodes must record spike traces."
 
-        if isinstance(connection, (Connection, LocalConnection)):
+        if isinstance(connection, (Connection, LocalConnection)):    # added: Modified_PostPre will work only fore these 2 connections
             self.update = self._connection_update    # rewrites the update rule defined in the base class 
         else:
             raise NotImplementedError(
@@ -614,7 +614,7 @@ class Modified_PostPre(LearningRule):
             # self.source.s : 28 *28 array of 0 and 1      source_s : array converted to 1D vector (784*1)
             # self.target.x : array of 100 values (~1e-5)  target_x : araray (20*5) (values ~1e-9)
             # source : first layer, target = second layer.    
-            # s: spike occurances (0 or 1) for each neuron   x : exp decaying trace 
+            # s: spike occurances (0 or 1) for each neuron;    x : exp decaying trace 
 
             self.connection.w -= self.reduction(torch.bmm(source_s, target_x), dim=0)
             del source_s, target_x

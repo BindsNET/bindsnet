@@ -43,10 +43,10 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=False, gpu=True, train="True", n_train=20000, n_epochs=1)
+parser.set_defaults(plot=False, gpu=False, train="True", n_train=60000, n_epochs=3)
 args = parser.parse_args()
 
-save_as = "exp_7"
+save_as = "exp_9"
 
 seed = args.seed
 n_neurons = args.n_neurons
@@ -81,7 +81,7 @@ print("Running on Device = ", device)
 
 # Determines number of workers to use
 if n_workers == -1:
-    n_workers =  gpu * 4 * torch.cuda.device_count()  # it was 0
+    n_workers =  0#gpu * 4 * torch.cuda.device_count()  # it was 0
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity

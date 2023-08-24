@@ -285,7 +285,7 @@ class Salah_model(Network):
 
         # Connections
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
-        input_exc_conn = Connection(
+        input_exc_conn = Connection(   # Modied_PostPre is only working for Connection and LocalConnection)
             source=input_layer,
             target=exc_layer,
             w=w,
