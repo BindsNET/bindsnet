@@ -118,7 +118,7 @@ def all_activity(
         n_assigns = torch.sum(assignments == i).float()
 
         if n_assigns > 0:
-            # Get indices of samples with this label.
+            # Get indices of samples with this label.         # correcting : get the number of neurons with this label
             indices = torch.nonzero(assignments == i).view(-1)
 
             # Compute layer-wise firing rate for this label.
