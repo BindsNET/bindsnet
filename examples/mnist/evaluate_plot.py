@@ -63,7 +63,7 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-saved_as = "exp_10"
+saved_as = "exp_9"
 
 #================================================
 # Sets up Gpu use (not used)
