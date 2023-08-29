@@ -39,15 +39,40 @@ parser.add_argument("--dt", type=int, default=1.0)
 parser.add_argument("--intensity", type=float, default=128)
 parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250) 
-parser.add_argument("--train", dest="train", action="store_true")
+# adding/not adding --train to CL makes args.train true/false 
+parser.add_argument("--train", dest="train", action="store_true")  
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=False, gpu=False, train="True", n_train=60000, n_epochs=1)
+# But if none of the four is added, these are the default ones:
+parser.set_defaults(plot=False, gpu=False, train="True") 
 args = parser.parse_args()
 
-save_as = "exp_9"
+print(args)
+save_as = "exp_10"
 
+#modified
+# Salah model has been modified 
+seed = args.seed
+n_neurons = args.n_neurons
+n_epochs = args.n_epochs
+n_test = args.n_test
+n_train = 20000
+n_workers = args.n_workers
+exc = args.exc
+inh = args.inh
+theta_plus = args.theta_plus
+time = args.time
+dt = args.dt
+intensity = args.intensity
+progress_interval = args.progress_interval
+update_interval = args.update_interval
+train = args.train
+plot = args.plot
+gpu = args.gpu
+
+'''
+#Original 
 seed = args.seed
 n_neurons = args.n_neurons
 n_epochs = args.n_epochs
@@ -65,6 +90,8 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
+'''
+
 
 # Sets up Gpu use
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -81,7 +108,7 @@ print("Running on Device = ", device)
 
 # Determines number of workers to use
 if n_workers == -1:
-    n_workers =  0#gpu * 4 * torch.cuda.device_count()  
+    n_workers =  0 #gpu * 4 * torch.cuda.device_count()  
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity

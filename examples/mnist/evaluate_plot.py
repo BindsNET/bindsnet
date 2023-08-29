@@ -63,7 +63,8 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-saved_as = "exp_9"
+saved_as = "exp_10"
+
 #================================================
 # Sets up Gpu use (not used)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

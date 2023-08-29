@@ -550,7 +550,7 @@ class PostPre(LearningRule):
         super().update()
 
 #===================================================
-class Modified_PostPre(LearningRule):
+class Bi_sigmoid(LearningRule):
     # language=rst
     """
     Simple STDP rule involving both pre- and post-synaptic spiking activity. By default,
@@ -590,7 +590,7 @@ class Modified_PostPre(LearningRule):
             self.source.traces and self.target.traces
         ), "Both pre- and post-synaptic nodes must record spike traces."
 
-        if isinstance(connection, (Connection, LocalConnection)):    # added: Modified_PostPre will work only fore these 2 connections
+        if isinstance(connection, (Connection, LocalConnection)):    # added: Bi_sigmoid will work only fore these 2 connections
             self.update = self._connection_update    # rewrites the update rule defined in the base class 
         else:
             raise NotImplementedError(

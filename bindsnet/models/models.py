@@ -5,7 +5,7 @@ import torch
 from scipy.spatial.distance import euclidean
 from torch.nn.modules.utils import _pair
 
-from bindsnet.learning import PostPre, Modified_PostPre
+from bindsnet.learning import PostPre, Bi_sigmoid
 from bindsnet.network import Network
 from bindsnet.network.nodes import DiehlAndCookNodes, Input, LIFNodes
 from bindsnet.network.topology import Connection, LocalConnection
@@ -203,9 +203,11 @@ class DiehlAndCook2015(Network):
 
 class Salah_model(Network):
     # language=rst
-    """
-    Implements the spiking neural network architecture from `(Diehl & Cook 2015)
-    <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_.
+    """ 
+    It implements the same network architecture model used by `(Diehl & Cook 2015)`,
+    that has input, excitatoy and inhebetory neurons layers. But this model uses 
+    a Bi-sigmoid learning rule (Bi_sigmoid), which is hardware friendly. The Bi-sigmoid rule 
+    describes the learning behavior of the MTJs-based synapses. 
     """
 
     def __init__(
@@ -263,9 +265,9 @@ class Salah_model(Network):
         exc_layer = DiehlAndCookNodes(
             n=self.n_neurons,
             traces=True,
-            rest=-65.0,
-            reset=-60.0,
-            thresh=-52.0,
+            rest= -65.0,
+            reset= -60.0,
+            thresh= -52.0,
             refrac=5,
             tc_decay=100.0,
             tc_trace=20.0,
@@ -278,8 +280,8 @@ class Salah_model(Network):
             rest=-60.0,
             reset=-45.0,
             thresh=-40.0,
-            tc_decay=10.0,
             refrac=2,
+            tc_decay=10.0,    
             tc_trace=20.0,
         )
 
@@ -289,7 +291,7 @@ class Salah_model(Network):
             source=input_layer,
             target=exc_layer,
             w=w,
-            update_rule=Modified_PostPre,
+            update_rule=Bi_sigmoid,
             nu=nu,
             reduction=reduction,
             wmin=wmin,
