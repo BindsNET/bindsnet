@@ -20,7 +20,7 @@ from bindsnet.analysis.plotting import (
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.evaluation import all_activity, assign_labels, proportion_weighting
-from bindsnet.models import Salah_model
+from bindsnet.models import Salah_model      # import model
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_assignments, get_square_weights
 
@@ -43,7 +43,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=False, gpu=False, train="True", n_train=60000, n_epochs=3)
+parser.set_defaults(plot=False, gpu=False, train="True", n_train=60000, n_epochs=1)
 args = parser.parse_args()
 
 save_as = "exp_9"
@@ -81,7 +81,7 @@ print("Running on Device = ", device)
 
 # Determines number of workers to use
 if n_workers == -1:
-    n_workers =  0#gpu * 4 * torch.cuda.device_count()  # it was 0
+    n_workers =  0#gpu * 4 * torch.cuda.device_count()  
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
@@ -110,7 +110,7 @@ train_dataset = MNIST(
     download=True,
     train=True,
     transform=transforms.Compose(
-        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]    # intensity = 128
     ),
 )
 
@@ -189,7 +189,7 @@ start = t()
 for epoch in range(n_epochs):
     labels = []
 
-    if epoch % progress_interval == 0:
+    if epoch % progress_interval == 0: 
         print("Progress: %d / %d (%.4f seconds)" % (epoch, n_epochs, t() - start))
         start = t()
 
@@ -211,7 +211,9 @@ for epoch in range(n_epochs):
 
             # Get network predictions.
             all_activity_pred = all_activity(
-                spikes=spike_record, assignments=assignments, n_labels=n_classes
+                spikes=spike_record, 
+                assignments=assignments, 
+                n_labels=n_classes,
             )
             proportion_pred = proportion_weighting(
                 spikes=spike_record,

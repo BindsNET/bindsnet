@@ -197,7 +197,7 @@ assigns_im = plot_assignments(square_assignments, im=None)
 perf_ax = plot_performance(train_accur, x_scale=update_interval, ax=None)
 plt.pause(300)
 
-#print(train_details['train_time'])
+print("training time", train_details['train_time'])
 #print(train_details["train_accur"])
 
 
