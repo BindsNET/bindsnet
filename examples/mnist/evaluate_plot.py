@@ -63,7 +63,7 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-saved_as = "exp_9"
+saved_as = "exp_10"
 
 #================================================
 # Sets up Gpu use (not used)
@@ -186,6 +186,9 @@ print("Testing complete after:          %.4f seconds \n" % (t() - start))
 #==================================================================================
 #**********************************  Ploting **************************************
 
+print("training time", train_details['train_time'])
+print(train_details["train_accur"])
+
 #extract weights
 input_exc_weights = network.connections[("X", "Ae")].w
 square_weights = get_square_weights( input_exc_weights.view(784, n_neurons), n_sqrt, 28 )
@@ -198,8 +201,6 @@ assigns_im = plot_assignments(square_assignments, im=None)
 perf_ax = plot_performance(train_accur, x_scale=update_interval, ax=None)
 plt.pause(300)
 
-print("training time", train_details['train_time'])
-#print(train_details["train_accur"])
 
 
 

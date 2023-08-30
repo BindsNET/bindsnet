@@ -49,7 +49,7 @@ parser.set_defaults(plot=False, gpu=False, train="True")
 args = parser.parse_args()
 
 print(args)
-save_as = "exp_10"
+save_as = "exp_11"
 
 #modified
 # Salah model has been modified 
@@ -57,11 +57,11 @@ seed = args.seed
 n_neurons = args.n_neurons
 n_epochs = args.n_epochs
 n_test = args.n_test
-n_train = 20000
+n_train = 30000
 n_workers = args.n_workers
 exc = args.exc
 inh = args.inh
-theta_plus = args.theta_plus
+theta_plus = 0.1 #args.theta_plus
 time = args.time
 dt = args.dt
 intensity = args.intensity
