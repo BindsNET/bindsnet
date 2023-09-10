@@ -1488,6 +1488,28 @@ class MSTDP(LearningRule):
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
 
+        # Initialize eligibility, P^+, and P^-.
+        if not hasattr(self, "p_plus"):
+            self.p_plus = torch.zeros(
+                # batch_size, *self.source.shape, device=self.source.s.device
+                self.source.batch_size,
+                self.source.n,
+                device=self.source.s.device,
+            )
+        if not hasattr(self, "p_minus"):
+            self.p_minus = torch.zeros(
+                # batch_size, *self.target.shape, device=self.target.s.device
+                self.source.batch_size,
+                self.target.n,
+                device=self.target.s.device,
+            )
+        if not hasattr(self, "eligibility"):
+            self.eligibility = torch.zeros(
+                self.source.batch_size, 
+                *self.connection.w.shape, 
+                device=self.connection.w.device
+            )
+
     def _connection_update(self, **kwargs) -> None:
         # language=rst
         """
@@ -1500,31 +1522,10 @@ class MSTDP(LearningRule):
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
-        batch_size = self.source.batch_size
-
-        # Initialize eligibility, P^+, and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(
-                # batch_size, *self.source.shape, device=self.source.s.device
-                batch_size,
-                self.source.n,
-                device=self.source.s.device,
-            )
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                # batch_size, *self.target.shape, device=self.target.s.device
-                batch_size,
-                self.target.n,
-                device=self.target.s.device,
-            )
-        if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
-            )
 
         # Reshape pre- and post-synaptic spikes.
-        source_s = self.source.s.view(batch_size, -1).float()
-        target_s = self.target.s.view(batch_size, -1).float()
+        source_s = self.source.s.view(self.source.batch_size, -1).float()
+        target_s = self.target.s.view(self.source.batch_size, -1).float()
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
