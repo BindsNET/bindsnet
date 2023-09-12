@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Tuple
 
+import ale_py
 import gymnasium as gym
 import numpy as np
 import torch
@@ -88,7 +89,7 @@ class GymEnvironment(Environment):
             2D inputs.
         """
         self.name = name
-        self.env = gym.make(name, render_mode=render_mode)
+        self.env = gym.make(env_id=name)#, render_mode=render_mode)
         self.action_space = self.env.action_space
 
         self.encoder = encoder
