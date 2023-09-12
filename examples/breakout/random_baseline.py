@@ -16,7 +16,7 @@ n = args.n
 render = args.render
 
 # Load Breakout environment.
-env = GymEnvironment("BreakoutDeterministic-v4")
+env = GymEnvironment("ALE/BreakoutDeterministic-v4")
 env.reset()
 
 total = 0
