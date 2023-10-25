@@ -49,30 +49,8 @@ parser.set_defaults(plot=False, gpu=False, train="True")
 args = parser.parse_args()
 
 print(args)
-save_as = "exp_11"
+save_as = "exp_14"
 
-#modified
-# Salah model has been modified 
-seed = args.seed
-n_neurons = args.n_neurons
-n_epochs = args.n_epochs
-n_test = args.n_test
-n_train = 30000
-n_workers = args.n_workers
-exc = args.exc
-inh = args.inh
-theta_plus = 0.1 #args.theta_plus
-time = args.time
-dt = args.dt
-intensity = args.intensity
-progress_interval = args.progress_interval
-update_interval = args.update_interval
-train = args.train
-plot = args.plot
-gpu = args.gpu
-
-'''
-#Original 
 seed = args.seed
 n_neurons = args.n_neurons
 n_epochs = args.n_epochs
@@ -90,7 +68,6 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-'''
 
 
 # Sets up Gpu use

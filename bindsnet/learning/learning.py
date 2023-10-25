@@ -389,6 +389,11 @@ class PostPre(LearningRule):
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection``
         class.
+
+        self.source.s : 28 *28 array of 0 and 1      source_s : array converted to 1D vector (784*1)
+        self.target.x : array of 100 values (~1e-5)  target_x : araray (20*5) (values ~1e-9)
+        source : first layer, target = second layer.    
+        s: spike occurances (0 or 1) for each neuron;    x : exp decaying trace 
         """
         batch_size = self.source.batch_size
 
@@ -553,8 +558,9 @@ class PostPre(LearningRule):
 class Bi_sigmoid(LearningRule):
     # language=rst
     """
-    Simple STDP rule involving both pre- and post-synaptic spiking activity. By default,
-    pre-synaptic update is negative and the post-synaptic update is positive.
+    Bi_sigmoid STDP rule involving only post-synaptic spiking activity. The weight update
+    quantity is poisitive if the post-synaptic spike occures shortly after the presynatpic spike,
+    and negative otherwise.
     """
 
     def __init__(
@@ -567,10 +573,10 @@ class Bi_sigmoid(LearningRule):
     ) -> None:
         # language=rst
         """
-        Constructor for ``PostPre`` learning rule.
+        Constructor for ``Bi_sigmoid`` learning rule.
 
         :param connection: An ``AbstractConnection`` object whose weights the
-            ``PostPre`` learning rule will modify.
+            ``Bi_sigmoid`` learning rule will modify.
         :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
@@ -591,7 +597,7 @@ class Bi_sigmoid(LearningRule):
         ), "Both pre- and post-synaptic nodes must record spike traces."
 
         if isinstance(connection, (Connection, LocalConnection)):    # added: Bi_sigmoid will work only fore these 2 connections
-            self.update = self._connection_update    # rewrites the update rule defined in the base class 
+            self.update = self._connection_update                    # rewrites the update rule defined in the base class 
         else:
             raise NotImplementedError(
                 "This learning rule is not supported for this Connection type."
@@ -600,37 +606,21 @@ class Bi_sigmoid(LearningRule):
     def _connection_update(self, **kwargs) -> None:
         # language=rst
         """
-        Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection``
+        Bi_sigmoid learning rule for ``Connection`` subclass of ``AbstractConnection``
         class.
+
+        self.source.s : 28 *28 array of 0 and 1      source_s : array converted to 1D vector (784*1)
+        self.target.x2 : array of 100 values (~1e-5)  target_x2 : araray (20*5) (values ~1e-9)
+        source : first layer, target = second layer.    
+        s: spike occurances (0 or 1) for each neuron;    x2 : bi_sigmoid decaying trace
+        In this rule we only use the spiking of post (target_s) and the bi_sigmoid trace of pre (source_x2)
         """
         batch_size = self.source.batch_size
         
-        """
-        # Pre-synaptic update.
-        if self.nu[0].any():
-            source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
-            target_x = self.target.x.view(batch_size, -1).unsqueeze(1) * self.nu[0]
-      
-            # self.source.s : 28 *28 array of 0 and 1      source_s : array converted to 1D vector (784*1)
-            # self.target.x : array of 100 values (~1e-5)  target_x : araray (20*5) (values ~1e-9)
-            # source : first layer, target = second layer.    
-            # s: spike occurances (0 or 1) for each neuron;    x : exp decaying trace 
-
-            self.connection.w -= self.reduction(torch.bmm(source_s, target_x), dim=0)
-            del source_s, target_x
-
         # Post-synaptic update.
         if self.nu[1].any():
             target_s = (self.target.s.view(batch_size, -1).unsqueeze(1).float() * self.nu[1]) # 100 values of 0&1
-            source_x = self.source.x.view(batch_size, -1).unsqueeze(2)    # 784 value 1D ( values between 0 and 1)
-            self.connection.w += self.reduction(torch.bmm(source_x, target_s), dim=0)
-            del source_x, target_s
-        """
-
-        # Post-synaptic update.
-        if self.nu[1].any():
-            target_s = (self.target.s.view(batch_size, -1).unsqueeze(1).float() * self.nu[1]) # 100 values of 0&1
-            source_x2 = self.source.x2.view(batch_size, -1).unsqueeze(2)    # 784 value 1D ( values between 0 and 1)
+            source_x2 = self.source.x2.view(batch_size, -1).unsqueeze(2)    # 784 value 1D ( values between -1 and 1)
             self.connection.w += self.reduction(torch.bmm(source_x2, target_s), dim=0)
             del source_x2, target_s
         
