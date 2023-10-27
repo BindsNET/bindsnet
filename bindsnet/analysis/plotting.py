@@ -254,6 +254,9 @@ def plot_weights(
             fig.tight_layout()
         else:
             im.set_data(local_weights)
+            wmin = weights.min().item()
+            wmax = weights.max().item()
+            im.set_clim(wmin, wmax)
 
         return im
 
