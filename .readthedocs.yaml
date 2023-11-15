@@ -26,10 +26,10 @@ formats:
 #   install:
 #   - requirements: docs/requirements.txt
 
-python:
-  version: 3.8
-  install:
-    - method: pip
-      path: .
-    - requirements: docs/requirements.txt
-  system_packages: False
+# python:
+  # version: 3.8
+  # install:
+    # - method: pip
+      # path: .
+    # - requirements: docs/requirements.txt
+  # system_packages: False
