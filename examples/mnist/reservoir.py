@@ -144,6 +144,7 @@ for i, dataPoint in pbar:
 
     # Plot spiking activity using monitors
     if plot:
+        # Plot the current image and reconstructed/encoded image
         inpt_axes, inpt_ims = plot_input(
             dataPoint["image"].view(28, 28),
             datum.view(int(time / dt), 784).sum(0).view(28, 28),
@@ -151,19 +152,23 @@ for i, dataPoint in pbar:
             axes=inpt_axes,
             ims=inpt_ims,
         )
+        # Plot spikes
         spike_ims, spike_axes = plot_spikes(
             {layer: spikes[layer].get("s").view(time, -1) for layer in spikes},
             axes=spike_axes,
             ims=spike_ims,
         )
+        # Plot voltages
         voltage_ims, voltage_axes = plot_voltages(
             {layer: voltages[layer].get("v").view(time, -1) for layer in voltages},
             ims=voltage_ims,
             axes=voltage_axes,
         )
+        # Plot weights between input and output
         weights_im = plot_weights(
             get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2
         )
+        # Plot weights between output and output
         weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
 
         plt.pause(1e-8)
@@ -236,7 +241,7 @@ for i, dataPoint in pbar:
     pbar.set_description_str("Testing progress: (%d / %d)" % (i, n_iters))
 
     network.run(inputs={"I": datum}, time=time)
-    test_pairs.append([spikes["O"].get("s").sum(0), label])
+    test_pairs.append([spikes["O"].get("s"), label])
 
     if plot:
         inpt_axes, inpt_ims = plot_input(
