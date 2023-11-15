@@ -29,8 +29,8 @@ python:
       path: .
       extra_requirements:
         - docs
-    - method: pip
-      path: another/package
+    # - method: pip
+      # path: another/package
       
 # python:
   # version: 3.8
