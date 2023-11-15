@@ -23,6 +23,7 @@ formats:
 # We recommend specifying your dependencies to enable reproducible builds:
 # https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
 python:
+  version: '3.10'
   install:
     - requirements: docs/requirements.txt
     - method: pip
