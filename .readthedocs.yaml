@@ -24,8 +24,14 @@ formats:
 # https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
 python:
   install:
-  - requirements: docs/requirements.txt
-
+    - requirements: docs/requirements.txt
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
+    - method: pip
+      path: another/package
+      
 # python:
   # version: 3.8
   # install:
