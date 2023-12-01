@@ -1431,13 +1431,13 @@ format-nongpl = ["fqdn", "idna", "isoduration", "jsonpointer (>1.13)", "rfc3339-
 
 [[package]]
 name = "jsonschema-specifications"
-version = "2023.11.1"
+version = "2023.11.2"
 description = "The JSON Schema meta-schemas and vocabularies, exposed as a Registry"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "jsonschema_specifications-2023.11.1-py3-none-any.whl", hash = "sha256:f596778ab612b3fd29f72ea0d990393d0540a5aab18bf0407a46632eab540779"},
-    {file = "jsonschema_specifications-2023.11.1.tar.gz", hash = "sha256:c9b234904ffe02f079bf91b14d79987faa685fd4b39c377a0996954c0090b9ca"},
+    {file = "jsonschema_specifications-2023.11.2-py3-none-any.whl", hash = "sha256:e74ba7c0a65e8cb49dc26837d6cfe576557084a8b423ed16a420984228104f93"},
+    {file = "jsonschema_specifications-2023.11.2.tar.gz", hash = "sha256:9472fc4fea474cd74bea4a2b190daeccb5a9e4db2ea80efcf7a1b582fc9a81b8"},
 ]
 
 [package.dependencies]
