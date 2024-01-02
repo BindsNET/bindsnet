@@ -126,7 +126,7 @@ parameters|default|description
 ## Tensorboard example
 */examples/tensorboard/*  
 Google's Tensorboard is a powerful tool to analyze Deep Learning models. It helps visualizing data flows, or any changes happening during a training process.  
-First developped for Google's Tensorflow, it is now available as **TensorboardX** (https://tensorboardx.readthedocs.io/en/latest/index.html) for Py-Torch or other DL fameworks *(under development)*.
+First developed for Google's Tensorflow, it is now available as **TensorboardX** (https://tensorboardx.readthedocs.io/en/latest/index.html) for Py-Torch or other DL frameworks *(under development)*.
 
 ```tensorboard.py``` shows how to use the ```TensorboardAnalyzer``` class, graphically monitoring the weights of 2D convolutional SNN during its training process.
 
