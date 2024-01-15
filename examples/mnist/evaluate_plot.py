@@ -28,7 +28,7 @@ from bindsnet.network import Network, load
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
-parser.add_argument("--n_neurons", type=int, default=100)
+parser.add_argument("--n_neurons", type=int, default=1000)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_train", type=int, default=60000)
@@ -63,7 +63,7 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-saved_as = "exp_14"
+saved_as = "exp_15"
 
 #================================================
 # Sets up Gpu use (not used)
