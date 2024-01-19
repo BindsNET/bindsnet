@@ -15,14 +15,14 @@ numpy = "^1.24.3"
 scipy = "^1.10.1"
 Cython = "^0.29.33"
 torch = [
-     {version = "^2.0.1", platform = "darwin"},
-     {version = "^2.0.1", platform = "linux", source = "torch"},
-     {version = "^2.0.1", platform = "win32", source = "torch"},
-     {version = "^2.0.1", platform = "win_amd64", source = "torch"},
+     {version = "^2.1.2", platform = "darwin"},
+     {version = "^2.1.2", platform = "linux", source = "torch"},
+     {version = "^2.1.2", platform = "win32", source = "torch"},
+     {version = "^2.1.2", platform = "win_amd64", source = "torch"},
  ]
-torchvision = "0.15.2"
-torchaudio = "2.0.2"
-tensorboardX = "2.6.1"
+torchvision = "0.16.2"
+torchaudio = "2.1.2"
+tensorboardX = "2.6.2.2"
 tqdm = "^4.65.0"
 matplotlib = "^3.7.1"
 gymnasium = {extras = ["atari", "accept-rom-license"], version = "^0.29.1"}
