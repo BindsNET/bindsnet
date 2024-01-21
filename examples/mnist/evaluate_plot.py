@@ -63,7 +63,7 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-saved_as = "exp_15"
+saved_as = "exp_19"
 
 #================================================
 # Sets up Gpu use (not used)
@@ -185,9 +185,9 @@ print("Testing complete after:          %.4f seconds \n" % (t() - start))
 '''
 #==================================================================================
 #**********************************  Ploting **************************************
-
-print("training time", train_details['train_time'])
-print(train_details["train_accur"])
+print("#of evaluation steps: \n",len(train_details["train_accur"]["all"]))
+print("training time: \n", train_details['train_time'])
+print("training accur: \n", train_details["train_accur"])
 
 #extract weights
 input_exc_weights = network.connections[("X", "Ae")].w

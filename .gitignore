@@ -22,3 +22,4 @@ logs/*
 .pytest_cache/*
 .vscode/*
 data/*
+/examples/mnist/*.pt
