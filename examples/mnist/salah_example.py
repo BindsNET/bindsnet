@@ -44,12 +44,13 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
+parser.add_argument("--save_as")
 # But if none of the four is added, these are the default ones:
 parser.set_defaults(plot=False, gpu=False, train="True") 
 args = parser.parse_args()
 
 print(args)
-save_as = "exp_19"
+save_as = args.save_as #"exp_31"
 
 seed = args.seed
 n_neurons = args.n_neurons

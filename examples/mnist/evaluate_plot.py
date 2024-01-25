@@ -44,6 +44,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
+parser.add_argument("--saved_as")
 parser.set_defaults(plot=True, gpu=False, train="False", n_test=10000 ) 
 args = parser.parse_args()
 
@@ -63,7 +64,7 @@ update_interval = args.update_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
-saved_as = "exp_19"
+saved_as = args.saved_as # "exp_26"
 
 #================================================
 # Sets up Gpu use (not used)
@@ -139,7 +140,7 @@ spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
 
 print("\nBegin testing\n")
 start = t()
-'''
+
 pbar = tqdm(total=n_test)
 for step, batch in enumerate(test_dataset):
     if step >= n_test:
@@ -188,6 +189,7 @@ print("Testing complete after:          %.4f seconds \n" % (t() - start))
 print("#of evaluation steps: \n",len(train_details["train_accur"]["all"]))
 print("training time: \n", train_details['train_time'])
 print("training accur: \n", train_details["train_accur"])
+print("average of last 10 accuracies (all): \n", np.mean(train_details["train_accur"]["all"][-10:]))
 
 #extract weights
 input_exc_weights = network.connections[("X", "Ae")].w
@@ -201,6 +203,4 @@ assigns_im = plot_assignments(square_assignments, im=None)
 perf_ax = plot_performance(train_accur, x_scale=update_interval, ax=None)
 plt.pause(300)
 
-
-
-
+'''
