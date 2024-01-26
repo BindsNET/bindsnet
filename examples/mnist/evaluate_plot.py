@@ -137,7 +137,7 @@ spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
 
 #==================================================================================
 #*************************  Testing the network ***********************************
-
+'''
 print("\nBegin testing\n")
 start = t()
 
@@ -196,11 +196,13 @@ input_exc_weights = network.connections[("X", "Ae")].w
 square_weights = get_square_weights( input_exc_weights.view(784, n_neurons), n_sqrt, 28 )
 square_assignments = get_square_assignments(assignments, n_sqrt)
 train_accur = train_details["train_accur"]
+train_accur_prop = {"Accuracy": train_accur["proportion"]} # creat a dict to plot only "proportion"
+
 
 #plot
 weights_im = plot_weights(square_weights, im=None)
 assigns_im = plot_assignments(square_assignments, im=None)
-perf_ax = plot_performance(train_accur, x_scale=update_interval, ax=None)
+#perf_ax = plot_performance(train_accur, x_scale=update_interval, ax=None) # plot both accrucies
+perf_ax = plot_performance(train_accur_prop, x_scale=update_interval, ax=None) # plot only proportion 
 plt.pause(300)
 
-'''
