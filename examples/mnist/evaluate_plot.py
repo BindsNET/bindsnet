@@ -188,7 +188,7 @@ print("Testing complete after:          %.4f seconds \n" % (t() - start))
 #**********************************  Ploting **************************************
 print("#of evaluation steps: \n",len(train_details["train_accur"]["all"]))
 print("training time: \n", train_details['train_time'])
-print("training accur: \n", train_details["train_accur"])
+#print("training accur: \n", train_details["train_accur"])
 print("average of last 10 accuracies (all): \n", np.mean(train_details["train_accur"]["all"][-10:]))
 
 #extract weights
