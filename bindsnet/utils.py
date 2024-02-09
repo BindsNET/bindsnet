@@ -102,9 +102,9 @@ def get_square_assignments(assignments: Tensor, n_sqrt: int) -> Tensor:
             if not n < assignments.size(0):
                 break
 
-            square_assignments[
-                i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)
-            ] = assignments[n]
+            square_assignments[i : (i + 1), (j % n_sqrt) : ((j % n_sqrt) + 1)] = (
+                assignments[n]
+            )
 
     return square_assignments
 
