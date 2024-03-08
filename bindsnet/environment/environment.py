@@ -89,7 +89,7 @@ class GymEnvironment(Environment):
             2D inputs.
         """
         self.name = name
-        self.env = gym.make(env_id=name)  # , render_mode=render_mode)
+        self.env = gym.make(name)  # , render_mode=render_mode)
         self.action_space = self.env.action_space
 
         self.encoder = encoder
