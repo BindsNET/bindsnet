@@ -363,7 +363,9 @@ for step, batch in enumerate(test_dataloader):
     )
 
     # Compute network accuracy according to available classification strategies.
-    accuracy["all"] += float(torch.sum(label_tensor.long() == all_activity_pred.to(device)).item())
+    accuracy["all"] += float(
+        torch.sum(label_tensor.long() == all_activity_pred.to(device)).item()
+    )
     accuracy["proportion"] += float(
         torch.sum(label_tensor.long() == proportion_pred.to(device)).item()
     )
