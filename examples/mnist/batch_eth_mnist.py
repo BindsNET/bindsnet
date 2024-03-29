@@ -206,12 +206,12 @@ for epoch in range(n_epochs):
             # Compute network accuracy according to available classification strategies.
             accuracy["all"].append(
                 100
-                * torch.sum(label_tensor.long() == all_activity_pred).item()
+                * torch.sum(label_tensor.long() == all_activity_pred.to(device)).item()
                 / len(label_tensor)
             )
             accuracy["proportion"].append(
                 100
-                * torch.sum(label_tensor.long() == proportion_pred).item()
+                * torch.sum(label_tensor.long() == proportion_pred.to(device)).item()
                 / len(label_tensor)
             )
 
@@ -363,9 +363,11 @@ for step, batch in enumerate(test_dataloader):
     )
 
     # Compute network accuracy according to available classification strategies.
-    accuracy["all"] += float(torch.sum(label_tensor.long() == all_activity_pred).item())
+    accuracy["all"] += float(
+        torch.sum(label_tensor.long() == all_activity_pred.to(device)).item()
+    )
     accuracy["proportion"] += float(
-        torch.sum(label_tensor.long() == proportion_pred).item()
+        torch.sum(label_tensor.long() == proportion_pred.to(device)).item()
     )
 
     network.reset_state_variables()  # Reset state variables.
