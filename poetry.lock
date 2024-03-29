@@ -3933,6 +3933,33 @@ files = [
 torch = "2.2.2"
 
 [[package]]
+name = "torchaudio"
+version = "2.2.2+cu118"
+description = "An audio package for PyTorch"
+optional = false
+python-versions = "*"
+files = [
+    {file = "torchaudio-2.2.2+cu118-cp310-cp310-linux_x86_64.whl", hash = "sha256:0b8ee953ef68f90974d1f7741ac2301c39d7c574aebc51081cfda64f5dad0ad4"},
+    {file = "torchaudio-2.2.2+cu118-cp310-cp310-win_amd64.whl", hash = "sha256:9f03eb87dfb418f83fb2a0d633b01c5fca8cd676da7a9b71c8b88b4dbb5d638e"},
+    {file = "torchaudio-2.2.2+cu118-cp311-cp311-linux_x86_64.whl", hash = "sha256:5748b4788791e6c4e5721a5cea42bca24b32c45df95ed5081d51d10140cdebc0"},
+    {file = "torchaudio-2.2.2+cu118-cp311-cp311-win_amd64.whl", hash = "sha256:d9525cb49a98a219dd6e5e6895da98cba5143f9be31fff4af3dbe545693e03e7"},
+    {file = "torchaudio-2.2.2+cu118-cp312-cp312-linux_x86_64.whl", hash = "sha256:7fbd81465e98248e4e1225052202dcba9b9048132cb6e2312d1e5cae24240511"},
+    {file = "torchaudio-2.2.2+cu118-cp312-cp312-win_amd64.whl", hash = "sha256:7468fd1ccf7701814c453127c0da0f285997c7e9bf01382c3d3f15822bc9f986"},
+    {file = "torchaudio-2.2.2+cu118-cp38-cp38-linux_x86_64.whl", hash = "sha256:10c1a4aa08054532b40f805c7775ea9879c46b21bf5e6992f67f71f4f35c55e2"},
+    {file = "torchaudio-2.2.2+cu118-cp38-cp38-win_amd64.whl", hash = "sha256:938d6851974fea9f1734de56dbc8e1d41873d24164003dd1e2f9b50c9809b358"},
+    {file = "torchaudio-2.2.2+cu118-cp39-cp39-linux_x86_64.whl", hash = "sha256:2a443a1f3afcee6f1fa471d2e01afb9889a60d96151af464cef10861224243da"},
+    {file = "torchaudio-2.2.2+cu118-cp39-cp39-win_amd64.whl", hash = "sha256:d03dacfd6ae18447acde8dcf16dd334977b584e4ec06a6cf83d31aa8a24cb5b3"},
+]
+
+[package.dependencies]
+torch = "2.2.2"
+
+[package.source]
+type = "legacy"
+url = "https://download.pytorch.org/whl/cu118"
+reference = "torch+cu118"
+
+[[package]]
 name = "torchvision"
 version = "0.17.2"
 description = "image and video datasets and models for torch deep learning"
@@ -3973,6 +4000,38 @@ torch = "2.2.2"
 
 [package.extras]
 scipy = ["scipy"]
+
+[[package]]
+name = "torchvision"
+version = "0.17.2+cu118"
+description = "image and video datasets and models for torch deep learning"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "torchvision-0.17.2+cu118-cp310-cp310-linux_x86_64.whl", hash = "sha256:69ea7cba762b958a74e8accbb1f92d822b59497b36d3aecae759bdbab75f85d2"},
+    {file = "torchvision-0.17.2+cu118-cp310-cp310-win_amd64.whl", hash = "sha256:7e7ef9024a15cc4292b3da9fbd42707d59ba1eb5e098f1df9fdb17a520f52f5f"},
+    {file = "torchvision-0.17.2+cu118-cp311-cp311-linux_x86_64.whl", hash = "sha256:961d9ca8364d6bfb4063902f1d73d84b446fa51a2cf0d1fb4cd643212e4f8c07"},
+    {file = "torchvision-0.17.2+cu118-cp311-cp311-win_amd64.whl", hash = "sha256:f6cc9ff70c973ad9b6fad8aac5d7a740ebcba962245b65d21018f832a65e07cf"},
+    {file = "torchvision-0.17.2+cu118-cp312-cp312-linux_x86_64.whl", hash = "sha256:0c9bb5dd2a8e4d28e79f29bee66a8a6edff7d607643549fffbe5c1348297e496"},
+    {file = "torchvision-0.17.2+cu118-cp312-cp312-win_amd64.whl", hash = "sha256:c9b9b80f5cd48d74b34bff1f0e5cc758a53f628e0cd71c97f1e80acf5d2d9b4f"},
+    {file = "torchvision-0.17.2+cu118-cp38-cp38-linux_x86_64.whl", hash = "sha256:19a53484c500f65d8f78aa89093e7474dea1fa3345d379971f24fdbf8716f432"},
+    {file = "torchvision-0.17.2+cu118-cp38-cp38-win_amd64.whl", hash = "sha256:400e43934aa078b8e9b0da06e7c173a0facbf7d5ebd1550cada1829bbd940345"},
+    {file = "torchvision-0.17.2+cu118-cp39-cp39-linux_x86_64.whl", hash = "sha256:f8b7a96cc061d7d4d981da2851c075d8bca0f8877d544991b230ae2646a4bb45"},
+    {file = "torchvision-0.17.2+cu118-cp39-cp39-win_amd64.whl", hash = "sha256:6e19d89e1caba4bd358cf5e5208e230583db55b348011c83bb607dd292f97af6"},
+]
+
+[package.dependencies]
+numpy = "*"
+pillow = ">=5.3.0,<8.3.dev0 || >=8.4.dev0"
+torch = "2.2.2"
+
+[package.extras]
+scipy = ["scipy"]
+
+[package.source]
+type = "legacy"
+url = "https://download.pytorch.org/whl/cu118"
+reference = "torch+cu118"
 
 [[package]]
 name = "tornado"
@@ -4323,4 +4382,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "42b717284fe4a86bfb2172d057753b5e8802f47d85464d654561c2c499ad6d83"
+content-hash = "cfb027d031c121e74e394de78a33da4343426789b0e129214684605fcff2914c"
