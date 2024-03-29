@@ -11,7 +11,8 @@ import collections
 
 import torch
 from torch.utils.data._utils import collate as pytorch_collate
-
+collections.Mapping = collections.abc.Mapping
+collections.Sequence = collections.abc.Sequence
 
 def safe_worker_check():
     # language=rst
