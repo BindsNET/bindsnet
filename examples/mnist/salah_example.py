@@ -316,7 +316,7 @@ for epoch in range(n_epochs):
 
 train_time = t()-start
 network.save(f"./net_{save_as}.pt")   # added
-train_details = {"assignments": assignments, "proportions": proportions, "rates": rates,"train_accur":accuracy, "train_time": train_time}
+train_details = {"assignments": assignments, "proportions": proportions, "rates": rates,"train_accur":accuracy, "train_time": train_time, "spike_record": spike_record}
 torch.save(train_details, f"./details_{save_as}.pt")
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, train_time))

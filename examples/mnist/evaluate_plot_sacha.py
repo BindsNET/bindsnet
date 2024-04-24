@@ -135,74 +135,110 @@ accuracy = {"all": 0, "proportion": 0}
 # Record spikes during the simulation.
 spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
 
+
+#------- start part one -------
+
 #==================================================================================
 #*************************  Testing the network ***********************************
 
+# Initialize dictionary to store spikes for analysis
+spike_history = {}
+
+'''
+# Start testing
 print("\nBegin testing\n")
 start = t()
-
 pbar = tqdm(total=n_test)
 for step, batch in enumerate(test_dataset):
     if step >= n_test:
         break
-    # Get next input sample.
+
     inputs = {"X": batch["encoded_image"].view(int(time / dt), 1, 1, 28, 28)}
-    if gpu:
+    if device == 'cuda':
         inputs = {k: v.cuda() for k, v in inputs.items()}
 
-    # Run the network on the input.
+    # Run the network on the input
     network.run(inputs=inputs, time=time)
 
-    # Add to spikes recording.
-    spike_record[0] = spikes["Ae"].get("s").squeeze()
-    #spike_record[0] = spikes
+    # Record spikes for all layers at each step
+    spike_history[step] = {layer: spikes[layer].get("s").clone().detach() for layer in spikes}
 
     # Convert the array of labels into a tensor
     label_tensor = torch.tensor(batch["label"], device=device)
 
-    # Get network predictions.
+    # Get network predictions using spikes from the 'Ae' layer for simplicity
     all_activity_pred = all_activity(
-        spikes=spike_record, assignments=assignments, n_labels=n_classes
-    )
-    
-    proportion_pred = proportion_weighting(
-        spikes=spike_record,
+        spikes=spike_history[step]['Ae'],  # Updated to use spike_history
         assignments=assignments,
-        proportions=proportions,
-        n_labels=n_classes,
+        n_labels=n_classes
     )
 
-    # Compute network accuracy according to available classification strategies.
+    proportion_pred = proportion_weighting(
+        spikes=spike_history[step]['Ae'],  # Updated to use spike_history
+        assignments=assignments,
+        proportions=proportions,
+        n_labels=n_classes
+    )
+
+    # Compute network accuracy according to available classification strategies
     accuracy["all"] += float(torch.sum(label_tensor.long() == all_activity_pred).item())
     accuracy["proportion"] += float(torch.sum(label_tensor.long() == proportion_pred).item())
 
+# plot the spikes of all layers while testing  
+    if step % update_interval == 0 and step > 0:
+        if plot:
+            spikes_ = {layer: spikes[layer].get("s") for layer in spikes}
+            spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
+            plt.pause(1e-8)
+#----------
     network.reset_state_variables()  # Reset state variables.
     pbar.set_description_str("Test progress: ")
     pbar.update()
 
-print("\nAll activity accuracy:         %.2f \n" % (100*accuracy["all"] / n_test))
-print("Proportion weighting accuracy:   %.2f \n" % (100*accuracy["proportion"] / n_test))
-print("Testing complete after:          %.4f seconds \n" % (t() - start))
+# Save the spike history to a .pt file for later analysis
+torch.save(spike_history, "spike_history.pt")
+
+pbar.close()
+print("\nAll activity accuracy: %.2f \n" % (100 * accuracy["all"] / n_test))
+print("Proportion weighting accuracy: %.2f \n" % (100 * accuracy["proportion"] / n_test))
+print("Testing complete after %.4f seconds \n" % (t() - start))
+
+#-----------------------------
 '''
-#==================================================================================
-#**********************************  Ploting **************************************
-print("#of evaluation steps: \n",len(train_details["train_accur"]["all"]))
-print("training time: \n", train_details['train_time'])
-#print("training accur: \n", train_details["train_accur"])
-print("average of last 10 accuracies (all): \n", np.mean(train_details["train_accur"]["all"][-10:]))
-
-#extract weights
-input_exc_weights = network.connections[("X", "Ae")].w
-square_weights = get_square_weights( input_exc_weights.view(784, n_neurons), n_sqrt, 28 )
-square_assignments = get_square_assignments(assignments, n_sqrt)
-train_accur = train_details["train_accur"]
-train_accur_prop = {"Accuracy": train_accur["proportion"]} # creat a dict to plot only "proportion"
+#------- end part one -------
 
 
-#plot
-weights_im = plot_weights(square_weights, im=None)
-assigns_im = plot_assignments(square_assignments, im=None)
-#perf_ax = plot_performance(train_accur, x_scale=update_interval, ax=None) # plot both accrucies
-perf_ax = plot_performance(train_accur_prop, x_scale=update_interval, ax=None) # plot only proportion 
+#------- start part two -------
+
+# Uncomment below lines to load and plot spikes after testing
+
+spike_history = torch.load("spike_history.pt")
+# Function to plot spikes from 'Ae' layer
+def plot_spikes_for_interval(start_step, end_step, layer_name="Ae"):
+    spikes_to_plot = {layer_name: torch.cat([spike_history[step][layer_name] for step in range(start_step, end_step)], dim=0)}
+    _, axes = plot_spikes(spikes=spikes_to_plot, figsize=(12, 6))
+    plt.show()
+
+# Example usage: plot spikes for Ae from steps 0 to update_interval
+# Here, each step is an image, each image will last for time/dt points horizontally
+#plot_spikes_for_interval(0, update_interval, "Ae")
+plot_spikes_for_interval(0, 10000, "X")
+
+#step(image) - layer - 
+#spike_history[1]["Ae"][1][:])
 plt.pause(300)
+#------- end part two -------
+'''
+Notes : 
+
+The spike_history file is a dictionary structured to store detailed spiking activity data from a neural network simulation, covering 10,000 steps, likely corresponding to 10,000 distinct image presentations. Each entry in the dictionary is keyed by a step number (from 0 to 9999) and contains another dictionary mapping layer names to tensors representing the spike data.
+
+For each layer at each step, the spike data is stored in a tensor with specific dimensions and types:
+
+Layers: The data includes layers labeled as "Ai", "X", and "Ae".
+Shape of the Tensors: For "Ai" and "Ae" layers, the tensors have a shape of [250, 1, 100], indicating 250 time steps, with spikes recorded from 100 neurons (the middle dimension is likely a singleton dimension added for batch processing or other architectural reasons). For the "X" layer, the shape is [250, 1, 1, 28, 28], suggesting a different data structure possibly representing input or processed images over time.
+Data Types: The tensors in the "Ai" and "Ae" layers are of type torch.bool, indicating binary spiking data (true for a spike, false for no spike). The tensors in the "X" layer are torch.uint8, which might be representing grayscale pixel values of images.
+Storage: All data is stored on the CPU as indicated by the tensor device information.
+
+print('value  ', spike_history[1]["Ae"][10,0,50])
 '''
