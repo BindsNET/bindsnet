@@ -207,7 +207,9 @@ class Salah_model(Network):
     It implements the same network architecture model used by `(Diehl & Cook 2015)`,
     that has input, excitatoy and inhebetory neurons layers. But this model uses 
     a Bi-sigmoid learning rule (Bi_sigmoid), which is hardware friendly. The Bi-sigmoid rule 
-    describes the learning behavior of the MTJs-based synapses. 
+    describes the learning behavior of the MTJs-based synapses.
+    More details here (DADDINOUOU & VATAJELU 2024) :
+    <https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2024.1387339/abstract>`_.
     """
 
     def __init__(

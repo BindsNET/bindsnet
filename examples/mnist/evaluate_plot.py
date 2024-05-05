@@ -183,9 +183,15 @@ for step, batch in enumerate(test_dataset):
 print("\nAll activity accuracy:         %.2f \n" % (100*accuracy["all"] / n_test))
 print("Proportion weighting accuracy:   %.2f \n" % (100*accuracy["proportion"] / n_test))
 print("Testing complete after:          %.4f seconds \n" % (t() - start))
+
+
+
 '''
 #==================================================================================
-#**********************************  Ploting **************************************
+#**********************  Ploting terained weights  ********************************
+After training, If you want to plot the weights without testing the network, 
+uncomment this bloc and comment the precedent testing code.
+
 print("#of evaluation steps: \n",len(train_details["train_accur"]["all"]))
 print("training time: \n", train_details['train_time'])
 #print("training accur: \n", train_details["train_accur"])

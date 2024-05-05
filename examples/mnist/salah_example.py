@@ -50,7 +50,7 @@ parser.set_defaults(plot=False, gpu=False, train="True")
 args = parser.parse_args()
 
 print(args)
-save_as = args.save_as #"exp_31"
+save_as = args.save_as  
 
 seed = args.seed
 n_neurons = args.n_neurons

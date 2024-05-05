@@ -23,3 +23,5 @@ logs/*
 .vscode/*
 data/*
 /examples/mnist/*.pt
+/examples/mnist/draft*
+
