@@ -15,22 +15,22 @@ numpy = "^1.24.3"
 scipy = "^1.10.1"
 Cython = "^0.29.33"
 torch = [
-     {version = "2.2.2", platform = "darwin"},
-     {version = "2.2.2", platform = "linux", source = "torch+cu118"},
-     {version = "2.2.2", platform = "win32", source = "torch+cu118"},
-     {version = "2.2.2", platform = "win_amd64", source = "torch+cu118"},
+     {version = "2.3.0", platform = "darwin"},
+     {version = "2.3.0", platform = "linux", source = "torch+cu118"},
+     {version = "2.3.0", platform = "win32", source = "torch+cu118"},
+     {version = "2.3.0", platform = "win_amd64", source = "torch+cu118"},
  ]
 torchvision = [
-     {version = "0.17.2", platform = "darwin"},
-     {version = "0.17.2", platform = "linux", source = "torch+cu118"},
-     {version = "0.17.2", platform = "win32", source = "torch+cu118"},
-     {version = "0.17.2", platform = "win_amd64", source = "torch+cu118"},
+     {version = "0.18.0", platform = "darwin"},
+     {version = "0.18.0", platform = "linux", source = "torch+cu118"},
+     {version = "0.18.0", platform = "win32", source = "torch+cu118"},
+     {version = "0.18.0", platform = "win_amd64", source = "torch+cu118"},
  ]
 torchaudio = [
-     {version = "2.2.2", platform = "darwin"},
-     {version = "2.2.2", platform = "linux", source = "torch+cu118"},
-     {version = "2.2.2", platform = "win32", source = "torch+cu118"},
-     {version = "2.2.2", platform = "win_amd64", source = "torch+cu118"},
+     {version = "2.3.0", platform = "darwin"},
+     {version = "2.3.0", platform = "linux", source = "torch+cu118"},
+     {version = "2.3.0", platform = "win32", source = "torch+cu118"},
+     {version = "2.3.0", platform = "win_amd64", source = "torch+cu118"},
  ]
 tensorboardX = "^2.6.2.2"
 tqdm = "^4.66.2"
