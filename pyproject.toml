@@ -54,7 +54,7 @@ pre-commit = "^2.14.0"
 notebook = "^6.4.12"
 jupyterlab = "^3.4.5"
 isort = "^5.9.3"
-black = "^23.1.0"
+black = "^24.1.0"
 autoflake = "^2.0.1"
 
 [build-system]
