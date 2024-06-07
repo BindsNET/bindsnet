@@ -48,6 +48,8 @@ class AbstractConnection(ABC, Module):
         :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
         :param float norm: Total weight per target neuron normalization.
+        :param Union[bool, torch.Tensor] Dales_rule: Whether to enforce Dale's rule. input is boolean tensor in weight shape
+            where True means force zero or positive values and False means force zero or negative values.
         """
         super().__init__()
 
@@ -88,6 +90,12 @@ class AbstractConnection(ABC, Module):
             **kwargs,
         )
 
+        self.Dales_rule = kwargs.get("Dales_rule", None)
+        if self.Dales_rule is not None:
+            self.Dales_rule = Parameter(
+                torch.as_tensor(self.Dales_rule, dtype=torch.bool), requires_grad=False
+            )
+
     @abstractmethod
     def compute(self, s: torch.Tensor) -> None:
         # language=rst
@@ -116,6 +124,12 @@ class AbstractConnection(ABC, Module):
         mask = kwargs.get("mask", None)
         if mask is not None:
             self.w.masked_fill_(mask, 0)
+
+        if self.Dales_rule is not None:
+            # weight that are negative and should be positive are set to 0
+            self.w[self.w < 0 * self.Dales_rule.to(torch.float)] = 0
+            # weight that are positive and should be negative are set to 0
+            self.w[self.w > 0 * 1 - self.Dales_rule.to(torch.float)] = 0
 
     @abstractmethod
     def reset_state_variables(self) -> None:
