@@ -15,22 +15,22 @@ numpy = "^1.24.3"
 scipy = "^1.10.1"
 Cython = "^0.29.33"
 torch = [
-     {version = "2.2.2", platform = "darwin"},
-     {version = "2.2.2", platform = "linux", source = "torch+cu118"},
-     {version = "2.2.2", platform = "win32", source = "torch+cu118"},
-     {version = "2.2.2", platform = "win_amd64", source = "torch+cu118"},
+     {version = "2.3.1", platform = "linux", source = "torch+cu121"},
+     {version = "2.3.1", platform = "darwin"},
+     {version = "2.3.1", platform = "win32", source = "torch+cu121"},
+     {version = "2.3.1", platform = "win_amd64", source = "torch+cu121"},
  ]
 torchvision = [
-     {version = "0.17.2", platform = "darwin"},
-     {version = "0.17.2", platform = "linux", source = "torch+cu118"},
-     {version = "0.17.2", platform = "win32", source = "torch+cu118"},
-     {version = "0.17.2", platform = "win_amd64", source = "torch+cu118"},
+     {version = "0.18.1", platform = "darwin"},
+     {version = "0.18.1", platform = "linux", source = "torch+cu121"},
+     {version = "0.18.1", platform = "win32", source = "torch+cu121"},
+     {version = "0.18.1", platform = "win_amd64", source = "torch+cu121"},
  ]
 torchaudio = [
-     {version = "2.2.2", platform = "darwin"},
-     {version = "2.2.2", platform = "linux", source = "torch+cu118"},
-     {version = "2.2.2", platform = "win32", source = "torch+cu118"},
-     {version = "2.2.2", platform = "win_amd64", source = "torch+cu118"},
+     {version = "2.3.1", platform = "darwin"},
+     {version = "2.3.1", platform = "linux", source = "torch+cu121"},
+     {version = "2.3.1", platform = "win32", source = "torch+cu121"},
+     {version = "2.3.1", platform = "win_amd64", source = "torch+cu121"},
  ]
 tensorboardX = "^2.6.2.2"
 tqdm = "^4.66.2"
@@ -48,13 +48,18 @@ foolbox = "^3.3.3"
  url = "https://download.pytorch.org/whl/cu118"
  priority = "explicit"
 
+[[tool.poetry.source]]
+ name = "torch+cu121"
+ url = "https://download.pytorch.org/whl/cu121"
+ priority = "explicit"
+
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.2"
 pre-commit = "^2.14.0"
 notebook = "^6.4.12"
 jupyterlab = "^3.4.5"
 isort = "^5.9.3"
-black = "^23.1.0"
+black = "^24.1.0"
 autoflake = "^2.0.1"
 
 [build-system]
