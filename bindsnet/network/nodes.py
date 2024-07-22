@@ -1766,7 +1766,7 @@ class IFNodes_PredInf(Nodes):
 
         self.Fire_only_Once = Fire_only_Once
         if self.Fire_only_Once:
-            refrac = torch.int.torch.iinfo(torch.int32).max
+            refrac = torch.iinfo(torch.int32).max
 
         self.lbound = lbound  # Lower bound of voltage.
 
