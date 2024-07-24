@@ -14,7 +14,7 @@ Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/mast
 
 ## Requirements
 
-- Python >=3.8.10,<3.11
+- Python >=3.9,<3.12
 
 ## Setting things up
 
