@@ -6,7 +6,8 @@ from abc import ABC
 from typing import Union, Optional, Iterable, Dict
 
 from .nodes import Nodes
-from .topology import AbstractConnection
+from .topology import AbstractConnection, AbstractMulticompartmentConnection
+from .topology_features import AbstractFeature
 
 
 class AbstractMonitor(ABC):
@@ -24,7 +25,7 @@ class Monitor(AbstractMonitor):
 
     def __init__(
         self,
-        obj: Union[Nodes, AbstractConnection],
+        obj: Union[Nodes, AbstractMulticompartmentConnection, AbstractFeature],
         state_vars: Iterable[str],
         time: Optional[int] = None,
         batch_size: int = 1,
@@ -169,7 +170,7 @@ class NetworkMonitor(AbstractMonitor):
                             self.time, *getattr(self.network.connections[c], v).size()
                         )
 
-    def get(self) -> Dict[str, Dict[str, Union[Nodes, AbstractConnection]]]:
+    def get(self) -> Dict[str, Dict[str, Union[Nodes, AbstractConnection, AbstractMulticompartmentConnection, AbstractFeature]]]:
         # language=rst
         """
         Return entire recording to user.
