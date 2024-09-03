@@ -22,7 +22,6 @@ class MCC_LearningRule(ABC):
     def __init__(
         self,
         connection: AbstractMulticompartmentConnection,
-        # TODO: Will not work properly with primitive types int/float (not by reference)
         feature_value: Union[float, int, torch.Tensor],
         range: Optional[Union[list, tuple]] = None,
         nu: Optional[Union[float, Sequence[float]]] = None,
@@ -99,7 +98,6 @@ class MCC_LearningRule(ABC):
             polarity_swaps = self.polarities == torch.sign(self.feature_value)
             self.feature_value[polarity_swaps == 0] = 0
 
-        # TODO: FIX THIS
         # Bound weights.
         if ((self.min is not None) or (self.max is not None)) and not isinstance(
             self, NoOp
