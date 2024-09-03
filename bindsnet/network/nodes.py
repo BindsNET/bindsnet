@@ -225,6 +225,8 @@ class Input(Nodes, AbstractInput):
         """
         Resets relevant state variables.
         """
+        self.s.zero_()
+        self.v.zero_()
         super().reset_state_variables()
 
 
