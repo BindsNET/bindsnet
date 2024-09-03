@@ -66,24 +66,18 @@ class AbstractFeature(ABC):
         ## Backend ##
         self.is_primed = False
 
-        from ..learning import (
+        from ..learning.MCC_learning import (
             NoOp,
             PostPre,
-            WeightDependentPostPre,
-            Hebbian,
             MSTDP,
             MSTDPET,
-            Rmax,
         )
 
         supported_rules = [
             NoOp,
             PostPre,
-            WeightDependentPostPre,
-            Hebbian,
             MSTDP,
             MSTDPET,
-            Rmax,
         ]
 
         #### Assertions ####
@@ -152,7 +146,7 @@ class AbstractFeature(ABC):
         """
 
         # Note: DO NOT move NoOp to global; cyclical dependency
-        from ..learning import NoOp
+        from ..learning.MCC_learning import NoOp
 
         # Check if feature is already primed
         if self.is_primed:
@@ -458,7 +452,7 @@ class Mask(AbstractFeature):
 
         ##### Initialize learning rule #####
         # Note: DO NOT move NoOp to global; cyclical dependency
-        from ..learning import NoOp
+        from ..learning.MCC_learning import NoOp
 
         # Default is NoOp
         if self.learning_rule is None:
