@@ -16,20 +16,21 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=[
-        "numpy>=1.19.5",
-        "torch==1.9.0",
-        "torchvision==0.10.0",
-        "tensorboardX==2.2",
-        "tqdm>=4.60.0",
-        "matplotlib>=2.1.0",
-        "gym>=0.10.4",
-        "scikit-build>=0.11.1",
-        "scikit_image>=0.13.1",
-        "scikit_learn>=0.19.1",
-        "opencv-python>=3.4.0.12",
-        "pytest>=6.2.0",
-        "scipy>=1.5.4",
-        "cython>=0.29.0",
-        "pandas>=0.23.4",
+        "scipy>=1.14.1,"
+        "numpy>=2.1.0,"
+        "cython>=3.0.11,"
+        "torch==2.4.0,"
+        "torchvision==0.19.0,"
+        "tensorboardX==2.6.2.2,"
+        "tqdm>=4.66.5,"
+        "setuptools>=74.1.1,"
+        "matplotlib>=3.9.2,"
+        "gym>=0.26.2,"
+        "scikit-build>=0.18.0,"
+        "scikit_image>=0.24.0,"
+        "scikit_learn>=1.5.1,"
+        "opencv-python>=4.10.0.84,"
+        "pytest>=8.3.2,"
+        "pandas>=2.2.2,"
     ],
 )
