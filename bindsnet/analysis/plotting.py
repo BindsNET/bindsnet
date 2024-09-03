@@ -40,8 +40,8 @@ def plot_input(
     if axes is None:
         fig, axes = plt.subplots(1, 2, figsize=figsize)
         ims = (
-            axes[0].imshow(local_image, cmap="binary"),
-            axes[1].imshow(local_inpy, cmap="binary"),
+            axes[0].imshow(local_image, cmap="binary", aspect="auto"),
+            axes[1].imshow(local_inpy, cmap="binary", aspect="auto"),
         )
 
         if label is None:
@@ -182,6 +182,7 @@ def plot_weights(
     figsize: Tuple[int, int] = (5, 5),
     cmap: str = "hot_r",
     save: Optional[str] = None,
+    title: Optional[str] = None,
 ) -> AxesImage:
     # language=rst
     """
@@ -194,6 +195,7 @@ def plot_weights(
     :param figsize: Horizontal, vertical figure size in inches.
     :param cmap: Matplotlib colormap.
     :param save: file name to save fig, if None = not saving fig.
+    :param title: Title of the plot.
     :return: ``AxesImage`` for re-drawing the weights plot.
     """
     local_weights = weights.detach().clone().cpu().numpy()
@@ -209,6 +211,8 @@ def plot_weights(
         ax.set_xticks(())
         ax.set_yticks(())
         ax.set_aspect("auto")
+        if title != None:
+            ax.set_title(title + " Weights")
 
         plt.colorbar(im, cax=cax)
         fig.tight_layout()
@@ -237,6 +241,8 @@ def plot_weights(
             ax.set_xticks(())
             ax.set_yticks(())
             ax.set_aspect("auto")
+            if title != None:
+                ax.set_title(title + " Weights")
 
             plt.colorbar(im, cax=cax)
             fig.tight_layout()
@@ -597,7 +603,7 @@ def plot_voltages(
                             .numpy()[
                                 time[0] : time[1],
                                 n_neurons[v[0]][0] : n_neurons[v[0]][1],
-                            ]
+                            ],
                         )
                     )
 
