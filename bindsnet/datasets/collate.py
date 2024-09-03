@@ -76,11 +76,11 @@ def time_aware_collate(batch):
         return torch.tensor(batch)
     elif isinstance(elem, str):
         return batch
-    elif isinstance(elem, collections.Mapping):
+    elif isinstance(elem, collections.abc.Mapping):
         return {key: time_aware_collate([d[key] for d in batch]) for key in elem}
     elif isinstance(elem, tuple) and hasattr(elem, "_fields"):  # namedtuple
         return elem_type(*(time_aware_collate(samples) for samples in zip(*batch)))
-    elif isinstance(elem, collections.Sequence):
+    elif isinstance(elem, collections.abc.Sequence):
         transposed = zip(*batch)
         return [time_aware_collate(samples) for samples in transposed]
 
