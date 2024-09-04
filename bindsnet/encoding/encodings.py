@@ -9,7 +9,7 @@ def single(
     dt: float = 1.0,
     sparsity: float = 0.5,
     device="cpu",
-    **kwargs
+    **kwargs,
 ) -> torch.Tensor:
     # language=rst
     """
@@ -26,7 +26,7 @@ def single(
     """
     time = int(time / dt)
     shape = list(datum.shape)
-    datum = torch.tensor(datum)
+    datum = torch.tensor(datum, device=device)
     quantile = torch.quantile(datum, 1 - sparsity)
     s = torch.zeros([time, *shape], device=device)
     s[0] = torch.where(datum > quantile, torch.ones(shape), torch.zeros(shape))
@@ -52,7 +52,7 @@ def bernoulli(
     time: Optional[int] = None,
     dt: float = 1.0,
     device="cpu",
-    **kwargs
+    **kwargs,
 ) -> torch.Tensor:
     # language=rst
     """
@@ -76,7 +76,7 @@ def bernoulli(
     assert (datum >= 0).all(), "Inputs must be non-negative"
 
     shape, size = datum.shape, datum.numel()
-    datum = datum.flatten()
+    datum = datum.flatten().to(device)
 
     if time is not None:
         time = int(time / dt)
@@ -102,7 +102,7 @@ def poisson(
     dt: float = 1.0,
     device="cpu",
     approx=False,
-    **kwargs
+    **kwargs,
 ) -> torch.Tensor:
     # language=rst
     """
@@ -122,7 +122,7 @@ def poisson(
 
     # Get shape and size of data.
     shape, size = datum.shape, datum.numel()
-    datum = datum.flatten()
+    datum = datum.flatten().to(device)
     time = int(time / dt)
 
     if approx:
@@ -157,7 +157,7 @@ def poisson(
 
 
 def rank_order(
-    datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs
+    datum: torch.Tensor, time: int, dt: float = 1.0, device="cpu", **kwargs
 ) -> torch.Tensor:
     # language=rst
     """
@@ -172,7 +172,7 @@ def rank_order(
     assert (datum >= 0).all(), "Inputs must be non-negative"
 
     shape, size = datum.shape, datum.numel()
-    datum = datum.flatten()
+    datum = datum.flatten().to(device)
     time = int(time / dt)
 
     # Create spike times in order of decreasing intensity.
@@ -183,7 +183,7 @@ def rank_order(
     times = torch.ceil(times).long()
 
     # Create spike times tensor.
-    spikes = torch.zeros(time, size).byte()
+    spikes = torch.zeros(time, size, device=device).byte()
     for i in range(size):
         if 0 < times[i] < time:
             spikes[times[i] - 1, i] = 1

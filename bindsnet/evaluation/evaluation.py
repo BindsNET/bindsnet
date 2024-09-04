@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Optional, Tuple, Dict
+from typing import Dict, Optional, Tuple
 
 import torch
 from sklearn.linear_model import LogisticRegression

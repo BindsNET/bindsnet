@@ -1,10 +1,10 @@
-from bindsnet.network import Network
-from bindsnet.pipeline import EnvironmentPipeline
-from bindsnet.learning import MSTDP
 from bindsnet.encoding import bernoulli
-from bindsnet.network.topology import Connection
 from bindsnet.environment import GymEnvironment
+from bindsnet.learning import MSTDP
+from bindsnet.network import Network
 from bindsnet.network.nodes import Input, LIFNodes
+from bindsnet.network.topology import Connection
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.pipeline.action import select_softmax
 
 # Build network.
@@ -35,7 +35,7 @@ network.add_connection(inpt_middle, source="Input Layer", target="Hidden Layer")
 network.add_connection(middle_out, source="Hidden Layer", target="Output Layer")
 
 # Load the Breakout environment.
-environment = GymEnvironment("BreakoutDeterministic-v4")
+environment = GymEnvironment("BreakoutDeterministic-v4", render_mode="human")
 environment.reset()
 
 # Build pipeline from specified components.
@@ -68,6 +68,9 @@ def run_pipeline(pipeline, episode_count):
             is_done = result[2]
         print(f"Episode {i} total reward:{total_reward}")
 
+
+# enable MSTDP
+environment_pipeline.network.learning = True
 
 print("Training: ")
 run_pipeline(environment_pipeline, episode_count=100)

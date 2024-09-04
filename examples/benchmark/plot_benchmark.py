@@ -1,8 +1,8 @@
-import os
 import argparse
-import pandas as pd
-import matplotlib.pyplot as plt
+import os
 
+import matplotlib.pyplot as plt
+import pandas as pd
 from experiments import ROOT_DIR
 
 benchmark_path = os.path.join(ROOT_DIR, "benchmark")

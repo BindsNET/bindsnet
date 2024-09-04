@@ -1,9 +1,9 @@
-import torch
-
-from bindsnet.analysis.pipeline_analysis import TensorboardAnalyzer, MatplotlibAnalyzer
+import os
 
 import matplotlib.pyplot as plt
-import os
+import torch
+
+from bindsnet.analysis.pipeline_analysis import MatplotlibAnalyzer, TensorboardAnalyzer
 
 
 class TestAnalyzer:

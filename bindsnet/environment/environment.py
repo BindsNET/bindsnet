@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Dict, Any
+from typing import Any, Dict, Tuple
 
-import gym
+import ale_py
+import gymnasium as gym
 import numpy as np
 import torch
 
-from ..datasets.preprocess import subsample, gray_scale, binary_image, crop
-from ..encoding import Encoder, NullEncoder
+from bindsnet.datasets.preprocess import binary_image, crop, gray_scale, subsample
+from bindsnet.encoding import Encoder, NullEncoder
 
 
 class Environment(ABC):
@@ -23,7 +24,6 @@ class Environment(ABC):
 
         :param a: Integer action to take in environment.
         """
-        pass
 
     @abstractmethod
     def reset(self) -> None:
@@ -31,7 +31,6 @@ class Environment(ABC):
         """
         Abstract method header for ``reset()``.
         """
-        pass
 
     @abstractmethod
     def render(self) -> None:
@@ -39,7 +38,6 @@ class Environment(ABC):
         """
         Abstract method header for ``render()``.
         """
-        pass
 
     @abstractmethod
     def close(self) -> None:
@@ -47,7 +45,6 @@ class Environment(ABC):
         """
         Abstract method header for ``close()``.
         """
-        pass
 
     @abstractmethod
     def preprocess(self) -> None:
@@ -55,7 +52,6 @@ class Environment(ABC):
         """
         Abstract method header for ``preprocess()``.
         """
-        pass
 
 
 class GymEnvironment(Environment):
@@ -64,7 +60,13 @@ class GymEnvironment(Environment):
     A wrapper around the OpenAI ``gym`` environments.
     """
 
-    def __init__(self, name: str, encoder: Encoder = NullEncoder(), **kwargs) -> None:
+    def __init__(
+        self,
+        name: str,
+        render_mode: str = "rgb_array",
+        encoder: Encoder = NullEncoder(),
+        **kwargs,
+    ) -> None:
         # language=rst
         """
         Initializes the environment wrapper. This class makes the
@@ -87,7 +89,7 @@ class GymEnvironment(Environment):
             2D inputs.
         """
         self.name = name
-        self.env = gym.make(name)
+        self.env = gym.make(id=name, render_mode=render_mode)
         self.action_space = self.env.action_space
 
         self.encoder = encoder
@@ -99,6 +101,7 @@ class GymEnvironment(Environment):
         self.history_length = kwargs.get("history_length", None)
         self.delta = kwargs.get("delta", 1)
         self.add_channel_dim = kwargs.get("add_channel_dim", True)
+        self.seed = kwargs.get("seed", None)
 
         if self.history_length is not None and self.delta is not None:
             self.history = {
@@ -127,7 +130,8 @@ class GymEnvironment(Environment):
         :return: Observation, reward, done flag, and information dictionary.
         """
         # Call gym's environment step function.
-        self.obs, self.reward, self.done, info = self.env.step(a)
+        self.obs, self.reward, terminated, truncated, info = self.env.step(a)
+        self.done = terminated or truncated
 
         if self.clip_rewards:
             self.reward = np.sign(self.reward)
@@ -167,7 +171,7 @@ class GymEnvironment(Environment):
         # Return converted observations and other information.
         return self.obs, self.reward, self.done, info
 
-    def reset(self) -> torch.Tensor:
+    def reset(self, seed=None) -> torch.Tensor:
         # language=rst
         """
         Wrapper around the OpenAI ``gym`` environment ``reset()`` function.
@@ -175,7 +179,7 @@ class GymEnvironment(Environment):
         :return: Observation from the environment.
         """
         # Call gym's environment reset function.
-        self.obs = self.env.reset()
+        self.obs, self.info = self.env.reset(seed=seed)
         self.preprocess()
 
         self.history = {i: torch.Tensor() for i in self.history}

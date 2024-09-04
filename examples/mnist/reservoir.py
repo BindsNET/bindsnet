@@ -1,10 +1,10 @@
+import argparse
 import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-import argparse
-import matplotlib.pyplot as plt
-
 from torchvision import transforms
 from tqdm import tqdm
 
@@ -17,14 +17,12 @@ from bindsnet.analysis.plotting import (
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.network import Network
-from bindsnet.network.nodes import Input
 
 # Build a simple two-layer, input-output network.
 from bindsnet.network.monitors import Monitor
-from bindsnet.network.nodes import LIFNodes
+from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.network.topology import Connection
 from bindsnet.utils import get_square_weights
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
@@ -129,7 +127,7 @@ dataloader = torch.utils.data.DataLoader(
 n_iters = examples
 training_pairs = []
 pbar = tqdm(enumerate(dataloader))
-for (i, dataPoint) in pbar:
+for i, dataPoint in pbar:
     if i > n_iters:
         break
 
@@ -141,12 +139,12 @@ for (i, dataPoint) in pbar:
     pbar.set_description_str("Train progress: (%d / %d)" % (i, n_iters))
 
     # Run network on sample image
-    network.run(inputs={"I": datum}, time=time, input_time_dim=1)
-    training_pairs.append([spikes["O"].get("s").sum(0), label])
+    network.run(inputs={"I": datum}, time=time)
+    training_pairs.append([spikes["O"].get("s"), label])
 
     # Plot spiking activity using monitors
     if plot:
-
+        # Plot the current image and reconstructed/encoded image
         inpt_axes, inpt_ims = plot_input(
             dataPoint["image"].view(28, 28),
             datum.view(int(time / dt), 784).sum(0).view(28, 28),
@@ -154,19 +152,23 @@ for (i, dataPoint) in pbar:
             axes=inpt_axes,
             ims=inpt_ims,
         )
+        # Plot spikes
         spike_ims, spike_axes = plot_spikes(
             {layer: spikes[layer].get("s").view(time, -1) for layer in spikes},
             axes=spike_axes,
             ims=spike_ims,
         )
+        # Plot voltages
         voltage_ims, voltage_axes = plot_voltages(
             {layer: voltages[layer].get("v").view(time, -1) for layer in voltages},
             ims=voltage_ims,
             axes=voltage_axes,
         )
+        # Plot weights between input and output
         weights_im = plot_weights(
             get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2
         )
+        # Plot weights between output and output
         weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
 
         plt.pause(1e-8)
@@ -190,7 +192,7 @@ class NN(nn.Module):
 
 
 # Create and train logistic regression model on reservoir outputs.
-model = NN(n_neurons, 10).to(device)
+model = NN(n_neurons * args.time, 10).to(device)
 criterion = torch.nn.MSELoss(reduction="sum")
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
 
@@ -205,7 +207,6 @@ for epoch, _ in pbar:
     #       s   -> Reservoir output spikes
     #       l   -> Image label
     for i, (s, l) in enumerate(training_pairs):
-
         # Reset gradients to 0
         optimizer.zero_grad()
 
@@ -232,15 +233,15 @@ for epoch, _ in pbar:
 n_iters = examples
 test_pairs = []
 pbar = tqdm(enumerate(dataloader))
-for (i, dataPoint) in pbar:
+for i, dataPoint in pbar:
     if i > n_iters:
         break
     datum = dataPoint["encoded_image"].view(int(time / dt), 1, 1, 28, 28).to(device)
     label = dataPoint["label"]
     pbar.set_description_str("Testing progress: (%d / %d)" % (i, n_iters))
 
-    network.run(inputs={"I": datum}, time=time, input_time_dim=1)
-    test_pairs.append([spikes["O"].get("s").sum(0), label])
+    network.run(inputs={"I": datum}, time=time)
+    test_pairs.append([spikes["O"].get("s"), label])
 
     if plot:
         inpt_axes, inpt_ims = plot_input(

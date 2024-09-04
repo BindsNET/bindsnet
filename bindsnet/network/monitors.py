@@ -1,12 +1,15 @@
 import os
-import torch
-import numpy as np
-
 from abc import ABC
-from typing import Union, Optional, Iterable, Dict
+from typing import TYPE_CHECKING, Dict, Iterable, Optional, Union
 
-from .nodes import Nodes
-from .topology import AbstractConnection
+import numpy as np
+import torch
+
+from bindsnet.network.nodes import Nodes
+from bindsnet.network.topology import AbstractConnection
+
+if TYPE_CHECKING:
+    from .network import Network
 
 
 class AbstractMonitor(ABC):
@@ -51,6 +54,8 @@ class Monitor(AbstractMonitor):
         if self.time is None:
             self.device = "cpu"
 
+        self.clean = True
+
         self.recording = []
         self.reset_state_variables()
 
@@ -65,9 +70,12 @@ class Monitor(AbstractMonitor):
         Note, if time == `None`, get return the logs and empty the monitor variable
 
         """
-        return_logs = torch.cat(self.recording[var], 0)
-        if self.time is None:
-            self.recording[var] = []
+        if self.clean:
+            return_logs = torch.empty(0, device=self.device)
+        else:
+            return_logs = torch.cat(self.recording[var], 0)
+            if self.time is None:
+                self.recording[var] = []
         return return_logs
 
     def record(self) -> None:
@@ -75,6 +83,7 @@ class Monitor(AbstractMonitor):
         """
         Appends the current value of the recorded state variables to the recording.
         """
+        self.clean = False
         for v in self.state_vars:
             data = getattr(self.obj, v).unsqueeze(0)
             # self.recording[v].append(data.detach().clone().to(self.device))
@@ -98,6 +107,7 @@ class Monitor(AbstractMonitor):
             self.recording = {
                 v: [[] for i in range(self.time)] for v in self.state_vars
             }
+        self.clean = True
 
 
 class NetworkMonitor(AbstractMonitor):

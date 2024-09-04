@@ -1,34 +1,19 @@
-import numpy as np
 import os
-import pandas as pd
 import random
 from time import time
 
-import torch
-from gym import spaces
 import matplotlib.pyplot as plt
-
+import numpy as np
+import pandas as pd
+import torch
+from gymnasium import spaces
 
 # Mappings for changing direction if reflected.
 # Cannot cross a row boundary moving right or left.
-ROW_CROSSING = {
-    1: 2,
-    3: -2,
-    5: 1,
-    6: -1,
-    7: 1,
-    8: -1,
-}
+ROW_CROSSING = {1: 2, 3: -2, 5: 1, 6: -1, 7: 1, 8: -1}
 
 # Cannot cross a column boundary moving up or down.
-COL_CROSSING = {
-    2: 2,
-    4: -2,
-    5: 3,
-    6: 1,
-    7: -1,
-    8: -3,
-}
+COL_CROSSING = {2: 2, 4: -2, 5: 3, 6: 1, 7: -1, 8: -3}
 
 
 class Dot:
@@ -104,7 +89,6 @@ class DotSimulator:
     """
 
     def __init__(self, t: int, **kwargs) -> None:
-
         self.timesteps = t  # total timesteps
         self.ts = 0  # initialize current timestep to 0
 
@@ -451,9 +435,8 @@ class DotSimulator:
 
         # Write to file if requested.
         if self.write2F:
-            f = open(self.filename, "ab")
-            np.savetxt(f, temp, delimiter=",")
-            f.close()
+            with open(self.filename, "ab") as f:
+                np.savetxt(f, temp, delimiter=",")
 
         # Print as pandas dataframe if requested.
         if self.pandas:
@@ -485,12 +468,12 @@ class DotSimulator:
         """
         Increments numbered suffix on output file to start a new one.
         """
-        oldStr = "_" + str(self.fileCnt)
+        underScore = self.filename.rfind("_")
         if 0 <= newInt:
             self.fileCnt = newInt
         else:
             self.fileCnt += 1
-        self.filename = self.filename.replace(oldStr, "_" + str(self.fileCnt))
+        self.filename = self.filename[: underScore + 1] + str(self.fileCnt) + ".csv"
 
     def addFileSuffix(self, suffix):
         """

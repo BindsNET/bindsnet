@@ -1,16 +1,14 @@
-from typing import Optional, Union, Tuple, List, Sequence, Iterable
+from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 from scipy.spatial.distance import euclidean
 from torch.nn.modules.utils import _pair
-import torch.nn as nn
-from torchvision import models
 
-from ..learning import PostPre
-from ..network import Network
-from ..network.nodes import Input, LIFNodes, DiehlAndCookNodes, AdaptiveLIFNodes
-from ..network.topology import Connection, LocalConnection
+from bindsnet.learning import PostPre
+from bindsnet.network import Network
+from bindsnet.network.nodes import DiehlAndCookNodes, Input, LIFNodes
+from bindsnet.network.topology import Connection, LocalConnection
 
 
 class TwoLayerNetwork(Network):
@@ -108,6 +106,8 @@ class DiehlAndCook2015(Network):
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         inpt_shape: Optional[Iterable[int]] = None,
+        inh_thresh: float = -40.0,
+        exc_thresh: float = -52.0,
     ) -> None:
         # language=rst
         """
@@ -150,7 +150,7 @@ class DiehlAndCook2015(Network):
             traces=True,
             rest=-65.0,
             reset=-60.0,
-            thresh=-52.0,
+            thresh=exc_thresh,
             refrac=5,
             tc_decay=100.0,
             tc_trace=20.0,
@@ -162,7 +162,7 @@ class DiehlAndCook2015(Network):
             traces=False,
             rest=-60.0,
             reset=-45.0,
-            thresh=-40.0,
+            thresh=inh_thresh,
             tc_decay=10.0,
             refrac=2,
             tc_trace=20.0,
@@ -225,6 +225,7 @@ class DiehlAndCook2015v2(Network):
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         inpt_shape: Optional[Iterable[int]] = None,
+        exc_thresh: float = -52.0,
     ) -> None:
         # language=rst
         """
@@ -266,7 +267,7 @@ class DiehlAndCook2015v2(Network):
             traces=True,
             rest=-65.0,
             reset=-60.0,
-            thresh=-52.0,
+            thresh=exc_thresh,
             refrac=5,
             tc_decay=100.0,
             tc_trace=20.0,
@@ -325,6 +326,7 @@ class IncreasingInhibitionNetwork(Network):
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
         inpt_shape: Optional[Iterable[int]] = None,
+        exc_thresh: float = -52.0,
     ) -> None:
         # language=rst
         """
@@ -368,7 +370,7 @@ class IncreasingInhibitionNetwork(Network):
             traces=True,
             rest=-65.0,
             reset=-60.0,
-            thresh=-52.0,
+            thresh=exc_thresh,
             refrac=5,
             tc_decay=100.0,
             tc_trace=20.0,
@@ -434,6 +436,7 @@ class LocallyConnectedNetwork(Network):
         wmin: float = 0.0,
         wmax: float = 1.0,
         norm: Optional[float] = 0.2,
+        exc_thresh: float = -52.0,
     ) -> None:
         # language=rst
         """
@@ -497,7 +500,7 @@ class LocallyConnectedNetwork(Network):
             traces=True,
             rest=-65.0,
             reset=-60.0,
-            thresh=-52.0,
+            thresh=exc_thresh,
             refrac=5,
             tc_decay=100.0,
             tc_trace=20.0,

@@ -1,28 +1,27 @@
-import os
-import torch
 import argparse
-import numpy as np
-import matplotlib.pyplot as plt
+import os
+from time import time as t
 
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 from torchvision import transforms
 from tqdm import tqdm
 
-from time import time as t
-
+from bindsnet.analysis.plotting import (
+    plot_assignments,
+    plot_input,
+    plot_performance,
+    plot_spikes,
+    plot_voltages,
+    plot_weights,
+)
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder, poisson
+from bindsnet.evaluation import all_activity, assign_labels, proportion_weighting
 from bindsnet.models import IncreasingInhibitionNetwork
 from bindsnet.network.monitors import Monitor
-from bindsnet.utils import get_square_weights, get_square_assignments
-from bindsnet.evaluation import all_activity, proportion_weighting, assign_labels
-from bindsnet.analysis.plotting import (
-    plot_input,
-    plot_spikes,
-    plot_weights,
-    plot_assignments,
-    plot_performance,
-    plot_voltages,
-)
+from bindsnet.utils import get_square_assignments, get_square_weights
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
@@ -254,7 +253,7 @@ for epoch in range(n_epochs):
         factor = 1.2
         for retry in range(5):
             # Run the network on the input.
-            network.run(inputs=inputs, time=time, input_time_dim=1)
+            network.run(inputs=inputs, time=time)
 
             # Get spikes from the network
             temp_spikes = spikes["Y"].get("s").squeeze()
@@ -315,7 +314,6 @@ for epoch in range(n_epochs):
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")
 
-
 # Load MNIST data.
 test_dataset = MNIST(
     PoissonEncoder(time=time, dt=dt),
@@ -349,7 +347,7 @@ for step, batch in enumerate(test_dataset):
         inputs = {k: v.cuda() for k, v in inputs.items()}
 
     # Run the network on the input.
-    network.run(inputs=inputs, time=time, input_time_dim=1)
+    network.run(inputs=inputs, time=time)
 
     # Add to spikes recording.
     spike_record[0] = spikes["Y"].get("s").squeeze()
@@ -378,10 +376,8 @@ for step, batch in enumerate(test_dataset):
     pbar.set_description_str("Test progress: ")
     pbar.update()
 
-
 print("\nAll activity accuracy: %.2f" % (accuracy["all"] / n_test))
 print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_test))
-
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Testing complete.\n")

@@ -8,8 +8,8 @@ import torch
 from tensorboardX import SummaryWriter
 from torchvision.utils import make_grid
 
-from .plotting import plot_spikes, plot_voltages, plot_conv2d_weights
 from ..utils import reshape_conv2d_weights
+from .plotting import plot_conv2d_weights, plot_spikes, plot_voltages
 
 
 class PipelineAnalyzer(ABC):
@@ -25,7 +25,6 @@ class PipelineAnalyzer(ABC):
         """
         Flush the output from the current step.
         """
-        pass
 
     @abstractmethod
     def plot_obs(self, obs: torch.Tensor, tag: str = "obs", step: int = None) -> None:
@@ -38,7 +37,6 @@ class PipelineAnalyzer(ABC):
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
-        pass
 
     @abstractmethod
     def plot_reward(
@@ -57,7 +55,6 @@ class PipelineAnalyzer(ABC):
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
-        pass
 
     @abstractmethod
     def plot_spikes(
@@ -75,7 +72,6 @@ class PipelineAnalyzer(ABC):
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
-        pass
 
     @abstractmethod
     def plot_voltages(
@@ -96,7 +92,6 @@ class PipelineAnalyzer(ABC):
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
-        pass
 
     @abstractmethod
     def plot_conv2d_weights(
@@ -110,7 +105,6 @@ class PipelineAnalyzer(ABC):
         :param tag: A unique tag to associate the data with.
         :param step: The step of the pipeline.
         """
-        pass
 
 
 class MatplotlibAnalyzer(PipelineAnalyzer):
@@ -313,7 +307,6 @@ class TensorboardAnalyzer(PipelineAnalyzer):
         """
         No-op for ``TensorboardAnalyzer``.
         """
-        pass
 
     def plot_obs(self, obs: torch.Tensor, tag: str = "obs", step: int = None) -> None:
         # language=rst

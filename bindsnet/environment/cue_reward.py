@@ -1,9 +1,8 @@
-import numpy as np
 import random
 from time import time
 
+import numpy as np
 import torch
-
 
 # Number of cues to be used in the experiment.
 NUM_CUES = 4
