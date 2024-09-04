@@ -1,6 +1,6 @@
 import torch
 
-from .collate import time_aware_collate
+from bindsnet.datasets.collate import time_aware_collate
 
 
 class DataLoader(torch.utils.data.DataLoader):

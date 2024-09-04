@@ -1,24 +1,20 @@
 import os
 import sys
 import time
-import zipfile
 import warnings
-from glob import glob
+import zipfile
 from urllib.request import urlretrieve
-from typing import Optional, Tuple, List, Iterable
 
 import cv2
-import torch
 import numpy as np
-from PIL import Image
 from torch.utils.data import Dataset
 
 from bindsnet.datasets.preprocess import (
-    cropPadImage,
     BoundingBox,
-    crop_sample,
     Rescale,
     bgr2rgb,
+    crop_sample,
+    cropPadImage,
 )
 
 warnings.filterwarnings("ignore")

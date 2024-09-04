@@ -1,12 +1,12 @@
 from __future__ import print_function
 
-import os
 import argparse
+import os
+from time import time as t
+
 import ANNarchy
 import numpy as np
 import pandas as pd
-
-from time import time as t
 
 plots_path = os.path.join("..", "..", "figures")
 benchmark_path = os.path.join("..", "..", "benchmark")

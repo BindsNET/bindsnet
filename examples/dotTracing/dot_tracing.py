@@ -1,29 +1,25 @@
-from bindsnet.network import Network
+import argparse
+import time
 
-# from bindsnet.pipeline import EnvironmentPipeline
-# from bindsnet.learning import MSTDP
-from bindsnet.learning import MSTDPET
-from bindsnet.learning import PostPre
+import numpy as np
+import torch
+
+from bindsnet.analysis.plotting import plot_spikes  # plot_performance
 
 # from bindsnet.encoding import bernoulli
 from bindsnet.encoding import poisson
-from bindsnet.network.topology import Connection
 from bindsnet.environment.dot_simulator import DotSimulator
-from bindsnet.network.nodes import Input, LIFNodes
+
+# from bindsnet.pipeline import EnvironmentPipeline
+# from bindsnet.learning import MSTDP
+from bindsnet.learning import MSTDPET, PostPre
+from bindsnet.network import Network
 
 # from bindsnet.pipeline.action import select_softmax
 # from bindsnet.network.nodes import AbstractInput
 from bindsnet.network.monitors import Monitor
-from bindsnet.analysis.plotting import (
-    plot_spikes,
-    # plot_performance
-)
-
-import argparse
-import numpy as np
-import time
-import torch
-
+from bindsnet.network.nodes import Input, LIFNodes
+from bindsnet.network.topology import Connection
 
 # Handle arguments for dot tracing params.
 parser = argparse.ArgumentParser()
@@ -104,7 +100,6 @@ def genFileName(ftype, suffix=""):
 
 
 def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
-
     steps = env.timesteps
     dt = net.dt
     spike_ims, spike_axes = None, None
@@ -131,7 +126,6 @@ def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
 
         # Run through episode.
         while not done:
-
             step += 1
             obs, reward, done, intercept = env.step(action)
             obs = torch.Tensor(obs).to(DEVICE)
@@ -165,9 +159,8 @@ def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
 
                 # Save rewards thus far to file
                 if rfname != "":
-                    f = open(rfname, "ab")
-                    np.savetxt(f, rewards, delimiter=",", fmt="%.6f")
-                    f.close()
+                    with open(rfname, "ab") as f:
+                        np.savetxt(f, rewards, delimiter=",", fmt="%.6f")
 
             spikes_ = {layer: spikes[layer].get("s").view(gran, -1) for layer in spikes}
             spike_ims, spike_axes = plot_spikes(spikes_, ims=spike_ims, axes=spike_axes)
@@ -185,12 +178,11 @@ def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
         print(f"Episode {ep} total reward:{total_reward}")
         # Save intcercepts thus far to file
         if pfname != "":
-            f = open(pfname, "a+")
-            if 0 < ep:
-                f.write("," + str(intercepts))
-            else:
-                f.write(str(intercepts))
-            f.close()
+            with open(pfname, "a+") as f:
+                if 0 < ep:
+                    f.write("," + str(intercepts))
+                else:
+                    f.write(str(intercepts))
 
         # Cycle output files every 10000 iterations
         if ep % fcycle == 0:
@@ -198,7 +190,6 @@ def runSimulator(net, env, spikes, episodes, gran=100, rfname="", pfname=""):
 
 
 def main():
-
     # Build network.
     network = Network(dt=dt)
 

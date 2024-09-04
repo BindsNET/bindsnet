@@ -1,16 +1,15 @@
 import itertools
-from typing import Callable, Optional, Tuple, Dict
+from typing import Callable, Dict, Optional, Tuple
 
 import torch
-
 from tqdm import tqdm
 
-from .base_pipeline import BasePipeline
-from ..analysis.pipeline_analysis import MatplotlibAnalyzer
-from ..environment import Environment
-from ..network import Network
-from ..network.nodes import AbstractInput
-from ..network.monitors import Monitor
+from bindsnet.analysis.pipeline_analysis import MatplotlibAnalyzer
+from bindsnet.environment import Environment
+from bindsnet.network import Network
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.nodes import AbstractInput
+from bindsnet.pipeline.base_pipeline import BasePipeline
 
 
 class EnvironmentPipeline(BasePipeline):
@@ -178,7 +177,7 @@ class EnvironmentPipeline(BasePipeline):
                 else:
                     self.action = torch.randint(
                         low=0, high=self.env.action_space.n, size=(1,)
-                    )[0]
+                    )[0].item()
                     tqdm.write(f"too many times {self.last_action} ")
             else:
                 self.action = self.action_function(self, output=self.output)
@@ -253,10 +252,7 @@ class EnvironmentPipeline(BasePipeline):
             obs = obs.unsqueeze(0).unsqueeze(0)
             obs_shape = torch.tensor([1] * len(obs.shape[1:]), device=self.device)
             inputs = {
-                k: self.encoding(
-                    obs.repeat(self.time, *obs_shape).to(self.device),
-                    device=self.device,
-                )
+                k: obs.repeat(self.time, *obs_shape).to(self.device)
                 for k in self.inputs
             }
         else:

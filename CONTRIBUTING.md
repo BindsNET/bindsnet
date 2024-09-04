@@ -2,27 +2,45 @@
 
 To clone this project locally, issue
 
-```
+```shell
 git clone https://github.com/Hananel-Hazan/bindsnet.git  # clones bindsnet repository
 ```
 
 in the directory of your choice. This will place the repository's code in a directory titled `bindsnet`.
 
+Install the project with [Poetry](https://python-poetry.org/) (current supported version - 1.1.8)
+
+```shell
+poetry install
+poetry run pre-commit install
+```
+
+
+Now you can access the project environment with `poetry shell` or run commands with `poetry run <command>`. For example, `poetry run python examples/mnist/conv_mnist.py`.
+
+Please make sure the `Poetry` environment is activated when you commit your files! The `git commit` command will invoke `pre-commit`, which is installed with Poetry too. IDEs like PyCharm have plugins for `Poetry` and will activate the environment automatically.
+
+Run the tests, they all should pass
+
+```shell
+poetry run pytest
+```
+
 All development should take place on a branch separate from master. To create a branch, issue
 
-```
+```shell
 git branch [branch-name]  # create new branch
 ```
 
 replacing `[branch-name]` with a simple and memorable name of choice; e.g., `git branch dan`. Switch to the newly created branch using
 
-```
+```shell
 git checkout [branch-name]  # switch to a different branch of the repository
 ```
 
 __Note__: Issue `git branch` with no arguments to list all branches currently being tracked, with an asterisk next to the currently used branch; e.g.,
 
-```
+```shell
 $ git branch  # list all branches and indicate current branch
 * dan
   devel
@@ -34,13 +52,19 @@ If new branches have been created on the remote repository, you may start tracki
 
 After making changes to the repository, issue a `git status` command to see which files have been modified. Then, use
 
-```
+```shell
 git add [file-name(s) | -A]  # add modified or newly created files
 ```
 
 to add one or more modified files (`file-name(s)`), or all modified files (`-A` or `--all`). These include newly created files. Issue
 
+```shell
+pre-commit run -a
 ```
+
+to run the `pre-commit` tool that will automatically format your code with `black`. Issue
+
+```shell
 git commit -m "[commit-message]"  # Useful messages help when reverting / searching through history 
 ```
 
@@ -48,26 +72,26 @@ to "commit" your changes to your local repository, where `[commit-message]` is a
 
 Before pushing your changes to the remote repository, you must make sure that you have an up-to-date version of the `master` code. That is, if master has been updated while you have been making your changes, your code will be out of date with respect to the master branch. Issue
 
-```
+```shell
 git pull  # gets all changes from remote repository
 git merge master  # merges changes made in master branch with those made in your branch
 ```
 
 and fix any merge conflicts that may have resulted, and re-commit after the fix with
 
-```
+```shell
 git commit  # no -m message needed; merge messages are auto-generated
 ```
 
 Push your changes back to the repository onto the same branch you are developing on. Issue
 
-```
+```shell
 git push [origin] [branch-name]  # verbose; depends on push.default behavior settings
 ```
 
 or,
 
-```
+```shell
 git push  # concise; again, depends on push.default behavior
 ```
 

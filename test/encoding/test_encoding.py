@@ -1,6 +1,6 @@
-from bindsnet.encoding import *
-
 import torch
+
+from bindsnet.encoding import *
 
 
 class TestEncodings:

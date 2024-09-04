@@ -1,9 +1,9 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import torch
-import torchvision
+from torchvision import datasets as torchDB
 
-from ..encoding import Encoder, NullEncoder
+from bindsnet.encoding import Encoder, NullEncoder
 
 
 def create_torchvision_dataset_wrapper(ds_type):
@@ -13,7 +13,7 @@ def create_torchvision_dataset_wrapper(ds_type):
     ``__getitem__``. This applies to all of the datasets inside of ``torchvision``.
     """
     if type(ds_type) == str:
-        ds_type = getattr(torchvision.datasets, ds_type)
+        ds_type = getattr(torchDB, ds_type)
 
     class TorchvisionDatasetWrapper(ds_type):
         __doc__ = (
@@ -34,7 +34,7 @@ def create_torchvision_dataset_wrapper(ds_type):
             image_encoder: Optional[Encoder] = None,
             label_encoder: Optional[Encoder] = None,
             *args,
-            **kwargs
+            **kwargs,
         ):
             # language=rst
             """

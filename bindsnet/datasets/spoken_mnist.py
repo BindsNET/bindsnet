@@ -1,15 +1,12 @@
-from typing import Optional, Tuple, List, Iterable
 import os
-import torch
-import numpy as np
 import shutil
 import zipfile
-
-
+from typing import Iterable, List, Tuple
 from urllib.request import urlretrieve
-from scipy.io import wavfile
 
-import warnings
+import numpy as np
+import torch
+from scipy.io import wavfile
 
 
 class SpokenMNIST(torch.utils.data.Dataset):
@@ -253,7 +250,7 @@ class SpokenMNIST(torch.utils.data.Dataset):
             # Fast Fourier Transform and Power Spectrum
             NFFT = 512
             mag_frames = np.absolute(np.fft.rfft(frames, NFFT))  # Magnitude of the FFT
-            pow_frames = (1.0 / NFFT) * (mag_frames ** 2)  # Power Spectrum
+            pow_frames = (1.0 / NFFT) * (mag_frames**2)  # Power Spectrum
 
             # Log filter banks
             nfilt = 40

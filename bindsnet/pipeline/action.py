@@ -1,7 +1,6 @@
 import torch
-import numpy as np
 
-from . import EnvironmentPipeline
+from bindsnet.pipeline.environment_pipeline import EnvironmentPipeline
 
 
 def select_multinomial(pipeline: EnvironmentPipeline, **kwargs) -> int:
@@ -77,7 +76,7 @@ def select_softmax(pipeline: EnvironmentPipeline, **kwargs) -> int:
         pipeline, "spike_record"
     ), "EnvironmentPipeline is missing the attribute: spike_record."
 
-    spikes = torch.sum(pipeline.spike_record[output], dim=0)
+    spikes = torch.sum(pipeline.spike_record[output], dim=0).squeeze()
     probabilities = torch.softmax(spikes, dim=0)
     return torch.multinomial(probabilities, num_samples=1).item()
 

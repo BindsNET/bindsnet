@@ -1,9 +1,9 @@
-from bindsnet.network import Network
-from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.encoding import bernoulli
-from bindsnet.network.topology import Connection
 from bindsnet.environment import GymEnvironment
+from bindsnet.network import Network
 from bindsnet.network.nodes import Input, IzhikevichNodes
+from bindsnet.network.topology import Connection
+from bindsnet.pipeline import EnvironmentPipeline
 from bindsnet.pipeline.action import select_softmax
 
 # Build network.

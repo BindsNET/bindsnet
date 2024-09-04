@@ -1,0 +1,98 @@
+[tool.poetry]
+name = "bindsnet"
+version = "0.3.2"
+description = "Spiking neural networks for ML in Python"
+authors = [ "Hananel Hazan <hananel@hazan.org.il>", "Daniel Saunders", "Darpan Sanghavi", "Hassaan Khan" ]
+license = "AGPL-3.0-only"
+readme = "README.md"
+repository = "https://github.com/BindsNET/bindsnet"
+documentation = "https://bindsnet-docs.readthedocs.io/"
+keywords = ["spiking", "neural", "networks", "pytorch"]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12"
+numpy = "^2"
+scipy = "^1"
+Cython = "^3"
+torch = [
+     {version = "2.4.0", platform = "linux", source = "torch+cu124"},
+     {version = "2.4.0", platform = "darwin"},
+     {version = "2.4.0", platform = "win32", source = "torch+cu124"},
+     {version = "2.4.0", platform = "win_amd64", source = "torch+cu124"},
+ ]
+torchvision = [
+     {version = "0.19.0", platform = "darwin"},
+     {version = "0.19.0", platform = "linux", source = "torch+cu124"},
+     {version = "0.19.0", platform = "win32", source = "torch+cu124"},
+     {version = "0.19.0", platform = "win_amd64", source = "torch+cu124"},
+ ]
+torchaudio = [
+     {version = "2.4.0", platform = "darwin"},
+     {version = "2.4.0", platform = "linux", source = "torch+cu124"},
+     {version = "2.4.0", platform = "win32", source = "torch+cu124"},
+     {version = "2.4.0", platform = "win_amd64", source = "torch+cu124"},
+ ]
+tensorboardX = "^2.6.2"
+tqdm = "^4"
+matplotlib = "^3.9.0"
+gymnasium = {extras = ["atari", "accept-rom-license"], version = "^0.29.1"}
+scikit-build = "^0.18"
+scikit-image = "^0.24"
+scikit-learn = "^1.5"
+opencv-python = "^4"
+pandas = "^2"
+foolbox = "^3"
+
+[[tool.poetry.source]]
+ name = "torch+cu118"
+ url = "https://download.pytorch.org/whl/cu118"
+ priority = "explicit"
+
+[[tool.poetry.source]]
+ name = "torch+cu121"
+ url = "https://download.pytorch.org/whl/cu121"
+ priority = "explicit"
+
+ [[tool.poetry.source]]
+ name = "torch+cu124"
+ url = "https://download.pytorch.org/whl/cu124"
+ priority = "explicit"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8"
+pre-commit = "^3"
+notebook = "^7"
+jupyterlab = "^4"
+isort = "^5.9.3"
+black = "^24"
+autoflake = "^2"
+
+[build-system]
+requires = ["setuptools", "poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+line_length = 88
+src_paths = ["bindsnet", "test"]
+
+[tool.black]
+target-version = ['py38']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.venv
+  | \.github
+  | build
+  | dist
+  | BindsNET.egg-info
+  | notebooks
+  | data
+  | logs
+  )/
+'''

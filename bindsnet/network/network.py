@@ -1,12 +1,12 @@
 import tempfile
-from typing import Dict, Optional, Type, Iterable
+from typing import Dict, Iterable, Optional, Type
 
 import torch
 
-from .monitors import AbstractMonitor
-from .nodes import Nodes, CSRMNodes
-from .topology import AbstractConnection
-from ..learning.reward import AbstractReward
+from bindsnet.learning.reward import AbstractReward
+from bindsnet.network.monitors import AbstractMonitor
+from bindsnet.network.nodes import CSRMNodes, Nodes
+from bindsnet.network.topology import AbstractConnection
 
 
 def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
@@ -352,6 +352,27 @@ class Network(torch.nn.Module):
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
+        # Run synapse updates.
+        if "a_minus" in kwargs:
+            A_Minus = kwargs["a_minus"]
+            kwargs.pop("a_minus")
+            if isinstance(A_Minus, dict):
+                A_MD = True
+            else:
+                A_MD = False
+        else:
+            A_Minus = None
+
+        if "a_plus" in kwargs:
+            A_Plus = kwargs["a_plus"]
+            kwargs.pop("a_plus")
+            if isinstance(A_Plus, dict):
+                A_PD = True
+            else:
+                A_PD = False
+        else:
+            A_Plus = None
+
         # Simulate network activity for `time` timesteps.
         for t in range(timesteps):
             # Get input to all layers (synchronous mode).
@@ -371,10 +392,22 @@ class Network(torch.nn.Module):
                     # Get input to this layer (one-step mode).
                     current_inputs.update(self._get_inputs(layers=[l]))
 
+                # Inject voltage to neurons.
+                inject_v = injects_v.get(l, None)
+                if inject_v is not None:
+                    if inject_v.ndimension() == 1:
+                        self.layers[l].v += inject_v
+                    else:
+                        self.layers[l].v += inject_v[t]
+
                 if l in current_inputs:
                     self.layers[l].forward(x=current_inputs[l])
                 else:
-                    self.layers[l].forward(x=torch.zeros(self.layers[l].s.shape))
+                    self.layers[l].forward(
+                        x=torch.zeros(
+                            self.layers[l].s.shape, device=self.layers[l].s.device
+                        )
+                    )
 
                 # Clamp neurons to spike.
                 clamp = clamps.get(l, None)
@@ -392,19 +425,30 @@ class Network(torch.nn.Module):
                     else:
                         self.layers[l].s[:, unclamp[t]] = 0
 
-                # Inject voltage to neurons.
-                inject_v = injects_v.get(l, None)
-                if inject_v is not None:
-                    if inject_v.ndimension() == 1:
-                        self.layers[l].v += inject_v
-                    else:
-                        self.layers[l].v += inject_v[t]
-
-            # Run synapse updates.
             for c in self.connections:
+                flad_m = False
+                if A_Minus != None and ((isinstance(A_Minus, float)) or (c in A_Minus)):
+                    if A_MD:
+                        kwargs["a_minus"] = A_Minus[c]
+                    else:
+                        kwargs["a_minus"] = A_Minus
+                    flad_m = True
+
+                flad_p = False
+                if A_Plus != None and ((isinstance(A_Plus, float)) or (c in A_Plus)):
+                    if A_PD:
+                        kwargs["a_plus"] = A_Plus[c]
+                    else:
+                        kwargs["a_plus"] = A_Plus
+                    flad_p = True
+
                 self.connections[c].update(
                     mask=masks.get(c, None), learning=self.learning, **kwargs
                 )
+                if flad_m:
+                    kwargs.pop("a_minus")
+                if flad_p:
+                    kwargs.pop("a_plus")
 
             # # Get input to all layers.
             # current_inputs.update(self._get_inputs())

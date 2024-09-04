@@ -1,13 +1,13 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from ..network import Network
-from .base_pipeline import BasePipeline
-from ..analysis.pipeline_analysis import PipelineAnalyzer
-from ..datasets import DataLoader
+from bindsnet.analysis.pipeline_analysis import PipelineAnalyzer
+from bindsnet.datasets import DataLoader
+from bindsnet.network import Network
+from bindsnet.pipeline.base_pipeline import BasePipeline
 
 
 class DataLoaderPipeline(BasePipeline):
@@ -24,7 +24,7 @@ class DataLoaderPipeline(BasePipeline):
         network: Network,
         train_ds: Dataset,
         test_ds: Optional[Dataset] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -87,7 +87,7 @@ class TorchVisionDatasetPipeline(DataLoaderPipeline):
         network: Network,
         train_ds: Dataset,
         pipeline_analyzer: Optional[PipelineAnalyzer] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         # language=rst
         """
