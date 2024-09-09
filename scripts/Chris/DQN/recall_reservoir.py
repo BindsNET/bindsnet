@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
-def recall_reservoir(res_size, sim_time, plot=False):
+def recall_reservoir(exc_size, inh_size, sim_time, plot=False):
   print("Recalling memories...")
 
   ## Load memory module and memory keys ##
@@ -13,16 +13,18 @@ def recall_reservoir(res_size, sim_time, plot=False):
     memory_keys, labels = pkl.load(f)
 
   ## Recall memories ##
-  recalled_memories = np.zeros((len(memory_keys), sim_time, res_size))
+  # TODO: Plot output spikes according to inh exc populations
+  recalled_memories = np.zeros((len(memory_keys), sim_time, exc_size + inh_size))
   recalled_memories_sorted = {}
   for i, (key, label) in enumerate(zip(memory_keys, labels)):
-    res_spike_train = res_module.recall(torch.tensor(key.reshape(sim_time, -1)), sim_time=sim_time)  # Recall the sample
-    recalled_memories[i] = res_spike_train.squeeze()  # Store the recalled memory
+    exc_spikes, inh_spikes = res_module.recall(torch.tensor(key.reshape(sim_time, -1)), sim_time=sim_time)  # Recall the sample
+    all_spikes = torch.cat((exc_spikes, inh_spikes), dim=2).squeeze()
+    recalled_memories[i] = all_spikes  # Store the recalled memory
     label = tuple(label.round())
     if label not in recalled_memories_sorted:
-      recalled_memories_sorted[label] = [res_spike_train.squeeze()]
+      recalled_memories_sorted[label] = [all_spikes]
     else:
-      recalled_memories_sorted[label].append(res_spike_train.squeeze())
+      recalled_memories_sorted[label].append(all_spikes)
 
   ## Save recalled memories ##
   with open('Data/recalled_memories.pkl', 'wb') as f:
