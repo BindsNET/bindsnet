@@ -16,7 +16,7 @@ class Recalled_Mem_Dataset(torch.utils.data.Dataset):
     # Compress spike train into windows for dimension reduction
     return self.samples[idx].flatten(), self.labels[idx]
 
-def classify_recalls(out_dim, train_ratio, batch_size):
+def classify_recalls(out_dim, train_ratio, batch_size, epochs):
   print("Classifying recalled memories...")
 
   ## Load recalled memory samples ##
@@ -38,7 +38,7 @@ def classify_recalls(out_dim, train_ratio, batch_size):
   ## Training ##
   loss_log = []
   accuracy_log = []
-  for epoch in range(20):
+  for epoch in range(epochs):
     total_loss = 0
     correct = 0
     for memory_batch, positions in train_loader:
@@ -68,6 +68,8 @@ def classify_recalls(out_dim, train_ratio, batch_size):
   ## Testing ##
   total = 0
   correct = 0
+  confusion_matrix = torch.zeros(25, 25)
+  out_of_bounds = 0
   with torch.no_grad():
     for memories, labels in test_loader:
       outputs = model(memories)
@@ -75,6 +77,20 @@ def classify_recalls(out_dim, train_ratio, batch_size):
       total += len(labels)
       correct += torch.all(outputs.round() == labels.round(),
                            dim=1).sum().item()  # Check if prediction for both x and y are correct
+      for t, p in zip(labels, outputs):
+        label_ind = int(t[0].round() * 5 + t[1].round())
+        pred_ind = int(p[0].round() * 5 + p[1].round())
+        if label_ind < 0 or label_ind >= 25 or pred_ind < 0 or pred_ind >= 25:
+          out_of_bounds += 1
+        else:
+          confusion_matrix[label_ind, pred_ind] += 1
+
+  plt.imshow(confusion_matrix)
+  plt.title('Confusion Matrix')
+  plt.xlabel('Predicted')
+  plt.ylabel('True Label')
+  plt.colorbar()
+  plt.show()
 
   print(f'Accuracy: {round(correct / total, 3)*100}%')
 

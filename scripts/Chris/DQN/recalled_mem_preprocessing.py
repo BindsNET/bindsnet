@@ -56,6 +56,7 @@ def recalled_mem_preprocessing(window_freq, window_size, plot):
     # plt.tight_layout()
     # plt.show()
 
+    positions = np.array([key for key in new_samples_sorted.keys()])
     fig = plt.figure(figsize=(10, 10))
     gs = fig.add_gridspec(nrows=5, ncols=5)
     for i, pos in enumerate(positions):

@@ -11,7 +11,7 @@ if __name__ == '__main__':
   ## Constants ##
   WIDTH = 5
   HEIGHT = 5
-  SAMPLES_PER_POS = 10
+  SAMPLES_PER_POS = 1000
   NOISE = 0.1   # Noise in sampling
   WINDOW_FREQ = 10
   WINDOW_SIZE = 10
@@ -29,6 +29,7 @@ if __name__ == '__main__':
   OUT_DIM = 2
   TRAIN_RATIO = 0.8
   BATCH_SIZE = 10
+  TRAIN_EPOCHS = 15
   PLOT = True
   exc_hyper_params = {
     'thresh_exc': -55,
@@ -63,15 +64,15 @@ if __name__ == '__main__':
   #
   # # Spike Train Generation ##
   # spike_trains, labels, sorted_spike_trains = spike_train_generator(samples, labels, SIM_TIME, GC_MULTIPLES, MAX_SPIKE_FREQ)
-
-  # ## Association (Store) ##
-  store_reservoir(EXC_SIZE, INH_SIZE, STORE_SAMPLES, NUM_CELLS, GC_MULTIPLES, SIM_TIME, hyper_params, PLOT)
-
-  # ## Association (Recall) ##
-  recall_reservoir(EXC_SIZE, INH_SIZE, SIM_TIME, PLOT)
-
+  #
+  # # ## Association (Store) ##
+  # store_reservoir(EXC_SIZE, INH_SIZE, STORE_SAMPLES, NUM_CELLS, GC_MULTIPLES, SIM_TIME, hyper_params, PLOT)
+  #
+  # # ## Association (Recall) ##
+  # recall_reservoir(EXC_SIZE, INH_SIZE, SIM_TIME, PLOT)
+  #
   # # Preprocess Recalls ##
   # recalled_mem_preprocessing(WINDOW_FREQ, WINDOW_SIZE, PLOT)
 
-  ## Train ANN ##
-  # classify_recalls(OUT_DIM, TRAIN_RATIO, BATCH_SIZE)
+  # Train ANN ##
+  classify_recalls(OUT_DIM, TRAIN_RATIO, BATCH_SIZE, TRAIN_EPOCHS)
