@@ -13,7 +13,6 @@ def recall_reservoir(exc_size, inh_size, sim_time, plot=False):
     memory_keys, labels = pkl.load(f)
 
   ## Recall memories ##
-  # TODO: Plot output spikes according to inh exc populations
   recalled_memories = np.zeros((len(memory_keys), sim_time, exc_size + inh_size))
   recalled_memories_sorted = {}
   for i, (key, label) in enumerate(zip(memory_keys, labels)):

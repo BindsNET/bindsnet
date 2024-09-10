@@ -11,7 +11,7 @@ if __name__ == '__main__':
   ## Constants ##
   WIDTH = 5
   HEIGHT = 5
-  SAMPLES_PER_POS = 1000
+  SAMPLES_PER_POS = 5000
   NOISE = 0.1   # Noise in sampling
   WINDOW_FREQ = 10
   WINDOW_SIZE = 10
@@ -74,5 +74,5 @@ if __name__ == '__main__':
   # # Preprocess Recalls ##
   # recalled_mem_preprocessing(WINDOW_FREQ, WINDOW_SIZE, PLOT)
 
-  # Train ANN ##
+  ## Train ANN ##
   classify_recalls(OUT_DIM, TRAIN_RATIO, BATCH_SIZE, TRAIN_EPOCHS)
