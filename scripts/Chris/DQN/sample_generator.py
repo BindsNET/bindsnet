@@ -26,7 +26,8 @@ def inter_positional_spread(env_to_gc):
   return spread
 
 # Generate grid cell activity for all integer coordinate positions in environment
-def sample_generator(scales, offsets, vars, x_range, y_range, samples_per_pos, noise=0.1, padding=2, plot=False):
+def sample_generator(scales, offsets, vars, x_range, y_range,
+                     samples_per_pos, noise=0.1, padding=2, plot=False):
   print('Generating samples...')
   sorted_samples = {}
   samples = np.zeros((x_range[1] * y_range[1] * samples_per_pos, len(scales)))
@@ -62,24 +63,3 @@ def sample_generator(scales, offsets, vars, x_range, y_range, samples_per_pos, n
     plt.show()
 
   return samples, labels, sorted_samples
-
-if __name__ == '__main__':
-  ## Constants ##
-  WIDTH = 5
-  HEIGHT = 5
-  SAMPLES_PER_POS = 1000
-  WINDOW_FREQ = 10
-  WINDOW_SIZE = 10
-  # Grid Cells
-  num_cells_ = 20
-  x_range_ = (0, 5)
-  y_range_ = (0, 5)
-  x_offsets_ = np.random.uniform(-1, 1, num_cells_)
-  y_offsets_ = np.random.uniform(-1, 1, num_cells_)
-  offsets_ = list(zip(x_offsets_, y_offsets_))
-  scales_ = [1 + 0.01 * i for i in range(num_cells_)]
-  vars_ = [0.85]*num_cells_
-
-  # Test spread for set of parameters
-  # Shape = (num_samples, num_cells)
-  samples_, labels_, sorted_samples_ = sample_generator(scales_, offsets_, vars_, x_range_, y_range_, SAMPLES_PER_POS)

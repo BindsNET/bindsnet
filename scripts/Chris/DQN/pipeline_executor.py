@@ -1,5 +1,6 @@
 import numpy as np
 import pickle as pkl
+from train_DQN import train_DQN
 from sample_generator import sample_generator
 from spike_train_generator import spike_train_generator
 from store_reservoir import store_reservoir
@@ -74,5 +75,19 @@ if __name__ == '__main__':
   # # Preprocess Recalls ##
   # recalled_mem_preprocessing(WINDOW_FREQ, WINDOW_SIZE, PLOT)
 
+  ## Train DQN ##
+  LR = 0.01
+  EPS_START = 0.9
+  EPS_END = 0.05
+  EPS_DECAY = 1000
+  TAU = 0.005
+  GAMMA = 0.99
+  MAX_STEPS_PER_EP = 10
+  MAX_TOTAL_STEPS = 10
+  MAX_EPS = 3000
+  BATCH_SIZE = 128
+  INPUT_SIZE = EXC_SIZE + INH_SIZE
+  train_DQN(INPUT_SIZE, LR, BATCH_SIZE, EPS_START, EPS_END, EPS_DECAY, TAU, GAMMA, MAX_STEPS_PER_EP, MAX_TOTAL_STEPS, MAX_EPS)
+
   ## Train ANN ##
-  classify_recalls(OUT_DIM, TRAIN_RATIO, BATCH_SIZE, TRAIN_EPOCHS)
+  # classify_recalls(OUT_DIM, TRAIN_RATIO, BATCH_SIZE, TRAIN_EPOCHS)

@@ -42,6 +42,8 @@ def recalled_mem_preprocessing(window_freq, window_size, plot):
   ## Save transformed samples ##
   with open('Data/preprocessed_recalls.pkl', 'wb') as f:
     pkl.dump((new_samples, labels), f)
+  with open('Data/preprocessed_recalls_sorted.pkl', 'wb') as f:
+    pkl.dump(new_samples_sorted, f)
 
   if plot:
     # positions = np.array([key for key in new_samples_sorted.keys()])

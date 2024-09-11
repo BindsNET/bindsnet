@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-from scripts.Chris.DQN.Environment import Maze_Environment
+from scripts.Chris.DQN.Environment import Maze_Environment, Grid_Cell_Maze_Environment
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -48,8 +48,6 @@ class DQN(nn.Module):
 
 # Select action using epsilon-greedy policy
 def select_action(state, step, eps, policy_net, env):
-  # eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-  #                 math.exp(-1. * step / EPS_DECAY)
 
   # Select action from policy net
   if random.random() > eps:
@@ -112,70 +110,82 @@ def optimize_model(memory, batch_size, policy_net, target_net, optimizer, gamma,
   optimizer.step()
 
 
-if __name__ == '__main__':
+# Run single episode of Maze env for DQN training
+def run_episode(env, policy_net, device, max_steps, eps=0):
+  # Initialize the environment and get its state
+  state, info = env.reset()
+  state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+  t = 0
+  while t < max_steps:
+    action = select_action(state, t, eps, policy_net, env)    # eps = 0 -> no exploration
+    observation, reward, terminated, _ = env.step(action.item())
+
+    if terminated:
+      next_state = None
+    else:
+      next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+
+    # Move to the next state
+    state = next_state
+
+    if terminated:
+      break
+
+    t+=1
+
+
+
+def train_DQN(input_size, lr, batch_size, eps_start, eps_end, eps_decay, tau, gamma, max_steps_per_ep, max_total_steps, max_eps):
   device = 'cpu'
   n_actions = 4
-  n_observations = 2
-  LR = 0.01
-  EPS_START = 0.9
-  EPS_END = 0.05
-  EPS_DECAY = 1000
-  TAU = 0.005
-  GAMMA = 0.99
-  MAX_STEPS_PER_EP = 1000
-  TOTAL_STEPS = 10000
-  MAX_EPS = 300
-  BATCH_SIZE = 128
-
-  policy_net_ = DQN(n_observations, n_actions).to(device)
-  target_net_ = DQN(n_observations, n_actions).to(device)
-  target_net_.load_state_dict(policy_net_.state_dict())
-  optimizer_ = optim.AdamW(policy_net_.parameters(), lr=LR, amsgrad=True)
-  memory_ = ReplayMemory(10000)
-  env_ = Maze_Environment(width=5, height=5)
+  policy_net = DQN(input_size, n_actions).to(device)
+  target_net = DQN(input_size, n_actions).to(device)
+  target_net.load_state_dict(policy_net.state_dict())
+  optimizer = optim.AdamW(policy_net.parameters(), lr=lr, amsgrad=True)
+  memory = ReplayMemory(10000)
+  env = Grid_Cell_Maze_Environment(width=5, height=5)
 
   episode_durations = []
   episodes = 0
   total_steps = 0
-  print(env_.maze)
-  while total_steps < TOTAL_STEPS and episodes < MAX_EPS:
+  print(env.maze)
+  while total_steps < max_total_steps and episodes < max_eps:
     # Initialize the environment and get its state
-    state, info = env_.reset()
-    state = torch.tensor(state.coordinates, dtype=torch.float32, device=device).unsqueeze(0)
-    # print(f"Episode {i_episode}")
+    state, info = env.reset()
+    state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
     for t in count():
-      eps = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * total_steps / EPS_DECAY)
-      action = select_action(state, t, eps, policy_net_, env_)
-      observation, reward, terminated, _ = env_.step(action.item())
+      eps = eps_end + (eps_start - eps_end) * math.exp(-1. * total_steps / eps_decay)
+      action = select_action(state, t, eps, policy_net, env)
+      observation, reward, terminated, _ = env.step(action.item())
       reward = torch.tensor([reward], device=device)
 
       if terminated:
         next_state = None
       else:
-        next_state = torch.tensor(observation.coordinates, dtype=torch.float32, device=device).unsqueeze(0)
+        next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
 
       # Store the transition in memory
-      memory_.push(state, action, next_state, reward)
+      memory.push(state, action, next_state, reward)
 
       # Move to the next state
       state = next_state
 
       # Perform one step of the optimization (on the policy network)
-      optimize_model(memory_, BATCH_SIZE, policy_net_, target_net_, optimizer_, gamma=GAMMA, device=device)
+      optimize_model(memory, batch_size, policy_net, target_net, optimizer, gamma=gamma, device=device)
 
       # Soft update of the target network's weights
       # θ′ ← τ θ + (1 −τ )θ′
-      target_net_state_dict = target_net_.state_dict()
-      policy_net_state_dict = policy_net_.state_dict()
+      target_net_state_dict = target_net.state_dict()
+      policy_net_state_dict = policy_net.state_dict()
       for key in policy_net_state_dict:
-        target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (1 - TAU)
-      target_net_.load_state_dict(target_net_state_dict)
+        target_net_state_dict[key] = policy_net_state_dict[key] * tau + target_net_state_dict[key] * (1 - tau)
+      target_net.load_state_dict(target_net_state_dict)
 
       total_steps += 1
-      if terminated or t > MAX_STEPS_PER_EP:
+      if terminated or t > max_steps_per_ep:
         episode_durations.append(t + 1)
         break
-    print(f"Episode {episodes} lasted {t+1} steps, eps = {round(eps, 2)} total steps = {total_steps}")
+    print(f"Episode {episodes} lasted {t + 1} steps, eps = {round(eps, 2)} total steps = {total_steps}")
     episodes += 1
 
   plt.plot(episode_durations)
