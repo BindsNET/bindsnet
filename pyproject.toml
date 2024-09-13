@@ -34,7 +34,7 @@ torchaudio = [
  ]
 tensorboardX = "^2.6.2"
 tqdm = "^4"
-matplotlib = "^3.9.0"
+matplotlib = "^3"
 gymnasium = {extras = ["atari", "accept-rom-license"], version = "^0.29.1"}
 scikit-build = "^0.18"
 scikit-image = "^0.24"
