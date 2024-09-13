@@ -10,7 +10,7 @@ documentation = "https://bindsnet-docs.readthedocs.io/"
 keywords = ["spiking", "neural", "networks", "pytorch"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9,<3.12"
 numpy = "^2"
 scipy = "^1"
 Cython = "^3"
