@@ -135,26 +135,32 @@ def run_episode(env, policy_net, device, max_steps, eps=0):
 
 
 
-def train_DQN(input_size, lr, batch_size, eps_start, eps_end, eps_decay, tau, gamma, max_steps_per_ep, max_total_steps, max_eps):
+def train_DQN(input_size, env_width, env_height, lr, batch_size, eps_start,
+              eps_end, decay_intensity, tau, gamma, max_steps_per_ep, max_total_steps, max_eps, plot):
   device = 'cpu'
   n_actions = 4
   policy_net = DQN(input_size, n_actions).to(device)
   target_net = DQN(input_size, n_actions).to(device)
   target_net.load_state_dict(policy_net.state_dict())
   optimizer = optim.AdamW(policy_net.parameters(), lr=lr, amsgrad=True)
-  memory = ReplayMemory(10000)
-  env = Grid_Cell_Maze_Environment(width=5, height=5)
+  memory = ReplayMemory(1000)
+  env = Grid_Cell_Maze_Environment(width=env_width, height=env_height)
+
+  ## Pre-training recording ##
+  if plot:
+    run_episode(env, policy_net, device, 100, eps=0.9)
+    env.animate_history("pre_training.gif")
 
   episode_durations = []
   episodes = 0
   total_steps = 0
   print(env.maze)
-  while total_steps < max_total_steps and episodes < max_eps:
+  while total_steps < max_total_steps: # and episodes < max_eps:
     # Initialize the environment and get its state
     state, info = env.reset()
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
     for t in count():
-      eps = eps_end + (eps_start - eps_end) * math.exp(-1. * total_steps / eps_decay)
+      eps = eps_end + (eps_start - eps_end) * math.exp(-decay_intensity * total_steps / (max_total_steps))
       action = select_action(state, t, eps, policy_net, env)
       observation, reward, terminated, _ = env.step(action.item())
       reward = torch.tensor([reward], device=device)
@@ -188,5 +194,15 @@ def train_DQN(input_size, lr, batch_size, eps_start, eps_end, eps_decay, tau, ga
     print(f"Episode {episodes} lasted {t + 1} steps, eps = {round(eps, 2)} total steps = {total_steps}")
     episodes += 1
 
-  plt.plot(episode_durations)
-  plt.show()
+  ## Post-training recording ##
+  if plot:
+    env.reset()
+    run_episode(env, policy_net, device, 100, eps=0)  # eps = 0 -> no exploration
+    env.animate_history("post_training.gif")
+    plt.clf()
+
+    plt.plot(episode_durations)
+    plt.title("Episode durations")
+    plt.ylabel("Duration")
+    plt.xlabel("Episode")
+    plt.show()

@@ -12,19 +12,19 @@ if __name__ == '__main__':
   ## Constants ##
   WIDTH = 5
   HEIGHT = 5
-  SAMPLES_PER_POS = 5000
+  SAMPLES_PER_POS = 10
   NOISE = 0.1   # Noise in sampling
   WINDOW_FREQ = 10
   WINDOW_SIZE = 10
   NUM_CELLS = 20
-  X_RANGE = (0, 5)
-  Y_RANGE = (0, 5)
+  X_RANGE = (0, WIDTH)
+  Y_RANGE = (0, HEIGHT)
   SIM_TIME = 50
   MAX_SPIKE_FREQ = 0.8
   GC_MULTIPLES = 1
   EXC_SIZE = 250
   INH_SIZE = 50
-  STORE_SAMPLES = 100
+  STORE_SAMPLES = 0
   WINDOW_FREQ = 10
   WINDOW_SIZE = 10
   OUT_DIM = 2
@@ -66,28 +66,30 @@ if __name__ == '__main__':
   # # Spike Train Generation ##
   # spike_trains, labels, sorted_spike_trains = spike_train_generator(samples, labels, SIM_TIME, GC_MULTIPLES, MAX_SPIKE_FREQ)
   #
-  # # ## Association (Store) ##
+  # ## Association (Store) ##
   # store_reservoir(EXC_SIZE, INH_SIZE, STORE_SAMPLES, NUM_CELLS, GC_MULTIPLES, SIM_TIME, hyper_params, PLOT)
   #
   # # ## Association (Recall) ##
   # recall_reservoir(EXC_SIZE, INH_SIZE, SIM_TIME, PLOT)
   #
   # # Preprocess Recalls ##
-  # recalled_mem_preprocessing(WINDOW_FREQ, WINDOW_SIZE, PLOT)
+  # recalled_mem_preprocessing(WIDTH, HEIGHT, PLOT)
 
   ## Train DQN ##
   LR = 0.01
   EPS_START = 0.9
   EPS_END = 0.05
-  EPS_DECAY = 1000
+  DECAY_INTENSITY = 3  # higher
   TAU = 0.005
   GAMMA = 0.99
-  MAX_STEPS_PER_EP = 10
-  MAX_TOTAL_STEPS = 10
-  MAX_EPS = 3000
-  BATCH_SIZE = 128
+  MAX_STEPS_PER_EP = 100
+  MAX_TOTAL_STEPS = 15000
+  MAX_EPS = 500
+  BATCH_SIZE = 256
   INPUT_SIZE = EXC_SIZE + INH_SIZE
-  train_DQN(INPUT_SIZE, LR, BATCH_SIZE, EPS_START, EPS_END, EPS_DECAY, TAU, GAMMA, MAX_STEPS_PER_EP, MAX_TOTAL_STEPS, MAX_EPS)
+  train_DQN(INPUT_SIZE, WIDTH, HEIGHT, LR, BATCH_SIZE, EPS_START,
+            EPS_END, DECAY_INTENSITY, TAU, GAMMA, MAX_STEPS_PER_EP,
+            MAX_TOTAL_STEPS, MAX_EPS, PLOT)
 
   ## Train ANN ##
   # classify_recalls(OUT_DIM, TRAIN_RATIO, BATCH_SIZE, TRAIN_EPOCHS)

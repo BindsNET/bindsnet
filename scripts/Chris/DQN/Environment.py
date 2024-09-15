@@ -24,7 +24,6 @@ class Maze_Environment():
     self.agent_cell = self.maze.start_cell
     self.num_actions = 4
     self.history = [(self.agent_cell.coordinates, 0, False, {})]  # (state, reward, done, info)
-    self.pos_history = []
 
   def plot(self):
     # Box around maze
@@ -53,8 +52,7 @@ class Maze_Environment():
 
   def reset(self):
     self.agent_cell = self.maze.start_cell
-    self.step_history = []
-    self.pos_history = []
+    self.history = [(self.agent_cell.coordinates, 0, False, {})]
     return self.agent_cell, {}
 
   # Takes action
@@ -72,14 +70,14 @@ class Maze_Environment():
 
     # Check if action runs into wall
     if action not in self.agent_cell.open_walls:
-      self.history.append((self.agent_cell.coordinates, -0.5, False, {}))
-      return self.agent_cell, -.5, False, {}
+      self.history.append((self.agent_cell.coordinates, -0.1, False, {}))
+      return self.agent_cell, -0.01, False, {}
 
     # Move agent
     else:
       self.agent_cell = self.maze.neighbor(self.agent_cell, action)
       if self.agent_cell == self.maze.end_cell:    # Check if agent has reached the end
-        self.history.append(self.agent_cell.coordinates, 1, True, {})
+        self.history.append((self.agent_cell.coordinates, 1, True, {}))
         return self.agent_cell, 1, True, {}
       else:
         self.history.append((self.agent_cell.coordinates, 0, False, {}))
@@ -89,14 +87,14 @@ class Maze_Environment():
     with open(filename, 'wb') as f:
       pkl.dump(self, f)
 
-  def animate_history(self):
+  def animate_history(self, file_name='maze.gif'):
     def update(i):
       plt.clf()
       self.plot()
       plt.plot(self.history[i][0][1], self.history[i][0][0], 'yo')
       plt.title(f'Step {i}, Reward: {self.history[i][1]}')
     ani = FuncAnimation(plt.gcf(), update, frames=len(self.history), repeat=False)
-    ani.save('maze.gif', writer='ffmpeg', fps=10)
+    ani.save(file_name, writer='ffmpeg', fps=5)
 
 class Grid_Cell_Maze_Environment(Maze_Environment):
   def __init__(self, width, height):
@@ -132,7 +130,7 @@ if __name__ == '__main__':
   target_net = DQN(input_size, n_actions).to(device)
   target_net.load_state_dict(policy_net.state_dict())
   optimizer = optim.AdamW(policy_net.parameters(), lr=lr, amsgrad=True)
-  memory = ReplayMemory(10000)
+  memory = ReplayMemory(1000)
   env = Grid_Cell_Maze_Environment(width=5, height=5)
 
   run_episode(env, policy_net, 'cpu', 100, eps=0.9)

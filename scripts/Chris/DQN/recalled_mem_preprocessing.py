@@ -3,7 +3,7 @@ import pickle as pkl
 import numpy as np
 
 
-def recalled_mem_preprocessing(window_freq, window_size, plot):
+def recalled_mem_preprocessing(width, height, plot):
   print('Preprocessing recalled memories...')
 
   ## Load recalled memory spike-trains ##
@@ -46,21 +46,9 @@ def recalled_mem_preprocessing(window_freq, window_size, plot):
     pkl.dump(new_samples_sorted, f)
 
   if plot:
-    # positions = np.array([key for key in new_samples_sorted.keys()])
-    # fig = plt.figure(figsize=(10, 10))
-    # gs = fig.add_gridspec(nrows=5, ncols=5)
-    # for i, pos in enumerate(positions):
-    #   ax = fig.add_subplot(gs[int(pos[0]), int(pos[1])])
-    #   avg_mem = np.mean(new_samples_sorted[tuple(pos)], axis=0)
-    #   ax.set_title(f"Conf-Mat: {pos[0] * 5 + pos[1]}")
-    #   im = ax.imshow(np.expand_dims(avg_mem, axis=0))
-    #   ax.set_aspect('auto')
-    # plt.tight_layout()
-    # plt.show()
-
     positions = np.array([key for key in new_samples_sorted.keys()])
-    fig = plt.figure(figsize=(10, 10))
-    gs = fig.add_gridspec(nrows=5, ncols=5)
+    fig = plt.figure(figsize=(50, 50))
+    gs = fig.add_gridspec(nrows=width, ncols=height)
     for i, pos in enumerate(positions):
       ax = fig.add_subplot(gs[int(pos[0]), int(pos[1])])
       avg_mem = np.mean(recalled_memories_sorted[tuple(pos)], axis=0)
