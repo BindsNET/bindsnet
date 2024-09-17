@@ -54,26 +54,26 @@ if __name__ == '__main__':
   hyper_params = exc_hyper_params | inh_hyper_params
 
   ## Sample Generation ##
-  # x_offsets = np.random.uniform(-1, 1, NUM_CELLS)
-  #
-  # y_offsets = np.random.uniform(-1, 1, NUM_CELLS)
-  # offsets = list(zip(x_offsets, y_offsets))           # Grid Cell x & y offsets
-  # scales = [np.random.uniform(1.7, 5) for i in range(NUM_CELLS)]   # Dist. between Grid Cell peaks
-  # vars = [.85] * NUM_CELLS              # Variance of Grid Cell activity
-  # samples, labels, sorted_samples = sample_generator(scales, offsets, vars, X_RANGE, Y_RANGE, SAMPLES_PER_POS,
-  #                                                    noise=NOISE, padding=1, plot=PLOT)
-  #
-  # # Spike Train Generation ##
-  # spike_trains, labels, sorted_spike_trains = spike_train_generator(samples, labels, SIM_TIME, GC_MULTIPLES, MAX_SPIKE_FREQ)
-  #
-  # ## Association (Store) ##
-  # store_reservoir(EXC_SIZE, INH_SIZE, STORE_SAMPLES, NUM_CELLS, GC_MULTIPLES, SIM_TIME, hyper_params, PLOT)
-  #
-  # # ## Association (Recall) ##
-  # recall_reservoir(EXC_SIZE, INH_SIZE, SIM_TIME, PLOT)
-  #
-  # # Preprocess Recalls ##
-  # recalled_mem_preprocessing(WIDTH, HEIGHT, PLOT)
+  x_offsets = np.random.uniform(-1, 1, NUM_CELLS)
+
+  y_offsets = np.random.uniform(-1, 1, NUM_CELLS)
+  offsets = list(zip(x_offsets, y_offsets))           # Grid Cell x & y offsets
+  scales = [np.random.uniform(1.7, 5) for i in range(NUM_CELLS)]   # Dist. between Grid Cell peaks
+  vars = [.85] * NUM_CELLS              # Variance of Grid Cell activity
+  samples, labels, sorted_samples = sample_generator(scales, offsets, vars, X_RANGE, Y_RANGE, SAMPLES_PER_POS,
+                                                     noise=NOISE, padding=1, plot=PLOT)
+
+  # Spike Train Generation ##
+  spike_trains, labels, sorted_spike_trains = spike_train_generator(samples, labels, SIM_TIME, GC_MULTIPLES, MAX_SPIKE_FREQ)
+
+  ## Association (Store) ##
+  store_reservoir(EXC_SIZE, INH_SIZE, STORE_SAMPLES, NUM_CELLS, GC_MULTIPLES, SIM_TIME, hyper_params, PLOT)
+
+  # ## Association (Recall) ##
+  recall_reservoir(EXC_SIZE, INH_SIZE, SIM_TIME, PLOT)
+
+  # Preprocess Recalls ##
+  recalled_mem_preprocessing(WIDTH, HEIGHT, PLOT)
 
   ## Train DQN ##
   LR = 0.01
