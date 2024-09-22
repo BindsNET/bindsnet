@@ -75,3 +75,32 @@ and providing implementations for the types of :code:`AbstractConnection` object
 For example, the :code:`Connection` and :code:`LocalConnection` objects rely on the implementation
 of a private method, :code:`_connection_update`, whereas the :code:`Conv2dConnection` object
 uses the :code:`_conv2d_connection_update` version.
+
+If using a MulticompartmentConneciton, you can add a learning rule to a specific feature. Note that only
+:code:`NoOp`, :code:`PostPre`, :code:`MSTDP`, :code:`MSTDPET` are supported, and located at 
+bindsnet.learning.MCC_learning. Below is an example of how to apply a PostPre learning rule to a weight function.
+Note that the bias does not have a learning rule, so it will remain static.
+
+.. code-block:: python
+
+    from bindsnet.network.nodes import Input, LIFNodes
+    from bindsnet.network.topology import MulticompartmentConnection
+    from bindsnet.learning.MCC_learning import PostPre
+
+    # Create two populations of neurons, one to act as the "source"
+    # population, and the other, the "target population".
+    # Neurons involved in certain learning rules must record synaptic
+    # traces, a vector of short-term memories of the last emitted spikes.
+    source_layer = Input(n=100, traces=True)
+    target_layer = LIFNodes(n=1000, traces=True)
+
+    # Create 'pipeline' of features that spikes will pass through
+    weights = Weight(name='weight_feature', value=torch.rand(100, 1000),
+                      learning_rule=PostPre, nu=(1e-4, 1e-2))
+    bias = Bias(name='bias_feature', value=torch.rand(100, 1000))
+
+    # Connect the two layers.
+    connection = MulticompartmentConnection(
+        source=source_layer, target=target_layer,
+        pipeline=[weights, bias])
+    )
