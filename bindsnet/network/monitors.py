@@ -10,11 +10,15 @@ from abc import ABC
 from typing import Union, Optional, Iterable, Dict
 
 from bindsnet.network.nodes import Nodes
-from bindsnet.network.topology import AbstractConnection, AbstractMulticompartmentConnection
+from bindsnet.network.topology import (
+    AbstractConnection,
+    AbstractMulticompartmentConnection,
+)
 from bindsnet.network.topology_features import AbstractFeature
 
 if TYPE_CHECKING:
     from .network import Network
+
 
 class AbstractMonitor(ABC):
     # language=rst
@@ -31,7 +35,12 @@ class Monitor(AbstractMonitor):
 
     def __init__(
         self,
-        obj: Union[Nodes, AbstractConnection, AbstractMulticompartmentConnection, AbstractFeature],
+        obj: Union[
+            Nodes,
+            AbstractConnection,
+            AbstractMulticompartmentConnection,
+            AbstractFeature,
+        ],
         state_vars: Iterable[str],
         time: Optional[int] = None,
         batch_size: int = 1,
@@ -181,7 +190,20 @@ class NetworkMonitor(AbstractMonitor):
                             self.time, *getattr(self.network.connections[c], v).size()
                         )
 
-    def get(self) -> Dict[str, Dict[str, Union[Nodes, AbstractConnection, AbstractMulticompartmentConnection, AbstractFeature]]]:
+    def get(
+        self,
+    ) -> Dict[
+        str,
+        Dict[
+            str,
+            Union[
+                Nodes,
+                AbstractConnection,
+                AbstractMulticompartmentConnection,
+                AbstractFeature,
+            ],
+        ],
+    ]:
         # language=rst
         """
         Return entire recording to user.

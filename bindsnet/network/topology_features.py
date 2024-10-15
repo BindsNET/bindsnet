@@ -545,13 +545,13 @@ class Weight(AbstractFeature):
         if self.enforce_polarity:
             pos_mask = ~torch.logical_xor(self.value > 0, self.positive_mask)
             neg_mask = ~torch.logical_xor(self.value < 0, ~self.positive_mask)
-            self.value = self.value * torch.logical_or(pos_mask , neg_mask)
+            self.value = self.value * torch.logical_or(pos_mask, neg_mask)
             self.value[~pos_mask] = 0.0001
             self.value[~neg_mask] = -0.0001
-        
+
         return_val = self.value * conn_spikes
         if self.norm_frequency == "time step":
-            self.normalize(time_step_norm=True)    
+            self.normalize(time_step_norm=True)
 
         return return_val
 
@@ -566,12 +566,10 @@ class Weight(AbstractFeature):
             connection, device, enforce_polarity=self.enforce_polarity, **kwargs
         )
         if self.enforce_polarity:
-            self.positive_mask = ((self.value > 0).sum(1) / self.value.shape[1]) >0.5
+            self.positive_mask = ((self.value > 0).sum(1) / self.value.shape[1]) > 0.5
             tmp = torch.zeros_like(self.value)
-            tmp[self.positive_mask,:] = 1
+            tmp[self.positive_mask, :] = 1
             self.positive_mask = tmp.bool()
-
-    
 
     def normalize(self, time_step_norm=False) -> None:
         # 'time_step_norm' will indicate if normalize is being called from compute()
@@ -694,12 +692,12 @@ class Degradation(AbstractFeature):
 
 class AdaptationBaseSynapsHistory(AbstractFeature):
     def __init__(
-            self,
-            name: str,
-            value: Union[torch.Tensor, float, int] = None,
-            ann_values: Union[list, tuple] = None,
-            const_update_rate: float = 0.1,
-            const_decay: float = 0.001,
+        self,
+        name: str,
+        value: Union[torch.Tensor, float, int] = None,
+        ann_values: Union[list, tuple] = None,
+        const_update_rate: float = 0.1,
+        const_decay: float = 0.001,
     ) -> None:
         # language=rst
         """
@@ -711,8 +709,8 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         :param const_update_rate: The mask upatate rate of the ANN decision.
         :param const_decay: The spontaneous activation of the synapses.
         """
-        
-        #Define the ANN
+
+        # Define the ANN
         class ANN(nn.Module):
             def __init__(self, input_size, hidden_size, output_size):
                 super(ANN, self).__init__()
@@ -721,21 +719,25 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
 
             def forward(self, x):
                 x = torch.relu(self.fc1(x))
-                x = torch.tanh(self.fc2(x)) # MUST HAVE output between -1 and 1
+                x = torch.tanh(self.fc2(x))  # MUST HAVE output between -1 and 1
                 return x
-        
-        self.init_value = value.clone().detach() # initial mask
-        self.mask = value # final decision of the ANN
-        value = torch.zeros_like(value) # initial mask
+
+        self.init_value = value.clone().detach()  # initial mask
+        self.mask = value  # final decision of the ANN
+        value = torch.zeros_like(value)  # initial mask
         self.ann = ANN(ann_values[0].shape[0], ann_values[0].shape[1], 1)
-        
+
         # load weights from ann_values
         with torch.no_grad():
             self.ann.fc1.weight.data = ann_values[0]
             self.ann.fc2.weight.data = ann_values[1]
         self.ann.to(ann_values[0].device)
 
-        self.spike_buffer = torch.zeros((value.numel(), ann_values[0].shape[1]), device=ann_values[0].device, dtype=torch.bool)
+        self.spike_buffer = torch.zeros(
+            (value.numel(), ann_values[0].shape[1]),
+            device=ann_values[0].device,
+            dtype=torch.bool,
+        )
         self.counter = 0
         self.start_counter = False
         self.const_update_rate = const_update_rate
@@ -744,41 +746,48 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         super().__init__(name=name, value=value)
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        
+
         # Update the spike buffer
         if self.start_counter == False or conn_spikes.sum() > 0:
             self.start_counter = True
-            self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = conn_spikes.flatten()
+            self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = (
+                conn_spikes.flatten()
+            )
             self.counter += 1
 
         # Update the masks
-        if self.counter % self.spike_buffer.shape[1] == 0 :
+        if self.counter % self.spike_buffer.shape[1] == 0:
             with torch.no_grad():
                 ann_decision = self.ann(self.spike_buffer.to(torch.float32))
-            self.mask += ann_decision.view(self.mask.shape) * self.const_update_rate # update mask with learning rate fraction
-            self.mask += self.const_decay # spontaneous activate synapses
-            self.mask = torch.clamp(self.mask, -1, 1) # cap the mask
+            self.mask += (
+                ann_decision.view(self.mask.shape) * self.const_update_rate
+            )  # update mask with learning rate fraction
+            self.mask += self.const_decay  # spontaneous activate synapses
+            self.mask = torch.clamp(self.mask, -1, 1)  # cap the mask
 
             # self.mask = torch.clamp(self.mask, -1, 1)
             self.value = (self.mask > 0).float()
-        
+
         return conn_spikes * self.value
 
-    def reset_state_variables(self, ): 
+    def reset_state_variables(
+        self,
+    ):
         self.spike_buffer = torch.zeros_like(self.spike_buffer)
         self.counter = 0
         self.start_counter = False
-        self.value = self.init_value.clone().detach() # initial mask
-        pass 
+        self.value = self.init_value.clone().detach()  # initial mask
+        pass
+
 
 class AdaptationBaseOtherSynaps(AbstractFeature):
     def __init__(
-            self,
-            name: str,
-            value: Union[torch.Tensor, float, int] = None,
-            ann_values: Union[list, tuple] = None,
-            const_update_rate: float = 0.1,
-            const_decay: float = 0.01,
+        self,
+        name: str,
+        value: Union[torch.Tensor, float, int] = None,
+        ann_values: Union[list, tuple] = None,
+        const_update_rate: float = 0.1,
+        const_decay: float = 0.01,
     ) -> None:
         # language=rst
         """
@@ -790,8 +799,8 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         :param const_update_rate: The mask upatate rate of the ANN decision.
         :param const_decay: The spontaneous activation of the synapses.
         """
-        
-        #Define the ANN
+
+        # Define the ANN
         class ANN(nn.Module):
             def __init__(self, input_size, hidden_size, output_size):
                 super(ANN, self).__init__()
@@ -800,21 +809,25 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
 
             def forward(self, x):
                 x = torch.relu(self.fc1(x))
-                x = torch.tanh(self.fc2(x)) # MUST HAVE output between -1 and 1
+                x = torch.tanh(self.fc2(x))  # MUST HAVE output between -1 and 1
                 return x
-        
-        self.init_value = value.clone().detach() # initial mask
-        self.mask = value # final decision of the ANN
-        value = torch.zeros_like(value) # initial mask
+
+        self.init_value = value.clone().detach()  # initial mask
+        self.mask = value  # final decision of the ANN
+        value = torch.zeros_like(value)  # initial mask
         self.ann = ANN(ann_values[0].shape[0], ann_values[0].shape[1], 1)
-        
+
         # load weights from ann_values
         with torch.no_grad():
             self.ann.fc1.weight.data = ann_values[0]
             self.ann.fc2.weight.data = ann_values[1]
         self.ann.to(ann_values[0].device)
 
-        self.spike_buffer = torch.zeros((value.numel(), ann_values[0].shape[1]), device=ann_values[0].device, dtype=torch.bool)
+        self.spike_buffer = torch.zeros(
+            (value.numel(), ann_values[0].shape[1]),
+            device=ann_values[0].device,
+            dtype=torch.bool,
+        )
         self.counter = 0
         self.start_counter = False
         self.const_update_rate = const_update_rate
@@ -823,32 +836,39 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         super().__init__(name=name, value=value)
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        
+
         # Update the spike buffer
         if self.start_counter == False or conn_spikes.sum() > 0:
             self.start_counter = True
-            self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = conn_spikes.flatten()
+            self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = (
+                conn_spikes.flatten()
+            )
             self.counter += 1
 
         # Update the masks
-        if self.counter % self.spike_buffer.shape[1] == 0 :
+        if self.counter % self.spike_buffer.shape[1] == 0:
             with torch.no_grad():
                 ann_decision = self.ann(self.spike_buffer.to(torch.float32))
-            self.mask += ann_decision.view(self.mask.shape) * self.const_update_rate # update mask with learning rate fraction
-            self.mask += self.const_decay # spontaneous activate synapses
-            self.mask = torch.clamp(self.mask, -1, 1) # cap the mask
+            self.mask += (
+                ann_decision.view(self.mask.shape) * self.const_update_rate
+            )  # update mask with learning rate fraction
+            self.mask += self.const_decay  # spontaneous activate synapses
+            self.mask = torch.clamp(self.mask, -1, 1)  # cap the mask
 
             # self.mask = torch.clamp(self.mask, -1, 1)
             self.value = (self.mask > 0).float()
-        
+
         return conn_spikes * self.value
 
-    def reset_state_variables(self, ): 
+    def reset_state_variables(
+        self,
+    ):
         self.spike_buffer = torch.zeros_like(self.spike_buffer)
         self.counter = 0
         self.start_counter = False
-        self.value = self.init_value.clone().detach() # initial mask
-        pass 
+        self.value = self.init_value.clone().detach()  # initial mask
+        pass
+
 
 ### Sub Features ###
 
