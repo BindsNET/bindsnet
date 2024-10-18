@@ -389,6 +389,11 @@ class PostPre(LearningRule):
         """
         Post-pre learning rule for ``Connection`` subclass of ``AbstractConnection``
         class.
+
+        self.source.s : 28 *28 array of 0 and 1      source_s : array converted to 1D vector (784*1)
+        self.target.x : array of 100 values (~1e-5)  target_x : araray (20*5) (values ~1e-9)
+        source : first layer, target = second layer.    
+        s: spike occurances (0 or 1) for each neuron;    x : exp decaying trace 
         """
         batch_size = self.source.batch_size
 
@@ -549,6 +554,80 @@ class PostPre(LearningRule):
 
         super().update()
 
+#===================================================
+class Bi_sigmoid(LearningRule):
+    # language=rst
+    """
+    Bi_sigmoid STDP rule involving only post-synaptic spiking activity. The weight update
+    quantity is poisitive if the post-synaptic spike occures shortly after the presynatpic spike,
+    and negative otherwise.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractConnection,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        **kwargs,
+    ) -> None:
+        # language=rst
+        """
+        Constructor for ``Bi_sigmoid`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the
+            ``Bi_sigmoid`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events. It also
+            accepts a pair of tensors to individualize learning rates of each neuron.
+            In this case, their shape should be the same size as the connection weights.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
+        """
+        super().__init__(
+            connection=connection,
+            nu=nu,
+            reduction=reduction,
+            weight_decay=weight_decay,
+            **kwargs,
+        )
+
+        assert (
+            self.source.traces and self.target.traces
+        ), "Both pre- and post-synaptic nodes must record spike traces."
+
+        if isinstance(connection, (Connection, LocalConnection)):    # added: Bi_sigmoid will work only fore these 2 connections
+            self.update = self._connection_update                    # rewrites the update rule defined in the base class 
+        else:
+            raise NotImplementedError(
+                "This learning rule is not supported for this Connection type."
+            )
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Bi_sigmoid learning rule for ``Connection`` subclass of ``AbstractConnection``
+        class.
+
+        self.source.s : 28 *28 array of 0 and 1      source_s : array converted to 1D vector (784*1)
+        self.target.x2 : array of 100 values (~1e-5)  target_x2 : araray (20*5) (values ~1e-9)
+        source : first layer, target = second layer.    
+        s: spike occurances (0 or 1) for each neuron;    x2 : bi_sigmoid decaying trace
+        In this rule we only use the spiking of post (target_s) and the bi_sigmoid trace of pre (source_x2)
+        """
+        batch_size = self.source.batch_size
+        
+        # Post-synaptic update.
+        if self.nu[1].any():
+            target_s = (self.target.s.view(batch_size, -1).unsqueeze(1).float() * self.nu[1]) # 100 values of 0&1
+            source_x2 = self.source.x2.view(batch_size, -1).unsqueeze(2)    # 784 value 1D ( values between -1 and 1)
+            self.connection.w += self.reduction(torch.bmm(source_x2, target_s), dim=0)
+            del source_x2, target_s
+        
+        super().update()
+
+
+#===================================================
 
 class WeightDependentPostPre(LearningRule):
     # language=rst

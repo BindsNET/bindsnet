@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from functools import reduce
 from operator import mul
 from typing import Iterable, Optional, Union
-
 import torch
 
 
@@ -67,6 +66,8 @@ class Nodes(torch.nn.Module):
 
         if self.traces:
             self.register_buffer("x", torch.Tensor())  # Firing traces.
+            self.register_buffer("t_", torch.Tensor())  # added delta_t is registred
+            self.register_buffer("x2", torch.Tensor())  # added x2 bisimoid trace is registred
             self.register_buffer(
                 "tc_trace", torch.tensor(tc_trace)
             )  # Time constant of spike trace decay.
@@ -93,19 +94,29 @@ class Nodes(torch.nn.Module):
 
         :param x: Inputs to the layer.
         """
+        def bisigmoid_trace(t_):   #added 
+            A = 7.95E+05; k0 = 0.474723045; x0 = 20.77893753; k1 = 0.757072031; x1 = 48.93860322
+            result = (-A / (1 + torch.exp(-k0*(t_-x0))) - A / (1 + torch.exp(-k1*(t_-x1))) + A) / A
+            result.masked_fill_(t_ > 60, torch.tensor(0)) 
+            return result
+
         if self.traces:
             # Decay and set spike traces.
             self.x *= self.trace_decay
+            
+            self.t_ += torch.tensor(self.dt)              #added 
+            self.x2 =  bisigmoid_trace(self.t_)           #added 
 
             if self.traces_additive:
                 self.x += self.trace_scale * self.s.float()
             else:
                 self.x.masked_fill_(self.s.bool(), self.trace_scale)
+                self.t_.masked_fill_(self.s.bool(), torch.tensor(0))  #added, reset t_ to 0 after spiking 
 
         if self.sum_input:
             # Add current input to running sum.
             self.summed += x.float()
-
+    
     def reset_state_variables(self) -> None:
         # language=rst
         """
@@ -115,6 +126,8 @@ class Nodes(torch.nn.Module):
 
         if self.traces:
             self.x.zero_()  # Spike traces.
+            self.t_.zero_()  # added
+            self.x2.zero_()  # added
 
         if self.sum_input:
             self.summed.zero_()  # Summed inputs.
@@ -144,6 +157,8 @@ class Nodes(torch.nn.Module):
 
         if self.traces:
             self.x = torch.zeros(batch_size, *self.shape, device=self.x.device)
+            self.t_ = torch.zeros(batch_size, *self.shape, device=self.t_.device) #added
+            self.x2 = torch.zeros(batch_size, *self.shape, device=self.x2.device) #added
 
         if self.sum_input:
             self.summed = torch.zeros(
@@ -207,7 +222,6 @@ class Input(Nodes, AbstractInput):
             trace_scale=trace_scale,
             sum_input=sum_input,
         )
-
     def forward(self, x: torch.Tensor) -> None:
         # language=rst
         """
@@ -217,16 +231,16 @@ class Input(Nodes, AbstractInput):
         """
         # Set spike occurrences to input values.
         self.s = x
-
         super().forward(x)
-
+         
+    
     def reset_state_variables(self) -> None:
         # language=rst
         """
         Resets relevant state variables.
         """
         super().reset_state_variables()
-
+    
 
 class McCullochPitts(Nodes):
     # language=rst
@@ -1083,9 +1097,9 @@ class DiehlAndCookNodes(Nodes):
 
         # Decrement refractory counters.
         self.refrac_count -= self.dt
-
+        
         # Check for spiking neurons.
-        self.s = self.v >= self.thresh + self.theta
+        self.s = self.v >= self.thresh + self.theta     # spikes whenever it exceds threshold
 
         # Refractoriness, voltage reset, and adaptive thresholds.
         self.refrac_count.masked_fill_(self.s, self.refrac)
@@ -1107,7 +1121,7 @@ class DiehlAndCookNodes(Nodes):
         # Voltage clipping to lower bound.
         if self.lbound is not None:
             self.v.masked_fill_(self.v < self.lbound, self.lbound)
-
+        
         super().forward(x)
 
     def reset_state_variables(self) -> None:
@@ -1131,6 +1145,7 @@ class DiehlAndCookNodes(Nodes):
         self.theta_decay = torch.exp(
             -self.dt / self.tc_theta_decay
         )  # Adaptive threshold decay (per timestep).
+        
 
     def set_batch_size(self, batch_size) -> None:
         # language=rst
