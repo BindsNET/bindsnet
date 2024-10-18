@@ -703,7 +703,7 @@ def plot_voltages(
                             .numpy()[
                                 time[0] : time[1],
                                 n_neurons[v[0]][0] : n_neurons[v[0]][1],
-                            ]
+                            ],
                         )
                     )
 
