@@ -15,6 +15,7 @@ from bindsnet.analysis.plotting import (
     plot_spikes,
     plot_voltages,
     plot_weights,
+    plot_traces,
 )
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder

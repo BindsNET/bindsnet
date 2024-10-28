@@ -98,7 +98,8 @@ class Nodes(torch.nn.Module):
             A = 7.95E+05; k0 = 0.474723045; x0 = 20.77893753; k1 = 0.757072031; x1 = 48.93860322
             result = (-A / (1 + torch.exp(-k0*(t_-x0))) - A / (1 + torch.exp(-k1*(t_-x1))) + A) / A
             result.masked_fill_(t_ > 60, torch.tensor(0)) 
-            return result
+            result2 = torch.normal(result, abs(0.1692 * result))  # added the variability in the trace, from a gauss dist where std= 16.92% of mean
+            return result2
 
         if self.traces:
             # Decay and set spike traces.
