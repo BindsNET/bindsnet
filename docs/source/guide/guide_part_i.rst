@@ -145,6 +145,33 @@ weights based on pre-, post-synaptic activity and possibly other signals; e.g., 
 :code:`normalize` (for ensuring weights incident to post-synaptic neurons sum to a pre-specified value), and :code:`reset_state_variables`
 (for re-initializing stateful variables for the start of a new simulation).
 
+For more complex connections, the MulticompartmentConnection class can be used. The MulticompartmentConnection will pass spikes through different "features"
+such as weights, bias's, and boolean masks in a specified order. Features are passed to the MulticompartmentConnection constructor in a list, and executed in order. 
+For example, the code below uses a pipeline containing a weight and bias feature. During runtime, spikes from the source will be multiplied by the weights first, 
+then a bias added second. Additional features can be added before/after/between these two.
+To create a simple all-to-all connection with a weight and bias:
+
+.. code-block:: python
+
+    from bindsnet.network.nodes import Input, LIFNodes
+    from bindsnet.network.topology import MulticompartmentConnection
+    from bindsnet.network.topology_features import Weight, Bias
+
+    # Create two populations of neurons, one to act as the "source"
+    # population, and the other, the "target population".
+    source_layer = Input(n=100)
+    target_layer = LIFNodes(n=1000)
+
+    # Create 'pipeline' of features that spikes will pass through
+    weights = Weight(name='weight_feature', value=torch.rand(100, 1000))
+    bias = Bias(name='bias_feature', value=torch.rand(100, 1000))
+
+    # Connect the two layers.
+    connection = MulticompartmentConnection(
+        source=source_layer, target=target_layer,
+        pipeline=[weight, bias]
+    )
+
 Specifying monitors
 *******************
 
@@ -176,7 +203,9 @@ course of simulation in certain network components. To create a monitor to monit
 
 The user must specify a :code:`Nodes` or :code:`AbstractConnection` object from which to record, attributes of that
 object to record (:code:`state_vars`), and, optionally, how many time steps the simulation(s) will last, in order to
-save time by pre-allocating memory.
+save time by pre-allocating memory. 
+
+Monitors are not officially supported for MulticompartmentConnection
 
 To add a monitor to the network (thereby enabling monitoring), use the :code:`add_monitor` function of the
 :py:class:`bindsnet.network.Network` class:

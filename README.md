@@ -4,7 +4,8 @@ A Python package used for simulating spiking neural networks (SNNs) on CPUs or G
 
 BindsNET is a spiking neural network simulation library geared towards the development of biologically inspired algorithms for machine learning.
 
-This package is used as part of ongoing research on applying SNNs to machine learning (ML) and reinforcement learning (RL) problems in the [Biologically Inspired Neural & Dynamical Systems (BINDS) lab](http://binds.cs.umass.edu/).
+This package is used as part of ongoing research on applying SNNs, machine learning (ML) and reinforcement learning (RL) problems in the [Biologically Inspired Neural & Dynamical Systems (BINDS) lab](http://binds.cs.umass.edu/) and the Allen Discovery Center at Tufts University.
+
 
 Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/master/examples) for a collection of experiments, functions for the analysis of results, plots of experiment outcomes, and more. Documentation for the package can be found [here](https://bindsnet-docs.readthedocs.io).
 
@@ -129,11 +130,22 @@ If you use BindsNET in your research, please cite the following [article](https:
 
 ## Contributors
 
-- Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu))
-- Hananel Hazan ([email](mailto:hananel@hazan.org.il))
-- Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu))
-- Hassaan Khan ([email](mailto:hqkhan@umass.edu))
-- Devdhar Patel ([email](mailto:devdharpatel@cs.umass.edu))
+- Hava Siegelmann - Director of BINDS lab at UMass
+- Robert Kozma - Co-Director of BINDS lab (2018-2019)
+- Hananel Hazan ([email](mailto:hananel@hazan.org.il)) - Spearheaded BindsNET and its main maintainer.
+- Daniel Saunders ([email](mailto:djsaunde@cs.umass.edu)) - MSc student, BindsNET core functions coder (2018-2019). 
+- Darpan Sanghavi ([email](mailto:dsanghavi@cs.umass.edu)) - MSc student BINDS Lab (2018)
+- Hassaan Khan ([email](mailto:hqkhan@umass.edu)) - MSc student BINDS Lab (2018)
+- Devdhar Patel ([email](mailto:devdharpatel@cs.umass.edu)) - MSc student BINDS Lab (2018)
+- Simon Caby [github](https://github.com/SimonInParis) 
+- Christopher Earl ([email](mailto:cearl@umass.edu)) - MSc student (2021 - present)
+
+
+<a href="https://github.com/Bindsnet/bindsnet/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Bindsnet/bindsnet" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
 
 ## License
 GNU Affero General Public License v3.0

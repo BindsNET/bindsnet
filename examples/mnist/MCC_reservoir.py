@@ -1,10 +1,10 @@
-import argparse
 import os
-
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
+import argparse
+import matplotlib.pyplot as plt
+
 from torchvision import transforms
 from tqdm import tqdm
 
@@ -17,12 +17,15 @@ from bindsnet.analysis.plotting import (
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.network import Network
+from bindsnet.network.nodes import Input
+from bindsnet.network.topology_features import Probability, Weight, Mask
 
 # Build a simple two-layer, input-output network.
 from bindsnet.network.monitors import Monitor
-from bindsnet.network.nodes import Input, LIFNodes
-from bindsnet.network.topology import Connection
+from bindsnet.network.nodes import LIFNodes
+from bindsnet.network.topology import MulticompartmentConnection
 from bindsnet.utils import get_square_weights
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
@@ -37,7 +40,7 @@ parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=False, train=True)
+parser.set_defaults(plot=False, gpu=True, train=True)
 
 args = parser.parse_args()
 
@@ -71,43 +74,69 @@ else:
 torch.set_num_threads(os.cpu_count() - 1)
 print("Running on Device = ", device)
 
-# Create simple Torch NN
-network = Network(dt=dt)
-inpt = Input(784, shape=(1, 28, 28))
-network.add_layer(inpt, name="I")
-output = LIFNodes(n_neurons, thresh=-52 + np.random.randn(n_neurons).astype(float))
-network.add_layer(output, name="O")
-C1 = Connection(source=inpt, target=output, w=0.5 * torch.randn(inpt.n, output.n))
-C2 = Connection(source=output, target=output, w=0.5 * torch.randn(output.n, output.n))
 
-network.add_connection(C1, source="I", target="O")
-network.add_connection(C2, source="O", target="O")
+### Base model ###
+model = Network()
+model.to(device)
 
-# Monitors for visualizing activity
-spikes = {}
-for l in network.layers:
-    spikes[l] = Monitor(network.layers[l], ["s"], time=time, device=device)
-    network.add_monitor(spikes[l], name="%s_spikes" % l)
 
-voltages = {"O": Monitor(network.layers["O"], ["v"], time=time, device=device)}
-network.add_monitor(voltages["O"], name="O_voltages")
+### Layers ###
+input_l = Input(n=784, shape=(1, 28, 28), traces=True)
+output_l = LIFNodes(
+    n=n_neurons, thresh=-52 + np.random.randn(n_neurons).astype(float), traces=True
+)
+
+model.add_layer(input_l, name="X")
+model.add_layer(output_l, name="Y")
+
+
+### Connections ###
+p = torch.rand(input_l.n, output_l.n)
+d = torch.rand(input_l.n, output_l.n) / 5
+w = torch.sign(torch.randint(-1, +2, (input_l.n, output_l.n)))
+prob_feature = Probability(name="input_prob_feature", value=p)
+weight_feature = Weight(name="input_weight_feature", value=w)
+pipeline = [prob_feature, weight_feature]
+input_con = MulticompartmentConnection(
+    source=input_l,
+    target=output_l,
+    device=device,
+    pipeline=pipeline,
+)
+
+p = torch.rand(output_l.n, output_l.n)
+d = torch.rand(output_l.n, output_l.n) / 5
+w = torch.sign(torch.randint(-1, +2, (output_l.n, output_l.n)))
+prob_feature = Probability(name="recc_prob_feature", value=p)
+weight_feature = Weight(name="recc_weight_feature", value=w)
+pipeline = [prob_feature, weight_feature]
+recurrent_con = MulticompartmentConnection(
+    source=output_l,
+    target=output_l,
+    device=device,
+    pipeline=pipeline,
+)
+
+model.add_connection(input_con, source="X", target="Y")
+model.add_connection(recurrent_con, source="Y", target="Y")
 
 # Directs network to GPU
 if gpu:
-    network.to("cuda")
+    model.to("cuda")
 
-# Get MNIST training images and labels.
-# Load MNIST data.
+### MNIST ###
 dataset = MNIST(
     PoissonEncoder(time=time, dt=dt),
     None,
-    root=os.path.join("..", "..", "data", "MNIST"),
+    root=os.path.join("../../test", "..", "data", "MNIST"),
     download=True,
     transform=transforms.Compose(
         [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
     ),
 )
 
+
+### Monitor setup ###
 inpt_axes = None
 inpt_ims = None
 spike_axes = None
@@ -116,14 +145,23 @@ weights_im = None
 weights_im2 = None
 voltage_ims = None
 voltage_axes = None
+spikes = {}
+voltages = {}
+for l in model.layers:
+    spikes[l] = Monitor(model.layers[l], ["s"], time=time, device=device)
+    model.add_monitor(spikes[l], name="%s_spikes" % l)
+
+voltages = {"Y": Monitor(model.layers["Y"], ["v"], time=time, device=device)}
+model.add_monitor(voltages["Y"], name="Y_voltages")
+
+
+### Running model on MNIST ###
 
 # Create a dataloader to iterate and batch data
 dataloader = torch.utils.data.DataLoader(
-    dataset, batch_size=1, shuffle=True, num_workers=0, pin_memory=gpu
+    dataset, batch_size=1, shuffle=True, num_workers=0, pin_memory=True
 )
 
-# Run training data on reservoir computer and store (spikes per neuron, label) per example.
-# Note: Because this is a reservoir network, no adjustments of neuron parameters occurs in this phase.
 n_iters = examples
 training_pairs = []
 pbar = tqdm(enumerate(dataloader))
@@ -139,12 +177,11 @@ for i, dataPoint in pbar:
     pbar.set_description_str("Train progress: (%d / %d)" % (i, n_iters))
 
     # Run network on sample image
-    network.run(inputs={"I": datum}, time=time)
-    training_pairs.append([spikes["O"].get("s"), label])
+    model.run(inputs={"X": datum}, time=time, input_time_dim=1, reward=1.0)
+    training_pairs.append([spikes["Y"].get("s").sum(0), label])
 
     # Plot spiking activity using monitors
     if plot:
-        # Plot the current image and reconstructed/encoded image
         inpt_axes, inpt_ims = plot_input(
             dataPoint["image"].view(28, 28),
             datum.view(int(time / dt), 784).sum(0).view(28, 28),
@@ -152,29 +189,22 @@ for i, dataPoint in pbar:
             axes=inpt_axes,
             ims=inpt_ims,
         )
-        # Plot spikes
         spike_ims, spike_axes = plot_spikes(
             {layer: spikes[layer].get("s").view(time, -1) for layer in spikes},
             axes=spike_axes,
             ims=spike_ims,
         )
-        # Plot voltages
         voltage_ims, voltage_axes = plot_voltages(
             {layer: voltages[layer].get("v").view(time, -1) for layer in voltages},
             ims=voltage_ims,
             axes=voltage_axes,
         )
-        # Plot weights between input and output
-        weights_im = plot_weights(
-            get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2
-        )
-        # Plot weights between output and output
-        weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
 
         plt.pause(1e-8)
-    network.reset_state_variables()
+    model.reset_state_variables()
 
 
+### Classification ###
 # Define logistic regression model using PyTorch.
 # These neurons will take the reservoirs output as its input, and be trained to classify the images.
 class NN(nn.Module):
@@ -192,9 +222,9 @@ class NN(nn.Module):
 
 
 # Create and train logistic regression model on reservoir outputs.
-model = NN(n_neurons * args.time, 10).to(device)
+learning_model = NN(n_neurons, 10).to(device)
 criterion = torch.nn.MSELoss(reduction="sum")
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-4, momentum=0.9)
+optimizer = torch.optim.SGD(learning_model.parameters(), lr=1e-4, momentum=0.9)
 
 # Training the Model
 print("\n Training the read out")
@@ -211,7 +241,7 @@ for epoch, _ in pbar:
         optimizer.zero_grad()
 
         # Run spikes through logistic regression model
-        outputs = model(s)
+        outputs = learning_model(s)
 
         # Calculate MSE
         label = torch.zeros(1, 1, 10).float().to(device)
@@ -240,8 +270,8 @@ for i, dataPoint in pbar:
     label = dataPoint["label"]
     pbar.set_description_str("Testing progress: (%d / %d)" % (i, n_iters))
 
-    network.run(inputs={"I": datum}, time=time)
-    test_pairs.append([spikes["O"].get("s"), label])
+    model.run(inputs={"X": datum}, time=time, input_time_dim=1)
+    test_pairs.append([spikes["Y"].get("s").sum(0), label])
 
     if plot:
         inpt_axes, inpt_ims = plot_input(
@@ -261,18 +291,14 @@ for i, dataPoint in pbar:
             ims=voltage_ims,
             axes=voltage_axes,
         )
-        weights_im = plot_weights(
-            get_square_weights(C1.w, 23, 28), im=weights_im, wmin=-2, wmax=2
-        )
-        weights_im2 = plot_weights(C2.w, im=weights_im2, wmin=-2, wmax=2)
 
         plt.pause(1e-8)
-    network.reset_state_variables()
+    model.reset_state_variables()
 
-# Test model with previously trained logistic regression classifier
+# Test learning model with previously trained logistic regression classifier
 correct, total = 0, 0
 for s, label in test_pairs:
-    outputs = model(s)
+    outputs = learning_model(s)
     _, predicted = torch.max(outputs.data.unsqueeze(0), 1)
     total += 1
     correct += int(predicted == label.long().to(device))
