@@ -5,6 +5,7 @@ from bindsnet.learning.learning import (
     LearningRule,
     NoOp,
     PostPre,
+    Bi_sigmoid,
     Rmax,
     WeightDependentPostPre,
 )
@@ -13,6 +14,7 @@ __all__ = [
     "LearningRule",
     "NoOp",
     "PostPre",
+    "Bi_sigmoid",
     "WeightDependentPostPre",
     "Hebbian",
     "MSTDP",
