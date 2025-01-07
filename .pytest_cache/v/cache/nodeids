@@ -1,0 +1,23 @@
+[
+  "test/analysis/test_analyzers.py::TestAnalyzer::test_init",
+  "test/analysis/test_analyzers.py::TestAnalyzer::test_plot_runs",
+  "test/conversion/test_conversion.py::test_conversion_1",
+  "test/conversion/test_conversion.py::test_conversion_2",
+  "test/encoding/test_encoding.py::TestEncodings::test_bernoulli",
+  "test/encoding/test_encoding.py::TestEncodings::test_bernoulli_loader",
+  "test/encoding/test_encoding.py::TestEncodings::test_multidim_bernoulli",
+  "test/encoding/test_encoding.py::TestEncodings::test_poisson",
+  "test/encoding/test_encoding.py::TestEncodings::test_poisson_loader",
+  "test/models/test_models.py::TestDiehlAndCook2015::test_init",
+  "test/models/test_models.py::TestTwoLayerNetwork::test_init",
+  "test/network/test_learning.py::TestLearningRules::test_hebbian",
+  "test/network/test_learning.py::TestLearningRules::test_mstdp",
+  "test/network/test_learning.py::TestLearningRules::test_mstdpet",
+  "test/network/test_learning.py::TestLearningRules::test_post_pre",
+  "test/network/test_learning.py::TestLearningRules::test_rmax",
+  "test/network/test_learning.py::TestLearningRules::test_weight_dependent_post_pre",
+  "test/network/test_network.py::TestNetwork::test_add_objects",
+  "test/network/test_network.py::TestNetwork::test_empty",
+  "test/network/test_nodes.py::TestNodes::test_init",
+  "test/network/test_nodes.py::TestNodes::test_transfer"
+]
