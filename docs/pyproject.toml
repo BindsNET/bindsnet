@@ -6,6 +6,6 @@ dependencies = [
   "sphinx_rtd_theme==1.3.0",
   "readthedocs-sphinx-search==0.3.2",
   "imagecodecs == 2023.9.18",
-  "Jinja2 == 3.1.4",
+  "Jinja2 == 3.1.5",
   "wheel == 0.41.3",
 ]
