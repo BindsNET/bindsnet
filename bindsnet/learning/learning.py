@@ -98,7 +98,10 @@ class LearningRule(ABC):
             (self.connection.wmin != -np.inf).any()
             or (self.connection.wmax != np.inf).any()
         ) and not isinstance(self, NoOp):
-            self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
+            if self.connection.w.is_sparse:
+                raise Exception("SparseConnection isn't supported for wmin\\wmax")
+            else:
+                self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
 
 
 class NoOp(LearningRule):
@@ -396,7 +399,10 @@ class PostPre(LearningRule):
         if self.nu[0].any():
             source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
             target_x = self.target.x.view(batch_size, -1).unsqueeze(1) * self.nu[0]
-            self.connection.w -= self.reduction(torch.bmm(source_s, target_x), dim=0)
+            update = self.reduction(torch.bmm(source_s, target_x), dim=0)
+            if self.connection.w.is_sparse:
+                update = update.to_sparse()
+            self.connection.w -= update
             del source_s, target_x
 
         # Post-synaptic update.
@@ -405,7 +411,10 @@ class PostPre(LearningRule):
                 self.target.s.view(batch_size, -1).unsqueeze(1).float() * self.nu[1]
             )
             source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
-            self.connection.w += self.reduction(torch.bmm(source_x, target_s), dim=0)
+            update = self.reduction(torch.bmm(source_x, target_s), dim=0)
+            if self.connection.w.is_sparse:
+                update = update.to_sparse()
+            self.connection.w += update
             del source_x, target_s
 
         super().update()
@@ -1113,10 +1122,14 @@ class Hebbian(LearningRule):
 
         # Pre-synaptic update.
         update = self.reduction(torch.bmm(source_s, target_x), dim=0)
+        if self.connection.w.is_sparse:
+            update = update.to_sparse()
         self.connection.w += self.nu[0] * update
 
         # Post-synaptic update.
         update = self.reduction(torch.bmm(source_x, target_s), dim=0)
+        if self.connection.w.is_sparse:
+            update = update.to_sparse()
         self.connection.w += self.nu[1] * update
 
         super().update()
@@ -1542,8 +1555,10 @@ class MSTDP(LearningRule):
             a_minus = torch.tensor(a_minus, device=self.connection.w.device)
 
         # Compute weight update based on the eligibility value of the past timestep.
-        update = reward * self.eligibility
-        self.connection.w += self.nu[0] * self.reduction(update, dim=0)
+        update = self.reduction(reward * self.eligibility, dim=0)
+        if self.connection.w.is_sparse:
+            update = update.to_sparse()
+        self.connection.w += self.nu[0] * update
 
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
@@ -2214,10 +2229,11 @@ class MSTDPET(LearningRule):
         self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
         self.eligibility_trace += self.eligibility / self.tc_e_trace
 
+        update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
+        if self.connection.w.is_sparse:
+            update = update.to_sparse()
         # Compute weight update.
-        self.connection.w += (
-            self.nu[0] * self.connection.dt * reward * self.eligibility_trace
-        )
+        self.connection.w += update
 
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
@@ -2936,6 +2952,9 @@ class Rmax(LearningRule):
         ) * source_x[:, None]
 
         # Compute weight update.
-        self.connection.w += self.nu[0] * reward * self.eligibility_trace
+        update = self.nu[0] * reward * self.eligibility_trace
+        if self.connection.w.is_sparse:
+            update = update.to_sparse()
+        self.connection.w += update
 
         super().update()
