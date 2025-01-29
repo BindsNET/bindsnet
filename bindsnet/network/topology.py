@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Sequence, Tuple, Union
 
+import warnings
+
 import numpy as np
 import torch
+from torch import device
 import torch.nn.functional as F
 from bindsnet.utils import im2col_indices
 from torch.nn import Module, Parameter
@@ -139,6 +142,112 @@ class AbstractConnection(ABC, Module):
         """
 
 
+class AbstractMulticompartmentConnection(ABC, Module):
+    # language=rst
+    """
+    Abstract base method for connections between ``Nodes``.
+    """
+
+    def __init__(
+        self,
+        source: Nodes,
+        target: Nodes,
+        device: device,
+        pipeline: list = None,
+        **kwargs,
+    ) -> None:
+        # language=rst
+        """
+        Constructor for abstract base class for connection objects.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param device: The device which the connection will run on
+        :param pipeline: An ordered list of topology features to be used on the connection
+        """
+
+        super().__init__()
+
+        #### General Assertions ####
+        assert isinstance(source, Nodes), "Source is not a Nodes object"
+        assert isinstance(target, Nodes), "Target is not a Nodes object"
+
+        #### Assign class variables ####
+        self.source = source
+        self.target = target
+        self.device = device
+        self.pipeline = (
+            [] if pipeline is None else pipeline
+        )  # <- *Ordered* executables for features
+
+        # TODO: Make it so there can't be repeated names!!!
+        # Initialize feature index & prime
+        self.feature_index = (
+            {}
+        )  # <- *Unordered* and named set of references for features
+        for feature in pipeline:
+            self.feature_index[feature.name] = feature
+            feature.prime_feature(connection=self, device=self.device, **kwargs)
+
+    @abstractmethod
+    def compute(self, s: torch.Tensor) -> None:
+        # language=rst
+        """
+        Compute pre-activations of downstream neurons given spikes of upstream neurons.
+
+        :param s: Incoming spikes.
+        """
+        pass
+
+    @abstractmethod
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Compute connection's update rule.
+
+        Keyword arguments:
+
+        :param bool learning: Whether to allow connection updates.
+        """
+        pass
+
+    @abstractmethod
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Contains resetting logic for the connection.
+        """
+        pass
+
+    def append_pipeline(self, feature) -> None:
+        # language=rst
+        """
+        Append a feature to the pipeline
+        """
+        self.pipeline.append(feature)
+        feature.prime_feature(connection=self, device=self.device)
+        self.feature_index[feature.name] = feature
+
+    def insert_pipeline(self, feature, index) -> None:
+        # language=rst
+        """
+        insert a feature into the pipeline
+        :param index: Index for where to insert the feature
+        """
+        self.pipeline.insert(feature, index)
+        feature.prime_feature(connection=self, device=self.device)
+        self.feature_index[feature.name] = feature
+
+    def remove_pipeline(self, feature) -> None:
+        # language=rst
+        """
+        remove a feature frome the pipeline
+        :param feature: feature to be removed
+        """
+        self.pipeline.remove(feature)
+        del self.feature_index[feature.name]
+
+
 class Connection(AbstractConnection):
     # language=rst
     """
@@ -270,6 +379,133 @@ class Connection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
+
+
+class MulticompartmentConnection(AbstractMulticompartmentConnection):
+    # language=rst
+    """
+    Specifies synapses between one or two populations of neurons.
+    """
+
+    def __init__(
+        self,
+        source: Nodes,
+        target: Nodes,
+        device: device,
+        pipeline: list = [],
+        manual_update: bool = False,
+        traces: bool = False,
+        **kwargs,
+    ) -> None:
+        # language=rst
+        """
+        Instantiates a :code:`Connection` object.
+
+        :param source: A layer of nodes from which the connection originates.
+        :param target: A layer of nodes to which the connection connects.
+        :param device: The device the connection will be run on.
+        :param list: Pipeline of features for the connection signals to be run through
+        :param manual_update: Set to :code:`True` to disable automatic updates (applying learning rules) to connection features.
+            False by default, updates called after each time step
+        :param traces: Set to :code:`True` to record history of connection activity (for monitors)
+        """
+
+        super().__init__(source, target, device, pipeline, **kwargs)
+        self.traces = traces
+        self.manual_update = manual_update
+        if self.traces:
+            self.activity = None
+
+    def compute(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Compute pre-activations given spikes using connection weights.
+
+        :param s: Incoming spikes.
+        :return: Incoming spikes multiplied by synaptic weights (with or without
+                 decaying spike activation).
+        """
+
+        # Change to numeric type (torch doesn't like booleans for matrix ops)
+        # Note: .float() is an expensive operation. Use as minimally as possible!
+        # if s.dtype != torch.float32:
+        #     s = s.float()
+
+        # Prepare broadcast from incoming spikes to all output neurons
+        # |conn_spikes| = [batch_size, source.n * target.n]
+        conn_spikes = s.view(s.size(0), self.source.n, 1).repeat(1, 1, self.target.n)
+        # TODO: ^ This could probably be optimized
+
+        # Run through pipeline
+        for f in self.pipeline:
+            conn_spikes = f.compute(conn_spikes)
+
+        # Sum signals for each of the output/terminal neurons
+        # |out_signal| = [batch_size, target.n]
+        out_signal = conn_spikes.view(s.size(0), self.source.n, self.target.n).sum(1)
+
+        if self.traces:
+            self.activity = out_signal
+
+        return out_signal.view(s.size(0), *self.target.shape)
+
+    def compute_window(self, s: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """"""
+
+        if self.s_w == None:
+            # Construct a matrix of shape batch size * window size * dimension of layer
+            self.s_w = torch.zeros(
+                self.target.batch_size, self.target.res_window_size, *self.source.shape
+            )
+
+        # Add the spike vector into the first in first out matrix of windowed (res) spike trains
+        self.s_w = torch.cat((self.s_w[:, 1:, :], s[:, None, :]), 1)
+
+        # Compute multiplication of spike activations by weights and add bias.
+        if self.b is None:
+            post = (
+                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
+            )
+        else:
+            post = (
+                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
+                + self.b
+            )
+
+        return post.view(
+            self.s_w.size(0), self.target.res_window_size, *self.target.shape
+        )
+
+    def update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Compute connection's update rule.
+        """
+        learning = kwargs.get("learning", False)
+        if learning and not self.manual_update:
+            # Pipeline learning
+            for f in self.pipeline:
+                f.update(**kwargs)
+
+    def normalize(self) -> None:
+        # language=rst
+        """
+        Normalize all features in the connection.
+        """
+        # Normalize pipeline features
+        for f in self.pipeline:
+            f.normalize()
+
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Contains resetting logic for the connection.
+        """
+        super().reset_state_variables()
+
+        for f in self.pipeline:
+            f.reset_state_variables()
 
 
 class Conv1dConnection(AbstractConnection):
