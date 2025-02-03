@@ -231,35 +231,36 @@ tomli = {version = ">=2.0.1", markers = "python_version < \"3.11\""}
 
 [[package]]
 name = "babel"
-version = "2.16.0"
+version = "2.17.0"
 description = "Internationalization utilities"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 markers = "(sys_platform == \"linux\" or sys_platform == \"win32\" or sys_platform == \"win_amd64\" or sys_platform == \"darwin\" or sys_platform != \"linux\" and sys_platform != \"win32\" and sys_platform != \"win_amd64\" and sys_platform != \"darwin\") and python_version <= \"3.11\""
 files = [
-    {file = "babel-2.16.0-py3-none-any.whl", hash = "sha256:368b5b98b37c06b7daf6696391c3240c938b37767d4584413e8438c5c435fa8b"},
-    {file = "babel-2.16.0.tar.gz", hash = "sha256:d1f3554ca26605fe173f3de0c65f750f5a42f924499bf134de6423582298e316"},
+    {file = "babel-2.17.0-py3-none-any.whl", hash = "sha256:4d0b53093fdfb4b21c92b5213dba5a1b23885afa8383709427046b21c366e5f2"},
+    {file = "babel-2.17.0.tar.gz", hash = "sha256:0c54cffb19f690cdcc52a3b50bcbf71e07a808d1c80d549f2459b9d2cf0afb9d"},
 ]
 
 [package.extras]
-dev = ["freezegun (>=1.0,<2.0)", "pytest (>=6.0)", "pytest-cov"]
+dev = ["backports.zoneinfo", "freezegun (>=1.0,<2.0)", "jinja2 (>=3.0)", "pytest (>=6.0)", "pytest-cov", "pytz", "setuptools", "tzdata"]
 
 [[package]]
 name = "beautifulsoup4"
-version = "4.12.3"
+version = "4.13.1"
 description = "Screen-scraping library"
 optional = false
-python-versions = ">=3.6.0"
+python-versions = ">=3.7.0"
 groups = ["dev"]
 markers = "(sys_platform == \"linux\" or sys_platform == \"win32\" or sys_platform == \"win_amd64\" or sys_platform == \"darwin\" or sys_platform != \"linux\" and sys_platform != \"win32\" and sys_platform != \"win_amd64\" and sys_platform != \"darwin\") and python_version <= \"3.11\""
 files = [
-    {file = "beautifulsoup4-4.12.3-py3-none-any.whl", hash = "sha256:b80878c9f40111313e55da8ba20bdba06d8fa3969fc68304167741bbf9e082ed"},
-    {file = "beautifulsoup4-4.12.3.tar.gz", hash = "sha256:74e3d1928edc070d21748185c46e3fb33490f22f52a3addee9aee0f4f7781051"},
+    {file = "beautifulsoup4-4.13.1-py3-none-any.whl", hash = "sha256:72465267014897bb10ca749bb632bde6c2d20f3254afd5458544bd74e6c2e6d8"},
+    {file = "beautifulsoup4-4.13.1.tar.gz", hash = "sha256:741c8b6903a1e4ae8ba32b9c9ae7510dab7a197fdbadcf9fcdeb0891ef5ec66a"},
 ]
 
 [package.dependencies]
 soupsieve = ">1.2"
+typing-extensions = ">=4.0.0"
 
 [package.extras]
 cchardet = ["cchardet"]
@@ -1090,15 +1091,15 @@ files = [
 
 [[package]]
 name = "fsspec"
-version = "2024.12.0"
+version = "2025.2.0"
 description = "File-system specification"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "(sys_platform == \"linux\" or sys_platform == \"win32\" or sys_platform == \"win_amd64\" or sys_platform == \"darwin\") and python_version <= \"3.11\""
 files = [
-    {file = "fsspec-2024.12.0-py3-none-any.whl", hash = "sha256:b520aed47ad9804237ff878b504267a3b0b441e97508bd6d2d8774e3db85cee2"},
-    {file = "fsspec-2024.12.0.tar.gz", hash = "sha256:670700c977ed2fb51e0d9f9253177ed20cbde4a3e5c0283cc5385b5870c8533f"},
+    {file = "fsspec-2025.2.0-py3-none-any.whl", hash = "sha256:9de2ad9ce1f85e1931858535bc882543171d197001a0a5eb2ddc04f1781ab95b"},
+    {file = "fsspec-2025.2.0.tar.gz", hash = "sha256:1c24b16eaa0a1798afa0337aa0db9b256718ab2a89c425371f5628d22c3b6afd"},
 ]
 
 [package.extras]
@@ -1125,7 +1126,7 @@ sftp = ["paramiko"]
 smb = ["smbprotocol"]
 ssh = ["paramiko"]
 test = ["aiohttp (!=4.0.0a0,!=4.0.0a1)", "numpy", "pytest", "pytest-asyncio (!=0.22.0)", "pytest-benchmark", "pytest-cov", "pytest-mock", "pytest-recording", "pytest-rerunfailures", "requests"]
-test-downstream = ["aiobotocore (>=2.5.4,<3.0.0)", "dask-expr", "dask[dataframe,test]", "moto[server] (>4,<5)", "pytest-timeout", "xarray"]
+test-downstream = ["aiobotocore (>=2.5.4,<3.0.0)", "dask[dataframe,test]", "moto[server] (>4,<5)", "pytest-timeout", "xarray"]
 test-full = ["adlfs", "aiohttp (!=4.0.0a0,!=4.0.0a1)", "cloudpickle", "dask", "distributed", "dropbox", "dropboxdrivefs", "fastparquet", "fusepy", "gcsfs", "jinja2", "kerchunk", "libarchive-c", "lz4", "notebook", "numpy", "ocifs", "pandas", "panel", "paramiko", "pyarrow", "pyarrow (>=1)", "pyftpdlib", "pygit2", "pytest", "pytest-asyncio (!=0.22.0)", "pytest-benchmark", "pytest-cov", "pytest-mock", "pytest-recording", "pytest-rerunfailures", "python-snappy", "requests", "smbprotocol", "tqdm", "urllib3", "zarr", "zstandard"]
 tqdm = ["tqdm"]
 
@@ -1674,19 +1675,20 @@ test = ["ipykernel", "pre-commit", "pytest (<8)", "pytest-cov", "pytest-timeout"
 
 [[package]]
 name = "jupyter-events"
-version = "0.11.0"
+version = "0.12.0"
 description = "Jupyter Event System library"
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 markers = "(sys_platform == \"linux\" or sys_platform == \"win32\" or sys_platform == \"win_amd64\" or sys_platform == \"darwin\" or sys_platform != \"linux\" and sys_platform != \"win32\" and sys_platform != \"win_amd64\" and sys_platform != \"darwin\") and python_version <= \"3.11\""
 files = [
-    {file = "jupyter_events-0.11.0-py3-none-any.whl", hash = "sha256:36399b41ce1ca45fe8b8271067d6a140ffa54cec4028e95491c93b78a855cacf"},
-    {file = "jupyter_events-0.11.0.tar.gz", hash = "sha256:c0bc56a37aac29c1fbc3bcfbddb8c8c49533f9cf11f1c4e6adadba936574ab90"},
+    {file = "jupyter_events-0.12.0-py3-none-any.whl", hash = "sha256:6464b2fa5ad10451c3d35fabc75eab39556ae1e2853ad0c0cc31b656731a97fb"},
+    {file = "jupyter_events-0.12.0.tar.gz", hash = "sha256:fc3fce98865f6784c9cd0a56a20644fc6098f21c8c33834a8d9fe383c17e554b"},
 ]
 
 [package.dependencies]
 jsonschema = {version = ">=4.18.0", extras = ["format-nongpl"]}
+packaging = "*"
 python-json-logger = ">=2.0.4"
 pyyaml = ">=5.3"
 referencing = "*"
@@ -3233,19 +3235,20 @@ files = [
 
 [[package]]
 name = "pywinpty"
-version = "2.0.14"
+version = "2.0.15"
 description = "Pseudo terminal support for Windows from Python."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["dev"]
 markers = "(sys_platform == \"linux\" or sys_platform == \"win32\" or sys_platform == \"win_amd64\" or sys_platform == \"darwin\" or sys_platform != \"linux\" and sys_platform != \"win32\" and sys_platform != \"win_amd64\" and sys_platform != \"darwin\") and os_name == \"nt\" and python_version <= \"3.11\""
 files = [
-    {file = "pywinpty-2.0.14-cp310-none-win_amd64.whl", hash = "sha256:0b149c2918c7974f575ba79f5a4aad58bd859a52fa9eb1296cc22aa412aa411f"},
-    {file = "pywinpty-2.0.14-cp311-none-win_amd64.whl", hash = "sha256:cf2a43ac7065b3e0dc8510f8c1f13a75fb8fde805efa3b8cff7599a1ef497bc7"},
-    {file = "pywinpty-2.0.14-cp312-none-win_amd64.whl", hash = "sha256:55dad362ef3e9408ade68fd173e4f9032b3ce08f68cfe7eacb2c263ea1179737"},
-    {file = "pywinpty-2.0.14-cp313-none-win_amd64.whl", hash = "sha256:074fb988a56ec79ca90ed03a896d40707131897cefb8f76f926e3834227f2819"},
-    {file = "pywinpty-2.0.14-cp39-none-win_amd64.whl", hash = "sha256:5725fd56f73c0531ec218663bd8c8ff5acc43c78962fab28564871b5fce053fd"},
-    {file = "pywinpty-2.0.14.tar.gz", hash = "sha256:18bd9529e4a5daf2d9719aa17788ba6013e594ae94c5a0c27e83df3278b0660e"},
+    {file = "pywinpty-2.0.15-cp310-cp310-win_amd64.whl", hash = "sha256:8e7f5de756a615a38b96cd86fa3cd65f901ce54ce147a3179c45907fa11b4c4e"},
+    {file = "pywinpty-2.0.15-cp311-cp311-win_amd64.whl", hash = "sha256:9a6bcec2df2707aaa9d08b86071970ee32c5026e10bcc3cc5f6f391d85baf7ca"},
+    {file = "pywinpty-2.0.15-cp312-cp312-win_amd64.whl", hash = "sha256:83a8f20b430bbc5d8957249f875341a60219a4e971580f2ba694fbfb54a45ebc"},
+    {file = "pywinpty-2.0.15-cp313-cp313-win_amd64.whl", hash = "sha256:ab5920877dd632c124b4ed17bc6dd6ef3b9f86cd492b963ffdb1a67b85b0f408"},
+    {file = "pywinpty-2.0.15-cp313-cp313t-win_amd64.whl", hash = "sha256:a4560ad8c01e537708d2790dbe7da7d986791de805d89dd0d3697ca59e9e4901"},
+    {file = "pywinpty-2.0.15-cp39-cp39-win_amd64.whl", hash = "sha256:d261cd88fcd358cfb48a7ca0700db3e1c088c9c10403c9ebc0d8a8b57aa6a117"},
+    {file = "pywinpty-2.0.15.tar.gz", hash = "sha256:312cf39153a8736c617d45ce8b6ad6cd2107de121df91c455b10ce6bba7a39b2"},
 ]
 
 [[package]]
