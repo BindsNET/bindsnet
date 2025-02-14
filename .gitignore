@@ -17,6 +17,7 @@ test/import/__pycache__/*
 test/models/__pycache__/*
 test/network/__pycache__/*
 test/analysis/__pycache__/*
+*.pyc
 dist/*
 logs/*
 .pytest_cache/*
