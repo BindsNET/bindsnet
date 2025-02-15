@@ -446,12 +446,19 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         # Sum signals for each of the output/terminal neurons
         # |out_signal| = [batch_size, target.n]
-        out_signal = conn_spikes.view(s.size(0), self.source.n, self.target.n).sum(1)
+        if conn_spikes.size() != torch.Size([s.size(0), self.source.n, self.target.n]):
+            if conn_spikes.is_sparse:
+                conn_spikes = conn_spikes.to_dense()
+            conn_spikes = conn_spikes.view(s.size(0), self.source.n, self.target.n)
+        out_signal = conn_spikes.sum(1)
 
         if self.traces:
             self.activity = out_signal
 
-        return out_signal.view(s.size(0), *self.target.shape)
+        if out_signal.size() != torch.Size([s.size(0)] + self.target.shape):
+            return out_signal.view(s.size(0), *self.target.shape)
+        else:
+            return out_signal
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
