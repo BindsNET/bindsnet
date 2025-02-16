@@ -322,7 +322,7 @@ class Connection(AbstractConnection):
         """
         # Compute multiplication of spike activations by weights and add bias.
         if self.b is None:
-            post = s.view(s.size(0), -1).float() @ self.w
+            post = s.view(s.size(0), -1).to(dtype=torch.float16) @ self.w
         else:
             post = s.view(s.size(0), -1).float() @ self.w + self.b
         return post.view(s.size(0), *self.target.shape)

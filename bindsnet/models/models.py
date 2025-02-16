@@ -169,7 +169,7 @@ class DiehlAndCook2015(Network):
         )
 
         # Connections
-        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
+        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons, dtype=torch.float16)
         input_exc_conn = Connection(
             source=input_layer,
             target=exc_layer,
@@ -181,13 +181,13 @@ class DiehlAndCook2015(Network):
             wmax=wmax,
             norm=norm,
         )
-        w = self.exc * torch.diag(torch.ones(self.n_neurons))
+        w = self.exc * torch.diag(torch.ones(self.n_neurons, dtype=torch.float16))
         exc_inh_conn = Connection(
             source=exc_layer, target=inh_layer, w=w, wmin=0, wmax=self.exc
         )
         w = -self.inh * (
-            torch.ones(self.n_neurons, self.n_neurons)
-            - torch.diag(torch.ones(self.n_neurons))
+            torch.ones(self.n_neurons, self.n_neurons, dtype=torch.float16)
+            - torch.diag(torch.ones(self.n_neurons, dtype=torch.float16))
         )
         inh_exc_conn = Connection(
             source=inh_layer, target=exc_layer, w=w, wmin=-self.inh, wmax=0
