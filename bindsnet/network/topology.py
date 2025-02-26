@@ -450,7 +450,11 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
             if conn_spikes.is_sparse:
                 conn_spikes = conn_spikes.to_dense()
             conn_spikes = conn_spikes.view(s.size(0), self.source.n, self.target.n)
-        out_signal = conn_spikes.sum(1)
+
+        if conn_spikes.is_sparse:
+            out_signal = conn_spikes.to_dense().sum(1)
+        else:
+            out_signal = conn_spikes.sum(1)
 
         if self.traces:
             self.activity = out_signal

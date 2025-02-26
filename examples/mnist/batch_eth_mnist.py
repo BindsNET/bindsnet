@@ -44,7 +44,8 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=True)
+parser.add_argument("--sparse", dest="sparse", action="store_true")
+parser.set_defaults(gpu=True)
 
 args = parser.parse_args()
 
@@ -66,6 +67,7 @@ progress_interval = args.progress_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
+sparse = args.sparse
 
 update_steps = int(n_train / batch_size / n_updates)
 update_interval = update_steps * batch_size
@@ -93,6 +95,9 @@ start_intensity = intensity
 
 # Build network.
 network = DiehlAndCook2015(
+    device=device,
+    sparse=sparse,
+    batch_size=batch_size,
     n_inpt=784,
     n_neurons=n_neurons,
     exc=exc,
