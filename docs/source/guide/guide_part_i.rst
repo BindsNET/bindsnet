@@ -193,6 +193,9 @@ Example 2: Batch dimension specified via batch_size parameter (no batch axis in 
     weights = Weight(name='weight_feature', value=torch.rand(100, 1000), sparse=True, batch_size=2)
     bias = Bias(name='bias_feature', value=torch.rand(100, 1000), sparse=True, batch_size=2)
 
+
+Note that subtraction and addition operations for sparse tensors are 90 times slower than those for dense tensors (tested on RTX 3060)
+
 Specifying monitors
 *******************
 
