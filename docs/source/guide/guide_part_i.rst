@@ -172,6 +172,27 @@ To create a simple all-to-all connection with a weight and bias:
         pipeline=[weight, bias]
     )
 
+Feature values (e.g., weights, biases) can be represented as sparse tensors for memory efficiency.
+To enable sparse tensor support:
+
+1. Set the sparse=True parameter when initializing the feature.
+2. If the value tensor does not include a batch dimension, explicitly specify the batch_size parameter.
+
+Example 1: Batch dimension included in the value tensor (first axis):
+
+.. code-block:: python
+
+    weights = Weight(name='weight_feature', value=torch.rand(2, 100, 1000), sparse=True)  # Batch size = 2
+    bias = Bias(name='bias_feature', value=torch.rand(2, 100, 1000), sparse=True)
+
+
+Example 2: Batch dimension specified via batch_size parameter (no batch axis in value):
+
+.. code-block:: python
+
+    weights = Weight(name='weight_feature', value=torch.rand(100, 1000), sparse=True, batch_size=2)
+    bias = Bias(name='bias_feature', value=torch.rand(100, 1000), sparse=True, batch_size=2)
+
 Specifying monitors
 *******************
 
