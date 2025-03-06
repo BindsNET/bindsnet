@@ -175,10 +175,7 @@ class DiehlAndCook2015(Network):
         )
 
         # Connections
-        if sparse:
-            w = 0.3 * torch.rand(batch_size, self.n_inpt, self.n_neurons)
-        else:
-            w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
+        w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
         input_exc_conn = MulticompartmentConnection(
             source=input_layer,
             target=exc_layer,
@@ -192,7 +189,8 @@ class DiehlAndCook2015(Network):
                     reduction=reduction,
                     nu=nu,
                     learning_rule=MMCPostPre,
-                    sparse=sparse
+                    sparse=sparse,
+                    batch_size=batch_size
                 )
             ]
         )

@@ -32,6 +32,7 @@ class AbstractFeature(ABC):
         decay: float = 0.0,
         parent_feature=None,
         sparse: Optional[bool] = False,
+        batch_size: int = 1,
         **kwargs,
     ) -> None:
         # language=rst
@@ -49,6 +50,7 @@ class AbstractFeature(ABC):
         :param decay: Constant multiple to decay weights by on each iteration
         :param parent_feature: Parent feature to inherit :code:`value` from
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         #### Initialize class variables ####
@@ -64,6 +66,7 @@ class AbstractFeature(ABC):
         self.decay = decay
         self.parent_feature = parent_feature
         self.sparse = sparse
+        self.batch_size = batch_size
         self.kwargs = kwargs
 
         ## Backend ##
@@ -120,12 +123,19 @@ class AbstractFeature(ABC):
         )
 
         self.assert_valid_range()
-        if value is not None:
-            self.assert_feature_in_range()
-            if self.sparse:
-                self.value = self.value.to_sparse()
-                assert not getattr(self, 'enforce_polarity', False), \
-                    "enforce_polarity isn't supported for sparse tensors"
+        if value is None:
+            return
+
+        self.assert_feature_in_range()
+        if not self.sparse:
+            return
+
+        if len(self.value.shape) == 2:
+            self.value = self.value.unsqueeze(0).repeat(self.batch_size, 1, 1)
+
+        self.value = self.value.to_sparse()
+        assert not getattr(self, 'enforce_polarity', False), \
+            "enforce_polarity isn't supported for sparse tensors"
 
     @abstractmethod
     def reset_state_variables(self) -> None:
@@ -341,7 +351,8 @@ class Probability(AbstractFeature):
         reduction: Optional[callable] = None,
         decay: float = 0.0,
         parent_feature=None,
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
+        batch_size: int = 1
     ) -> None:
         # language=rst
         """
@@ -360,6 +371,7 @@ class Probability(AbstractFeature):
         :param decay: Constant multiple to decay weights by on each iteration
         :param parent_feature: Parent feature to inherit :code:`value` from
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         ### Assertions ###
@@ -373,7 +385,8 @@ class Probability(AbstractFeature):
             reduction=reduction,
             decay=decay,
             parent_feature=parent_feature,
-            sparse=sparse
+            sparse=sparse,
+            batch_size=batch_size
         )
 
     def sparse_bernoulli(self):
@@ -434,7 +447,8 @@ class Mask(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
+        batch_size: int = 1
     ) -> None:
         # language=rst
         """
@@ -442,6 +456,7 @@ class Mask(AbstractFeature):
         :param name: Name of the feature
         :param value: Boolean mask. :code:`True` means a signal can pass, :code:`False` means the synapse is impassable
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         ### Assertions ###
@@ -460,7 +475,8 @@ class Mask(AbstractFeature):
         super().__init__(
             name=name,
             value=value,
-            sparse=sparse
+            sparse=sparse,
+            batch_size=batch_size
         )
 
     def compute(self, conn_spikes) -> torch.Tensor:
@@ -544,7 +560,8 @@ class Weight(AbstractFeature):
         reduction: Optional[callable] = None,
         enforce_polarity: Optional[bool] = False,
         decay: float = 0.0,
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
+        batch_size: int = 1
     ) -> None:
         # language=rst
         """
@@ -564,6 +581,7 @@ class Weight(AbstractFeature):
         :param enforce_polarity: Will prevent synapses from changing signs if :code:`True`
         :param decay: Constant multiple to decay weights by on each iteration
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         self.norm_frequency = norm_frequency
@@ -577,7 +595,8 @@ class Weight(AbstractFeature):
             nu=nu,
             reduction=reduction,
             decay=decay,
-            sparse=sparse
+            sparse=sparse,
+            batch_size=batch_size
         )
 
     def reset_state_variables(self) -> None:
@@ -631,7 +650,8 @@ class Bias(AbstractFeature):
         value: Union[torch.Tensor, float, int] = None,
         range: Optional[Sequence[float]] = None,
         norm: Optional[Union[torch.Tensor, float, int]] = None,
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
+        batch_size: int = 1
     ) -> None:
         # language=rst
         """
@@ -642,6 +662,7 @@ class Bias(AbstractFeature):
         :param norm: Value which all values in :code:`value` will sum to. Normalization of values occurs after each sample
             and after the value has been updated by the learning rule (if there is one)
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         super().__init__(
@@ -649,7 +670,8 @@ class Bias(AbstractFeature):
             value=value,
             range=[-torch.inf, +torch.inf] if range is None else range,
             norm=norm,
-            sparse=sparse
+            sparse=sparse,
+            batch_size=batch_size
         )
 
     def reset_state_variables(self) -> None:
@@ -674,7 +696,8 @@ class Intensity(AbstractFeature):
         name: str,
         value: Union[torch.Tensor, float, int] = None,
         range: Optional[Sequence[float]] = None,
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
+        batch_size: int = 1
     ) -> None:
         # language=rst
         """
@@ -682,9 +705,10 @@ class Intensity(AbstractFeature):
         :param name: Name of the feature
         :param value: Values to scale signals by
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
-        super().__init__(name=name, value=value, range=range, sparse=sparse)
+        super().__init__(name=name, value=value, range=range, sparse=sparse, batch_size=batch_size)
 
     def reset_state_variables(self) -> None:
         pass
@@ -713,7 +737,8 @@ class Degradation(AbstractFeature):
         value: Union[torch.Tensor, float, int] = None,
         degrade_function: callable = None,
         parent_feature: Optional[AbstractFeature] = None,
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
+        batch_size: int = 1
     ) -> None:
         # language=rst
         """
@@ -725,10 +750,11 @@ class Degradation(AbstractFeature):
         constant to be *subtracted* from the propagating spikes.
         :param parent_feature: Parent feature with desired :code:`value` to inherit
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         # Note: parent_feature will override value. See abstract constructor
-        super().__init__(name=name, value=value, parent_feature=parent_feature, sparse=sparse)
+        super().__init__(name=name, value=value, parent_feature=parent_feature, sparse=sparse, batch_size=batch_size)
 
         self.degrade_function = degrade_function
 
@@ -747,7 +773,8 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         ann_values: Union[list, tuple] = None,
         const_update_rate: float = 0.1,
         const_decay: float = 0.001,
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
+        batch_size: int = 1
     ) -> None:
         # language=rst
         """
@@ -759,6 +786,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         :param const_update_rate: The mask upatate rate of the ANN decision.
         :param const_decay: The spontaneous activation of the synapses.
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         # Define the ANN
@@ -794,7 +822,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         self.const_update_rate = const_update_rate
         self.const_decay = const_decay
 
-        super().__init__(name=name, value=value, sparse=sparse)
+        super().__init__(name=name, value=value, sparse=sparse, batch_size=batch_size)
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
 
@@ -843,7 +871,8 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         ann_values: Union[list, tuple] = None,
         const_update_rate: float = 0.1,
         const_decay: float = 0.01,
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
+        batch_size: int = 1
     ) -> None:
         # language=rst
         """
@@ -855,6 +884,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         :param const_update_rate: The mask upatate rate of the ANN decision.
         :param const_decay: The spontaneous activation of the synapses.
         :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         # Define the ANN
@@ -890,7 +920,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         self.const_update_rate = const_update_rate
         self.const_decay = const_decay
 
-        super().__init__(name=name, value=value, sparse=sparse)
+        super().__init__(name=name, value=value, sparse=sparse, batch_size=batch_size)
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
 
