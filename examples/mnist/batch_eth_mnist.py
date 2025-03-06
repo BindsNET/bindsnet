@@ -147,7 +147,7 @@ network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 spikes = {}
 for layer in set(network.layers):
     spikes[layer] = Monitor(
-        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device, sparse=True
+        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device, sparse=sparse
     )
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
