@@ -141,8 +141,8 @@ class AbstractConnection(ABC, Module):
         Contains resetting logic for the connection.
         """
 
-    @abstractmethod
-    def cast_dtype_if_needed(self, w, w_dtype):
+    @staticmethod
+    def cast_dtype_if_needed(w, w_dtype):
         if w.dtype != w_dtype:
             warnings.warn(f"Provided w has data type {w.dtype} but parameter w_dtype is {w_dtype}")
             return w.to(dtype=w_dtype)
