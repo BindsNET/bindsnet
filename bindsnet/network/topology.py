@@ -141,6 +141,14 @@ class AbstractConnection(ABC, Module):
         Contains resetting logic for the connection.
         """
 
+    @abstractmethod
+    def cast_dtype_if_needed(self, w, w_dtype):
+        if w.dtype != w_dtype:
+            warnings.warn(f"Provided w has data type {w.dtype} but parameter w_dtype is {w_dtype}")
+            return w.to(dtype=w_dtype)
+        else:
+            return w
+
 
 class AbstractMulticompartmentConnection(ABC, Module):
     # language=rst
@@ -261,6 +269,7 @@ class Connection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         # language=rst
@@ -275,6 +284,7 @@ class Connection(AbstractConnection):
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
 
         Keyword arguments:
 
@@ -296,9 +306,11 @@ class Connection(AbstractConnection):
                 w = torch.clamp(torch.rand(source.n, target.n), self.wmin, self.wmax)
             else:
                 w = self.wmin + torch.rand(source.n, target.n) * (self.wmax - self.wmin)
+            w = w.to(dtype=w_dtype)
         else:
             if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
                 w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
+            w = self.cast_dtype_if_needed(w, w_dtype)
 
         self.w = Parameter(w, requires_grad=False)
 
@@ -525,6 +537,7 @@ class Conv1dConnection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         # language=rst
@@ -543,6 +556,7 @@ class Conv1dConnection(AbstractConnection):
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
 
         Keyword arguments:
 
@@ -595,9 +609,11 @@ class Conv1dConnection(AbstractConnection):
                     self.out_channels, self.in_channels, self.kernel_size
                 )
                 w += self.wmin
+            w = w.to(dtype=w_dtype)
         else:
             if (self.wmin == -inf).any() or (self.wmax == inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
+            w = self.cast_dtype_if_needed(w, w_dtype)
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(
@@ -667,6 +683,7 @@ class Conv2dConnection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         # language=rst
@@ -685,6 +702,7 @@ class Conv2dConnection(AbstractConnection):
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
 
         Keyword arguments:
 
@@ -750,9 +768,11 @@ class Conv2dConnection(AbstractConnection):
                     self.out_channels, self.in_channels, *self.kernel_size
                 )
                 w += self.wmin
+            w = w.to(dtype=w_dtype)
         else:
             if (self.wmin == -inf).any() or (self.wmax == inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
+            w = self.cast_dtype_if_needed(w, w_dtype)
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(
@@ -824,6 +844,7 @@ class Conv3dConnection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         # language=rst
@@ -842,6 +863,7 @@ class Conv3dConnection(AbstractConnection):
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
 
         Keyword arguments:
 
@@ -926,9 +948,11 @@ class Conv3dConnection(AbstractConnection):
                     self.out_channels, self.in_channels, *self.kernel_size
                 )
                 w += self.wmin
+            w = w.to(dtype=w_dtype)
         else:
             if (self.wmin == -inf).any() or (self.wmax == inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
+            w = self.cast_dtype_if_needed(w, w_dtype)
 
         self.w = Parameter(w, requires_grad=False)
         self.b = Parameter(
@@ -1276,6 +1300,7 @@ class LocalConnection(AbstractConnection):
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         # language=rst
@@ -1299,6 +1324,7 @@ class LocalConnection(AbstractConnection):
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
 
         Keyword arguments:
 
@@ -1378,10 +1404,11 @@ class LocalConnection(AbstractConnection):
                 w = torch.clamp(w, self.wmin, self.wmax)
             else:
                 w = self.wmin + w * (self.wmax - self.wmin)
-
+            w = w.to(dtype=w_dtype)
         else:
             if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
+            w = self.cast_dtype_if_needed(w, w_dtype)
 
         self.w = Parameter(w, requires_grad=False)
 
@@ -1456,6 +1483,7 @@ class LocalConnection1D(AbstractConnection):
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         """
@@ -1474,6 +1502,7 @@ class LocalConnection1D(AbstractConnection):
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
         Keyword arguments:
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
@@ -1507,12 +1536,14 @@ class LocalConnection1D(AbstractConnection):
             w = torch.rand(
                 self.in_channels, self.n_filters * self.conv_size, self.kernel_size
             )
+            w = w.to(dtype=w_dtype)
         else:
             assert w.shape == (
                 self.in_channels,
                 self.out_channels * self.conv_size,
                 self.kernel_size,
             ), error
+            w = self.cast_dtype_if_needed(w, w_dtype)
 
         if self.wmin != -np.inf or self.wmax != np.inf:
             w = torch.clamp(w, self.wmin, self.wmax)
@@ -1588,6 +1619,7 @@ class LocalConnection2D(AbstractConnection):
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         """
@@ -1606,6 +1638,7 @@ class LocalConnection2D(AbstractConnection):
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
         Keyword arguments:
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
@@ -1649,12 +1682,14 @@ class LocalConnection2D(AbstractConnection):
             w = torch.rand(
                 self.in_channels, self.n_filters * self.conv_prod, self.kernel_prod
             )
+            w = w.to(dtype=w_dtype)
         else:
             assert w.shape == (
                 self.in_channels,
                 self.out_channels * self.conv_prod,
                 self.kernel_prod,
             ), error
+            w = self.cast_dtype_if_needed(w, w_dtype)
 
         if self.wmin != -np.inf or self.wmax != np.inf:
             w = torch.clamp(w, self.wmin, self.wmax)
@@ -1731,6 +1766,7 @@ class LocalConnection3D(AbstractConnection):
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         reduction: Optional[callable] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         """
@@ -1749,6 +1785,7 @@ class LocalConnection3D(AbstractConnection):
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
         Keyword arguments:
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
@@ -1794,12 +1831,14 @@ class LocalConnection3D(AbstractConnection):
             w = torch.rand(
                 self.in_channels, self.n_filters * self.conv_prod, self.kernel_prod
             )
+            w = w.to(dtype=w_dtype)
         else:
             assert w.shape == (
                 self.in_channels,
                 self.out_channels * self.conv_prod,
                 self.kernel_prod,
             ), error
+            w = self.cast_dtype_if_needed(w, w_dtype)
 
         if self.wmin != -np.inf or self.wmax != np.inf:
             w = torch.clamp(w, self.wmin, self.wmax)
@@ -1875,6 +1914,7 @@ class MeanFieldConnection(AbstractConnection):
         target: Nodes,
         nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
         weight_decay: float = 0.0,
+        w_dtype: torch.dtype = torch.float32,
         **kwargs,
     ) -> None:
         # language=rst
@@ -1886,6 +1926,7 @@ class MeanFieldConnection(AbstractConnection):
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
+        :param w_dtype: Data type for :code:`w` tensor
         Keyword arguments:
         :param LearningRule update_rule: Modifies connection parameters according to
             some rule.
@@ -1904,10 +1945,11 @@ class MeanFieldConnection(AbstractConnection):
                 w = torch.clamp((torch.randn(1)[0] + 1) / 10, self.wmin, self.wmax)
             else:
                 w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (self.wmax - self.wmin)
+            w = w.to(dtype=w_dtype)
         else:
             if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
-
+            w = self.cast_dtype_if_needed(w, w_dtype)
         self.w = Parameter(w, requires_grad=False)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
