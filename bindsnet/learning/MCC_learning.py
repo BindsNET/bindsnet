@@ -523,16 +523,18 @@ class MSTDP(MCC_LearningRule):
                 self.average_buffer_index + 1
             ) % self.average_update
 
-            if self.continues_update:
-                self.feature_value += self.nu[0] * torch.mean(
+            if self.continues_update or self.average_buffer_index == 0:
+                update = self.nu[0] * torch.mean(
                     self.average_buffer, dim=0
                 )
-            elif self.average_buffer_index == 0:
-                self.feature_value += self.nu[0] * torch.mean(
-                    self.average_buffer, dim=0
-                )
+                if self.feature_value.is_sparse:
+                    update = update.to_sparse()
+                self.feature_value += update
         else:
-            self.feature_value += self.nu[0] * self.reduction(update, dim=0)
+            update = self.nu[0] * self.reduction(update, dim=0)
+            if self.feature_value.is_sparse:
+                update = update.to_sparse()
+            self.feature_value += update
 
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
@@ -701,14 +703,16 @@ class MSTDPET(MCC_LearningRule):
                 self.average_buffer_index + 1
             ) % self.average_update
 
-            if self.continues_update:
-                self.feature_value += torch.mean(self.average_buffer, dim=0)
-            elif self.average_buffer_index == 0:
-                self.feature_value += torch.mean(self.average_buffer, dim=0)
+            if self.continues_update or self.average_buffer_index == 0:
+                update = torch.mean(self.average_buffer, dim=0)
+                if self.feature_value.is_sparse:
+                    update = update.to_sparse()
+                self.feature_value += update
         else:
-            self.feature_value += (
-                self.nu[0] * self.connection.dt * reward * self.eligibility_trace
-            )
+            update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
+            if self.feature_value.is_sparse:
+                update = update.to_sparse()
+            self.feature_value += update
 
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)  # Decay
