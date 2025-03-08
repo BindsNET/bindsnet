@@ -97,8 +97,8 @@ class DiehlAndCook2015(Network):
     def __init__(
         self,
         n_inpt: int,
-        device: device,
-        batch_size: int,
+        device: str = "cpu",
+        batch_size: int = None,
         sparse: bool = False,
         n_neurons: int = 100,
         exc: float = 22.5,
