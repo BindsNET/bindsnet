@@ -19,7 +19,9 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
     :param learning: Whether to load with learning enabled. Default loads value from
         disk.
     """
-    network = torch.load(open(file_name, "rb"), map_location=map_location, weights_only=False)
+    network = torch.load(
+        open(file_name, "rb"), map_location=map_location, weights_only=False
+    )
     if learning is not None and "learning" in vars(network):
         network.learning = learning
 
