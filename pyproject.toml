@@ -15,22 +15,22 @@ numpy = "^2"
 scipy = "^1"
 Cython = "^3"
 torch = [
-     {version = "2.5.1", platform = "linux", source = "torch+cu124"},
-     {version = "2.5.1", platform = "darwin"},
-     {version = "2.5.1", platform = "win32", source = "torch+cu124"},
-     {version = "2.5.1", platform = "win_amd64", source = "torch+cu124"},
+     {version = "2.6.0", platform = "linux", source = "torch+cu124"},
+     {version = "2.6.0", platform = "darwin"},
+     {version = "2.6.0", platform = "win32", source = "torch+cu124"},
+     {version = "2.6.0", platform = "win_amd64", source = "torch+cu124"},
  ]
 torchvision = [
-     {version = "0.20.1", platform = "darwin"},
-     {version = "0.20.1", platform = "linux", source = "torch+cu124"},
-     {version = "0.20.1", platform = "win32", source = "torch+cu124"},
-     {version = "0.20.1", platform = "win_amd64", source = "torch+cu124"},
+     {version = "0.21.0", platform = "darwin"},
+     {version = "0.21.0", platform = "linux", source = "torch+cu124"},
+     {version = "0.21.0", platform = "win32", source = "torch+cu124"},
+     {version = "0.21.0", platform = "win_amd64", source = "torch+cu124"},
  ]
 torchaudio = [
-     {version = "2.5.1", platform = "darwin"},
-     {version = "2.5.1", platform = "linux", source = "torch+cu124"},
-     {version = "2.5.1", platform = "win32", source = "torch+cu124"},
-     {version = "2.5.1", platform = "win_amd64", source = "torch+cu124"},
+     {version = "2.6.0", platform = "darwin"},
+     {version = "2.6.0", platform = "linux", source = "torch+cu124"},
+     {version = "2.6.0", platform = "win32", source = "torch+cu124"},
+     {version = "2.6.0", platform = "win_amd64", source = "torch+cu124"},
  ]
 tensorboardX = "^2.6.2"
 tqdm = "^4"
@@ -57,6 +57,11 @@ foolbox = "^3"
  [[tool.poetry.source]]
  name = "torch+cu124"
  url = "https://download.pytorch.org/whl/cu124"
+ priority = "explicit"
+
+ [[tool.poetry.source]]
+ name = "torch+cu126"
+ url = "https://download.pytorch.org/whl/cu126"
  priority = "explicit"
 
 [tool.poetry.dev-dependencies]
