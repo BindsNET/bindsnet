@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 assert torch.cuda.is_available(), 'Benchmark works only on cuda'
 device = torch.device("cuda")
-shape = (500, 500, 500)
+shape = (300, 500, 500)
 
 
 def create_spikes_tensor(percent_of_true_values, sparse, return_memory_usage=True):
