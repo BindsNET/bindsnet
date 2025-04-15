@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 
 assert torch.cuda.is_available(), 'Benchmark works only on cuda'
-device = torch.device("cpu")
+device = torch.device("cuda")
 shape = (500, 500, 500)
 
 
