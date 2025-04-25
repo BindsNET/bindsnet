@@ -10,35 +10,30 @@ documentation = "https://bindsnet-docs.readthedocs.io/"
 keywords = ["spiking", "neural", "networks", "pytorch"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.10"
 numpy = "^2"
 scipy = "^1"
 Cython = "^3"
 torch = [
-     {version = "2.6.0", platform = "linux", source = "torch+cu124"},
-     {version = "2.6.0", platform = "darwin"},
-     {version = "2.6.0", platform = "win32", source = "torch+cu124"},
-     {version = "2.6.0", platform = "win_amd64", source = "torch+cu124"},
- ]
+    {version = "2.6.0", markers = "sys_platform != 'darwin'", source = "torch+cu124"},
+    {version = "2.6", markers = "sys_platform == 'darwin'" },
+]
 torchvision = [
-     {version = "0.21.0", platform = "darwin"},
-     {version = "0.21.0", platform = "linux", source = "torch+cu124"},
-     {version = "0.21.0", platform = "win32", source = "torch+cu124"},
-     {version = "0.21.0", platform = "win_amd64", source = "torch+cu124"},
- ]
+    {version = "0.21.0", markers = "sys_platform != 'darwin'", source = "torch+cu124"},
+    {version = "0.21.0", markers = "sys_platform == 'darwin'" },
+]
 torchaudio = [
-     {version = "2.6.0", platform = "darwin"},
-     {version = "2.6.0", platform = "linux", source = "torch+cu124"},
-     {version = "2.6.0", platform = "win32", source = "torch+cu124"},
-     {version = "2.6.0", platform = "win_amd64", source = "torch+cu124"},
- ]
+    {version = "2.6.0", markers = "sys_platform != 'darwin'", source = "torch+cu124"},
+    {version = "2.6.0", markers = "sys_platform == 'darwin'" },
+]
+
 tensorboardX = "^2.6.2"
 tqdm = "^4"
 matplotlib = "^3"
-ale-py = "^0"
-gymnasium = {extras = ["atari"], version = "^0"}
+ale-py = "^0.10.2"
+gymnasium = {extras = ["atari"], version = "^1"}
 scikit-build = "^0.18"
-scikit-image = "^0.24"
+scikit-image = "^0.25.2"
 scikit-learn = "^1.5"
 opencv-python = "^4"
 pandas = "^2"
