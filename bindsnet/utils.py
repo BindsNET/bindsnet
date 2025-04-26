@@ -276,3 +276,18 @@ def reshape_local_connection_2d_weights(
                             ]
 
         return square
+
+
+class FakeStream:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *_):
+        pass
+
+
+def stream(device=None):
+    try:
+        return torch.cuda.stream(torch.cuda.Stream(device=device))
+    except RuntimeError as _:
+        return FakeStream()
