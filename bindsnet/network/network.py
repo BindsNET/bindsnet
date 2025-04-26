@@ -7,6 +7,7 @@ from bindsnet.learning.reward import AbstractReward
 from bindsnet.network.monitors import AbstractMonitor
 from bindsnet.network.nodes import CSRMNodes, Nodes
 from bindsnet.network.topology import AbstractConnection
+from bindsnet.utils import stream
 
 
 def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
@@ -384,49 +385,52 @@ class Network(torch.nn.Module):
                 current_inputs.update(self._get_inputs())
 
             for l in self.layers:
-                # Update each layer of nodes.
-                if l in inputs:
+                with stream():
+                    # Update each layer of nodes.
+                    if l in inputs:
+                        if l in current_inputs:
+                            current_inputs[l] += inputs[l][t]
+                        else:
+                            current_inputs[l] = inputs[l][t]
+
+                    if one_step:
+                        # Get input to this layer (one-step mode).
+                        current_inputs.update(self._get_inputs(layers=[l]))
+
+                    # Inject voltage to neurons.
+                    inject_v = injects_v.get(l, None)
+                    if inject_v is not None:
+                        if inject_v.ndimension() == 1:
+                            self.layers[l].v += inject_v
+                        else:
+                            self.layers[l].v += inject_v[t]
+
                     if l in current_inputs:
-                        current_inputs[l] += inputs[l][t]
+                        self.layers[l].forward(x=current_inputs[l])
                     else:
-                        current_inputs[l] = inputs[l][t]
-
-                if one_step:
-                    # Get input to this layer (one-step mode).
-                    current_inputs.update(self._get_inputs(layers=[l]))
-
-                # Inject voltage to neurons.
-                inject_v = injects_v.get(l, None)
-                if inject_v is not None:
-                    if inject_v.ndimension() == 1:
-                        self.layers[l].v += inject_v
-                    else:
-                        self.layers[l].v += inject_v[t]
-
-                if l in current_inputs:
-                    self.layers[l].forward(x=current_inputs[l])
-                else:
-                    self.layers[l].forward(
-                        x=torch.zeros(
-                            self.layers[l].s.shape, device=self.layers[l].s.device
+                        self.layers[l].forward(
+                            x=torch.zeros(
+                                self.layers[l].s.shape, device=self.layers[l].s.device
+                            )
                         )
-                    )
 
-                # Clamp neurons to spike.
-                clamp = clamps.get(l, None)
-                if clamp is not None:
-                    if clamp.ndimension() == 1:
-                        self.layers[l].s[:, clamp] = 1
-                    else:
-                        self.layers[l].s[:, clamp[t]] = 1
+                    # Clamp neurons to spike.
+                    clamp = clamps.get(l, None)
+                    if clamp is not None:
+                        if clamp.ndimension() == 1:
+                            self.layers[l].s[:, clamp] = 1
+                        else:
+                            self.layers[l].s[:, clamp[t]] = 1
 
-                # Clamp neurons not to spike.
-                unclamp = unclamps.get(l, None)
-                if unclamp is not None:
-                    if unclamp.ndimension() == 1:
-                        self.layers[l].s[:, unclamp] = 0
-                    else:
-                        self.layers[l].s[:, unclamp[t]] = 0
+                    # Clamp neurons not to spike.
+                    unclamp = unclamps.get(l, None)
+                    if unclamp is not None:
+                        if unclamp.ndimension() == 1:
+                            self.layers[l].s[:, unclamp] = 0
+                        else:
+                            self.layers[l].s[:, unclamp[t]] = 0
+
+            torch.cuda.synchronize()
 
             for c in self.connections:
                 flad_m = False
