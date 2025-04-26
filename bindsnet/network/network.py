@@ -7,6 +7,7 @@ from bindsnet.learning.reward import AbstractReward
 from bindsnet.network.monitors import AbstractMonitor
 from bindsnet.network.nodes import CSRMNodes, Nodes
 from bindsnet.network.topology import AbstractConnection
+from torch.multiprocessing.spawn import spawn
 
 
 def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
@@ -26,6 +27,52 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
         network.learning = learning
 
     return network
+
+
+def update_layer(_, self, l, t):
+    # Update each layer of nodes.
+    if l in self.inputs:
+        if l in self.current_inputs:
+            self.current_inputs[l] += self.inputs[l][t]
+        else:
+            self.current_inputs[l] = self.inputs[l][t]
+
+    if self.one_step:
+        # Get input to this layer (one-step mode).
+        self.current_inputs.update(self._get_inputs(layers=[l]))
+
+    # Inject voltage to neurons.
+    inject_v = self.injects_v.get(l, None)
+    if inject_v is not None:
+        if inject_v.ndimension() == 1:
+            self.layers[l].v += inject_v
+        else:
+            self.layers[l].v += inject_v[t]
+
+    if l in self.current_inputs:
+        self.layers[l].forward(x=self.current_inputs[l])
+    else:
+        self.layers[l].forward(
+            x=torch.zeros(
+                self.layers[l].s.shape, device=self.layers[l].s.device
+            )
+        )
+
+    # Clamp neurons to spike.
+    clamp = self.clamps.get(l, None)
+    if clamp is not None:
+        if clamp.ndimension() == 1:
+            self.layers[l].s[:, clamp] = 1
+        else:
+            self.layers[l].s[:, clamp[t]] = 1
+
+    # Clamp neurons not to spike.
+    unclamp = self.unclamps.get(l, None)
+    if unclamp is not None:
+        if unclamp.ndimension() == 1:
+            self.layers[l].s[:, unclamp] = 0
+        else:
+            self.layers[l].s[:, unclamp[t]] = 0
 
 
 class Network(torch.nn.Module):
@@ -383,50 +430,23 @@ class Network(torch.nn.Module):
             if not one_step:
                 current_inputs.update(self._get_inputs())
 
+            processes = []
+            self.inputs = inputs
+            self.current_inputs = current_inputs
+            self.one_step = one_step
+            self.injects_v = injects_v
+            self.unclamps = unclamps
+            self.clamps = clamps
+
             for l in self.layers:
-                # Update each layer of nodes.
-                if l in inputs:
-                    if l in current_inputs:
-                        current_inputs[l] += inputs[l][t]
-                    else:
-                        current_inputs[l] = inputs[l][t]
+                processes.append(
+                    spawn(update_layer, args=(self, l, t), join=False)
+                )
 
-                if one_step:
-                    # Get input to this layer (one-step mode).
-                    current_inputs.update(self._get_inputs(layers=[l]))
+            for p in processes:
+                p.join()
 
-                # Inject voltage to neurons.
-                inject_v = injects_v.get(l, None)
-                if inject_v is not None:
-                    if inject_v.ndimension() == 1:
-                        self.layers[l].v += inject_v
-                    else:
-                        self.layers[l].v += inject_v[t]
-
-                if l in current_inputs:
-                    self.layers[l].forward(x=current_inputs[l])
-                else:
-                    self.layers[l].forward(
-                        x=torch.zeros(
-                            self.layers[l].s.shape, device=self.layers[l].s.device
-                        )
-                    )
-
-                # Clamp neurons to spike.
-                clamp = clamps.get(l, None)
-                if clamp is not None:
-                    if clamp.ndimension() == 1:
-                        self.layers[l].s[:, clamp] = 1
-                    else:
-                        self.layers[l].s[:, clamp[t]] = 1
-
-                # Clamp neurons not to spike.
-                unclamp = unclamps.get(l, None)
-                if unclamp is not None:
-                    if unclamp.ndimension() == 1:
-                        self.layers[l].s[:, unclamp] = 0
-                    else:
-                        self.layers[l].s[:, unclamp[t]] = 0
+            print(t)
 
             for c in self.connections:
                 flad_m = False
