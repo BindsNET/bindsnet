@@ -10,27 +10,28 @@ documentation = "https://bindsnet-docs.readthedocs.io/"
 keywords = ["spiking", "neural", "networks", "pytorch"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.10,<3.12"
 numpy = "^2"
+numba = "^0"
 scipy = "^1"
 Cython = "^3"
 torch = [
-     {version = "2.6.0", platform = "linux", source = "torch+cu124"},
-     {version = "2.6.0", platform = "darwin"},
-     {version = "2.6.0", platform = "win32", source = "torch+cu124"},
-     {version = "2.6.0", platform = "win_amd64", source = "torch+cu124"},
+     {version = "2.7.0", platform = "linux", source = "torch+cu126"},
+     {version = "2.7.0", platform = "darwin"},
+     {version = "2.7.0", platform = "win32", source = "torch+cu126"},
+     {version = "2.7.0", platform = "win_amd64", source = "torch+cu126"},
  ]
 torchvision = [
-     {version = "0.21.0", platform = "darwin"},
-     {version = "0.21.0", platform = "linux", source = "torch+cu124"},
-     {version = "0.21.0", platform = "win32", source = "torch+cu124"},
-     {version = "0.21.0", platform = "win_amd64", source = "torch+cu124"},
+     {version = "0.22.0", platform = "darwin"},
+     {version = "0.22.0", platform = "linux", source = "torch+cu126"},
+     {version = "0.22.0", platform = "win32", source = "torch+cu126"},
+     {version = "0.22.0", platform = "win_amd64", source = "torch+cu126"},
  ]
 torchaudio = [
-     {version = "2.6.0", platform = "darwin"},
-     {version = "2.6.0", platform = "linux", source = "torch+cu124"},
-     {version = "2.6.0", platform = "win32", source = "torch+cu124"},
-     {version = "2.6.0", platform = "win_amd64", source = "torch+cu124"},
+     {version = "2.7.0", platform = "darwin"},
+     {version = "2.7.0", platform = "linux", source = "torch+cu126"},
+     {version = "2.7.0", platform = "win32", source = "torch+cu126"},
+     {version = "2.7.0", platform = "win_amd64", source = "torch+cu126"},
  ]
 tensorboardX = "^2.6.2"
 tqdm = "^4"
@@ -43,11 +44,6 @@ scikit-learn = "^1.5"
 opencv-python = "^4"
 pandas = "^2"
 foolbox = "^3"
-
-[[tool.poetry.source]]
- name = "torch+cu118"
- url = "https://download.pytorch.org/whl/cu118"
- priority = "explicit"
 
 [[tool.poetry.source]]
  name = "torch+cu121"
@@ -64,7 +60,12 @@ foolbox = "^3"
  url = "https://download.pytorch.org/whl/cu126"
  priority = "explicit"
 
-[tool.poetry.dev-dependencies]
+[[tool.poetry.source]]
+ name = "torch+cu128"
+ url = "https://download.pytorch.org/whl/cu128"
+ priority = "explicit"
+
+[tool.poetry.group.dev.dependencies]
 pytest = "^8"
 pre-commit = "^3"
 notebook = "^7"

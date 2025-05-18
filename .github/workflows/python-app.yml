@@ -19,10 +19,10 @@ jobs:
     - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
+        python-version: 3.10
     - name: Install Poetry
       env:
-        POETRY_VERSION: 1.5.1
+        POETRY_VERSION: 2.0.0
       run: |
         curl -sSL https://install.python-poetry.org | python - -y &&\
             poetry config virtualenvs.create false
