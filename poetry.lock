@@ -1038,15 +1038,15 @@ files = [
 
 [[package]]
 name = "fsspec"
-version = "2025.5.0"
+version = "2025.5.1"
 description = "File-system specification"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 markers = "sys_platform == \"linux\" or sys_platform == \"win32\" or sys_platform == \"win_amd64\" or sys_platform == \"darwin\""
 files = [
-    {file = "fsspec-2025.5.0-py3-none-any.whl", hash = "sha256:0ca253eca6b5333d8a2b8bd98c7326fe821f1f0fdbd34e1b445bddde8e804c95"},
-    {file = "fsspec-2025.5.0.tar.gz", hash = "sha256:e4f4623bb6221f7407fd695cc535d1f857a077eb247580f4ada34f5dc25fd5c8"},
+    {file = "fsspec-2025.5.1-py3-none-any.whl", hash = "sha256:24d3a2e663d5fc735ab256263c4075f374a174c3410c0b25e5bd1970bceaa462"},
+    {file = "fsspec-2025.5.1.tar.gz", hash = "sha256:2e55e47a540b91843b755e83ded97c6e897fa0942b11490113f09e9c443c2475"},
 ]
 
 [package.extras]
@@ -1204,14 +1204,14 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "identify"
-version = "2.6.10"
+version = "2.6.12"
 description = "File identification library for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "identify-2.6.10-py2.py3-none-any.whl", hash = "sha256:5f34248f54136beed1a7ba6a6b5c4b6cf21ff495aac7c359e1ef831ae3b8ab25"},
-    {file = "identify-2.6.10.tar.gz", hash = "sha256:45e92fd704f3da71cc3880036633f48b4b7265fd4de2b57627cb157216eb7eb8"},
+    {file = "identify-2.6.12-py2.py3-none-any.whl", hash = "sha256:ad9672d5a72e0d2ff7c5c8809b62dfa60458626352fb0eb7b55e69bdc45334a2"},
+    {file = "identify-2.6.12.tar.gz", hash = "sha256:d8de45749f1efb108badef65ee8386f0f7bb19a7f26185f74de6367bffbaf0e6"},
 ]
 
 [package.extras]
@@ -1493,14 +1493,14 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "joblib"
-version = "1.5.0"
+version = "1.5.1"
 description = "Lightweight pipelining with Python functions"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "joblib-1.5.0-py3-none-any.whl", hash = "sha256:206144b320246485b712fc8cc51f017de58225fa8b414a1fe1764a7231aca491"},
-    {file = "joblib-1.5.0.tar.gz", hash = "sha256:d8757f955389a3dd7a23152e43bc297c2e0c2d3060056dad0feefc88a06939b5"},
+    {file = "joblib-1.5.1-py3-none-any.whl", hash = "sha256:4719a31f054c7d766948dcd83e9613686b27114f190f717cec7eaa2084f8a74a"},
+    {file = "joblib-1.5.1.tar.gz", hash = "sha256:f4f86e351f39fe3d0d32a9f2c3d8af1ee4cec285aafcb27003dda5205576b444"},
 ]
 
 [[package]]
@@ -1532,14 +1532,14 @@ files = [
 
 [[package]]
 name = "jsonschema"
-version = "4.23.0"
+version = "4.24.0"
 description = "An implementation of JSON Schema validation for Python"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "jsonschema-4.23.0-py3-none-any.whl", hash = "sha256:fbadb6f8b144a8f8cf9f0b89ba94501d143e50411a1278633f56a7acf7fd5566"},
-    {file = "jsonschema-4.23.0.tar.gz", hash = "sha256:d71497fef26351a33265337fa77ffeb82423f3ea21283cd9467bb03999266bc4"},
+    {file = "jsonschema-4.24.0-py3-none-any.whl", hash = "sha256:a462455f19f5faf404a7902952b6f0e3ce868f3ee09a359b05eca6673bd8412d"},
+    {file = "jsonschema-4.24.0.tar.gz", hash = "sha256:0b4e8069eb12aedfa881333004bccaec24ecef5a8a6a4b6df142b2cc9599d196"},
 ]
 
 [package.dependencies]
@@ -1600,14 +1600,14 @@ test = ["coverage", "ipykernel (>=6.14)", "mypy", "paramiko ; sys_platform == \"
 
 [[package]]
 name = "jupyter-core"
-version = "5.7.2"
+version = "5.8.1"
 description = "Jupyter core package. A base package on which Jupyter projects rely."
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "jupyter_core-5.7.2-py3-none-any.whl", hash = "sha256:4f7315d2f6b4bcf2e3e7cb6e46772eba760ae459cd1f59d29eb57b0a01bd7409"},
-    {file = "jupyter_core-5.7.2.tar.gz", hash = "sha256:aa5f8d32bbf6b431ac830496da7392035d6f61b4f54872f15c4bd2a9c3f536d9"},
+    {file = "jupyter_core-5.8.1-py3-none-any.whl", hash = "sha256:c28d268fc90fb53f1338ded2eb410704c5449a358406e8a948b75706e24863d0"},
+    {file = "jupyter_core-5.8.1.tar.gz", hash = "sha256:0a5f9706f70e64786b75acba995988915ebd4601c8a52e534a40b51c95f59941"},
 ]
 
 [package.dependencies]
@@ -1616,8 +1616,8 @@ pywin32 = {version = ">=300", markers = "sys_platform == \"win32\" and platform_
 traitlets = ">=5.3"
 
 [package.extras]
-docs = ["myst-parser", "pydata-sphinx-theme", "sphinx-autodoc-typehints", "sphinxcontrib-github-alt", "sphinxcontrib-spelling", "traitlets"]
-test = ["ipykernel", "pre-commit", "pytest (<8)", "pytest-cov", "pytest-timeout"]
+docs = ["intersphinx-registry", "myst-parser", "pydata-sphinx-theme", "sphinx-autodoc-typehints", "sphinxcontrib-spelling", "traitlets"]
+test = ["ipykernel", "pre-commit", "pytest (<9)", "pytest-cov", "pytest-timeout"]
 
 [[package]]
 name = "jupyter-events"
@@ -1720,14 +1720,14 @@ test = ["jupyter-server (>=2.0.0)", "pytest (>=7.0)", "pytest-jupyter[server] (>
 
 [[package]]
 name = "jupyterlab"
-version = "4.4.2"
+version = "4.4.3"
 description = "JupyterLab computational environment"
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "jupyterlab-4.4.2-py3-none-any.whl", hash = "sha256:857111a50bed68542bf55dca784522fe728f9f88b4fe69e8c585db5c50900419"},
-    {file = "jupyterlab-4.4.2.tar.gz", hash = "sha256:afa9caf28c0cb966488be18e5e8daba9f018a1c4273a406b7d5006344cbc6d16"},
+    {file = "jupyterlab-4.4.3-py3-none-any.whl", hash = "sha256:164302f6d4b6c44773dfc38d585665a4db401a16e5296c37df5cba63904fbdea"},
+    {file = "jupyterlab-4.4.3.tar.gz", hash = "sha256:a94c32fd7f8b93e82a49dc70a6ec45a5c18281ca2a7228d12765e4e210e5bca2"},
 ]
 
 [package.dependencies]
@@ -2251,19 +2251,19 @@ files = [
 
 [[package]]
 name = "notebook"
-version = "7.4.2"
+version = "7.4.3"
 description = "Jupyter Notebook - A web-based notebook environment for interactive computing"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "notebook-7.4.2-py3-none-any.whl", hash = "sha256:9ccef602721aaa5530852e3064710b8ae5415c4e2ce26f8896d0433222755259"},
-    {file = "notebook-7.4.2.tar.gz", hash = "sha256:e739defd28c3f615a6bfb0a2564bd75018a9cc6613aa00bbd9c15e68eed2de1b"},
+    {file = "notebook-7.4.3-py3-none-any.whl", hash = "sha256:9cdeee954e04101cadb195d90e2ab62b7c9286c1d4f858bf3bb54e40df16c0c3"},
+    {file = "notebook-7.4.3.tar.gz", hash = "sha256:a1567481cd3853f2610ee0ecf5dfa12bb508e878ee8f92152c134ef7f0568a76"},
 ]
 
 [package.dependencies]
 jupyter-server = ">=2.4.0,<3"
-jupyterlab = ">=4.4.0,<4.5"
+jupyterlab = ">=4.4.3,<4.5"
 jupyterlab-server = ">=2.27.1,<3"
 notebook-shim = ">=0.2,<0.3"
 tornado = ">=6.2.0"
@@ -3794,14 +3794,14 @@ win32 = ["pywin32 ; sys_platform == \"win32\""]
 
 [[package]]
 name = "setuptools"
-version = "80.8.0"
+version = "80.9.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "dev"]
 files = [
-    {file = "setuptools-80.8.0-py3-none-any.whl", hash = "sha256:95a60484590d24103af13b686121328cc2736bee85de8936383111e421b9edc0"},
-    {file = "setuptools-80.8.0.tar.gz", hash = "sha256:49f7af965996f26d43c8ae34539c8d99c5042fbff34302ea151eaa9c207cd257"},
+    {file = "setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922"},
+    {file = "setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c"},
 ]
 
 [package.extras]
@@ -4003,15 +4003,15 @@ zarr = ["fsspec", "zarr (<3)"]
 
 [[package]]
 name = "tifffile"
-version = "2025.5.21"
+version = "2025.5.26"
 description = "Read and write TIFF files"
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 markers = "python_version == \"3.11\""
 files = [
-    {file = "tifffile-2025.5.21-py3-none-any.whl", hash = "sha256:de06c487773796bf3ed9503525530f8d039c2db6e4bdafd4118b20ee8d3a338e"},
-    {file = "tifffile-2025.5.21.tar.gz", hash = "sha256:49d3ec73fa5aa8735e63626d9d982a7db029b3886da4b23796e1984b1f992b33"},
+    {file = "tifffile-2025.5.26-py3-none-any.whl", hash = "sha256:c316c9191c935d3a1fd7617e7af1d4367dfe2d8bd74d98d147bc21c074cc3ea9"},
+    {file = "tifffile-2025.5.26.tar.gz", hash = "sha256:512ad634b142a8aa7e3004f81acb81cd5b0f2ccd16979cb1ef2f01a7fd971bfc"},
 ]
 
 [package.dependencies]
