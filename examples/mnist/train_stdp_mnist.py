@@ -5,6 +5,7 @@ from time import time as t
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import random 
 from torchvision import transforms
 from tqdm import tqdm
 
@@ -15,12 +16,12 @@ from bindsnet.analysis.plotting import (
     plot_spikes,
     plot_voltages,
     plot_weights,
-    plot_traces,  # added
+    plot_traces,
 )
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.evaluation import all_activity, assign_labels, proportion_weighting
-from bindsnet.models import Salah_model      # import model
+from bindsnet.models import DiehlAndCook2015
 from bindsnet.network.monitors import Monitor
 from bindsnet.utils import get_square_assignments, get_square_weights
 
@@ -92,7 +93,7 @@ n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
 
 # Build network.
-network = Salah_model(
+network = DiehlAndCook2015(
     n_inpt=784,
     n_neurons=n_neurons,
     exc=exc,
@@ -115,7 +116,7 @@ train_dataset = MNIST(
     download=True,
     train=True,
     transform=transforms.Compose(
-        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]    # intensity = 128
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
     ),
 )
 
@@ -132,24 +133,25 @@ rates = torch.zeros((n_neurons, n_classes), device=device)
 accuracy = {"all": [], "proportion": []}
 
 # Voltage recording for excitatory and inhibitory layers.
-exc_voltage_monitor = Monitor(
-    network.layers["Ae"], ["v"], time=int(time / dt), device=device
-)
-inh_voltage_monitor = Monitor(
-    network.layers["Ai"], ["v"], time=int(time / dt), device=device
-)
-network.add_monitor(exc_voltage_monitor, name="exc_voltage")
-network.add_monitor(inh_voltage_monitor, name="inh_voltage")
+#exc_voltage_monitor = Monitor(
+#    network.layers["Ae"], ["v"], time=int(time / dt), device=device)
+
+#inh_voltage_monitor = Monitor(
+#    network.layers["Ai"], ["v"], time=int(time / dt), device=device)
+
+#network.add_monitor(exc_voltage_monitor, name="exc_voltage")
+#network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 
 #==============================
+'''
 #added
 # trace recording for input and excitatory layers.
 inp_trace_monitor = Monitor(
-    network.layers["X"], ["x2"], time=int(time / dt), device=device
-)
+    network.layers["X"], ["x"], time=int(time / dt), device=device)
+
 exc_trace_monitor = Monitor(
-    network.layers["Ae"], ["x2"], time=int(time / dt), device=device
-)
+    network.layers["Ae"], ["x"], time=int(time / dt), device=device)
+
 network.add_monitor(inp_trace_monitor, name="inp_trace")
 network.add_monitor(exc_trace_monitor, name="exc_trace")
 
@@ -157,18 +159,17 @@ network.add_monitor(exc_trace_monitor, name="exc_trace")
 traces = {}
 for layer in set(network.layers) - {"Ai"}:
     traces[layer] = Monitor(
-        network.layers[layer], state_vars=["x"], time=int(time / dt), device=device 
-    )
+        network.layers[layer], state_vars=["x"], time=int(time / dt), device=device)
 
     network.add_monitor(traces[layer], name="%s_traces" % layer)
-
+'''
 #==============================
 
 # Set up monitors for spikes and voltages
 spikes = {}
 for layer in set(network.layers):
     spikes[layer] = Monitor(
-        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device 
+        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device
     )
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
@@ -191,6 +192,19 @@ trace_axes, trace_ims = None, None
 # Train the network.
 print("\nBegin training.\n")
 start = t()
+#=======
+#prepare weights to record during training
+num_weights = 7800
+input_size = 784
+
+# 1. Generate num_weights random (i, j) index pairs
+random_indices = [(random.randint(0, input_size - 1), random.randint(0, n_neurons - 1))
+    for _ in range(num_weights)]
+
+# 2. Prepare a storage tensor: [n_train, num_weights]
+tracked_weights = torch.zeros((n_train, num_weights), dtype=torch.float32)
+
+#=======
 for epoch in range(n_epochs):
     labels = []
 
@@ -273,16 +287,21 @@ for epoch in range(n_epochs):
         network.run(inputs=inputs, time=time)
 
         # Get voltage recording.
-        exc_voltages = exc_voltage_monitor.get("v")
-        inh_voltages = inh_voltage_monitor.get("v")
+        #exc_voltages = exc_voltage_monitor.get("v")
+        #inh_voltages = inh_voltage_monitor.get("v")
 
         #added
         # Get trace recording.     
-        inp_traces = inp_trace_monitor.get("x2")
-        exc_traces = exc_trace_monitor.get("x2")
+        #inp_traces = inp_trace_monitor.get("x")
+        #exc_traces = exc_trace_monitor.get("x")
 
         # Add to spikes recording.
         spike_record[step % update_interval] = spikes["Ae"].get("s").squeeze()
+        
+        #record some weights
+        input_exc_weights = network.connections[("X", "Ae")].w
+        tracked_weights[step-1] = torch.tensor([
+            input_exc_weights[i, j].item() for i, j in random_indices])
 
         # Optionally plot various simulation information.
         if plot:
@@ -314,9 +333,10 @@ for epoch in range(n_epochs):
 
         network.reset_state_variables()  # Reset state variables.
 
+
 train_time = t()-start
 network.save(f"./net_{save_as}.pt")   # added
-train_details = {"assignments": assignments, "proportions": proportions, "rates": rates,"train_accur":accuracy, "train_time": train_time, "spike_record": spike_record}
+train_details = {"assignments": assignments, "proportions": proportions, "rates": rates,"train_accur":accuracy, "train_time": train_time, "spike_record": spike_record, "weights": tracked_weights}
 torch.save(train_details, f"./details_{save_as}.pt")
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, train_time))

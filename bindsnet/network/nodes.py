@@ -111,8 +111,8 @@ class Nodes(torch.nn.Module):
             if self.traces_additive:
                 self.x += self.trace_scale * self.s.float()
             else:
-                self.x.masked_fill_(self.s.bool(), self.trace_scale)
-                self.t_.masked_fill_(self.s.bool(), torch.tensor(0))  #added, reset t_ to 0 after spiking 
+                self.x.masked_fill_(self.s.bool(), self.trace_scale)  # initialize x trace with 1 when the neuron spikes
+                self.t_.masked_fill_(self.s.bool(), torch.tensor(0))  # added, reset t_ to 0 after spiking 
 
         if self.sum_input:
             # Add current input to running sum.

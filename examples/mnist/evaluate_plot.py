@@ -134,9 +134,10 @@ accuracy = {"all": 0, "proportion": 0}
 
 # Record spikes during the simulation.
 spike_record = torch.zeros((1, int(time / dt), n_neurons), device=device)
-
+'''
 #==================================================================================
 #*************************  Testing the network ***********************************
+# Uncomment this to do Inference
 
 print("\nBegin testing\n")
 start = t()
@@ -185,14 +186,14 @@ print("Proportion weighting accuracy:   %.2f \n" % (100*accuracy["proportion"] /
 print("Testing complete after:          %.4f seconds \n" % (t() - start))
 
 
-
 '''
+
 #==================================================================================
 #**********************  Ploting terained weights  ********************************
-After training, If you want to plot the weights without testing the network, 
-uncomment this bloc and comment the precedent testing code.
+#After training, If you want to plot the weights without testing the network, 
+#uncomment this bloc and comment the precedent testing code.
 
-print("#of evaluation steps: \n",len(train_details["train_accur"]["all"]))
+print("number of evaluation steps: \n",len(train_details["train_accur"]["all"]))
 print("training time: \n", train_details['train_time'])
 #print("training accur: \n", train_details["train_accur"])
 print("average of last 10 accuracies (all): \n", np.mean(train_details["train_accur"]["all"][-10:]))
@@ -203,12 +204,71 @@ square_weights = get_square_weights( input_exc_weights.view(784, n_neurons), n_s
 square_assignments = get_square_assignments(assignments, n_sqrt)
 train_accur = train_details["train_accur"]
 train_accur_prop = {"Accuracy": train_accur["proportion"]} # creat a dict to plot only "proportion"
+#---------
 
+# Load tracked weights from dictionary
+tracked_weights = train_details["weights"]  # shape: [num_iterations, num_weights]
+num_iterations = tracked_weights.shape[0]
 
+# Plot weights evolution across image iteration
+plt.figure(figsize=(10, 5))
+plt.plot(tracked_weights[:,:].cpu().numpy(), alpha=0.7)
+plt.title(f"Weights evolution across image iterations")
+plt.xlabel("Image iterations")
+plt.ylabel("Weights")
+plt.grid(True)
+plt.show()
+#-----------------------
+
+# Plot de l'histogramme of weight distribuion 
+
+iteration_k = 600 # Choose an iteration k (between 0 and num_iterations - 1)
+weights_at_k = tracked_weights[iteration_k]  # Extract all the tracked weights at this iteration
+
+plt.figure(figsize=(10, 5))
+#plt.hist(weights_at_k.cpu().numpy(), bins=50, edgecolor='black')
+plt.hist(weights_at_k.cpu().numpy(), bins=50, edgecolor='black')
+plt.title(f"Distribution of the  {len(weights_at_k)} weights at the {iteration_k}th iteration")
+plt.xlabel("weight value")
+plt.ylabel("Frequency")
+plt.grid(True)
+plt.show()
+
+#==========
+
+# Plot evolution of weights with a variation bigger than a certian value 
+weights_np = tracked_weights.cpu().numpy()  # shape: [num_iterations, num_weights]
+
+# Find the lines 
+variability_mask = (weights_np.max(axis=0) > 0.1 + weights_np.min(axis=0))
+#variability_mask = (weights_np.max(axis=0) != weights_np.min(axis=0)) # this finds the non constant lines
+
+# Filter only variable weights
+filtered_weights = weights_np[:, variability_mask]
+
+plt.figure(figsize=(10, 5))
+for i in range(filtered_weights.shape[1]):
+    plt.plot(filtered_weights[:, i], alpha=0.7)
+
+plt.title("evolution of weights (with a magnitude of update > 0.1)")
+plt.xlabel("Image iteration")
+plt.ylabel("Weight")
+plt.grid(True)
+plt.show()
+
+num_removed = (~variability_mask).sum()
+print(f"{num_removed} lignes supprimées.")
+
+#----------
+'''
 #plot
 weights_im = plot_weights(square_weights, im=None)
 assigns_im = plot_assignments(square_assignments, im=None)
 #perf_ax = plot_performance(train_accur, x_scale=update_interval, ax=None) # plot both accrucies
 perf_ax = plot_performance(train_accur_prop, x_scale=update_interval, ax=None) # plot only proportion 
-plt.pause(300)
+plt.figure(figsize=(12,9))
+plt.hist(input_exc_weights)
+plt.show()
 '''
+plt.pause(5000)
+
