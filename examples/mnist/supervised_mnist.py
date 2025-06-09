@@ -15,6 +15,7 @@ from bindsnet.analysis.plotting import (
     plot_voltages,
     plot_weights,
 )
+
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.evaluation import all_activity, assign_labels, proportion_weighting
@@ -64,24 +65,24 @@ gpu = args.gpu
 device_id = args.device_id
 
 # Sets up Gpu use
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") #gpu or cpu
 if gpu and torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
 else:
-    torch.manual_seed(seed)
+    torch.manual_seed(seed) # random number generator
     device = "cpu"
     if gpu:
         gpu = False
 
-torch.set_num_threads(os.cpu_count() - 1)
+torch.set_num_threads(os.cpu_count() - 1) #multithreading
 print("Running on Device = ", device)
 
 if not train:
     update_interval = n_test
 
-n_classes = 10
-n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
-start_intensity = intensity
+n_classes = 10 #digits 0-9
+n_sqrt = int(np.ceil(np.sqrt(n_neurons))) #arranging neurons in a square grid for visualization or analysis purposes
+start_intensity = intensity #controls the scaling of input images before they are encoded and fed into the spiking neural network
 per_class = int(n_neurons / n_classes)
 
 # Build Diehl & Cook 2015 network.
@@ -119,10 +120,10 @@ dataset = MNIST(
 )
 
 # Create a dataloader to iterate and batch data
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True) #A dataloader in PyTorch is a utility that provides an efficient way to iterate over a dataset in batches
 
 # Record spikes during the simulation.
-spike_record = torch.zeros(update_interval, time, n_neurons, device=device)
+spike_record = torch.zeros(update_interval, time, n_neurons, device=device) # tensor with dimnensions (update_interval, time, n_neurons) to record spikes
 
 # Neuron assignments and spike proportions.
 assignments = -torch.ones_like(torch.Tensor(n_neurons), device=device)

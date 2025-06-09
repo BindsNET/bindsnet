@@ -12,8 +12,13 @@ from ..network.topology import (
 )
 from ..utils import im2col_indices
 
+#MCC much faster and durable
+# Old is practical connection between 2 objects and you can only use it as a weight
+# If theres a mask you want to add, you need to add another object, or another weight
+# run the experiments 
+#Object pipe it can be delayed weighted
 
-class MCC_LearningRule(ABC):
+class MCC_LearningRule(ABC): #multicompartment connection 
     # language=rst
     """
     Abstract base class for learning rules.
@@ -719,3 +724,43 @@ class MSTDPET(MCC_LearningRule):
         self.eligibility.zero_()
         self.eligibility_trace.zero_()
         return
+
+
+
+class MyBackpropVariant(MCC_LearningRule):
+    def __init__(self, connection, feature_value, **kwargs):
+        super().__init__(connection=connection, feature_value=feature_value, **kwargs)
+        # Potentially initialize other parameters specific to your variant
+        self.update = self._custom_connection_update
+
+    def _custom_connection_update(self, **kwargs) -> None:
+        # Assume 'error_signal' for the target layer is passed in kwargs
+        # Assume 'surrogate_grad_target' for target neuron activations is available or computed
+        # Assume 'source_activity' (e.g., spikes or trace) is from self.source
+        
+        if "error_signal" not in kwargs:
+            return # Or handle missing error
+        
+        error_signal = kwargs["error_signal"] # This would be specific to target neurons
+        
+        # This is highly conceptual and depends on your specific variant:
+        # 1. Get pre-synaptic activity (e.g., self.source.s or self.source.x)
+        # 2. The 'error_signal' would correspond to the error at the post-synaptic (target) neurons
+        # 3. Compute weight updates, e.g., delta_w = learning_rate * error_signal * pre_synaptic_activity
+        #    (This is a simplification; SNN backprop is more complex)
+        
+        # Example: (very abstract, actual SNN backprop is more involved)
+        # Assume error_signal is shaped for target neurons, source_s for source neurons
+        # update_matrix = torch.outer(error_signal, self.source.s.float().mean(dim=0)) # Simplified
+        # self.feature_value += self.nu[0] * update_matrix * self.connection.dt 
+        
+        # Actual implementation would depend on the precise math of your variant
+        # (e.g., using surrogate derivatives of target neuron potentials, etc.)
+        
+        # Call the parent's update for decay, clamping, etc.
+        super().update() 
+        
+    def reset_state_variables(self) -> None:
+        # Reset any internal states if your rule has them
+        pass
+

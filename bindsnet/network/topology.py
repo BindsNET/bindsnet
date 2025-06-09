@@ -176,8 +176,8 @@ class AbstractMulticompartmentConnection(ABC, Module):
         self.source = source
         self.target = target
         self.device = device
+        [] if pipeline is None else pipeline
         self.pipeline = (
-            [] if pipeline is None else pipeline
         )  # <- *Ordered* executables for features
 
         # TODO: Make it so there can't be repeated names!!!
@@ -380,7 +380,7 @@ class Connection(AbstractConnection):
         """
         super().reset_state_variables()
 
-
+# learn how to work with this
 class MulticompartmentConnection(AbstractMulticompartmentConnection):
     # language=rst
     """

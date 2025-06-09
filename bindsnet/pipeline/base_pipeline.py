@@ -2,8 +2,9 @@ import collections.abc
 import time
 from typing import Any, Dict, Tuple
 
-import torch
-from bindsnet.network import Network
+from bindsnet.network import Network  # Make sure Network is imported for isinstance check
+import torch  # For isinstance(..., torch.nn.Module)
+
 from bindsnet.network.monitors import Monitor
 
 
@@ -69,21 +70,32 @@ class BasePipeline:
             "plot_config", {"data_step": True, "data_length": 100}
         )
 
-        if self.plot_config["data_step"] is not None:
-            for l in self.network.layers:
+        # Conditionally add BindsNET monitors if it's a BindsNET Network
+        # and plot_config specifies it.
+        if self.plot_config.get("data_step") is not None and isinstance(
+            self.network, Network
+        ) and hasattr(self.network, 'layers') and hasattr(self.network, 'add_monitor'):
+            print("BasePipeline: Setting up BindsNET monitors.")  # Optional: for debugging
+            for l_name in self.network.layers:  # Iterate over keys (layer names)
+                layer_obj = self.network.layers[l_name]
                 self.network.add_monitor(
                     Monitor(
-                        self.network.layers[l], "s", self.plot_config["data_length"]
+                        layer_obj, "s", self.plot_config["data_length"]
                     ),
-                    name=f"{l}_spikes",
+                    name=f"{l_name}_spikes",
                 )
-                if hasattr(self.network.layers[l], "v"):
+                if hasattr(layer_obj, "v"):
                     self.network.add_monitor(
                         Monitor(
-                            self.network.layers[l], "v", self.plot_config["data_length"]
+                            layer_obj, "v", self.plot_config["data_length"]
                         ),
-                        name=f"{l}_voltages",
+                        name=f"{l_name}_voltages",
                     )
+        elif isinstance(self.network, torch.nn.Module):
+            # If it's a torch.nn.Module (like your FFSNN), skip BindsNET monitor setup.
+            # Your ForwardForwardPipeline handles its own data collection.
+            print(f"BasePipeline: Skipping BindsNET monitor setup for torch.nn.Module of type {type(self.network).__name__}.") # Optional: for debugging
+            pass
 
         self.print_interval = kwargs.get("print_interval", None)
         self.test_interval = kwargs.get("test_interval", None)

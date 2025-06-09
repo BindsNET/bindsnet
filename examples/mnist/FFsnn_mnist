@@ -1,0 +1,121 @@
+import torch
+import torch.optim as optim
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+import os
+import sys
+
+# Add the parent directory of 'bindsnet' to the Python path
+# This is to ensure that the bindsnet module can be found
+# Adjust the number of 'os.path.dirname' calls if your script is nested deeper
+module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if module_path not in sys.path:
+    sys.path.append(module_path)
+
+from bindsnet.models.models import FFSNN # Assuming FFSNN is in this path
+from bindsnet.pipeline.forward_forward_pipeline import ForwardForwardPipeline # Assuming pipeline is here
+from bindsnet.encoding.encodings import repeat as repeat_encoder # Using the repeat function as encoder
+# The generate_positive_sample and generate_negative_sample functions are assumed to be
+# imported and used within the ForwardForwardPipeline itself. If not, they need to be imported here
+# and potentially passed to the pipeline or used externally if the pipeline expects pre-generated samples.
+# For this example, we assume the pipeline handles their invocation.
+
+def main():
+    # Hyperparameters based on the provided table for MNIST (first column)
+    image_feature_size = 784  # From "Input neurons 784"
+    hidden_sizes = [500, 500] # Example: Two hidden layers with 500 neurons each - adjust as needed
+    # The FFSNN input_size will be image_feature_size + num_classes
+    snn_output_size = None # Or hidden_sizes[-1] if FFSNN expects it for the last layer structure
+
+    num_classes = 10         # From "Dataset classes 10"
+    snn_beta = 0.99          # From "Neurons’ decay rate 0.99"
+    snn_threshold = 1.0      # From "Neurons’ threshold 1.0"
+    snn_reset_mechanism = "subtract" # Default, not in table
+
+    simulation_time = 10     # From "Time steps T 10"
+    dt = 1.0                 # Assuming dt=1.0 if time steps are integers
+    learning_rate = 0.001    # From "Learning rate 0.001"
+    alpha_ff_loss = 0.6      # From "α (in loss) 0.6"
+    batch_size = 32 #4096        # From "Batch size 4096"
+    num_epochs = 2 #300         # From "Epochs 300"
+    
+    print_interval = 10 # Print training stats every 10 batches (adjust as needed for large batch sizes)
+    
+    max_train_samples = 128    # Only 128 samples = 4 batches
+    max_test_samples = 64      # Only 64 test samples
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
+    # Data Loading and Preprocessing
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,)), # MNIST mean and std
+        transforms.Lambda(lambda x: x.view(-1)) # Flatten the images
+    ])
+
+    full_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+    full_test = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+    
+    train_dataset = torch.utils.data.Subset(full_train, range(max_train_samples))
+    test_dataset = torch.utils.data.Subset(full_test, range(max_test_samples))
+    
+    print(f"Quick test mode: {len(train_dataset)} train, {len(test_dataset)} test samples")
+    print(f"Expected batches per epoch: {len(train_dataset) // batch_size}")
+
+    # Instantiate the FFSNN model
+    # Input to SNN for positive pass is image_features
+    network_input_size = image_feature_size;
+    network = FFSNN(
+        input_size=network_input_size,
+        hidden_sizes=hidden_sizes,
+        output_size=snn_output_size,
+        beta=snn_beta,
+        threshold=snn_threshold,
+        reset_mechanism=snn_reset_mechanism
+    ).to(device)# Directs network to GPU
+
+
+    # Get the (Linear, SpikingNeuron) pairs for Forward-Forward training
+    if hasattr(network, 'get_ff_layer_pairs'):
+        ff_layer_pairs = network.get_ff_layer_pairs()
+    elif hasattr(network, '_ff_layer_pairs_info'): 
+        ff_layer_pairs = network._ff_layer_pairs_info
+    else:
+        raise AttributeError("FFSNN model does not have a method/property to get ff_layer_pairs.")
+    
+    if not ff_layer_pairs:
+        print("Warning: No FF layer pairs found in the network. Training will not proceed correctly.")
+        return
+
+    def wrapped_repeat_encoder(datum: torch.Tensor) -> torch.Tensor:
+        return repeat_encoder(datum=datum, time=simulation_time, dt=dt)
+
+    pipeline = ForwardForwardPipeline(
+        network=network,
+        train_ds=train_dataset,
+        num_classes=num_classes,
+        encoder=wrapped_repeat_encoder,
+        time=simulation_time,
+        ff_layer_pairs=ff_layer_pairs,
+        lr=learning_rate,
+        alpha_loss=alpha_ff_loss,
+        optimizer_cls=optim.Adam,
+        device=device,
+        dt=dt,
+        batch_size=batch_size,
+        num_epochs=num_epochs,
+        print_interval=print_interval,
+        test_ds=test_dataset
+    )
+
+    print("Starting training...")
+    pipeline.train()
+
+    print("\nStarting testing...")
+    pipeline.test_epoch()
+
+    print("\nFFSNN MNIST example finished.")
+
+if __name__ == "__main__":
+    main()
