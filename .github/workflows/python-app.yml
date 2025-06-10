@@ -16,13 +16,20 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.9
+    - name: Set up Python 3.13
       uses: actions/setup-python@v4
       with:
+<<<<<<< HEAD
         python-version: 3.10
     - name: Install Poetry
       env:
         POETRY_VERSION: 2.0.0
+=======
+        python-version: 3.13
+    - name: Install Poetry
+      env:
+        POETRY_VERSION: 2.1.2
+>>>>>>> origin
       run: |
         curl -sSL https://install.python-poetry.org | python - -y &&\
             poetry config virtualenvs.create false
