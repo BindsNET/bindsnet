@@ -36,15 +36,20 @@ def main():
     dt = 1.0                 # Assuming dt=1.0 if time steps are integers
     learning_rate = 0.001    # From "Learning rate 0.001"
     alpha_ff_loss = 0.6      # From "α (in loss) 0.6"
-    batch_size = 32 #4096        # From "Batch size 4096"
+    batch_size = 64 #4096        # From "Batch size 4096"
     num_epochs = 2 #300         # From "Epochs 300"
     
     print_interval = 10 # Print training stats every 10 batches (adjust as needed for large batch sizes)
     
-    max_train_samples = 128    # Only 128 samples = 4 batches
+    max_train_samples = 256    # Only 128 samples = 4 batches
     max_test_samples = 64      # Only 64 test samples
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")    
     print(f"Using device: {device}")
 
     # Data Loading and Preprocessing
