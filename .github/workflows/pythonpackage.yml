@@ -9,7 +9,11 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
+<<<<<<< HEAD
+        python-version: ["3.10", "3.11", "3.12"]
+=======
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+>>>>>>> origin
 
     steps:
     - uses: actions/checkout@v3
@@ -19,7 +23,11 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Poetry
       env:
+<<<<<<< HEAD
+        POETRY_VERSION: 2.0.0
+=======
         POETRY_VERSION: 2.1.2
+>>>>>>> origin
       run: |
         curl -sSL https://install.python-poetry.org | python - -y &&\
             poetry config virtualenvs.create false
