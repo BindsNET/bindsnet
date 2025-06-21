@@ -112,10 +112,10 @@ def main():
     learning_rate = 0.001        # Learning rate
     alpha_ff_loss = 0.6          # α in Forward-Forward loss
     batch_size = 64             # Smaller batch for debugging
-    num_epochs = 10               # Few epochs for quick test
+    num_epochs = 3               # Few epochs for quick test
     
     # Dataset limits for quick testing
-    max_train_samples = 2024      # Small dataset for testing
+    max_train_samples = 128      # Small dataset for testing
     max_test_samples = 512        # Small test set
     
     # Device setup
