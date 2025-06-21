@@ -1,7 +1,6 @@
 import torch
 import torch.optim as optim
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
 import os
 import sys
 
@@ -15,6 +14,7 @@ from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.network.topology import ForwardForwardConnection
 from bindsnet.pipeline.forward_forward_pipeline import BindsNETForwardForwardPipeline
 from bindsnet.encoding.encodings import repeat as repeat_encoder
+
 
 def create_bindsnet_ff_network(input_size: int, hidden_sizes: list, device: torch.device, 
                                alpha: float = 2.0, spike_threshold: float = 1.0) -> Network:
@@ -91,7 +91,7 @@ def main():
     print("=====================================")
 
     #Modifying the Dataset to only include classes 0-4
-    target_labels = [0, 1, 2, 3, 4]
+    target_labels = [0, 1, 2, 3, 4,5,6,7,8,9]
     num_classes = len(target_labels)  # Now 5 classes instead of 10
 
     
@@ -111,11 +111,11 @@ def main():
     dt = 1.0                     # Time step size
     learning_rate = 0.001        # Learning rate
     alpha_ff_loss = 0.6          # α in Forward-Forward loss
-    batch_size = 32              # Smaller batch for debugging
-    num_epochs = 2               # Few epochs for quick test
+    batch_size = 64             # Smaller batch for debugging
+    num_epochs = 10               # Few epochs for quick test
     
     # Dataset limits for quick testing
-    max_train_samples = 2000      # Small dataset for testing
+    max_train_samples = 2024      # Small dataset for testing
     max_test_samples = 512        # Small test set
     
     # Device setup
