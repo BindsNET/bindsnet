@@ -549,7 +549,6 @@ class LocallyConnectedNetwork(Network):
         self.add_connection(recurrent_conn, source="Y", target="Y")
 
 
-import snntorch as snn
 
 class FFSNN(nn.Module):
     # language=rst
