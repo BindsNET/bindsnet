@@ -18,6 +18,7 @@ test/models/__pycache__/*
 test/network/__pycache__/*
 test/analysis/__pycache__/*
 *.pyc
+**/*.pyc
 dist/*
 logs/*
 .pytest_cache/*

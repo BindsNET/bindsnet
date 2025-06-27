@@ -4,6 +4,7 @@ from typing import Union, Tuple, Optional, Sequence
 
 import numpy as np
 import torch
+import warnings
 from torch import device
 from torch.nn import Parameter
 import torch.nn.functional as F
@@ -22,6 +23,7 @@ class AbstractFeature(ABC):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        value_dtype: torch.dtype = torch.float32,
         range: Optional[Union[list, tuple]] = None,
         clamp_frequency: Optional[int] = 1,
         norm: Optional[Union[torch.Tensor, float, int]] = None,
@@ -38,6 +40,7 @@ class AbstractFeature(ABC):
         Instantiates a :code:`Feature` object. Will assign all incoming arguments as class variables
         :param name: Name of the feature
         :param value: Core numeric object for the feature. This parameters function will vary depending on the feature
+        :param value_dtype: Data type for :code:`value` tensor
         :param range: Range of acceptable values for the :code:`value` parameter
         :param norm: Value which all values in :code:`value` will sum to. Normalization of values occurs after each
             sample and after the value has been updated by the learning rule (if there is one)
@@ -119,6 +122,15 @@ class AbstractFeature(ABC):
         self.assert_valid_range()
         if value is not None:
             self.assert_feature_in_range()
+            self.value = self.cast_dtype_if_needed(self.value, value_dtype)
+
+    @staticmethod
+    def cast_dtype_if_needed(value, value_dtype):
+        if value.dtype != value_dtype:
+            warnings.warn(f"Provided value has data type {value.dtype} but parameter w_dtype is {value_dtype}")
+            return value.to(dtype=value_dtype)
+        else:
+            return value
 
     @abstractmethod
     def reset_state_variables(self) -> None:
@@ -312,6 +324,7 @@ class Probability(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        value_dtype: torch.dtype = torch.float32,
         range: Optional[Sequence[float]] = None,
         norm: Optional[Union[torch.Tensor, float, int]] = None,
         learning_rule: Optional[bindsnet.learning.LearningRule] = None,
@@ -327,6 +340,7 @@ class Probability(AbstractFeature):
         :param value: Number(s) in [0, 1] which represent the probability of a signal traversing a synapse. Tensor values
             assume that probabilities will be matched to adjacent synapses in the connection. Scalars will be applied to
             all synapses.
+        :param value_dtype: Data type for :code:`value` tensor
         :param range: Range of acceptable values for the :code:`value` parameter. Should be in [0, 1]
         :param norm: Value which all values in :code:`value` will sum to. Normalization of values occurs after each sample
             and after the value has been updated by the learning rule (if there is one)
@@ -342,6 +356,7 @@ class Probability(AbstractFeature):
         super().__init__(
             name=name,
             value=value,
+            value_dtype=value_dtype,
             range=[0, 1] if range is None else range,
             norm=norm,
             learning_rule=learning_rule,
@@ -419,6 +434,7 @@ class Mask(AbstractFeature):
         super().__init__(
             name=name,
             value=value,
+            value_dtype=torch.bool
         )
 
         self.name = name
@@ -497,6 +513,7 @@ class Weight(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        value_dtype: torch.dtype = torch.float32,
         range: Optional[Sequence[float]] = None,
         norm: Optional[Union[torch.Tensor, float, int]] = None,
         norm_frequency: Optional[str] = "sample",
@@ -511,6 +528,7 @@ class Weight(AbstractFeature):
         Multiplies signals by scalars
         :param name: Name of the feature
         :param value: Values to scale signals by
+        :param value_dtype: Data type for :code:`value` tensor
         :param range: Range of acceptable values for the :code:`value` parameter
         :param norm: Value which all values in :code:`value` will sum to. Normalization of values occurs after each sample
             and after the value has been updated by the learning rule (if there is one)
@@ -530,6 +548,7 @@ class Weight(AbstractFeature):
         super().__init__(
             name=name,
             value=value,
+            value_dtype=value_dtype,
             range=[-torch.inf, +torch.inf] if range is None else range,
             norm=norm,
             learning_rule=learning_rule,
@@ -587,6 +606,7 @@ class Bias(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        value_dtype: torch.dtype = torch.float32,
         range: Optional[Sequence[float]] = None,
         norm: Optional[Union[torch.Tensor, float, int]] = None,
     ) -> None:
@@ -595,6 +615,7 @@ class Bias(AbstractFeature):
         Adds scalars to signals
         :param name: Name of the feature
         :param value: Values to add to the signals
+        :param value_dtype: Data type for :code:`value` tensor
         :param range: Range of acceptable values for the :code:`value` parameter
         :param norm: Value which all values in :code:`value` will sum to. Normalization of values occurs after each sample
             and after the value has been updated by the learning rule (if there is one)
@@ -603,6 +624,7 @@ class Bias(AbstractFeature):
         super().__init__(
             name=name,
             value=value,
+            value_dtype=value_dtype,
             range=[-torch.inf, +torch.inf] if range is None else range,
             norm=norm,
         )
@@ -628,6 +650,7 @@ class Intensity(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        value_dtype: torch.dtype = torch.float32,
         range: Optional[Sequence[float]] = None,
     ) -> None:
         # language=rst
@@ -635,9 +658,10 @@ class Intensity(AbstractFeature):
         Adds scalars to signals
         :param name: Name of the feature
         :param value: Values to scale signals by
+        :param value_dtype: Data type for :code:`value` tensor
         """
 
-        super().__init__(name=name, value=value, range=range)
+        super().__init__(name=name, value=value, value_dtype=value_dtype, range=range)
 
     def reset_state_variables(self) -> None:
         pass
@@ -664,6 +688,7 @@ class Degradation(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        value_dtype: torch.dtype = torch.float32,
         degrade_function: callable = None,
         parent_feature: Optional[AbstractFeature] = None,
     ) -> None:
@@ -673,13 +698,14 @@ class Degradation(AbstractFeature):
         Note: If :code:`parent_feature` is provided, it will override :code:`value`.
         :param name: Name of the feature
         :param value: Value used to degrade feature
+        :param value_dtype: Data type for :code:`value` tensor
         :param degrade_function: Callable function which takes a single argument (:code:`value`) and returns a tensor or
         constant to be *subtracted* from the propagating spikes.
         :param parent_feature: Parent feature with desired :code:`value` to inherit
         """
 
         # Note: parent_feature will override value. See abstract constructor
-        super().__init__(name=name, value=value, parent_feature=parent_feature)
+        super().__init__(name=name, value=value, value_dtype=value_dtype, parent_feature=parent_feature)
 
         self.degrade_function = degrade_function
 
@@ -695,6 +721,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        value_dtype: torch.dtype = torch.float32,
         ann_values: Union[list, tuple] = None,
         const_update_rate: float = 0.1,
         const_decay: float = 0.001,
@@ -709,6 +736,9 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         :param const_update_rate: The mask upatate rate of the ANN decision.
         :param const_decay: The spontaneous activation of the synapses.
         """
+
+        self.value_dtype = value_dtype
+        value = value.to(self.value_dtype)
 
         # Define the ANN
         class ANN(nn.Module):
@@ -743,7 +773,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         self.const_update_rate = const_update_rate
         self.const_decay = const_decay
 
-        super().__init__(name=name, value=value)
+        super().__init__(name=name, value=value, value_dtype=self.value_dtype)
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
 
@@ -758,7 +788,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         # Update the masks
         if self.counter % self.spike_buffer.shape[1] == 0:
             with torch.no_grad():
-                ann_decision = self.ann(self.spike_buffer.to(torch.float32))
+                ann_decision = self.ann(self.spike_buffer.to(self.value_dtype))
             self.mask += (
                 ann_decision.view(self.mask.shape) * self.const_update_rate
             )  # update mask with learning rate fraction
@@ -766,7 +796,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
             self.mask = torch.clamp(self.mask, -1, 1)  # cap the mask
 
             # self.mask = torch.clamp(self.mask, -1, 1)
-            self.value = (self.mask > 0).float()
+            self.value = (self.mask > 0).to(self.value_dtype)
 
         return conn_spikes * self.value
 
@@ -785,6 +815,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        value_dtype: torch.dtype = torch.float32,
         ann_values: Union[list, tuple] = None,
         const_update_rate: float = 0.1,
         const_decay: float = 0.01,
@@ -796,9 +827,12 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         :param name: Name of the feature
         :param ann_values: Values to be use to build an ANN that will adapt the connectivity of the layer.
         :param value: Values to be use to build an initial mask for the synapses.
+        :param value_dtype: Data type for :code:`value` tensor
         :param const_update_rate: The mask upatate rate of the ANN decision.
         :param const_decay: The spontaneous activation of the synapses.
         """
+        self.value_dtype = value_dtype
+        value = value.to(self.value_dtype)
 
         # Define the ANN
         class ANN(nn.Module):
@@ -833,7 +867,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         self.const_update_rate = const_update_rate
         self.const_decay = const_decay
 
-        super().__init__(name=name, value=value)
+        super().__init__(name=name, value=value, value_dtype=self.value_dtype)
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
 
@@ -848,7 +882,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         # Update the masks
         if self.counter % self.spike_buffer.shape[1] == 0:
             with torch.no_grad():
-                ann_decision = self.ann(self.spike_buffer.to(torch.float32))
+                ann_decision = self.ann(self.spike_buffer.to(self.value_dtype))
             self.mask += (
                 ann_decision.view(self.mask.shape) * self.const_update_rate
             )  # update mask with learning rate fraction
@@ -856,7 +890,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
             self.mask = torch.clamp(self.mask, -1, 1)  # cap the mask
 
             # self.mask = torch.clamp(self.mask, -1, 1)
-            self.value = (self.mask > 0).float()
+            self.value = (self.mask > 0).to(self.value_dtype)
 
         return conn_spikes * self.value
 
