@@ -44,8 +44,9 @@ def assign_labels(
             indices = torch.nonzero(labels == i).view(-1)
 
             # Compute average firing rates for this label.
+            selected_spikes = torch.index_select(spikes, dim=0, index=torch.tensor(indices))
             rates[:, i] = alpha * rates[:, i] + (
-                torch.sum(spikes[indices], 0) / n_labeled
+                torch.sum(selected_spikes, 0) / n_labeled
             )
 
     # Compute proportions of spike activity per class.
@@ -111,6 +112,8 @@ def all_activity(
 
     # Sum over time dimension (spike ordering doesn't matter).
     spikes = spikes.sum(1)
+    if spikes.is_sparse:
+        spikes = spikes.to_dense()
 
     rates = torch.zeros((n_samples, n_labels), device=spikes.device)
     for i in range(n_labels):
@@ -152,6 +155,8 @@ def proportion_weighting(
 
     # Sum over time dimension (spike ordering doesn't matter).
     spikes = spikes.sum(1)
+    if spikes.is_sparse:
+        spikes = spikes.to_dense()
 
     rates = torch.zeros((n_samples, n_labels), device=spikes.device)
     for i in range(n_labels):
