@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 from bindsnet.learning.learning import NoOp
-from typing import Union, Tuple, Optional, Sequence
+from typing import Union, Tuple, Optional, Sequence, TYPE_CHECKING
 
 import numpy as np
 import torch
+
+if TYPE_CHECKING:
+    from bindsnet.network.topology import MulticompartmentConnection
 from torch import device
 from torch.nn import Parameter
 import torch.nn.functional as F
@@ -912,7 +915,6 @@ class Normalization(AbstractSubFeature):
     """
     Normalize parent features values so each target neuron has sum of feature values equal to a desired value :code:`norm`.
     """
-
     def __init__(
         self,
         name: str,
@@ -941,297 +943,282 @@ class Updating(AbstractSubFeature):
 
 
 
-class ForwardForwardWeight(AbstractFeature):
+#FF Related
+class ArctangentSurrogateFeature(AbstractFeature):
     """
-    Forward-Forward learning weight feature for MulticompartmentConnection.
+    Arctangent surrogate gradient feature for spiking neural networks.
     
-    Implements the Forward-Forward algorithm with surrogate gradients, enabling
-    layer-wise learning without backpropagation through time. This feature adds:
-    - Arctangent surrogate gradient computation
-    - Membrane potential tracking for goodness scores
-    - Forward-Forward loss computation capabilities
-    
-    Compatible with the MCC architecture and composable with other features.
+    This feature handles the complete spiking computation pipeline using
+    arctangent surrogate gradients to enable backpropagation through
+    discrete spike events.
     """
     
     def __init__(
         self,
         spike_threshold: float = 1.0,
         alpha: float = 2.0,
-        alpha_loss: float = 0.6,
         dt: float = 1.0,
+        reset_mechanism: str = "subtract",
         **kwargs
     ):
         """
-        Initialize Forward-Forward weight feature.
+        Initialize arctangent surrogate feature.
         
         Args:
-            spike_threshold: Threshold for spike generation and surrogate gradient
-            alpha: Arctangent surrogate gradient steepness parameter  
-            alpha_loss: Forward-Forward loss threshold parameter
-            dt: Time step size for membrane potential integration
-            **kwargs: Additional arguments passed to parent WeightFeature
+            spike_threshold: Voltage threshold for spike generation
+            alpha: Steepness parameter for surrogate gradient (higher = steeper)
+            dt: Integration time step
+            reset_mechanism: Post-spike reset ("subtract", "zero", "none")
+            **kwargs: Additional arguments for AbstractFeature
         """
         super().__init__(**kwargs)
         
         self.spike_threshold = spike_threshold
         self.alpha = alpha
-        self.alpha_loss = alpha_loss
         self.dt = dt
+        self.reset_mechanism = reset_mechanism
         
-        # Membrane potential state for goodness computation
+        # State variables
         self.v_membrane = None
+        self.batch_size = None
+        self.target_size = None
+        self.initialized = False
         
-    def reset_state(self):
-        """Reset membrane potential state."""
-        self.v_membrane = None
-        
-    def forward(
+    def compute(
         self, 
-        s: torch.Tensor, 
         connection: 'MulticompartmentConnection',
+        source_s: torch.Tensor,
         **kwargs
     ) -> torch.Tensor:
         """
-        Forward pass through weight feature with surrogate gradients.
-        
-        This method integrates with the MCC forward pass pipeline.
+        Compute forward pass with arctangent surrogate gradients.
         
         Args:
-            s: Input spikes [batch_size, source_neurons]
-            connection: Parent MulticompartmentConnection instance
-            **kwargs: Additional arguments from MCC forward pass
+            connection: Parent MulticompartmentConnection
+            source_s: Source layer spikes [batch_size, source_neurons]
+            **kwargs: Additional arguments
             
         Returns:
-            Weighted synaptic input with surrogate gradient computation
+            Target spikes with differentiable surrogate gradients [batch_size, target_neurons]
         """
-        # Get connection weights (handled by parent MCC)
-        w = connection.w
+        # Step 1: Compute synaptic input
+        synaptic_input = torch.mm(source_s.float(), connection.w)
         
-        # Compute synaptic input: I = s * W
-        synaptic_input = torch.mm(s.float(), w)
+        # Step 2: Initialize membrane potential if needed
+        if not self.initialized:
+            self._initialize_state(synaptic_input)
         
-        # Track this for goodness score computation if needed
-        if hasattr(self, '_track_activity') and self._track_activity:
-            self._last_synaptic_input = synaptic_input.detach()
-        
-        return synaptic_input
-    
-    def compute_spikes_with_surrogate(
-        self, 
-        synaptic_input: torch.Tensor,
-        target_layer: 'AbstractPopulation'
-    ) -> torch.Tensor:
-        """
-        Generate spikes with surrogate gradients from synaptic input.
-        
-        This method should be called after the weight forward pass to convert
-        synaptic input to spikes using the Forward-Forward surrogate gradient.
-        
-        Args:
-            synaptic_input: Weighted input [batch_size, target_neurons]
-            target_layer: Target neuron population
-            
-        Returns:
-            Spikes with surrogate gradients [batch_size, target_neurons]
-        """
-        # Initialize or update membrane potential
-        if self.v_membrane is None:
-            self.v_membrane = torch.zeros_like(synaptic_input)
-        
-        # Integrate synaptic input (simple Euler integration)
+        # Step 3: Integrate membrane potential
         self.v_membrane = self.v_membrane + synaptic_input * self.dt
         
-        # Generate spikes using arctangent surrogate gradient
-        spikes = ArctangentSurrogate.apply(
+        # Step 4: Generate spikes with arctangent surrogate gradients
+        spikes = self.arctangent_surrogate_spike(
             self.v_membrane, 
             self.spike_threshold, 
             self.alpha
         )
         
-        # Optional: Reset membrane potential where spikes occurred
-        # self.v_membrane = self.v_membrane * (1 - spikes)
+        # Step 5: Apply reset mechanism
+        self._apply_reset(spikes)
         
         return spikes
     
-    def compute_goodness_score(self, spike_activity: torch.Tensor) -> torch.Tensor:
-        """
-        Compute Forward-Forward goodness score from spike activity.
-        
-        Args:
-            spike_activity: Spike traces [batch_size, time_steps, neurons] or
-                          spike counts [batch_size, neurons]
-            
-        Returns:
-            Goodness scores [batch_size]
-        """
-        if spike_activity.dim() == 3:
-            # Sum over time dimension if time traces provided
-            spike_counts = torch.sum(spike_activity, dim=1)  # [batch_size, neurons]
-        else:
-            spike_counts = spike_activity  # Already summed
-        
-        # Forward-Forward goodness: mean squared spike activity
-        goodness = torch.mean(spike_counts ** 2, dim=1)  # [batch_size]
-        
-        return goodness
-    
-    def compute_ff_loss(
-        self,
-        goodness_pos: torch.Tensor,
-        goodness_neg: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        Compute Forward-Forward contrastive loss.
-        
-        Loss = log(1 + exp(-g_pos + α)) + log(1 + exp(g_neg - α))
-        
-        Args:
-            goodness_pos: Goodness scores for positive samples [batch_size]
-            goodness_neg: Goodness scores for negative samples [batch_size]
-            
-        Returns:
-            Forward-Forward loss [batch_size]
-        """
-        # Positive loss: encourage high goodness for true labels
-        loss_pos = torch.log(1 + torch.exp(-goodness_pos + self.alpha_loss))
-        
-        # Negative loss: encourage low goodness for false labels
-        loss_neg = torch.log(1 + torch.exp(goodness_neg - self.alpha_loss))
-        
-        return loss_pos + loss_neg
-    
-    def get_feature_info(self) -> dict:
-        """Get information about this Forward-Forward feature."""
-        return {
-            'feature_type': 'ForwardForwardWeight',
-            'spike_threshold': self.spike_threshold,
-            'alpha_surrogate': self.alpha,
-            'alpha_loss': self.alpha_loss,
-            'dt': self.dt,
-            'surrogate_function': 'arctangent',
-            'compatible_with': ['MCC', 'other_weight_features']
-        }
-
-
-class ArctangentSurrogate(torch.autograd.Function):
-    """
-    Arctangent surrogate gradient function for Forward-Forward training.
-    
-    Forward pass: spikes = (membrane_potential >= threshold)
-    Backward pass: gradient = 1 / (α * |membrane_potential - threshold| + 1)
-    
-    This enables gradient-based learning in spiking neural networks by
-    providing a smooth approximation of the non-differentiable spike function.
-    """
-    
-    @staticmethod
-    def forward(
-        ctx, 
-        membrane_potential: torch.Tensor, 
+    def arctangent_surrogate_spike(
+        self, 
+        v: torch.Tensor, 
         threshold: float, 
         alpha: float
     ) -> torch.Tensor:
         """
-        Forward pass: generate binary spikes.
+        Arctangent surrogate gradient spike function.
+        
+        Forward pass: spikes = (v >= threshold)
+        Backward pass: grad = 1 / (α * |v - threshold| + 1)
         
         Args:
-            membrane_potential: Neuron membrane potentials
+            v: Membrane potential [batch_size, neurons]
             threshold: Spike threshold
             alpha: Surrogate gradient steepness parameter
             
         Returns:
-            Binary spike tensor (0 or 1)
+            Binary spikes with differentiable surrogate gradients
         """
-        # Save tensors and parameters for backward pass
-        ctx.save_for_backward(membrane_potential)
+        return _ArctangentSurrogateSpike.apply(v, threshold, alpha)
+    
+    def _initialize_state(self, reference_tensor: torch.Tensor):
+        """Initialize state tensors based on input dimensions."""
+        self.batch_size, self.target_size = reference_tensor.shape
+        self.v_membrane = torch.zeros_like(reference_tensor)
+        self.initialized = True
+    
+    def _apply_reset(self, spikes: torch.Tensor):
+        """Apply post-spike reset mechanism."""
+        if self.reset_mechanism == "subtract":
+            # Subtract threshold from spiking neurons
+            self.v_membrane = self.v_membrane - spikes * self.spike_threshold
+        elif self.reset_mechanism == "zero":
+            # Reset spiking neurons to zero
+            self.v_membrane = self.v_membrane * (1 - spikes)
+        elif self.reset_mechanism == "none":
+            # No reset - membrane potential continues to integrate
+            pass
+        else:
+            raise ValueError(f"Unknown reset mechanism: {self.reset_mechanism}")
+    
+    def reset_state_variables(self):
+        """Reset all internal state variables."""
+        self.v_membrane = None
+        self.batch_size = None
+        self.target_size = None
+        self.initialized = False
+    
+    def get_membrane_potential(self) -> Optional[torch.Tensor]:
+        """Get current membrane potential."""
+        return self.v_membrane
+    
+    def set_spike_threshold(self, threshold: float):
+        """Set spike threshold."""
+        self.spike_threshold = threshold
+    
+    def set_alpha(self, alpha: float):
+        """Set surrogate gradient steepness."""
+        self.alpha = alpha
+    
+    def get_feature_info(self) -> dict:
+        """Get feature configuration information."""
+        return {
+            'feature_type': 'ArctangentSurrogateFeature',
+            'spike_threshold': self.spike_threshold,
+            'alpha': self.alpha,
+            'dt': self.dt,
+            'reset_mechanism': self.reset_mechanism,
+            'initialized': self.initialized,
+            'batch_size': self.batch_size,
+            'target_size': self.target_size
+        }
+    
+    def __repr__(self) -> str:
+        """String representation."""
+        return (
+            f"ArctangentSurrogateFeature("
+            f"spike_threshold={self.spike_threshold}, "
+            f"alpha={self.alpha}, "
+            f"dt={self.dt}, "
+            f"reset_mechanism='{self.reset_mechanism}')"
+        )
+
+
+class _ArctangentSurrogateSpike(torch.autograd.Function):
+    """
+    Arctangent surrogate gradient autograd function.
+    
+    This function implements the arctangent surrogate gradient method
+    for training spiking neural networks with backpropagation.
+    """
+    
+    @staticmethod
+    def forward(ctx, input_v, threshold, alpha):
+        """
+        Forward pass: generate binary spikes.
+        
+        Args:
+            ctx: Context for saving variables
+            input_v: Input membrane potential
+            threshold: Spike threshold
+            alpha: Surrogate gradient parameter
+            
+        Returns:
+            Binary spikes (0 or 1)
+        """
+        # Save variables for backward pass
+        ctx.save_for_backward(input_v)
         ctx.threshold = threshold
         ctx.alpha = alpha
         
-        # Generate spikes (heaviside step function)
-        spikes = (membrane_potential >= threshold).float()
+        # Generate binary spikes
+        spikes = (input_v >= threshold).float()
         
         return spikes
     
     @staticmethod
-    def backward(
-        ctx, 
-        grad_output: torch.Tensor
-    ) -> Tuple[torch.Tensor, None, None]:
+    def backward(ctx, grad_output):
         """
         Backward pass: compute surrogate gradients.
         
-        Uses arctangent-based surrogate: 1 / (α * |v - threshold| + 1)
-        
         Args:
-            grad_output: Gradient from subsequent layers
+            ctx: Context with saved variables
+            grad_output: Gradient from downstream layers
             
         Returns:
-            Tuple of (grad_membrane_potential, None, None)
+            Gradients w.r.t. input_v, threshold, alpha
         """
-        membrane_potential, = ctx.saved_tensors
+        # Retrieve saved variables
+        input_v, = ctx.saved_tensors
         threshold = ctx.threshold
         alpha = ctx.alpha
         
         # Compute arctangent surrogate gradient
-        # grad = 1 / (α * |v - v_th| + 1)
-        surrogate_grad = 1.0 / (alpha * torch.abs(membrane_potential - threshold) + 1.0)
+        # Surrogate gradient: 1 / (α * |v - v_th| + 1)
+        surrogate_grad = 1.0 / (alpha * torch.abs(input_v - threshold) + 1.0)
         
-        # Apply chain rule with incoming gradients
-        grad_membrane_potential = grad_output * surrogate_grad
+        # Apply chain rule
+        grad_input = grad_output * surrogate_grad
         
-        # Return gradients (only for first argument)
-        return grad_membrane_potential, None, None
+        # Return gradients (input_v, threshold, alpha)
+        # threshold and alpha gradients are None (not optimized)
+        return grad_input, None, None
 
 
-# Add this helper function to create FF-enabled MCC connections
-def create_ff_connection(
-    source: 'AbstractPopulation',
-    target: 'AbstractPopulation', 
+# Helper function for easy creation
+def create_arctangent_surrogate_connection(
+    source,
+    target,
     w: Optional[torch.Tensor] = None,
     spike_threshold: float = 1.0,
     alpha: float = 2.0,
-    alpha_loss: float = 0.6,
     dt: float = 1.0,
+    reset_mechanism: str = "subtract",
     **mcc_kwargs
-) -> 'MulticompartmentConnection':
+):
     """
-    Helper function to create MulticompartmentConnection with ForwardForwardWeight feature.
+    Create MulticompartmentConnection with ArctangentSurrogateFeature.
     
     Args:
-        source: Source neuron population
-        target: Target neuron population
-        w: Connection weights (if None, will be initialized)
-        spike_threshold: FF spike threshold
-        alpha: FF surrogate gradient parameter
-        alpha_loss: FF loss threshold parameter
-        dt: Time step size
-        **mcc_kwargs: Additional arguments for MulticompartmentConnection
+        source: Source population
+        target: Target population
+        w: Weight matrix (initialized randomly if None)
+        spike_threshold: Spike threshold
+        alpha: Surrogate gradient steepness
+        dt: Integration time step
+        reset_mechanism: Post-spike reset mechanism
+        **mcc_kwargs: Additional MulticompartmentConnection arguments
         
     Returns:
-        MCC with ForwardForwardWeight feature attached
+        MulticompartmentConnection with ArctangentSurrogateFeature
     """
     from bindsnet.network.topology import MulticompartmentConnection
-    
-    # Create ForwardForwardWeight feature
-    ff_feature = ForwardForwardWeight(
-        spike_threshold=spike_threshold,
-        alpha=alpha,
-        alpha_loss=alpha_loss,
-        dt=dt
-    )
     
     # Initialize weights if not provided
     if w is None:
         w = 0.1 * torch.randn(source.n, target.n)
     
-    # Create MCC with FF feature
+    # Create arctangent surrogate feature
+    surrogate_feature = ArctangentSurrogateFeature(
+        spike_threshold=spike_threshold,
+        alpha=alpha,
+        dt=dt,
+        reset_mechanism=reset_mechanism
+    )
+    
+    # Create connection with feature
     connection = MulticompartmentConnection(
         source=source,
         target=target,
         w=w,
-        features=[ff_feature],
+        features=[surrogate_feature],
         **mcc_kwargs
     )
     
     return connection
+
+

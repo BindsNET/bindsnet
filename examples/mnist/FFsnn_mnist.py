@@ -3,7 +3,6 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 import os
 import sys
-
 # Add the parent directory of 'bindsnet' to the Python path
 module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if module_path not in sys.path:
@@ -101,7 +100,7 @@ def main():
     
     #num_classes = 10              # MNIST classes
     
-    # SNN parameters
+    # `SNN` parameters
     snn_beta = 0.99              # Neuron decay rate
     snn_threshold = 1.0          # Spike threshold
     alpha_surrogate = 2.0        # Arctangent surrogate gradient parameter

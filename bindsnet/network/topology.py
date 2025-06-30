@@ -2051,6 +2051,11 @@ class SparseConnection(AbstractConnection):
         super().reset_state_variables()
 
 
+
+# designed for ANN
+# the weights are not a true connection
+# gradient 
+
 class ForwardForwardConnection(AbstractConnection):
     """
     Connection class specifically designed for Forward-Forward training with arctangent surrogate gradients.

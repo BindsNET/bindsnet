@@ -725,42 +725,313 @@ class MSTDPET(MCC_LearningRule):
         self.eligibility_trace.zero_()
         return
 
+# Remove the MyBackpropVariant class and replace with:
 
-
-class MyBackpropVariant(MCC_LearningRule):
-    def __init__(self, connection, feature_value, **kwargs):
-        super().__init__(connection=connection, feature_value=feature_value, **kwargs)
-        # Potentially initialize other parameters specific to your variant
-        self.update = self._custom_connection_update
-
-    def _custom_connection_update(self, **kwargs) -> None:
-        # Assume 'error_signal' for the target layer is passed in kwargs
-        # Assume 'surrogate_grad_target' for target neuron activations is available or computed
-        # Assume 'source_activity' (e.g., spikes or trace) is from self.source
+class ForwardForwardMCCLearning(MCC_LearningRule):
+    """
+    Forward-Forward learning rule for MulticompartmentConnection.
+    
+    This MCC learning rule wrapper integrates the Forward-Forward algorithm
+    with the MulticompartmentConnection architecture, enabling layer-wise
+    learning without backpropagation through time.
+    
+    The learning rule works by:
+    1. Computing goodness scores from target layer activity
+    2. Collecting positive and negative sample statistics
+    3. Applying contrastive weight updates based on Forward-Forward loss
+    """
+    
+    def __init__(
+        self,
+        alpha_loss: float = 0.6,
+        goodness_fn: str = "mean_squared",
+        nu: float = 0.001,
+        momentum: float = 0.0,
+        weight_decay: float = 0.0,
+        **kwargs
+    ):
+        """
+        Initialize Forward-Forward MCC learning rule.
         
-        if "error_signal" not in kwargs:
-            return # Or handle missing error
+        Args:
+            alpha_loss: Forward-Forward loss threshold parameter
+            goodness_fn: Goodness score computation method ("mean_squared", "sum_squared")
+            nu: Learning rate for weight updates
+            momentum: Momentum factor for weight updates
+            weight_decay: Weight decay factor for regularization
+            **kwargs: Additional arguments passed to parent MCC_LearningRule
+        """
+        super().__init__(nu=nu, **kwargs)
         
-        error_signal = kwargs["error_signal"] # This would be specific to target neurons
+        self.alpha_loss = alpha_loss
+        self.goodness_fn = goodness_fn
+        self.momentum = momentum
+        self.weight_decay = weight_decay
         
-        # This is highly conceptual and depends on your specific variant:
-        # 1. Get pre-synaptic activity (e.g., self.source.s or self.source.x)
-        # 2. The 'error_signal' would correspond to the error at the post-synaptic (target) neurons
-        # 3. Compute weight updates, e.g., delta_w = learning_rate * error_signal * pre_synaptic_activity
-        #    (This is a simplification; SNN backprop is more complex)
+        # State tracking for Forward-Forward learning
+        self.positive_goodness = None
+        self.negative_goodness = None
+        self.positive_activations = None
+        self.negative_activations = None
         
-        # Example: (very abstract, actual SNN backprop is more involved)
-        # Assume error_signal is shaped for target neurons, source_s for source neurons
-        # update_matrix = torch.outer(error_signal, self.source.s.float().mean(dim=0)) # Simplified
-        # self.feature_value += self.nu[0] * update_matrix * self.connection.dt 
+        # Momentum state
+        self.velocity = None
         
-        # Actual implementation would depend on the precise math of your variant
-        # (e.g., using surrogate derivatives of target neuron potentials, etc.)
+        # Sample type tracking
+        self.current_sample_type = None
+        self.samples_processed = 0
         
-        # Call the parent's update for decay, clamping, etc.
-        super().update() 
+    def update(
+        self,
+        connection: 'MulticompartmentConnection',
+        source_s: torch.Tensor,
+        target_s: torch.Tensor,
+        **kwargs
+    ) -> None:
+        """
+        Perform Forward-Forward learning update.
         
-    def reset_state_variables(self) -> None:
-        # Reset any internal states if your rule has them
-        pass
-
+        This method is called by MCC during each simulation step. It accumulates
+        statistics for positive and negative samples, then applies contrastive
+        updates when both sample types are available.
+        
+        Args:
+            connection: Parent MulticompartmentConnection
+            source_s: Source layer spikes [batch_size, source_neurons]
+            target_s: Target layer spikes [batch_size, target_neurons]
+            **kwargs: Additional arguments including 'sample_type'
+        """
+        # Check if learning is enabled
+        if not connection.w.requires_grad:
+            return
+        
+        # Get sample type from kwargs
+        sample_type = kwargs.get('sample_type', self.current_sample_type)
+        if sample_type is None:
+            # Default to positive for backward compatibility
+            sample_type = "positive"
+        
+        # Compute goodness score for current batch
+        current_goodness = self._compute_goodness(target_s)
+        
+        # Store activations and goodness based on sample type
+        if sample_type == "positive":
+            self.positive_goodness = current_goodness.detach()
+            self.positive_activations = {
+                'source': source_s.detach(),
+                'target': target_s.detach()
+            }
+            
+        elif sample_type == "negative":
+            self.negative_goodness = current_goodness.detach()
+            self.negative_activations = {
+                'source': source_s.detach(),
+                'target': target_s.detach()
+            }
+            
+        else:
+            raise ValueError(f"Invalid sample_type: {sample_type}. Must be 'positive' or 'negative'")
+        
+        self.samples_processed += 1
+        
+        # Apply contrastive update if we have both positive and negative samples
+        if (self.positive_goodness is not None and 
+            self.negative_goodness is not None and
+            self.positive_activations is not None and
+            self.negative_activations is not None):
+            
+            self._apply_forward_forward_update(connection)
+            self._reset_accumulated_data()
+    
+    def _compute_goodness(self, target_activity: torch.Tensor) -> torch.Tensor:
+        """
+        Compute Forward-Forward goodness score from target layer activity.
+        
+        Args:
+            target_activity: Target neuron spikes [batch_size, neurons]
+            
+        Returns:
+            Goodness scores [batch_size]
+        """
+        if self.goodness_fn == "mean_squared":
+            # Mean squared activity across neurons (original FF paper)
+            goodness = torch.mean(target_activity ** 2, dim=1)
+            
+        elif self.goodness_fn == "sum_squared":
+            # Sum of squared activity across neurons
+            goodness = torch.sum(target_activity ** 2, dim=1)
+            
+        else:
+            raise ValueError(f"Unknown goodness function: {self.goodness_fn}")
+        
+        return goodness
+    
+    def _apply_forward_forward_update(self, connection: 'MulticompartmentConnection'):
+        """
+        Apply Forward-Forward contrastive weight update.
+        
+        The update follows the Forward-Forward principle:
+        - Strengthen weights that increase goodness for positive samples
+        - Weaken weights that increase goodness for negative samples
+        
+        Args:
+            connection: Parent MulticompartmentConnection
+        """
+        # Get weight tensor
+        w = connection.w
+        
+        # Compute Forward-Forward loss (for monitoring)
+        ff_loss = self._compute_ff_loss(self.positive_goodness, self.negative_goodness)
+        
+        # Compute weight update based on activity correlations
+        pos_source = self.positive_activations['source']
+        pos_target = self.positive_activations['target']
+        neg_source = self.negative_activations['source']
+        neg_target = self.negative_activations['target']
+        
+        # Positive update: strengthen weights for positive samples
+        # ΔW_pos = η * s_pos^T * t_pos / batch_size
+        delta_w_pos = torch.mm(pos_source.t(), pos_target) / pos_source.shape[0]
+        
+        # Negative update: weaken weights for negative samples  
+        # ΔW_neg = -η * s_neg^T * t_neg / batch_size
+        delta_w_neg = -torch.mm(neg_source.t(), neg_target) / neg_source.shape[0]
+        
+        # Combined Forward-Forward update
+        delta_w = self.nu * (delta_w_pos + delta_w_neg)
+        
+        # Add weight decay if specified
+        if self.weight_decay > 0:
+            delta_w = delta_w - self.weight_decay * w
+        
+        # Apply momentum if specified
+        if self.momentum > 0:
+            if self.velocity is None:
+                self.velocity = torch.zeros_like(w)
+            
+            self.velocity = self.momentum * self.velocity + delta_w
+            delta_w = self.velocity
+        
+        # Apply weight update
+        with torch.no_grad():
+            w.add_(delta_w)
+        
+        # Apply weight constraints if they exist
+        self._apply_weight_constraints(connection)
+    
+    def _compute_ff_loss(
+        self,
+        goodness_pos: torch.Tensor,
+        goodness_neg: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Compute Forward-Forward contrastive loss for monitoring.
+        
+        L = log(1 + exp(-g_pos + α)) + log(1 + exp(g_neg - α))
+        
+        Args:
+            goodness_pos: Goodness scores for positive samples
+            goodness_neg: Goodness scores for negative samples
+            
+        Returns:
+            Forward-Forward loss (scalar)
+        """
+        # Positive loss: encourage high goodness for positive samples
+        loss_pos = torch.log(1 + torch.exp(-goodness_pos + self.alpha_loss))
+        
+        # Negative loss: encourage low goodness for negative samples
+        loss_neg = torch.log(1 + torch.exp(goodness_neg - self.alpha_loss))
+        
+        # Return mean loss across batch
+        total_loss = loss_pos + loss_neg
+        return torch.mean(total_loss)
+    
+    def _apply_weight_constraints(self, connection: 'MulticompartmentConnection'):
+        """
+        Apply weight constraints (bounds, normalization) if specified.
+        
+        Args:
+            connection: Parent connection with constraint parameters
+        """
+        w = connection.w
+        
+        # Apply weight bounds if specified
+        if hasattr(connection, 'wmin') and hasattr(connection, 'wmax'):
+            with torch.no_grad():
+                w.clamp_(connection.wmin, connection.wmax)
+        
+        # Apply normalization if specified
+        if hasattr(connection, 'norm') and connection.norm is not None:
+            with torch.no_grad():
+                if connection.norm == "l2":
+                    # L2 normalize each output neuron's weights
+                    w.div_(w.norm(dim=0, keepdim=True) + 1e-8)
+                elif connection.norm == "l1":
+                    # L1 normalize each output neuron's weights
+                    w.div_(w.abs().sum(dim=0, keepdim=True) + 1e-8)
+    
+    def _reset_accumulated_data(self):
+        """Reset accumulated positive and negative sample data."""
+        self.positive_goodness = None
+        self.negative_goodness = None
+        self.positive_activations = None
+        self.negative_activations = None
+    
+    def set_sample_type(self, sample_type: str):
+        """
+        Set the current sample type for subsequent updates.
+        
+        Args:
+            sample_type: Either "positive" or "negative"
+        """
+        if sample_type not in ["positive", "negative"]:
+            raise ValueError(f"Invalid sample_type: {sample_type}")
+        
+        self.current_sample_type = sample_type
+    
+    def get_goodness_scores(self) -> dict:
+        """Get current goodness scores for positive and negative samples."""
+        return {
+            'positive_goodness': self.positive_goodness,
+            'negative_goodness': self.negative_goodness
+        }
+    
+    def get_ff_loss(self) -> torch.Tensor:
+        """Compute and return current Forward-Forward loss if data available."""
+        if self.positive_goodness is not None and self.negative_goodness is not None:
+            return self._compute_ff_loss(self.positive_goodness, self.negative_goodness)
+        else:
+            return torch.tensor(0.0)
+    
+    def reset_state(self):
+        """Reset all learning rule state."""
+        self._reset_accumulated_data()
+        self.velocity = None
+        self.current_sample_type = None
+        self.samples_processed = 0
+    
+    def get_learning_stats(self) -> dict:
+        """Get learning rule statistics and configuration."""
+        return {
+            'learning_rule_type': 'ForwardForwardMCCLearning',
+            'alpha_loss': self.alpha_loss,
+            'goodness_fn': self.goodness_fn,
+            'learning_rate': self.nu,
+            'momentum': self.momentum,
+            'weight_decay': self.weight_decay,
+            'samples_processed': self.samples_processed,
+            'current_sample_type': self.current_sample_type,
+            'has_positive_data': self.positive_goodness is not None,
+            'has_negative_data': self.negative_goodness is not None
+        }
+    
+    def __repr__(self):
+        """String representation of the learning rule."""
+        return (
+            f"ForwardForwardMCCLearning("
+            f"nu={self.nu}, "
+            f"alpha_loss={self.alpha_loss}, "
+            f"goodness_fn='{self.goodness_fn}', "
+            f"momentum={self.momentum}, "
+            f"weight_decay={self.weight_decay})"
+        )
