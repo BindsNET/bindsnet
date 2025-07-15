@@ -1,8 +1,13 @@
+'''
+Think about other users and think about features. add layer with ff and layer without.
+'''
 import torch
 import torch.optim as optim
 from torchvision import datasets, transforms
 import os
 import sys
+
+
 # Add the parent directory of 'bindsnet' to the Python path
 module_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if module_path not in sys.path:
@@ -10,9 +15,11 @@ if module_path not in sys.path:
 
 from bindsnet.network import Network
 from bindsnet.network.nodes import Input, LIFNodes
-from bindsnet.network.topology import ForwardForwardConnection
+from bindsnet.network.topology import Connection
+from bindsnet.network.topology_features import ArctangentSurrogateFeature, GoodnessScore
 from bindsnet.pipeline.forward_forward_pipeline import BindsNETForwardForwardPipeline
 from bindsnet.encoding.encodings import repeat as repeat_encoder
+from bindsnet.datasets.contrastive_transforms import prepend_label_to_image
 
 
 def create_bindsnet_ff_network(input_size: int, hidden_sizes: list, device: torch.device, 
@@ -48,26 +55,23 @@ def create_bindsnet_ff_network(input_size: int, hidden_sizes: list, device: torc
         )
         network.add_layer(hidden_layer, name=f"hidden_{i}")
         
-        # Create ForwardForwardConnection between layers
+        # Create regular connection (features handled in pipeline)
         source_layer_name = layer_names[i]
         target_layer_name = layer_names[i + 1]
         source_layer = network.layers[source_layer_name]
         target_layer = network.layers[target_layer_name]
-        
-        ff_connection = ForwardForwardConnection(
+        connection = Connection(
             source=source_layer,
             target=target_layer,
-            spike_threshold=spike_threshold,
-            alpha=alpha,
             w=torch.randn(layer_sizes[i], layer_sizes[i + 1]) * 0.1,  # Small random weights
             wmin=-torch.inf,
             wmax=torch.inf
         )
-        
         connection_name = f"{source_layer_name}_to_{target_layer_name}"
-        network.add_connection(ff_connection, source=source_layer_name, target=target_layer_name)
-    
+        network.add_connection(connection, source=source_layer_name, target=target_layer_name)
     return network
+
+
 def filter_dataset_by_labels(dataset, target_labels):
     """
     Filter dataset to only include samples with specified labels.
@@ -90,7 +94,7 @@ def main():
     print("=====================================")
 
     #Modifying the Dataset to only include classes 0-4
-    target_labels = [0, 1, 2, 3, 4,5,6,7,8,9]
+    target_labels = [0, 1, 2, 3, 4]
     num_classes = len(target_labels)  # Now 5 classes instead of 10
 
     
@@ -114,7 +118,7 @@ def main():
     num_epochs = 3               # Few epochs for quick test
     
     # Dataset limits for quick testing
-    max_train_samples = 128      # Small dataset for testing
+    max_train_samples = 10000      # Small dataset for testing
     max_test_samples = 512        # Small test set
     
     # Device setup
@@ -131,10 +135,11 @@ def main():
     
     # Data loading and preprocessing
     print("\nPreparing MNIST dataset...")
+    
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,)),  # MNIST normalization
-        transforms.Lambda(lambda x: x.view(-1))       # Flatten to 784
+        transforms.Normalize((0.1307,), (0.3081,)),
+        transforms.Lambda(lambda x: x.view(-1))      
     ])
     
     full_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
@@ -158,7 +163,7 @@ def main():
     print(f"Expected batches per epoch: {len(train_dataset) // batch_size}")
     
     # Create BindsNET network with ForwardForwardConnections
-    print("\nCreating BindsNET network with ForwardForwardConnections...")
+    print("\nCreating BindsNET network with topology features...")
     network = create_bindsnet_ff_network(
         input_size=image_feature_size,
         hidden_sizes=hidden_sizes,
@@ -170,15 +175,14 @@ def main():
     print(f"Network layers: {list(network.layers.keys())}")
     print(f"Network connections: {list(network.connections.keys())}")
     
-    # Verify connections are ForwardForwardConnection
+    # Verify connections are regular Connection objects
     for conn_name, connection in network.connections.items():
         print(f"Connection '{conn_name}': {type(connection).__name__}")
-        if hasattr(connection, 'get_surrogate_info'):
-            info = connection.get_surrogate_info()
-            print(f"  Surrogate: {info['surrogate_type']}, α={info['alpha']}, threshold={info['spike_threshold']}")
+        if hasattr(connection, 'w'):
+            print(f"  Weight shape: {connection.w.shape}")
     
-    # Define FF layer pairs for training
-    ff_pairs_specs = []
+    # Create features dictionary for the pipeline
+    features = {}
     for i in range(len(hidden_sizes)):
         if i == 0:
             source_name = "input"
@@ -186,84 +190,79 @@ def main():
             source_name = f"hidden_{i-1}"
         target_name = f"hidden_{i}"
         
-        # FIX: Use tuple keys to match how BindsNET actually stores connections
-        connection_key = (source_name, target_name)  # ('input', 'hidden_0'), ('hidden_0', 'hidden_1')
-        ff_pairs_specs.append((connection_key, target_name))
+        connection_key = f"{source_name}_to_{target_name}"
+        features[connection_key] = ArctangentSurrogateFeature(
+            name=f"feature_{connection_key}",
+            spike_threshold=snn_threshold,
+            alpha=alpha_surrogate,
+            dt=dt,
+            reset_mechanism="subtract"
+        )
     
-    print(f"FF layer pairs: {ff_pairs_specs}")
-    
-    # Create encoder function
-    def wrapped_repeat_encoder(datum: torch.Tensor) -> torch.Tensor:
-        """Encode input data for SNN simulation."""
-        return repeat_encoder(datum=datum, time=simulation_time, dt=dt)
-    
-    # Create BindsNET Forward-Forward pipeline
-    print("\nCreating BindsNET Forward-Forward pipeline with surrogate gradients...")
+    print(f"Created features: {list(features.keys())}")
+
+    # Create BindsNET Forward-Forward pipeline with topology features
+    print("\nCreating BindsNET Forward-Forward pipeline with topology features...")
     pipeline = BindsNETForwardForwardPipeline(
         network=network,
-        train_ds=train_dataset,
-        num_classes=num_classes,
-        encoder=wrapped_repeat_encoder,
+        features=features,
+        positive_threshold=2.0,
+        negative_threshold=-2.0,
+        learning_rate=learning_rate,
         time=simulation_time,
-        ff_pairs_specs=ff_pairs_specs,
-        input_layer_name="input",
-        lr=learning_rate,
-        alpha_loss=alpha_ff_loss,
-        alpha=alpha_surrogate,
-        spike_threshold=snn_threshold,
-        optimizer_cls=optim.Adam,
-        device=device,
-        dt=dt,
-        batch_size=batch_size,
-        num_epochs=num_epochs,
-        test_ds=test_dataset
+        dt=dt
     )
     
     # Display pipeline information
-    surrogate_info = pipeline.get_surrogate_info()
-    print(f"Pipeline surrogate info: {surrogate_info}")
-    
-    # Training
-    print("\n" + "="*50)
-    print("STARTING BINDSNET FORWARD-FORWARD TRAINING")
-    print("="*50)
-    try:
-        pipeline.train()
-        print("\nTraining completed successfully!")
-    except Exception as e:
-        print(f"\nTraining failed with error: {e}")
-        import traceback
-        traceback.print_exc()
-        return
-    
-    # Testing
-    print("\n" + "="*30)
-    print("STARTING TESTING")
-    print("="*30)
-    try:
-        pipeline.test_epoch()
-        print("\nTesting completed successfully!")
-    except Exception as e:
-        print(f"\nTesting failed with error: {e}")
-        import traceback
-        traceback.print_exc()
-        return
-    
-    print("\n" + "="*50)
-    print("BINDSNET FORWARD-FORWARD MNIST EXAMPLE FINISHED")
-    print("="*50)
-    
-    # Display final network statistics
-    print("\nFinal Network Statistics:")
-    for conn_name, connection in network.connections.items():
-        if hasattr(connection, 'w'):
-            weight_stats = {
-                'mean': connection.w.mean().item(),
-                'std': connection.w.std().item(),
-                'min': connection.w.min().item(),
-                'max': connection.w.max().item()
-            }
-            print(f"Connection '{conn_name}' weights: {weight_stats}")
+    print(f"Pipeline features: {list(pipeline.features.keys())}")
+    print(f"Pipeline time: {pipeline.time}")
+    print(f"Pipeline learning rate: {pipeline.learning_rate}")
+
+    # Prepare positive and negative data for Forward-Forward training
+    print("\nPreparing positive and negative data for Forward-Forward training...")
+    positive_data = []
+    negative_data = []
+    goodness_score = GoodnessScore(
+    name="goodness",
+    parent_feature=features["input_to_hidden_0"],  # Use the feature instance for the first connection
+    network=network,  # Pass your network directly
+    time=simulation_time,  #You need to provide this
+    input_layer="input"
+    )
+    pipeline.goodness_score = goodness_score  # Attach to pipeline
+
+    # Generate positive and negative data using the pipeline method
+    positive_data, negative_data = pipeline.generate_positive_negative_data(
+        train_dataset, num_classes
+    )
+
+    print(f"Training with {len(positive_data)} positive and {len(negative_data)} negative samples")
+
+    # Train using Forward-Forward algorithm
+    print("\nStarting Forward-Forward training...")
+
+
+    metrics = pipeline.train_ff(
+        positive_data=positive_data,
+        negative_data=negative_data,
+        n_epochs=num_epochs
+    )
+    print(f"Training metrics: {metrics}")
+    print("Training complete.")
+
+    # Predict on test set using label scoring
+    print("\nStarting prediction on test set...")
+
+    predicted_labels = pipeline.predict_label_scoring(
+        test_dataset,
+        num_classes,
+    )
+    # Calculate percentage correct
+    true_labels = torch.tensor([target for _, target in test_dataset])
+    num_correct = (predicted_labels == true_labels).sum().item()
+    percent_correct = 100.0 * num_correct / len(true_labels) if len(true_labels) > 0 else 0.0
+    print(f"Percentage correct: {percent_correct:.2f}% ({num_correct}/{len(true_labels)})")
+    print("Prediction complete.")
 
 if __name__ == "__main__":
     main()

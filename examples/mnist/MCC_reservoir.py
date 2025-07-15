@@ -96,7 +96,7 @@ d = torch.rand(input_l.n, output_l.n) / 5
 w = torch.sign(torch.randint(-1, +2, (input_l.n, output_l.n)))
 prob_feature = Probability(name="input_prob_feature", value=p)
 weight_feature = Weight(name="input_weight_feature", value=w)
-pipeline = [prob_feature, weight_feature]
+pipeline = [prob_feature, weight_feature] # rewrite as FF feature?
 input_con = MulticompartmentConnection(
     source=input_l,
     target=output_l,

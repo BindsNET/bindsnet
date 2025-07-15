@@ -955,23 +955,38 @@ class ArctangentSurrogateFeature(AbstractFeature):
     
     def __init__(
         self,
+        name: str,
         spike_threshold: float = 1.0,
         alpha: float = 2.0,
         dt: float = 1.0,
         reset_mechanism: str = "subtract",
+        value: Union[torch.Tensor, float, int] = None,
+        range: Optional[Union[list, tuple]] = None,
         **kwargs
     ):
         """
         Initialize arctangent surrogate feature.
         
         Args:
+            name: Name of the feature
             spike_threshold: Voltage threshold for spike generation
             alpha: Steepness parameter for surrogate gradient (higher = steeper)
             dt: Integration time step
             reset_mechanism: Post-spike reset ("subtract", "zero", "none")
+            value: Initial membrane potential values (optional)
+            range: Range of acceptable values for membrane potential
             **kwargs: Additional arguments for AbstractFeature
         """
-        super().__init__(**kwargs)
+        # Set default range if not provided
+        if range is None:
+            range = [-10.0, 10.0]  # Reasonable range for membrane potentials
+            
+        super().__init__(
+            name=name,
+            value=value,
+            range=range,
+            **kwargs
+        )
         
         self.spike_threshold = spike_threshold
         self.alpha = alpha
@@ -983,26 +998,32 @@ class ArctangentSurrogateFeature(AbstractFeature):
         self.batch_size = None
         self.target_size = None
         self.initialized = False
+        self.connection = None
         
-    def compute(
-        self, 
-        connection: 'MulticompartmentConnection',
-        source_s: torch.Tensor,
-        **kwargs
-    ) -> torch.Tensor:
+    def compute(self, conn_spikes) -> torch.Tensor:
         """
         Compute forward pass with arctangent surrogate gradients.
         
         Args:
-            connection: Parent MulticompartmentConnection
-            source_s: Source layer spikes [batch_size, source_neurons]
-            **kwargs: Additional arguments
+            conn_spikes: Connection spikes tensor [batch_size, source_neurons * target_neurons]
             
         Returns:
-            Target spikes with differentiable surrogate gradients [batch_size, target_neurons]
+            Target spikes with differentiable surrogate gradients [batch_size, source_neurons * target_neurons]
         """
-        # Step 1: Compute synaptic input
-        synaptic_input = torch.mm(source_s.float(), connection.w)
+        # Ensure connection is available
+        if self.connection is None:
+            raise RuntimeError("ArctangentSurrogateFeature not properly initialized. Call prime_feature first.")
+            
+        # Reshape conn_spikes to [batch_size, source_neurons, target_neurons]
+        batch_size = conn_spikes.size(0)
+        source_n = self.connection.source.n
+        target_n = self.connection.target.n
+        
+        # Reshape connection spikes to matrix form
+        conn_spikes_matrix = conn_spikes.view(batch_size, source_n, target_n)
+        
+        # Step 1: Compute synaptic input (sum over source neurons)
+        synaptic_input = conn_spikes_matrix.sum(dim=1)  # [batch_size, target_neurons]
         
         # Step 2: Initialize membrane potential if needed
         if not self.initialized:
@@ -1021,7 +1042,15 @@ class ArctangentSurrogateFeature(AbstractFeature):
         # Step 5: Apply reset mechanism
         self._apply_reset(spikes)
         
-        return spikes
+        # Step 6: Broadcast spikes back to connection format
+        # Each target spike affects all connections to that target
+        spikes_broadcast = spikes.unsqueeze(1).expand(batch_size, source_n, target_n)
+        
+        # Apply spikes to incoming connections
+        output_spikes = conn_spikes_matrix * spikes_broadcast
+        
+        # Reshape back to original format
+        return output_spikes.view(batch_size, source_n * target_n)
     
     def arctangent_surrogate_spike(
         self, 
@@ -1048,7 +1077,13 @@ class ArctangentSurrogateFeature(AbstractFeature):
     def _initialize_state(self, reference_tensor: torch.Tensor):
         """Initialize state tensors based on input dimensions."""
         self.batch_size, self.target_size = reference_tensor.shape
-        self.v_membrane = torch.zeros_like(reference_tensor)
+        # Initialize membrane potential to match batch size and target neurons
+        if self.v_membrane is None:
+            self.v_membrane = torch.zeros_like(reference_tensor)
+        else:
+            # Expand existing membrane potential to match batch size
+            if self.v_membrane.size(0) != self.batch_size:
+                self.v_membrane = self.v_membrane.expand(self.batch_size, -1)
         self.initialized = True
     
     def _apply_reset(self, spikes: torch.Tensor):
@@ -1067,10 +1102,39 @@ class ArctangentSurrogateFeature(AbstractFeature):
     
     def reset_state_variables(self):
         """Reset all internal state variables."""
+        super().reset_state_variables()
         self.v_membrane = None
         self.batch_size = None
         self.target_size = None
         self.initialized = False
+        
+    def prime_feature(self, connection, device, **kwargs) -> None:
+        """
+        Prime the feature for use in a connection.
+        
+        Args:
+            connection: Parent connection object
+            device: Device to run on
+            **kwargs: Additional arguments
+        """
+        # Store connection reference
+        self.connection = connection
+        
+        # Call parent prime_feature
+        super().prime_feature(connection, device, **kwargs)
+        
+    def initialize_value(self):
+        """
+        Initialize default membrane potential values.
+        
+        Returns:
+            Zero membrane potentials for all target neurons
+        """
+        if self.connection is None:
+            raise RuntimeError("Connection not set. Call prime_feature first.")
+            
+        # Initialize with zeros - membrane potentials start at rest
+        return torch.zeros(1, self.connection.target.n)
     
     def get_membrane_potential(self) -> Optional[torch.Tensor]:
         """Get current membrane potential."""
@@ -1101,6 +1165,7 @@ class ArctangentSurrogateFeature(AbstractFeature):
         """String representation."""
         return (
             f"ArctangentSurrogateFeature("
+            f"name='{self.name}', "
             f"spike_threshold={self.spike_threshold}, "
             f"alpha={self.alpha}, "
             f"dt={self.dt}, "
@@ -1168,11 +1233,61 @@ class _ArctangentSurrogateSpike(torch.autograd.Function):
         # threshold and alpha gradients are None (not optimized)
         return grad_input, None, None
 
+class GoodnessScore(AbstractSubFeature):
+    """
+    SubFeature to compute the goodness score (sum of spikes over time) for all layers in a BindsNET network.
+    """
 
+    def __init__(
+        self,
+        name: str,
+        parent_feature: AbstractFeature = None,
+        network=None,  # <-- Add this argument
+        time: int = 250,
+        input_layer: str = "X",
+    ) -> None:
+        super().__init__(name, parent_feature)
+        self.time = time
+        self.input_layer = input_layer
+        self.network = network  # <-- Store the network
+
+    def compute(self, sample: torch.Tensor) -> dict:
+        # Use self.network if provided, else fall back to parent_feature's connection
+        if self.network is not None:
+            network = self.network
+        else:
+            if not hasattr(self.parent, "connection") or self.parent.connection is None:
+                raise RuntimeError("Parent feature must have a valid connection attribute.")
+            if not hasattr(self.parent.connection, "network") or self.parent.connection.network is None:
+                raise RuntimeError("Connection must have a valid network attribute.")
+            network = self.parent.connection.network
+
+        network.reset_state_variables()
+        inputs = {self.input_layer: sample.unsqueeze(0) if sample.dim() == 1 else sample}
+        spike_record = {layer_name: [] for layer_name in network.layers}
+
+        for t in range(self.time):
+            network.run(inputs, time=1)
+            for layer_name, layer in network.layers.items():
+                spike_record[layer_name].append(layer.s.clone().detach())
+
+        goodness_per_layer = {}
+        for layer_name, spikes_list in spike_record.items():
+            spikes = torch.stack(spikes_list, dim=0)
+            goodness = spikes.sum(dim=0).sum(dim=0)
+            goodness_per_layer[layer_name] = goodness
+
+        total_goodness = sum([v.sum() for v in goodness_per_layer.values()])
+        goodness_per_layer["total_goodness"] = total_goodness
+
+        return goodness_per_layer
+    
+    
 # Helper function for easy creation
 def create_arctangent_surrogate_connection(
     source,
     target,
+    name: str = "arctangent_surrogate",
     w: Optional[torch.Tensor] = None,
     spike_threshold: float = 1.0,
     alpha: float = 2.0,
@@ -1186,6 +1301,7 @@ def create_arctangent_surrogate_connection(
     Args:
         source: Source population
         target: Target population
+        name: Name for the surrogate feature
         w: Weight matrix (initialized randomly if None)
         spike_threshold: Spike threshold
         alpha: Surrogate gradient steepness
@@ -1204,6 +1320,7 @@ def create_arctangent_surrogate_connection(
     
     # Create arctangent surrogate feature
     surrogate_feature = ArctangentSurrogateFeature(
+        name=name,
         spike_threshold=spike_threshold,
         alpha=alpha,
         dt=dt,
@@ -1215,7 +1332,7 @@ def create_arctangent_surrogate_connection(
         source=source,
         target=target,
         w=w,
-        features=[surrogate_feature],
+        pipeline=[surrogate_feature],
         **mcc_kwargs
     )
     

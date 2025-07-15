@@ -1,454 +1,422 @@
-from typing import Dict, Optional, Callable, List, Tuple, Union # Add Union if batch can be List or Tuple
 import torch
-from bindsnet.pipeline.dataloader_pipeline import DataLoaderPipeline  # CHANGE: absolute import
-from bindsnet.datasets.contrastive_transforms import prepend_label_to_image
-from tqdm import tqdm
-from torch.utils.data import DataLoader as TorchDataLoader # Use an alias to avoid confusion if needed
-from bindsnet.network import Network as BindsNetwork
+from typing import Dict, Optional, Tuple, Union, Sequence
+from abc import ABC, abstractmethod
 
-class BindsNETForwardForwardPipeline(DataLoaderPipeline):
+from bindsnet.network import Network
+from bindsnet.network.topology_features import AbstractFeature
+from bindsnet.pipeline.base_pipeline import BasePipeline
+
+
+class BindsNETForwardForwardPipeline(BasePipeline):
+    """
+    Forward-Forward learning pipeline compatible with topology features.
+    
+    This pipeline implements the Forward-Forward algorithm using BindsNET's
+    topology features framework for feature extraction and learning.
+    """
     
     def __init__(
         self,
-        #required parameters
-        network: BindsNetwork,
-        train_ds: torch.utils.data.Dataset,
-        num_classes: int,
-        encoder: Callable,
-        time: int,
-        ff_pairs_specs: List[Tuple[str, str]],
-        input_layer_name: str,
-        lr: float = 0.001,
-        alpha_loss: float = 0.6,
-        alpha: float = 2.0,
-        spike_threshold: float = 1.0,
-        optimizer_cls: torch.optim.Optimizer = torch.optim.Adam,
-        device: Optional[torch.device] = None,
+        network: Network,
+        features: Dict[str, AbstractFeature],
+        positive_threshold: float = 2.0,
+        negative_threshold: float = -2.0,
+        learning_rate: float = 0.03,
+        time: int = 250,
         dt: float = 1.0,
-        batch_size: int = 32,  
-        num_epochs: int = 1,   
-        **kwargs,
+        **kwargs
     ):
-        # STEP 1: Initialize required attributes BEFORE super().__init__()
-        self.ff_layer_pairs: List = []  # Empty list to satisfy init_fn()
-        self.optimizers: List = []
-        
-        # STEP 2: Store parameters for init_fn() to use
-        self._stored_network = network  # Store network with different name
-        self.train_ds = train_ds  # FIX: Store train_ds
-        self.num_classes = num_classes
-        self.encoder = encoder
-        self.sim_time = time
-        self.lr = lr
-        self.alpha_loss = alpha_loss
-        self.alpha = alpha
-        self.input_layer_name = input_layer_name
-        self.ff_pairs_specs = ff_pairs_specs
-        self.optimizer_cls = optimizer_cls
-        self.threshold = spike_threshold
-
-        # Store DataLoader parameters
-        self.batch_size = batch_size
-        self.num_epochs = num_epochs
-        self.shuffle = kwargs.get('shuffle', True)
-        self.num_workers = kwargs.get('num_workers', 0)
-        self.pin_memory = kwargs.get('pin_memory', False)
-
-        if network is not None:
-            network.dt = dt 
-
-        self.device = device if device is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        # STEP 3: Call super().__init__() with None network, init_fn will set it up
-        super().__init__(network=None, train_ds=train_ds,batch_size=batch_size,num_epochs=num_epochs, **kwargs)
-
-    def init_fn(self) -> None:
         """
-        Initialization function called by BasePipeline.
-        This is where we do the actual ForwardForwardConnection setup.
+        Initialize the Forward-Forward pipeline.
+        
+        Args:
+            network: BindsNET network instance
+            features: Dictionary mapping connection names to feature instances
+            positive_threshold: Threshold for positive examples
+            negative_threshold: Threshold for negative examples
+            learning_rate: Learning rate for feature updates
+            time: Simulation time
+            dt: Time step
         """
-        print("init_fn() called - setting up ForwardForwardConnections...")
         
-        # Restore the actual network
-        self.network = self._stored_network
+        self.features = features
+        self.positive_threshold = positive_threshold
+        self.negative_threshold = negative_threshold
+        self.learning_rate = learning_rate
+        self.time = time
+        self.dt = dt
+        super().__init__(network, **kwargs)
         
-        if self.network is None:
-            raise ValueError("Network cannot be None")
-        
-        # Import here to avoid circular imports
-        from bindsnet.network.topology import ForwardForwardConnection
-
-        # Clear and rebuild ff_layer_pairs
-        self.ff_layer_pairs.clear()
-        self.optimizers.clear()
-
-        print(f"Available connections: {list(self.network.connections.keys())}")
-        print(f"Looking for connections: {[pair[0] for pair in self.ff_pairs_specs]}")
-
-        # Setup FF connections with surrogate gradients
-        for conn_name, spiking_layer_name in self.ff_pairs_specs:
-            if conn_name not in self.network.connections:
-                raise ValueError(f"Connection '{conn_name}' not found in network. Available: {list(self.network.connections.keys())}")
-            if spiking_layer_name not in self.network.layers:
-                raise ValueError(f"Spiking layer '{spiking_layer_name}' not found in network. Available: {list(self.network.layers.keys())}")
-            
-            connection = self.network.connections[conn_name]
-            spiking_layer = self.network.layers[spiking_layer_name]
-
-            # Convert to ForwardForwardConnection if needed
-            if not isinstance(connection, ForwardForwardConnection):
-                print(f"Converting connection '{conn_name}' to ForwardForwardConnection")
+    def _initialize_features(self):
+        """Initialize all features with the network connections."""
+        device = getattr(self.network, 'device', torch.device('cpu'))
+        for conn_name, feature in self.features.items():
+            if hasattr(self.network, conn_name):
+                connection = getattr(self.network, conn_name)
+                # Prime the feature with the connection (this sets up the connection reference)
+                if hasattr(feature, 'prime_feature'):
+                    feature.prime_feature(connection, device)
                 
-                ff_connection = ForwardForwardConnection(
-                    source=connection.source,
-                    target=connection.target,
-                    nu=getattr(connection, 'nu', None),
-                    weight_decay=getattr(connection, 'weight_decay', 0.0),
-                    spike_threshold=self.threshold,
-                    alpha=self.alpha,
-                    w=connection.w.data.clone() if hasattr(connection, 'w') else None,
-                    wmin=getattr(connection, 'wmin', -torch.inf),
-                    wmax=getattr(connection, 'wmax', torch.inf),
-                    norm=getattr(connection, 'norm', None),
-                )
+                # Initialize feature value
+                if hasattr(feature, 'initialize_value'):
+                    feature.initialize_value()
                 
-                # Replace in network
-                self.network.connections[conn_name] = ff_connection
-                connection = ff_connection
-            else:
-                print(f"Connection '{conn_name}' is already ForwardForwardConnection")
-            
-            self.ff_layer_pairs.append((connection, spiking_layer))
-            
-            # FIX: Properly handle Parameter device transfer
-            if hasattr(connection, 'w') and connection.w is not None:
-                # Move the parameter data to device, keeping it as a Parameter
-                if connection.w.device != self.device:
-                    connection.w.data = connection.w.data.to(self.device)
-                
-                # Ensure gradients are enabled
-                connection.w.requires_grad = True
-                
-                # Create optimizer for this connection
-                self.optimizers.append(self.optimizer_cls([connection.w], lr=self.lr))
-            else:
-                raise ValueError(f"Connection '{conn_name}' has no weights!")
-
-        # Initialize other attributes
-        self.current_epoch_losses = [[] for _ in self.ff_layer_pairs]
-
-        # Setup dataloaders
-        if self.train_ds is not None:
-            from torch.utils.data import DataLoader as TorchDataLoader
-            self.train_dataloader = TorchDataLoader(
-                dataset=self.train_ds,
-                batch_size=self.batch_size,
-                shuffle=self.shuffle,
-                num_workers=self.num_workers,
-                pin_memory=self.pin_memory
-            )
-        else:
-            self.train_dataloader = None
-            print("Warning: train_ds is None.")
-        
-        self.test_dataloader = None
-        
-        print(f"BindsNETForwardForwardPipeline initialized with {len(self.ff_layer_pairs)} FF layer pairs")
-
-    def _run_snn_batch_with_surrogate(
+    def step(
         self,
-        batch_encoded_inputs: torch.Tensor, 
-    ) -> Dict[str, Dict[int, torch.Tensor]]:
+        inputs: Dict[str, torch.Tensor],
+        labels: Optional[torch.Tensor] = None,
+        is_positive: bool = True,
+        **kwargs
+    ) -> Dict[str, torch.Tensor]:
         """
-        Run SNN simulation with surrogate gradients for Forward-Forward training.
-        Uses the ForwardForwardConnection's compute_with_surrogate method.
-        """
-        batch_size = batch_encoded_inputs.shape[0]
-        time_steps = batch_encoded_inputs.shape[1]
-
-        s_traces_batch: Dict[int, torch.Tensor] = {}
-        g_scalars_batch: Dict[int, torch.Tensor] = {}
-
-        # Initialize storage for each FF layer
-        for ff_pair_idx, (connection, spiking_layer) in enumerate(self.ff_layer_pairs):
-            num_neurons = connection.target.n
-            s_traces_batch[ff_pair_idx] = torch.zeros(
-                batch_size, time_steps, num_neurons, device=self.device
-            )
-
-        # Reset membrane potentials for all FF connections
-        for connection, _ in self.ff_layer_pairs:
-            connection.reset_membrane_potential()
-
-        # Simulate through time with surrogate gradients
-        current_input = batch_encoded_inputs  # [batch_size, time, features]
+        Perform one step of Forward-Forward learning.
         
-        for t in range(time_steps):
-            layer_input = current_input[:, t, :]  # [batch_size, features]
+        Args:
+            inputs: Dictionary of input tensors
+            labels: Optional labels for supervised learning
+            is_positive: Whether this is a positive or negative example
             
-            for ff_pair_idx, (connection, spiking_layer) in enumerate(self.ff_layer_pairs):
-                # Forward through connection with surrogate gradients
-                layer_spikes = connection.compute_with_surrogate(layer_input)
-                
-                # Store spike traces
-                s_traces_batch[ff_pair_idx][:, t, :] = layer_spikes
-                
-                # Output becomes input for next layer
-                layer_input = layer_spikes
-
-        # Compute goodness scores for each layer
-        for ff_pair_idx in s_traces_batch:
-            # Total spike count per neuron across time
-            spike_counts = torch.sum(s_traces_batch[ff_pair_idx], dim=1)  # [batch_size, neurons]
-            # Goodness score: mean squared spike activity per sample
-            g_scalars_batch[ff_pair_idx] = torch.mean(spike_counts ** 2, dim=1)  # [batch_size]
-        
-        return {
-            "s_traces": s_traces_batch,
-            "g_scalars": g_scalars_batch
-        }
-
-    def _compute_goodness_score(self, original_x: torch.Tensor, label_to_embed: int) -> float:
+        Returns:
+            Dictionary containing network outputs and goodness values
         """
-        Compute goodness score for a single sample with a specific label.
-        Now uses surrogate gradients for proper computation.
-        """
-        temp_labeled_input_single = prepend_label_to_image(
-            original_x.cpu(), label_to_embed, self.num_classes
-        ).to(self.device)
+        # Reset network state
+        self.network.reset_state_variables()
         
-        encoded_input_single = self.encoder(temp_labeled_input_single)
-        if encoded_input_single.dim() == 2:
-            batch_encoded_input = encoded_input_single.unsqueeze(0)  # Add batch dimension
-        else:
-            raise ValueError("Encoder output for single sample should be [T, Features]")
-
-        with torch.no_grad():
-            run_data = self._run_snn_batch_with_surrogate(batch_encoded_input)
-        
-        total_goodness_for_sample = 0.0
-        num_ff_pairs = len(self.ff_layer_pairs)
-        if num_ff_pairs == 0: 
-            return 0.0
-
-        for ff_pair_idx in range(num_ff_pairs):
-            total_goodness_for_sample += run_data["g_scalars"][ff_pair_idx].item()
-        
-        return total_goodness_for_sample / num_ff_pairs if num_ff_pairs > 0 else 0.0
-
-    def _select_hard_negative_label(self, original_x_sample: torch.Tensor, true_label_sample: int) -> int:
-        """
-        Select a hard negative label using goodness scores.
-        Now works with surrogate gradients for better gradient flow.
-        """
-        goodness_scores = torch.zeros(self.num_classes, device=self.device)
-        
-        with torch.no_grad():
-            for label_idx in range(self.num_classes):
-                if label_idx != true_label_sample:
-                    goodness_scores[label_idx] = self._compute_goodness_score(original_x_sample, label_idx)
-                else:
-                    goodness_scores[label_idx] = 0.0
-        
-        # Remove true label from consideration
-        non_true_labels = list(range(self.num_classes))
-        non_true_labels.remove(true_label_sample)
-        non_true_goodness = goodness_scores[non_true_labels]
-        
-        # Apply square root transformation
-        epsilon = 1e-8
-        transformed_goodness = torch.sqrt(non_true_goodness + epsilon)
-        
-        # Normalize to create probability distribution
-        if transformed_goodness.sum() > 0:
-            probabilities = transformed_goodness / transformed_goodness.sum()
-        else:
-            probabilities = torch.ones(len(non_true_labels), device=self.device) / len(non_true_labels)
-        
-        # Sample hard negative label
-        selected_idx = torch.multinomial(probabilities, 1).item()
-        return non_true_labels[selected_idx]
-
-    def _forward_forward_update_batch(
-        self,
-        batch_original_x: torch.Tensor,
-        batch_true_labels: torch.Tensor
-    ) -> None:
-        """
-        Forward-Forward update with surrogate gradients for proper backpropagation.
-        Now enables automatic differentiation through the BindsNET simulation.
-        """
-        print(f"_forward_forward_update_batch called with batch size: {batch_original_x.shape[0]}")
-        
-        batch_size = batch_original_x.shape[0]
-        
-        # Process each sample individually
-        for i in range(batch_size):
-            if i % 32 == 0:  # Progress update
-                print(f"Processing sample {i+1}/{batch_size}")
+        # Reset feature states
+        for feature in self.features.values():
+            feature.reset_state_variables()
             
-            original_x_sample = batch_original_x[i]
-            true_label_sample = batch_true_labels[i].item()
-            
-            # Update each FF layer pair separately
-            for pair_idx in range(len(self.ff_layer_pairs)):
-                # Zero gradients for this layer
-                self.optimizers[pair_idx].zero_grad()
-                
-                # Ensure network connections are in training mode
-                for connection, _ in self.ff_layer_pairs:
-                    connection.w.requires_grad = True
-                
-                # Select hard negative label
-                hard_negative_label = self._select_hard_negative_label(original_x_sample, true_label_sample)
-                
-                # Create positive and negative samples
-                x_pos_sample = prepend_label_to_image(
-                    original_x_sample, true_label_sample, self.num_classes
-                ).to(self.device)
-                x_neg_sample = prepend_label_to_image(  # Use positive sample with hard negative label
-                    original_x_sample, hard_negative_label, self.num_classes
-                ).to(self.device)
-                
-                # Encode samples
-                batch_encoded_x_pos = self.encoder(x_pos_sample).unsqueeze(0)
-                batch_encoded_x_neg = self.encoder(x_neg_sample).unsqueeze(0)
-                
-                # Forward passes with surrogate gradients (separate graphs)
-                pos_run_data = self._run_snn_batch_with_surrogate(batch_encoded_x_pos)
-                neg_run_data = self._run_snn_batch_with_surrogate(batch_encoded_x_neg)
-                
-                # Get goodness scores for this layer
-                g_pos = pos_run_data["g_scalars"][pair_idx][0]
-                g_neg = neg_run_data["g_scalars"][pair_idx][0]
-                
-                # Compute Forward-Forward loss
-                loss_pos = torch.log(1 + torch.exp(-g_pos + self.threshold))
-                loss_neg = torch.log(1 + torch.exp(g_neg - self.threshold))
-                loss = self.alpha_loss * loss_pos + (1 - self.alpha_loss) * loss_neg
-                
-                # Backward pass with surrogate gradients - THIS NOW WORKS!
-                loss.backward()
-                self.optimizers[pair_idx].step()
-                
-                # Store loss
-                self.current_epoch_losses[pair_idx].append(loss.item())
-                
-                # Reset membrane potentials for next sample
-                for connection, _ in self.ff_layer_pairs:
-                    connection.reset_membrane_potential()
-    
-    def step_(self, batch: Union[List[torch.Tensor], Tuple[torch.Tensor, ...]], **kwargs) -> None:
-        """
-        Required step_ method for BasePipeline compatibility.
-        This calls our train_step method for Forward-Forward training.
-        """
-        self.train_step(batch)
-
-    def train_step(self, batch: Union[List[torch.Tensor], Tuple[torch.Tensor, ...]]) -> None:
-        """Train step using ForwardForwardConnection with surrogate gradients."""
-        if not (isinstance(batch, (list, tuple)) and len(batch) >= 2):
-            raise ValueError(f"train_step expects batch to be a list or tuple of at least two tensors (images, labels). Got: {type(batch)}")
-
-        original_images = batch[0].to(self.device)
-        true_labels = batch[1].to(self.device)
-
-        # Ensure all FF connections are in training mode
-        for connection, _ in self.ff_layer_pairs:
-            connection.w.requires_grad = True
+        # Run simulation
+        outputs = {}
+        goodness_per_layer = {}
         
-        self._forward_forward_update_batch(original_images, true_labels)
-
-    def train(self) -> None:
-        """Training loop with surrogate gradient support."""
-        print(f"Starting Forward-Forward training for {self.num_epochs} epochs using BindsNET with surrogate gradients.")
-        
-        for epoch in range(self.num_epochs):
-            print(f"\n=== Starting Epoch {epoch + 1}/{self.num_epochs} ===")
-            self.current_epoch_losses = [[] for _ in self.ff_layer_pairs]
+        for t in range(self.time):
+            # Forward pass through network
+            self.network.run(inputs, time=1)
             
-            batch_count = 0
-            total_loss = 0
-            
-            pbar = tqdm(self.train_dataloader, desc=f"Epoch {epoch+1}")
-            for batch_idx, batch_data in enumerate(pbar):
-                print(f"Processing batch {batch_idx + 1} with {len(batch_data[0])} samples")
-                
-                self.train_step(batch_data)
-                batch_count += 1
-                
-                # Print loss info
-                if len(self.current_epoch_losses[0]) > 0:
-                    recent_loss = self.current_epoch_losses[0][-1]
-                    total_loss += recent_loss
-                    pbar.set_postfix({"loss": f"{recent_loss:.6f}"})
-            
-            avg_loss = total_loss / batch_count if batch_count > 0 else 0
-            print(f"=== Epoch {epoch + 1} completed. Avg loss: {avg_loss:.6f} ===")
-
-        print("Training complete with surrogate gradients!")
-
-    def test_step(self, batch: Union[List[torch.Tensor], Tuple[torch.Tensor, ...]]) -> Tuple[int, int]:
-        """Test step using surrogate gradient goodness computation."""
-        correct_predictions = 0
-        
-        if not (isinstance(batch, (list, tuple)) and len(batch) >= 2):
-            raise ValueError(f"test_step expects batch to be a list or tuple of at least two tensors (images, labels). Got: {type(batch)}")
-
-        original_images = batch[0].to(self.device)
-        true_labels = batch[1].to(self.device)
-        total_samples = original_images.shape[0]
-
-        with torch.no_grad(): 
-            for i in range(total_samples):
-                original_x_sample = original_images[i]
-                true_label_sample = true_labels[i].item()
-                
-                goodness_for_all_classes = torch.tensor(
-                    [self._compute_goodness_score(original_x_sample, j) for j in range(self.num_classes)],
-                    device=self.device
-                )
-                predicted_label = torch.argmax(goodness_for_all_classes).item()
-                
-                if predicted_label == true_label_sample:
-                    correct_predictions += 1
+            # Compute features and goodness for each connection
+            for conn_name, feature in self.features.items():
+                if hasattr(self.network, conn_name):
+                    connection = getattr(self.network, conn_name)
                     
-        return correct_predictions, total_samples
-
-    def test_epoch(self) -> None:
-        """Test epoch using surrogate gradient evaluation."""
-        if not self.test_dataloader:
-            if hasattr(self, 'test_ds') and self.test_ds is not None:
-                self.test_dataloader = TorchDataLoader(
-                    self.test_ds, batch_size=self.batch_size, num_workers=self.num_workers, 
-                    pin_memory=self.pin_memory, shuffle=False
-                )
-            else:
-                print("No test dataloader configured and no test_ds found.")
-                return
-
-        total_correct = 0
-        total_tested = 0
-        pbar = tqdm(self.test_dataloader, desc="Testing")
-        for batch_data in pbar:
-            correct, num_samples = self.test_step(batch_data)
-            total_correct += correct
-            total_tested += num_samples
-            if total_tested > 0:
-                pbar.set_postfix({"acc": f"{(total_correct / total_tested) * 100:.2f}%"})
+                    # Get connection spikes
+                    source_spikes = connection.source.s.float()
+                    target_spikes = connection.target.s.float()
+                    
+                    # Create conn_spikes tensor for feature computation
+                    batch_size = source_spikes.shape[0] if source_spikes.dim() > 1 else 1
+                    conn_spikes = torch.outer(
+                        source_spikes.flatten(), 
+                        target_spikes.flatten()
+                    ).reshape(batch_size, -1)
+                    
+                    # Compute feature
+                    feature_output = feature.compute(conn_spikes)
+                    
+                    # Compute goodness (sum of squares of feature activations)
+                    goodness = torch.sum(feature_output ** 2, dim=-1)
+                    
+                    # Store goodness values
+                    if conn_name not in goodness_per_layer:
+                        goodness_per_layer[conn_name] = []
+                    goodness_per_layer[conn_name].append(goodness)
+                    
+                    # Update connection weights based on Forward-Forward rule
+                    self._update_weights(connection, feature_output, goodness, is_positive)
+                    
+        # Average goodness values over time
+        for conn_name in goodness_per_layer:
+            goodness_per_layer[conn_name] = torch.stack(goodness_per_layer[conn_name]).mean(0)
+            
+        self.goodness_values = goodness_per_layer
         
-        if total_tested > 0:
-            accuracy = (total_correct / total_tested) * 100
-            print(f"Test Accuracy: {accuracy:.2f}% ({total_correct}/{total_tested})")
-        else:
-            print("No samples in test set or test dataloader is empty.")
-
-    def get_surrogate_info(self) -> dict:
-        """Get information about surrogate gradient configuration."""
+        # Get final network outputs
+        for pop_name, population in self.network.layers.items():
+            outputs[pop_name] = population.s.clone()
+            
         return {
-            'surrogate_type': 'arctangent',
-            'alpha': self.alpha,
-            'spike_threshold': self.threshold,
-            'num_ff_layers': len(self.ff_layer_pairs),
-            'formula': '1 / (α * |input - threshold| + 1)'
+            'outputs': outputs,
+            'goodness': goodness_per_layer,
+            'total_goodness': sum(goodness_per_layer.values())
         }
+        
+    def _update_weights(
+        self,
+        connection,
+        feature_output: torch.Tensor,
+        goodness: torch.Tensor,
+        is_positive: bool
+    ):
+        """
+        Update connection weights using Forward-Forward learning rule.
+        
+        Args:
+            connection: Network connection to update
+            feature_output: Output from feature computation
+            goodness: Computed goodness values
+            is_positive: Whether this is a positive example
+        """
+        if not hasattr(connection, 'w'):
+            return
+            
+        # Determine target goodness based on example type
+        if is_positive:
+            target_goodness = self.positive_threshold
+        else:
+            target_goodness = self.negative_threshold
+            
+        # Compute goodness error
+        goodness_error = goodness - target_goodness
+        
+        # Update weights to minimize goodness error
+        # This is a simplified version - in practice, you'd use more sophisticated updates
+        if hasattr(connection, 'update'):
+            # Use connection's built-in update mechanism if available
+            connection.update()
+        else:
+            # Manual weight update
+            with torch.no_grad():
+                weight_update = self.learning_rate * goodness_error.unsqueeze(-1) * feature_output
+                connection.w += weight_update.mean(0)  # Average over batch
+                
+    def train_ff(
+        self,
+        positive_data: torch.Tensor,
+        negative_data: torch.Tensor,
+        n_epochs: int = 1,
+        **kwargs
+    ) -> Dict[str, float]:
+        """
+        Train the network using Forward-Forward learning.
+        
+        Args:
+            positive_data: Positive training examples
+            negative_data: Negative training examples
+            n_epochs: Number of training epochs
+            
+        Returns:
+            Dictionary of training metrics
+        """
+        metrics = {
+            'positive_goodness': [],
+            'negative_goodness': [],
+            'goodness_separation': []
+        }
+        
+        for epoch in range(n_epochs):
+            epoch_pos_goodness = 0
+            epoch_neg_goodness = 0
+            
+            # Train on positive examples
+            for batch in positive_data:
+                inputs = {'X': batch}
+                result = self.step(inputs, is_positive=True)
+                epoch_pos_goodness += result['total_goodness'].item()
+                
+            # Train on negative examples
+            for batch in negative_data:
+                inputs = {'X': batch}
+                result = self.step(inputs, is_positive=False)
+                epoch_neg_goodness += result['total_goodness'].item()
+                
+            # Calculate average goodness
+            avg_pos_goodness = epoch_pos_goodness / len(positive_data)
+            avg_neg_goodness = epoch_neg_goodness / len(negative_data)
+            goodness_separation = avg_pos_goodness - avg_neg_goodness
+            
+            metrics['positive_goodness'].append(avg_pos_goodness)
+            metrics['negative_goodness'].append(avg_neg_goodness)
+            metrics['goodness_separation'].append(goodness_separation)
+            
+        return metrics
+    
+    def predict_label_scoring(
+        self,
+        test_dataset,
+        num_classes,
+    ) -> torch.Tensor:
+        """
+        Predict labels for each sample in test_dataset using label scoring.
+        For each sample, embed every possible label, run through the network,
+        and select the label with the highest total goodness.
+
+        Args:
+            test_dataset: Iterable of (data, target) pairs (targets not used for prediction)
+            num_classes: Number of possible class labels
+            prepend_label_to_image: Function to embed label into input
+
+        Returns:
+            Tensor of predicted labels for each sample
+        """
+        from bindsnet.datasets.contrastive_transforms import prepend_label_to_image
+
+        predictions = []
+        for data, _ in test_dataset:
+            goodness_scores = []
+            for label in range(num_classes):
+                sample = prepend_label_to_image(data, label, num_classes)
+                goodness = self.compute_goodness(sample.unsqueeze(0))["total_goodness"]
+                goodness_scores.append(goodness.item())
+            predicted_label = int(torch.tensor(goodness_scores).argmax())
+            predictions.append(predicted_label)
+        return torch.tensor(predictions)
+
+        
+    def reset_state_variables(self):
+        """Reset all state variables."""
+        super().reset_state_variables()
+        for feature in self.features.values():
+            feature.reset_state_variables()
+        self.goodness_values = {}
+    
+    def init_fn(self):
+        """
+        Initialize the pipeline. This method is called by the base pipeline.
+        Sets up the features and prepares the network for Forward-Forward learning.
+        """
+        print("Initializing Forward-Forward pipeline...")
+        
+        # Initialize features with network connections
+        self._initialize_features()
+        
+        # Set up any additional pipeline-specific initialization
+        if hasattr(self.network, 'dt'):
+            self.network.dt = self.dt
+            
+        print(f"Pipeline initialized with {len(self.features)} features")
+        print(f"Features: {list(self.features.keys())}")
+        
+        # Track goodness values for each layer
+        self.goodness_values = {}
+
+    def step_(self, batch):
+        """
+        Run a single step of the pipeline.
+        
+        Args:
+            batch: Input batch data
+            
+        Returns:
+            Step output
+        """
+        # Extract inputs from batch
+        if isinstance(batch, dict):
+            inputs = batch
+        else:
+            # Assume batch is a tensor for input layer
+            inputs = {'X': batch}
+            
+        # Run forward pass
+        result = self.step(inputs, is_positive=True)
+        return result
+    
+    def train(self):
+        """
+        Train the network using Forward-Forward learning.
+        This is a placeholder that implements the BasePipeline interface.
+        Use train_ff(positive_data, negative_data) for actual Forward-Forward training.
+        """
+        print("BasePipeline train() method called.")
+        print("For Forward-Forward training, use train_ff(positive_data, negative_data) method.")
+        return {}
+    
+    def test(self):
+        """
+        Test the network.
+        This is a placeholder - actual testing should use predict() method with data.
+        """
+        print("Test method called. Use predict(test_data) for actual testing.")
+        return {}
+    
+    def plots(self, batch, step_out):
+        """
+        Create plots and logs for a step.
+        
+        Args:
+            batch: Input batch
+            step_out: Step output
+        """
+        # Placeholder implementation
+        pass
+
+    def compute_goodness(self, sample: torch.Tensor) -> dict:
+        """
+        Computes the overall goodness score across the entire network for a given sample,
+        using an AbstractSubFeature (e.g., GoodnessScore).
+
+        Args:
+            sample: Input tensor for a single sample (shape should match input layer).
+
+        Returns:
+            goodness_per_layer: Dictionary of goodness scores per layer, including "total_goodness".
+        """
+        if not hasattr(self, "goodness_score") or self.goodness_score is None:
+            raise RuntimeError("Pipeline must have a 'goodness_score' AbstractSubFeature instance attached as self.goodness_score.")
+
+        # Use the GoodnessScore subfeature to compute goodness
+        return self.goodness_score.compute(sample)
+
+    def generate_positive_negative_data(self, train_dataset, num_classes):
+        """
+        Generate positive and hard negative samples for Forward-Forward training.
+        """
+        from bindsnet.datasets.contrastive_transforms import prepend_label_to_image
+
+        positive_data = []
+        negative_data = []
+        for data, target in train_dataset:
+            pos_sample = prepend_label_to_image(data, target, num_classes)
+            positive_data.append(pos_sample)
+
+            candidate_samples = []
+            candidate_goodness = []
+            for neg_label in range(num_classes):
+                if neg_label == target:
+                    continue
+                neg_sample = prepend_label_to_image(data, neg_label, num_classes)
+                candidate_samples.append(neg_sample)
+                goodness = self.goodness_score.compute(sample=neg_sample.unsqueeze(0))["total_goodness"]
+                candidate_goodness.append(goodness)
+            
+            best_idx = int(torch.tensor(candidate_goodness).argmax())
+            negative_data.append(candidate_samples[best_idx])
+        return positive_data, negative_data
+
+
+# Example usage and helper functions
+def create_ff_pipeline_with_features(
+    network: Network,
+    feature_configs: Dict[str, Dict],
+    **pipeline_kwargs
+) -> BindsNETForwardForwardPipeline:
+    """
+    Helper function to create a Forward-Forward pipeline with specified features.
+    
+    Args:
+        network: BindsNET network
+        feature_configs: Dictionary mapping connection names to feature configurations
+        **pipeline_kwargs: Additional pipeline arguments
+        
+    Returns:
+        Configured Forward-Forward pipeline
+    """
+    from ..network.topology_features import (
+        ArctangentSurrogateFeature,
+    )
+    
+    # Feature factory
+    feature_classes = {
+        'arctangent': ArctangentSurrogateFeature,
+    }
+    
+    features = {}
+    for conn_name, config in feature_configs.items():
+        feature_type = config.pop('type', 'arctangent')
+        feature_class = feature_classes[feature_type]
+        features[conn_name] = feature_class(**config)
+        
+    return BindsNETForwardForwardPipeline(
+        network=network,
+        features=features,
+        **pipeline_kwargs
+    )
