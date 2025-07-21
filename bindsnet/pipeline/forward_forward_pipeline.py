@@ -60,85 +60,6 @@ class BindsNETForwardForwardPipeline(BasePipeline):
                 # Initialize feature value
                 if hasattr(feature, 'initialize_value'):
                     feature.initialize_value()
-                
-    def step(
-        self,
-        inputs: Dict[str, torch.Tensor],
-        labels: Optional[torch.Tensor] = None,
-        is_positive: bool = True,
-        **kwargs
-    ) -> Dict[str, torch.Tensor]:
-        """
-        Perform one step of Forward-Forward learning.
-        
-        Args:
-            inputs: Dictionary of input tensors
-            labels: Optional labels for supervised learning
-            is_positive: Whether this is a positive or negative example
-            
-        Returns:
-            Dictionary containing network outputs and goodness values
-        """
-        # Reset network state
-        self.network.reset_state_variables()
-        
-        # Reset feature states
-        for feature in self.features.values():
-            feature.reset_state_variables()
-            
-        # Run simulation
-        outputs = {}
-        goodness_per_layer = {}
-        
-        for t in range(self.time):
-            # Forward pass through network
-            self.network.run(inputs, time=1)
-            
-            # Compute features and goodness for each connection
-            for conn_name, feature in self.features.items():
-                if hasattr(self.network, conn_name):
-                    connection = getattr(self.network, conn_name)
-                    
-                    # Get connection spikes
-                    source_spikes = connection.source.s.float()
-                    target_spikes = connection.target.s.float()
-                    
-                    # Create conn_spikes tensor for feature computation
-                    batch_size = source_spikes.shape[0] if source_spikes.dim() > 1 else 1
-                    conn_spikes = torch.outer(
-                        source_spikes.flatten(), 
-                        target_spikes.flatten()
-                    ).reshape(batch_size, -1)
-                    
-                    # Compute feature
-                    feature_output = feature.compute(conn_spikes)
-                    
-                    # Compute goodness (sum of squares of feature activations)
-                    goodness = torch.sum(feature_output ** 2, dim=-1)
-                    
-                    # Store goodness values
-                    if conn_name not in goodness_per_layer:
-                        goodness_per_layer[conn_name] = []
-                    goodness_per_layer[conn_name].append(goodness)
-                    
-                    # Update connection weights based on Forward-Forward rule
-                    self._update_weights(connection, feature_output, goodness, is_positive)
-                    
-        # Average goodness values over time
-        for conn_name in goodness_per_layer:
-            goodness_per_layer[conn_name] = torch.stack(goodness_per_layer[conn_name]).mean(0)
-            
-        self.goodness_values = goodness_per_layer
-        
-        # Get final network outputs
-        for pop_name, population in self.network.layers.items():
-            outputs[pop_name] = population.s.clone()
-            
-        return {
-            'outputs': outputs,
-            'goodness': goodness_per_layer,
-            'total_goodness': sum(goodness_per_layer.values())
-        }
         
     def _update_weights(
         self,
@@ -149,86 +70,42 @@ class BindsNETForwardForwardPipeline(BasePipeline):
     ):
         """
         Update connection weights using Forward-Forward learning rule.
-        
-        Args:
-            connection: Network connection to update
-            feature_output: Output from feature computation
-            goodness: Computed goodness values
-            is_positive: Whether this is a positive example
+        Delegates to the ForwardForwardUpdate subfeature if available, otherwise uses feature's update_weights.
+        Uses self.alpha_ff_loss if provided, otherwise falls back to feature's alpha.
         """
         if not hasattr(connection, 'w'):
             return
-            
+
         # Determine target goodness based on example type
         if is_positive:
             target_goodness = self.positive_threshold
         else:
             target_goodness = self.negative_threshold
-            
+
         # Compute goodness error
         goodness_error = goodness - target_goodness
-        
-        # Update weights to minimize goodness error
-        # This is a simplified version - in practice, you'd use more sophisticated updates
-        if hasattr(connection, 'update'):
-            # Use connection's built-in update mechanism if available
-            connection.update()
-        else:
-            # Manual weight update
-            with torch.no_grad():
-                weight_update = self.learning_rate * goodness_error.unsqueeze(-1) * feature_output
-                connection.w += weight_update.mean(0)  # Average over batch
-                
-    def train_ff(
-        self,
-        positive_data: torch.Tensor,
-        negative_data: torch.Tensor,
-        n_epochs: int = 1,
-        **kwargs
-    ) -> Dict[str, float]:
-        """
-        Train the network using Forward-Forward learning.
-        
-        Args:
-            positive_data: Positive training examples
-            negative_data: Negative training examples
-            n_epochs: Number of training epochs
-            
-        Returns:
-            Dictionary of training metrics
-        """
-        metrics = {
-            'positive_goodness': [],
-            'negative_goodness': [],
-            'goodness_separation': []
-        }
-        
-        for epoch in range(n_epochs):
-            epoch_pos_goodness = 0
-            epoch_neg_goodness = 0
-            
-            # Train on positive examples
-            for batch in positive_data:
-                inputs = {'X': batch}
-                result = self.step(inputs, is_positive=True)
-                epoch_pos_goodness += result['total_goodness'].item()
-                
-            # Train on negative examples
-            for batch in negative_data:
-                inputs = {'X': batch}
-                result = self.step(inputs, is_positive=False)
-                epoch_neg_goodness += result['total_goodness'].item()
-                
-            # Calculate average goodness
-            avg_pos_goodness = epoch_pos_goodness / len(positive_data)
-            avg_neg_goodness = epoch_neg_goodness / len(negative_data)
-            goodness_separation = avg_pos_goodness - avg_neg_goodness
-            
-            metrics['positive_goodness'].append(avg_pos_goodness)
-            metrics['negative_goodness'].append(avg_neg_goodness)
-            metrics['goodness_separation'].append(goodness_separation)
-            
-        return metrics
+
+        # Find the feature for this connection
+        feature = None
+        for conn_name, f in self.features.items():
+            if hasattr(self.network, conn_name) and getattr(self.network, conn_name) is connection:
+                feature = f
+                break
+
+        # Try to delegate to ForwardForwardUpdate subfeature if available
+        ff_update = getattr(feature, 'ff_update', None)
+        # Use alpha_ff_loss if set, otherwise fall back to feature's alpha or default
+        alpha = self.alpha_ff_loss if self.alpha_ff_loss is not None else getattr(feature, 'alpha', 2.0)
+        if ff_update is not None and hasattr(ff_update, 'update_weights'):
+            ff_update.update_weights(
+                connection,
+                feature_output,
+                goodness,
+                goodness_error,
+                is_positive,
+                learning_rate=self.learning_rate,
+                alpha=alpha
+            )
     
     def predict_label_scoring(
         self,
@@ -288,28 +165,6 @@ class BindsNETForwardForwardPipeline(BasePipeline):
         
         # Track goodness values for each layer
         self.goodness_values = {}
-
-    def step_(self, batch):
-        """
-        Run a single step of the pipeline.
-        
-        Args:
-            batch: Input batch data
-            
-        Returns:
-            Step output
-        """
-        # Extract inputs from batch
-        if isinstance(batch, dict):
-            inputs = batch
-        else:
-            # Assume batch is a tensor for input layer
-            inputs = {'X': batch}
-            
-        # Run forward pass
-        result = self.step(inputs, is_positive=True)
-        return result
-    
     def train(self):
         """
         Train the network using Forward-Forward learning.
@@ -381,6 +236,215 @@ class BindsNETForwardForwardPipeline(BasePipeline):
             best_idx = int(torch.tensor(candidate_goodness).argmax())
             negative_data.append(candidate_samples[best_idx])
         return positive_data, negative_data
+
+    def step_(self, batch, **kwargs):
+        """
+        Run a single step of the pipeline: forward pass, feature/goodness computation, and weight update.
+        At every time step t, normalization is performed for every layer (if the feature has a BatchNormalization subfeature).
+        Args:
+            batch: Input batch data
+            **kwargs: Additional arguments (e.g., is_positive)
+        Returns:
+            dict with outputs, goodness, and total_goodness
+        """
+        is_positive = kwargs.get('is_positive', True)
+        # Prepare inputs - encode as spikes using bernoulli
+        if isinstance(batch, dict):
+            if 'input' in batch:
+                input_data = batch['input']
+                encoded_batch = {'input': input_data}
+            else:
+                encoded_batch = batch
+        else:
+            # Convert batch to spikes using bernoulli encoding
+            from bindsnet.encoding.encodings import bernoulli
+            if batch.dim() == 1:
+                batch = batch.unsqueeze(0)
+            encoded_batch = {'input': batch}
+
+        # Reset state variables for network and features
+        self.network.reset_state_variables()
+        for feature in self.features.values():
+            feature.reset_state_variables()
+
+        # Run the network for self.time steps and extract features
+        outputs = {pop_name: [] for pop_name in self.network.layers}
+        layer_activities = {layer_name: [] for layer_name in self.network.layers}
+        
+        for t in range(self.time):
+            # For each timestep, generate spikes from the batch using bernoulli sampling
+            if 'input' in encoded_batch:
+                # Generate spikes for this timestep
+                input_data = encoded_batch['input']
+                
+                # Ensure input data is in [0, 1] range for bernoulli sampling
+                input_probs = torch.clamp(input_data, 0.0, 1.0)
+                spike_input = torch.bernoulli(input_probs)
+                timestep_inputs = {'input': spike_input}
+            else:
+                timestep_inputs = encoded_batch
+            
+            self.network.run(timestep_inputs, time=1)
+            
+            # Collect layer activities for feature extraction
+            for layer_name, layer in self.network.layers.items():
+                layer_activities[layer_name].append(layer.s.clone())
+            
+            # Collect outputs for each layer
+            for pop_name, population in self.network.layers.items():
+                outputs[pop_name].append(population.s.clone())
+
+        # After simulation, extract features and apply batch normalization
+        # Also compute goodness from normalized features
+        total_goodness = torch.tensor(0.0, requires_grad=True)
+        goodness_dict = {}
+        
+        for conn_key, feature in self.features.items():
+            # Get connection to determine source and target layers
+            connection = None
+            for name, conn in self.network.connections.items():
+                if str(name) == str(conn_key):
+                    connection = conn
+                    break
+            
+            if connection is not None:
+                # Get target layer activity (sum over time)
+                target_layer_name = None
+                for layer_name, layer in self.network.layers.items():
+                    if layer is connection.target:
+                        target_layer_name = layer_name
+                        break
+                
+                if target_layer_name is not None:
+                    # Sum target layer activity over time to get feature representation
+                    target_activity = torch.stack(layer_activities[target_layer_name], dim=0)  # [time, batch, neurons]
+                    target_activity_sum = target_activity.sum(dim=0).float()  # [batch, neurons] - convert to float
+                    
+                    # Ensure proper batch dimension
+                    if target_activity_sum.dim() == 1:
+                        target_activity_sum = target_activity_sum.unsqueeze(0)
+                    
+                    # Set feature value for batch normalization (with gradients)
+                    feature.value = target_activity_sum.requires_grad_(True)
+                    
+                    # Apply batch normalization if present
+                    batch_norm = getattr(feature, 'batch_norm', None)
+                    if batch_norm is not None:
+                        normalized_activity = batch_norm.batch_normalize()
+                        # Update feature value with normalized activity
+                        feature.value = normalized_activity
+                    
+                    # Compute goodness from the (possibly normalized) feature values
+                    feature_goodness = (feature.value ** 2).sum()
+                    goodness_dict[f"layer_{target_layer_name}"] = feature_goodness
+                    total_goodness = total_goodness + feature_goodness
+
+        # Add total goodness
+        goodness_dict["total_goodness"] = total_goodness
+
+        # Stack outputs for each layer
+        outputs_stacked = {pop_name: torch.stack(s_list, dim=0) for pop_name, s_list in outputs.items()}
+        return {
+            'outputs': outputs_stacked,
+            'goodness': {k: v for k, v in goodness_dict.items() if k != 'total_goodness'},
+            'total_goodness': goodness_dict['total_goodness']
+        }
+
+    def get_learnable_parameters(self):
+        """
+        Get all learnable parameters from features (e.g., BatchNorm1d parameters).
+        
+        Returns:
+            List of torch.nn.Parameter objects that can be optimized
+        """
+        params = []
+        for feature in self.features.values():
+            if hasattr(feature, 'batch_norm') and hasattr(feature.batch_norm, 'bn'):
+                bn_params = list(feature.batch_norm.bn.parameters())
+                params.extend(bn_params)
+        return params
+
+    def train_ff(
+        self,
+        positive_data: torch.Tensor,
+        negative_data: torch.Tensor,
+        n_epochs: int = 1,
+        batch_size: int = 64,
+        optimizer: torch.optim.Optimizer = None,
+        **kwargs
+    ) -> Dict[str, float]:
+        """
+        Train the network using Forward-Forward learning and update learnable parameters (e.g., gamma, beta).
+        If optimizer is not provided, creates Adam optimizer for learnable parameters.
+        Uses MSE loss between total_goodness and target threshold as a simple example.
+        """
+        if optimizer is None:
+            params = self.get_learnable_parameters()
+            if params:
+                optimizer = torch.optim.Adam(params, lr=self.learning_rate)
+            else:
+                optimizer = None
+        loss_fn = torch.nn.MSELoss()
+        metrics = {
+            'positive_goodness': [],
+            'negative_goodness': [],
+            'goodness_separation': []
+        }
+        for epoch in range(n_epochs):
+            epoch_pos_goodness = 0
+            epoch_neg_goodness = 0
+            # Train on positive examples in batches
+            for i in range(0, len(positive_data), batch_size):
+                batch_list = positive_data[i:i+batch_size]
+                if len(batch_list) < 2:
+                    continue  # Skip batches too small for BatchNorm1d
+
+                batch = torch.stack(batch_list)
+                if optimizer:
+                    optimizer.zero_grad()
+                inputs = {'input': batch}
+                result = self.step(inputs, is_positive=True)
+                # result['total_goodness'] should be a tensor of batch_size or scalar; ensure it's meaned if needed
+                if isinstance(result['total_goodness'], torch.Tensor) and result['total_goodness'].numel() > 1:
+                    batch_goodness = result['total_goodness'].mean()
+                else:
+                    batch_goodness = result['total_goodness']
+                epoch_pos_goodness += batch_goodness.item() * batch.size(0)
+                if optimizer:
+                    target = torch.full_like(result['total_goodness'], self.positive_threshold, dtype=torch.float32)
+                    output = result['total_goodness']
+                    loss = loss_fn(output, target)
+                    loss.backward()
+                    optimizer.step()
+            # Train on negative examples in batches
+            for i in range(0, len(negative_data), batch_size):
+                batch_list = negative_data[i:i+batch_size]
+                if len(batch_list) < 2:
+                    continue  # Skip batches too small for BatchNorm1d
+                batch = torch.stack(batch_list)
+                if optimizer:
+                    optimizer.zero_grad()
+                inputs = {'input': batch}
+                result = self.step(inputs, is_positive=False)
+                if isinstance(result['total_goodness'], torch.Tensor) and result['total_goodness'].numel() > 1:
+                    batch_goodness = result['total_goodness'].mean()
+                else:
+                    batch_goodness = result['total_goodness']
+                epoch_neg_goodness += batch_goodness.item() * batch.size(0)
+                if optimizer:
+                    target = torch.full_like(result['total_goodness'], self.negative_threshold, dtype=torch.float32)
+                    output = result['total_goodness']
+                    loss = loss_fn(output, target)
+                    loss.backward()
+                    optimizer.step()
+            # Calculate average goodness
+            avg_pos_goodness = epoch_pos_goodness / len(positive_data)
+            avg_neg_goodness = epoch_neg_goodness / len(negative_data)
+            goodness_separation = avg_pos_goodness - avg_neg_goodness
+            metrics['positive_goodness'].append(avg_pos_goodness)
+            metrics['negative_goodness'].append(avg_neg_goodness)
+            metrics['goodness_separation'].append(goodness_separation)
+        return metrics
 
 
 # Example usage and helper functions

@@ -14,6 +14,41 @@ import torch.nn as nn
 import bindsnet.learning
 
 class AbstractFeature(ABC):
+    def update_weights(
+        self,
+        connection,
+        feature_output: torch.Tensor,
+        goodness: torch.Tensor,
+        goodness_error: torch.Tensor,
+        is_positive: bool,
+        learning_rate: float = 0.03,
+        alpha: float = 2.0,
+        **kwargs
+    ):
+        """
+        General Forward-Forward weight update using the loss:
+        Loss = -alpha * delta / (1 + exp(alpha * delta))
+        The update is proportional to the gradient of this loss w.r.t. delta.
+        Args:
+            connection: The connection whose weights to update
+            feature_output: Output from feature computation
+            goodness: Computed goodness values
+            goodness_error: Goodness error (goodness - target_goodness)
+            is_positive: Whether this is a positive example
+            learning_rate: Learning rate for update
+            alpha: Steepness parameter for loss (default 2.0)
+            **kwargs: Additional arguments
+        """
+        if not hasattr(connection, 'w'):
+            return
+        with torch.no_grad():
+            delta = goodness_error
+            exp_term = torch.exp(alpha * delta)
+            denom = (1 + exp_term)
+            numer = -alpha * delta
+            grad = numer / denom
+            weight_update = learning_rate * grad.unsqueeze(-1) * feature_output
+            connection.w += weight_update.mean(0)  # Average over batch
     # language=rst
     """
     Features to operate on signals traversing a connection.
@@ -945,6 +980,7 @@ class Updating(AbstractSubFeature):
 
 #FF Related
 class ArctangentSurrogateFeature(AbstractFeature):
+    # Inherit update_weights from AbstractFeature for general FF update
     """
     Arctangent surrogate gradient feature for spiking neural networks.
     
@@ -1002,53 +1038,58 @@ class ArctangentSurrogateFeature(AbstractFeature):
         
     def compute(self, conn_spikes) -> torch.Tensor:
         """
-        Compute forward pass with arctangent surrogate gradients.
-        
+        Compute forward pass with arctangent surrogate gradients and optional batch normalization.
         Args:
             conn_spikes: Connection spikes tensor [batch_size, source_neurons * target_neurons]
-            
         Returns:
             Target spikes with differentiable surrogate gradients [batch_size, source_neurons * target_neurons]
         """
         # Ensure connection is available
         if self.connection is None:
             raise RuntimeError("ArctangentSurrogateFeature not properly initialized. Call prime_feature first.")
-            
+
         # Reshape conn_spikes to [batch_size, source_neurons, target_neurons]
         batch_size = conn_spikes.size(0)
         source_n = self.connection.source.n
         target_n = self.connection.target.n
-        
+
         # Reshape connection spikes to matrix form
         conn_spikes_matrix = conn_spikes.view(batch_size, source_n, target_n)
-        
-        # Step 1: Compute synaptic input (sum over source neurons)
+
+        # Compute synaptic input (sum over source neurons)
         synaptic_input = conn_spikes_matrix.sum(dim=1)  # [batch_size, target_neurons]
-        
+
+        # Set the feature value for batch normalization
+        self.value = synaptic_input
+
+        # Optionally apply batch normalization if present
+        if hasattr(self, 'batch_norm') and self.batch_norm is not None:
+            synaptic_input = self.batch_norm.batch_normalize()
+
         # Step 2: Initialize membrane potential if needed
         if not self.initialized:
             self._initialize_state(synaptic_input)
-        
+
         # Step 3: Integrate membrane potential
         self.v_membrane = self.v_membrane + synaptic_input * self.dt
-        
+
         # Step 4: Generate spikes with arctangent surrogate gradients
         spikes = self.arctangent_surrogate_spike(
             self.v_membrane, 
             self.spike_threshold, 
             self.alpha
         )
-        
+
         # Step 5: Apply reset mechanism
         self._apply_reset(spikes)
-        
+
         # Step 6: Broadcast spikes back to connection format
         # Each target spike affects all connections to that target
         spikes_broadcast = spikes.unsqueeze(1).expand(batch_size, source_n, target_n)
-        
+
         # Apply spikes to incoming connections
         output_spikes = conn_spikes_matrix * spikes_broadcast
-        
+
         # Reshape back to original format
         return output_spikes.view(batch_size, source_n * target_n)
     
@@ -1252,7 +1293,14 @@ class GoodnessScore(AbstractSubFeature):
         self.network = network  # <-- Store the network
 
     def compute(self, sample: torch.Tensor) -> dict:
-        # Use self.network if provided, else fall back to parent_feature's connection
+        # For Forward-Forward learning, use the normalized feature values instead of raw spikes
+        # This allows gradients to flow through the batch normalization
+        
+        # Get the pipeline that contains the features
+        # We'll compute goodness from the feature values that have been normalized
+        goodness_per_layer = {}
+        
+        # Use parent feature's network if available
         if self.network is not None:
             network = self.network
         else:
@@ -1262,27 +1310,86 @@ class GoodnessScore(AbstractSubFeature):
                 raise RuntimeError("Connection must have a valid network attribute.")
             network = self.parent.connection.network
 
-        network.reset_state_variables()
-        inputs = {self.input_layer: sample.unsqueeze(0) if sample.dim() == 1 else sample}
-        spike_record = {layer_name: [] for layer_name in network.layers}
-
-        for t in range(self.time):
-            network.run(inputs, time=1)
+        # For Forward-Forward, we compute goodness from the sum of squared normalized activities
+        # We assume the pipeline has already computed feature values during the forward pass
+        total_goodness = torch.tensor(0.0, requires_grad=True)
+        
+        # If we have a parent feature with a value, use that for goodness computation
+        if hasattr(self.parent, 'value') and self.parent.value is not None:
+            # Compute goodness as sum of squared activities (common in Forward-Forward)
+            feature_goodness = (self.parent.value ** 2).sum()
+            goodness_per_layer[self.parent.name] = feature_goodness
+            total_goodness = total_goodness + feature_goodness
+        else:
+            # Fallback: run network and compute goodness from layer activities
+            network.reset_state_variables()
+            inputs = {self.input_layer: sample.unsqueeze(0) if sample.dim() == 1 else sample}
+            
+            for t in range(self.time):
+                network.run(inputs, time=1)
+            
             for layer_name, layer in network.layers.items():
-                spike_record[layer_name].append(layer.s.clone().detach())
+                if layer_name != self.input_layer:  # Skip input layer
+                    # Convert spikes to float and compute goodness
+                    layer_activity = layer.s.float()
+                    if layer_activity.requires_grad:
+                        goodness = (layer_activity ** 2).sum()
+                    else:
+                        goodness = (layer_activity ** 2).sum().requires_grad_(True)
+                    goodness_per_layer[layer_name] = goodness
+                    total_goodness = total_goodness + goodness
 
-        goodness_per_layer = {}
-        for layer_name, spikes_list in spike_record.items():
-            spikes = torch.stack(spikes_list, dim=0)
-            goodness = spikes.sum(dim=0).sum(dim=0)
-            goodness_per_layer[layer_name] = goodness
-
-        total_goodness = sum([v.sum() for v in goodness_per_layer.values()])
         goodness_per_layer["total_goodness"] = total_goodness
-
         return goodness_per_layer
     
-    
+class ForwardForwardUpdate(AbstractSubFeature):
+    """
+    SubFeature for Forward-Forward weight update using the loss:
+    Loss = -alpha * delta / (1 + exp(alpha * delta))
+    The update is proportional to the gradient of this loss w.r.t. delta.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        parent_feature: AbstractFeature,
+    ) -> None:
+        super().__init__(name, parent_feature)
+        # Optionally, you could set self.sub_feature = self.update_weights
+
+    def update_weights(
+        self,
+        connection,
+        feature_output: torch.Tensor,
+        goodness: torch.Tensor,
+        goodness_error: torch.Tensor,
+        is_positive: bool,
+        learning_rate: float = 0.03,
+        alpha: float = 2.0,
+        **kwargs
+    ):
+        """
+        Perform the Forward-Forward weight update.
+        Args:
+            connection: The connection whose weights to update
+            feature_output: Output from feature computation
+            goodness: Computed goodness values
+            goodness_error: Goodness error (goodness - target_goodness)
+            is_positive: Whether this is a positive example
+            learning_rate: Learning rate for update
+            alpha: Steepness parameter for loss (default 2.0)
+            **kwargs: Additional arguments
+        """
+        if not hasattr(connection, 'w'):
+            return
+        with torch.no_grad():
+            delta = goodness_error
+            exp_term = torch.exp(alpha * delta)
+            denom = (1 + exp_term)
+            numer = -alpha * delta
+            grad = numer / denom
+            weight_update = learning_rate * grad.unsqueeze(-1) * feature_output
+            connection.w += weight_update.mean(0)  # Average over batch
 # Helper function for easy creation
 def create_arctangent_surrogate_connection(
     source,
@@ -1339,3 +1446,78 @@ def create_arctangent_surrogate_connection(
     return connection
 
 
+class BatchNormalization(AbstractSubFeature):
+    """
+    SubFeature to perform batch normalization on the parent feature's value using PyTorch's nn.BatchNorm1d.
+    Normalizes across the batch (first) dimension and includes learnable gamma (weight) and beta (bias).
+    """
+    def __init__(
+        self,
+        name: str,
+        parent_feature: AbstractFeature,
+        eps: float = 1e-5,
+        affine: bool = True,
+        momentum: float = 0.1,
+    ) -> None:
+        super().__init__(name, parent_feature)
+        self.eps = eps
+        self.affine = affine
+        self.momentum = momentum
+        self.bn = None  # Will be initialized after parent_feature is primed
+
+        # Try to infer feature size if possible
+        if hasattr(self.parent, 'value') and isinstance(self.parent.value, torch.Tensor):
+            num_features = self.parent.value.shape[-1]
+            self._init_bn(num_features)
+        else:
+            self._pending_init = True  # Will initialize in prime_feature
+
+        self.sub_feature = self.batch_normalize
+
+    def _init_bn(self, num_features):
+        self.bn = torch.nn.BatchNorm1d(
+            num_features=num_features,
+            eps=self.eps,
+            affine=self.affine,
+            momentum=self.momentum,
+        )
+        self._pending_init = False
+
+    def prime_feature(self, connection, device, **kwargs):
+        # If not already initialized, do so now
+        if getattr(self, '_pending_init', False):
+            if hasattr(self.parent, 'value') and isinstance(self.parent.value, torch.Tensor):
+                num_features = self.parent.value.shape[-1]
+                self._init_bn(num_features)
+        if self.bn is not None:
+            self.bn.to(device)
+        super().prime_feature(connection, device, **kwargs)
+
+    def batch_normalize(self):
+        value = self.parent.value
+        # value should be [batch_size, num_features]
+        if self.bn is None:
+            raise RuntimeError("BatchNorm not initialized. Call prime_feature first.")
+        # If value is 1D, unsqueeze to 2D for BatchNorm1d
+        if value.dim() == 1:
+            value = value.unsqueeze(0)
+        
+        # Handle single sample case for BatchNorm1d
+        if value.size(0) == 1 and self.bn.training:
+            # Switch to eval mode temporarily for single samples
+            was_training = self.bn.training
+            self.bn.eval()
+            result = self.bn(value)
+            if was_training:
+                self.bn.train()
+            return result
+        else:
+            return self.bn(value)
+
+    @property
+    def gamma(self):
+        return self.bn.weight if self.bn is not None and self.affine else None
+
+    @property
+    def beta(self):
+        return self.bn.bias if self.bn is not None and self.affine else None

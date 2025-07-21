@@ -16,9 +16,9 @@ if module_path not in sys.path:
 from bindsnet.network import Network
 from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.network.topology import Connection
-from bindsnet.network.topology_features import ArctangentSurrogateFeature, GoodnessScore
+from bindsnet.network.topology_features import ArctangentSurrogateFeature, GoodnessScore, BatchNormalization
 from bindsnet.pipeline.forward_forward_pipeline import BindsNETForwardForwardPipeline
-from bindsnet.encoding.encodings import repeat as repeat_encoder
+from bindsnet.encoding.encodings import bernoulli
 from bindsnet.datasets.contrastive_transforms import prepend_label_to_image
 
 
@@ -49,7 +49,7 @@ def create_bindsnet_ff_network(input_size: int, hidden_sizes: list, device: torc
         hidden_layer = LIFNodes(
             n=hidden_sizes[i], 
             decay=0.99,  # β = 0.99
-            thresh=spike_threshold,
+            thresh=0.5,  # Lower threshold
             reset=0.0,
             name=f"hidden_{i}"
         )
@@ -63,7 +63,7 @@ def create_bindsnet_ff_network(input_size: int, hidden_sizes: list, device: torc
         connection = Connection(
             source=source_layer,
             target=target_layer,
-            w=torch.randn(layer_sizes[i], layer_sizes[i + 1]) * 0.1,  # Small random weights
+            w=torch.randn(layer_sizes[i], layer_sizes[i + 1]) * 0.5,  # Larger random weights
             wmin=-torch.inf,
             wmax=torch.inf
         )
@@ -118,16 +118,11 @@ def main():
     num_epochs = 3               # Few epochs for quick test
     
     # Dataset limits for quick testing
-    max_train_samples = 10000      # Small dataset for testing
+    max_train_samples = 500      # Small dataset for testing
     max_test_samples = 512        # Small test set
     
     # Device setup
-    if torch.backends.mps.is_available():
-        device = torch.device("mps")
-    elif torch.cuda.is_available():
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
+    device = torch.device("cpu")  # Use CPU to avoid MPS issues during debugging
 
 
 
@@ -161,7 +156,8 @@ def main():
     print(f"Training samples: {len(train_dataset)}")
     print(f"Test samples: {len(test_dataset)}")
     print(f"Expected batches per epoch: {len(train_dataset) // batch_size}")
-    
+
+
     # Create BindsNET network with ForwardForwardConnections
     print("\nCreating BindsNET network with topology features...")
     network = create_bindsnet_ff_network(
@@ -171,37 +167,39 @@ def main():
         alpha=alpha_surrogate,
         spike_threshold=snn_threshold
     )
-    
-    print(f"Network layers: {list(network.layers.keys())}")
-    print(f"Network connections: {list(network.connections.keys())}")
-    
-    # Verify connections are regular Connection objects
-    for conn_name, connection in network.connections.items():
-        print(f"Connection '{conn_name}': {type(connection).__name__}")
-        if hasattr(connection, 'w'):
-            print(f"  Weight shape: {connection.w.shape}")
-    
-    # Create features dictionary for the pipeline
+
+    print(f"Actual network connection keys: {list(network.connections.keys())}")
+    # Explicitly create features dict for each connection
     features = {}
-    for i in range(len(hidden_sizes)):
-        if i == 0:
-            source_name = "input"
-        else:
-            source_name = f"hidden_{i-1}"
-        target_name = f"hidden_{i}"
-        
-        connection_key = f"{source_name}_to_{target_name}"
-        features[connection_key] = ArctangentSurrogateFeature(
+    for connection_key, connection in network.connections.items():
+        # Create a simple feature that just holds layer activations
+        feature = ArctangentSurrogateFeature(
             name=f"feature_{connection_key}",
             spike_threshold=snn_threshold,
             alpha=alpha_surrogate,
             dt=dt,
             reset_mechanism="subtract"
         )
-    
-    print(f"Created features: {list(features.keys())}")
-
-    # Create BindsNET Forward-Forward pipeline with topology features
+        feature.prime_feature(connection, device)
+        feature.initialize_value()
+        
+        # Add batch normalization - determine size from target layer
+        target_layer_size = connection.target.n
+        feature.batch_norm = BatchNormalization(
+            name=f"batch_norm_{connection_key}",
+            parent_feature=feature,
+            eps=1e-5,
+            affine=True
+        )
+        # Manually initialize BatchNorm with known size
+        feature.batch_norm._init_bn(target_layer_size)
+        feature.batch_norm.bn.to(device)
+        # Enable gradients for batch norm parameters
+        for param in feature.batch_norm.bn.parameters():
+            param.requires_grad_(True)
+        
+        features[str(connection_key)] = feature
+    print(f"Created features for: {list(features.keys())}")
     print("\nCreating BindsNET Forward-Forward pipeline with topology features...")
     pipeline = BindsNETForwardForwardPipeline(
         network=network,
@@ -210,26 +208,27 @@ def main():
         negative_threshold=-2.0,
         learning_rate=learning_rate,
         time=simulation_time,
-        dt=dt
+        dt=dt,
+        alpha_ff_loss=alpha_ff_loss
     )
-    
+
+    # Use the first feature as the parent_feature for GoodnessScore
+    first_feature = next(iter(features.values()))
+    pipeline.goodness_score = GoodnessScore(
+        name="goodness",
+        parent_feature=first_feature,
+        network=network,
+        time=simulation_time,
+        input_layer="input"
+    )
+    print("GoodnessScore attached to pipeline.")
+
     # Display pipeline information
-    print(f"Pipeline features: {list(pipeline.features.keys())}")
     print(f"Pipeline time: {pipeline.time}")
     print(f"Pipeline learning rate: {pipeline.learning_rate}")
 
     # Prepare positive and negative data for Forward-Forward training
     print("\nPreparing positive and negative data for Forward-Forward training...")
-    positive_data = []
-    negative_data = []
-    goodness_score = GoodnessScore(
-    name="goodness",
-    parent_feature=features["input_to_hidden_0"],  # Use the feature instance for the first connection
-    network=network,  # Pass your network directly
-    time=simulation_time,  #You need to provide this
-    input_layer="input"
-    )
-    pipeline.goodness_score = goodness_score  # Attach to pipeline
 
     # Generate positive and negative data using the pipeline method
     positive_data, negative_data = pipeline.generate_positive_negative_data(
@@ -241,11 +240,13 @@ def main():
     # Train using Forward-Forward algorithm
     print("\nStarting Forward-Forward training...")
 
-
+    # Let the pipeline handle the optimizer creation
     metrics = pipeline.train_ff(
         positive_data=positive_data,
         negative_data=negative_data,
-        n_epochs=num_epochs
+        n_epochs=num_epochs,
+        batch_size=batch_size,
+        optimizer=None  # Let pipeline create optimizer
     )
     print(f"Training metrics: {metrics}")
     print("Training complete.")
