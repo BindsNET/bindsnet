@@ -944,6 +944,13 @@ class AbstractSubFeature(ABC):
         # sub_feature should be defined in the non-abstract constructor
         self.sub_feature()
 
+    def prime_feature(self, connection, device, **kwargs):
+        """
+        Default prime_feature method for SubFeatures.
+        Can be overridden in subclasses that need custom priming.
+        """
+        pass
+
 
 class Normalization(AbstractSubFeature):
     # language=rst
@@ -1059,12 +1066,15 @@ class ArctangentSurrogateFeature(AbstractFeature):
         # Compute synaptic input (sum over source neurons)
         synaptic_input = conn_spikes_matrix.sum(dim=1)  # [batch_size, target_neurons]
 
-        # Set the feature value for batch normalization
-        self.value = synaptic_input
-
-        # Optionally apply batch normalization if present
+        # Optionally apply per-timestep batch normalization if present
         if hasattr(self, 'batch_norm') and self.batch_norm is not None:
-            synaptic_input = self.batch_norm.batch_normalize()
+            # Set the feature value for potential access by batch norm
+            self.value = synaptic_input
+            # Apply normalization directly to synaptic input
+            synaptic_input = self.batch_norm.batch_normalize(synaptic_input)
+        else:
+            # Set the feature value for consistency
+            self.value = synaptic_input
 
         # Step 2: Initialize membrane potential if needed
         if not self.initialized:
@@ -1149,6 +1159,10 @@ class ArctangentSurrogateFeature(AbstractFeature):
         self.target_size = None
         self.initialized = False
         
+        # Reset batch normalization if it exists
+        if hasattr(self, 'batch_norm') and self.batch_norm is not None:
+            self.batch_norm.reset_state_variables()
+        
     def prime_feature(self, connection, device, **kwargs) -> None:
         """
         Prime the feature for use in a connection.
@@ -1163,6 +1177,10 @@ class ArctangentSurrogateFeature(AbstractFeature):
         
         # Call parent prime_feature
         super().prime_feature(connection, device, **kwargs)
+        
+        # Prime batch normalization if it exists
+        if hasattr(self, 'batch_norm') and self.batch_norm is not None:
+            self.batch_norm.prime_feature(connection, device, **kwargs)
         
     def initialize_value(self):
         """
@@ -1201,6 +1219,36 @@ class ArctangentSurrogateFeature(AbstractFeature):
             'batch_size': self.batch_size,
             'target_size': self.target_size
         }
+    
+    def add_batch_normalization(
+        self,
+        eps: float = 1e-5,
+        affine: bool = True,
+        momentum: float = 0.1,
+        per_timestep: bool = True,
+    ):
+        """
+        Add per-timestep batch normalization to this feature.
+        
+        This enables the Forward-Forward style per-timestep input normalization
+        rather than post-hoc feature normalization.
+        
+        Args:
+            eps: Small constant for numerical stability
+            affine: Whether to use learnable scale and shift parameters
+            momentum: Momentum for running statistics update
+            per_timestep: Whether to use per-timestep normalization
+        """
+        self.batch_norm = BatchNormalization(
+            name=f"{self.name}_batch_norm",
+            parent_feature=self,
+            eps=eps,
+            affine=affine,
+            momentum=momentum,
+            per_timestep=per_timestep,
+            num_features=None,  # Will be inferred from connection
+        )
+        return self.batch_norm
     
     def __repr__(self) -> str:
         """String representation."""
@@ -1400,6 +1448,8 @@ def create_arctangent_surrogate_connection(
     alpha: float = 2.0,
     dt: float = 1.0,
     reset_mechanism: str = "subtract",
+    use_batch_norm: bool = False,
+    batch_norm_kwargs: Optional[dict] = None,
     **mcc_kwargs
 ):
     """
@@ -1414,6 +1464,8 @@ def create_arctangent_surrogate_connection(
         alpha: Surrogate gradient steepness
         dt: Integration time step
         reset_mechanism: Post-spike reset mechanism
+        use_batch_norm: Whether to add per-timestep batch normalization
+        batch_norm_kwargs: Additional arguments for batch normalization
         **mcc_kwargs: Additional MulticompartmentConnection arguments
         
     Returns:
@@ -1434,6 +1486,11 @@ def create_arctangent_surrogate_connection(
         reset_mechanism=reset_mechanism
     )
     
+    # Add batch normalization if requested
+    if use_batch_norm:
+        bn_kwargs = batch_norm_kwargs or {}
+        surrogate_feature.add_batch_normalization(**bn_kwargs)
+    
     # Create connection with feature
     connection = MulticompartmentConnection(
         source=source,
@@ -1448,76 +1505,391 @@ def create_arctangent_surrogate_connection(
 
 class BatchNormalization(AbstractSubFeature):
     """
-    SubFeature to perform batch normalization on the parent feature's value using PyTorch's nn.BatchNorm1d.
-    Normalizes across the batch (first) dimension and includes learnable gamma (weight) and beta (bias).
+    SubFeature to perform batch normalization with support for per-timestep normalization.
+    
+    This implementation supports two modes:
+    1. Post-hoc normalization (original behavior): Normalizes parent feature's value
+    2. Per-timestep normalization: Can be integrated into the forward pass for real-time normalization
+    
+    For Forward-Forward learning, this enables proper per-timestep input normalization
+    as described in the paper, rather than just post-hoc feature normalization.
     """
     def __init__(
         self,
         name: str,
-        parent_feature: AbstractFeature,
+        parent_feature: AbstractFeature = None,
         eps: float = 1e-5,
         affine: bool = True,
         momentum: float = 0.1,
+        per_timestep: bool = True,
+        num_features: int = None,
     ) -> None:
         super().__init__(name, parent_feature)
         self.eps = eps
         self.affine = affine
         self.momentum = momentum
-        self.bn = None  # Will be initialized after parent_feature is primed
+        self.per_timestep = per_timestep
+        self.bn = None
+        self._num_features = num_features
+        
+        # For per-timestep normalization, we maintain running statistics
+        self.running_mean = None
+        self.running_var = None
+        self.num_batches_tracked = None
 
         # Try to infer feature size if possible
-        if hasattr(self.parent, 'value') and isinstance(self.parent.value, torch.Tensor):
-            num_features = self.parent.value.shape[-1]
-            self._init_bn(num_features)
+        if parent_feature is not None and hasattr(parent_feature, 'value') and isinstance(parent_feature.value, torch.Tensor):
+            self._num_features = parent_feature.value.shape[-1]
+            
+        if self._num_features is not None:
+            self._init_bn(self._num_features)
         else:
             self._pending_init = True  # Will initialize in prime_feature
 
         self.sub_feature = self.batch_normalize
 
     def _init_bn(self, num_features):
+        """Initialize batch normalization components."""
         self.bn = torch.nn.BatchNorm1d(
             num_features=num_features,
             eps=self.eps,
             affine=self.affine,
             momentum=self.momentum,
         )
+        
+        # Initialize running statistics for per-timestep mode
+        if self.per_timestep:
+            self.running_mean = torch.zeros(num_features)
+            self.running_var = torch.ones(num_features) 
+            self.num_batches_tracked = torch.tensor(0, dtype=torch.long)
+            
         self._pending_init = False
+        self._num_features = num_features
 
     def prime_feature(self, connection, device, **kwargs):
+        """Prime the feature for use in a connection."""
         # If not already initialized, do so now
         if getattr(self, '_pending_init', False):
-            if hasattr(self.parent, 'value') and isinstance(self.parent.value, torch.Tensor):
-                num_features = self.parent.value.shape[-1]
-                self._init_bn(num_features)
+            if self.parent is not None and hasattr(self.parent, 'value') and isinstance(self.parent.value, torch.Tensor):
+                self._num_features = self.parent.value.shape[-1]
+            elif connection is not None:
+                # Try to infer from connection dimensions
+                self._num_features = connection.target.n
+            
+            if self._num_features is not None:
+                self._init_bn(self._num_features)
+                
         if self.bn is not None:
             self.bn.to(device)
+            if self.per_timestep and self.running_mean is not None:
+                self.running_mean = self.running_mean.to(device)
+                self.running_var = self.running_var.to(device)
+                self.num_batches_tracked = self.num_batches_tracked.to(device)
+                
         super().prime_feature(connection, device, **kwargs)
 
-    def batch_normalize(self):
-        value = self.parent.value
-        # value should be [batch_size, num_features]
+    def batch_normalize(self, input_tensor=None):
+        """
+        Perform batch normalization.
+        
+        Args:
+            input_tensor: Optional input tensor to normalize. If None, uses parent.value
+            
+        Returns:
+            Normalized tensor
+        """
+        # Determine input
+        if input_tensor is not None:
+            value = input_tensor
+        elif self.parent is not None:
+            value = self.parent.value
+        else:
+            raise RuntimeError("No input tensor provided and no parent feature available.")
+            
         if self.bn is None:
             raise RuntimeError("BatchNorm not initialized. Call prime_feature first.")
-        # If value is 1D, unsqueeze to 2D for BatchNorm1d
+            
+        # Ensure proper tensor format
+        original_shape = value.shape
         if value.dim() == 1:
             value = value.unsqueeze(0)
-        
-        # Handle single sample case for BatchNorm1d
-        if value.size(0) == 1 and self.bn.training:
-            # Switch to eval mode temporarily for single samples
-            was_training = self.bn.training
-            self.bn.eval()
-            result = self.bn(value)
-            if was_training:
-                self.bn.train()
-            return result
+        elif value.dim() > 2:
+            # Reshape to [batch_size, features] if needed
+            value = value.view(-1, value.size(-1))
+            
+        # Apply normalization
+        if self.per_timestep:
+            # Use custom per-timestep normalization with running statistics
+            # This is the key for Forward-Forward learning - normalize at each timestep
+            normalized = self._per_timestep_normalize(value)
         else:
-            return self.bn(value)
+            # Use standard PyTorch BatchNorm1d
+            if value.size(0) == 1 and self.bn.training:
+                # Handle single sample case
+                was_training = self.bn.training
+                self.bn.eval()
+                normalized = self.bn(value)
+                if was_training:
+                    self.bn.train()
+            else:
+                normalized = self.bn(value)
+                
+        # Restore original shape if needed
+        if len(original_shape) == 1:
+            normalized = normalized.squeeze(0)
+        elif len(original_shape) > 2:
+            normalized = normalized.view(original_shape)
+            
+        return normalized
+
+    def _per_timestep_normalize(self, x):
+        """
+        Custom per-timestep normalization using running statistics.
+        
+        This enables true per-timestep normalization as used in Forward-Forward learning,
+        where statistics are updated incrementally rather than computed over the full batch.
+        
+        For sparse spike data, we apply special handling to avoid destroying the signal.
+        """
+        if self.running_mean is None or self.running_var is None:
+            raise RuntimeError("Running statistics not initialized for per-timestep normalization.")
+            
+        # Check if input is very sparse (spike data) - if so, use lighter normalization
+        sparsity = (x == 0).float().mean()
+        
+        if sparsity > 0.9:  # Very sparse data (>90% zeros) - likely spike data
+            # For sparse spike data, use a modified approach:
+            # 1. Only normalize non-zero values
+            # 2. Use smaller momentum to preserve signal
+            
+            # Compute statistics only on non-zero values
+            non_zero_mask = x != 0
+            if non_zero_mask.any():
+                non_zero_values = x[non_zero_mask]
+                batch_mean = non_zero_values.mean()
+                batch_var = non_zero_values.var(unbiased=False)
+            else:
+                # All zeros, no normalization needed
+                return x
+                
+            # Use smaller momentum for spike data
+            sparse_momentum = self.momentum * 0.1 if self.momentum is not None else 0.01
+            
+            # Update running statistics with smaller momentum
+            if self.bn.training:
+                with torch.no_grad():
+                    self.num_batches_tracked += 1
+                    if self.momentum is None:
+                        exponential_average_factor = 1.0 / float(self.num_batches_tracked)
+                    else:
+                        exponential_average_factor = sparse_momentum
+                        
+                    self.running_mean = (1 - exponential_average_factor) * self.running_mean + exponential_average_factor * batch_mean
+                    self.running_var = (1 - exponential_average_factor) * self.running_var + exponential_average_factor * batch_var
+
+            # For normalization, use current batch statistics during training
+            if self.bn.training:
+                mean_for_norm = batch_mean
+                var_for_norm = batch_var
+            else:
+                mean_for_norm = self.running_mean
+                var_for_norm = self.running_var
+
+            # Apply normalization only to non-zero values
+            normalized = x.clone()
+            if non_zero_mask.any():
+                non_zero_normalized = (non_zero_values - mean_for_norm) / torch.sqrt(var_for_norm + self.eps)
+                
+                # Apply learnable parameters if enabled
+                if self.affine and self.bn is not None:
+                    # For sparse data, we need to handle the dimensions carefully
+                    # self.bn.weight and self.bn.bias have shape [num_features]
+                    # We need to select the appropriate elements for non-zero positions
+                    if x.dim() == 2:  # [batch, features]
+                        # Get feature indices for non-zero values
+                        _, feature_indices = torch.where(non_zero_mask)
+                        weight_selected = self.bn.weight[feature_indices]
+                        bias_selected = self.bn.bias[feature_indices]
+                        non_zero_normalized = non_zero_normalized * weight_selected + bias_selected
+                    else:  # x.dim() == 1, [features]
+                        weight_selected = self.bn.weight[non_zero_mask]
+                        bias_selected = self.bn.bias[non_zero_mask]
+                        non_zero_normalized = non_zero_normalized * weight_selected + bias_selected
+                
+                normalized[non_zero_mask] = non_zero_normalized
+            
+            return normalized
+        
+        else:
+            # Dense data - use standard normalization
+            # Compute batch statistics for current timestep
+            batch_mean = x.mean(dim=0, keepdim=False)
+            batch_var = x.var(dim=0, keepdim=False, unbiased=False)
+            
+            # During training, update running statistics
+            if self.bn.training:
+                with torch.no_grad():
+                    self.num_batches_tracked += 1
+                    if self.momentum is None:  # Use cumulative moving average
+                        exponential_average_factor = 1.0 / float(self.num_batches_tracked)
+                    else:
+                        exponential_average_factor = self.momentum
+                        
+                    self.running_mean = (1 - exponential_average_factor) * self.running_mean + exponential_average_factor * batch_mean
+                    self.running_var = (1 - exponential_average_factor) * self.running_var + exponential_average_factor * batch_var
+
+            # For normalization, use current batch statistics during training
+            # and running statistics during evaluation
+            if self.bn.training:
+                # Use current batch statistics for normalization during training
+                # This provides better gradient flow for Forward-Forward learning
+                mean_for_norm = batch_mean
+                var_for_norm = batch_var
+            else:
+                # Use running statistics during evaluation
+                mean_for_norm = self.running_mean
+                var_for_norm = self.running_var
+
+            # Normalize using selected statistics
+            normalized = (x - mean_for_norm) / torch.sqrt(var_for_norm + self.eps)
+            
+            # Apply learnable parameters if enabled
+            if self.affine and self.bn is not None:
+                normalized = normalized * self.bn.weight + self.bn.bias
+                
+            return normalized
+
+    def reset_state_variables(self):
+        """Reset running statistics for per-timestep normalization."""
+        if self.per_timestep and self.running_mean is not None:
+            self.running_mean.zero_()
+            self.running_var.fill_(1.0)
+            self.num_batches_tracked.zero_()
+
+    def compute(self, conn_spikes):
+        """
+        Enable BatchNormalization to work as a regular feature in the pipeline.
+        
+        This allows per-timestep normalization to be applied directly to connection spikes.
+        """
+        if not self.per_timestep:
+            # Standard post-hoc behavior
+            return conn_spikes
+            
+        # Apply per-timestep normalization to connection spikes
+        return self.batch_normalize(conn_spikes)
 
     @property
     def gamma(self):
+        """Get learnable scale parameter (weight)."""
         return self.bn.weight if self.bn is not None and self.affine else None
 
     @property
     def beta(self):
+        """Get learnable shift parameter (bias)."""
         return self.bn.bias if self.bn is not None and self.affine else None
+        
+    def get_running_stats(self):
+        """Get current running statistics."""
+        if self.per_timestep:
+            return {
+                'running_mean': self.running_mean,
+                'running_var': self.running_var,
+                'num_batches_tracked': self.num_batches_tracked
+            }
+        else:
+            return {
+                'running_mean': self.bn.running_mean,
+                'running_var': self.bn.running_var,
+                'num_batches_tracked': self.bn.num_batches_tracked
+            }
+            
+    def set_training_mode(self, training: bool):
+        """Set training mode for batch normalization."""
+        if self.bn is not None:
+            self.bn.training = training
+
+
+# Helper function for creating per-timestep batch normalization
+def create_per_timestep_batch_norm(
+    name: str = "per_timestep_batch_norm",
+    num_features: int = None,
+    eps: float = 1e-5,
+    affine: bool = True,
+    momentum: float = 0.1,
+) -> BatchNormalization:
+    """
+    Create a BatchNormalization feature configured for per-timestep normalization.
+    
+    This creates a BatchNormalization that can be used directly in a pipeline
+    to normalize inputs at each timestep, as described in the Forward-Forward paper.
+    
+    Args:
+        name: Name for the batch normalization feature
+        num_features: Number of features to normalize (will be inferred if None)
+        eps: Small constant for numerical stability
+        affine: Whether to use learnable scale and shift parameters
+        momentum: Momentum for running statistics update
+        
+    Returns:
+        BatchNormalization configured for per-timestep operation
+    """
+    return BatchNormalization(
+        name=name,
+        parent_feature=None,  # No parent - works as standalone feature
+        eps=eps,
+        affine=affine,
+        momentum=momentum,
+        per_timestep=True,
+        num_features=num_features,
+    )
+
+
+# Example usage for Forward-Forward learning with per-timestep batch normalization:
+"""
+Example: Creating a Forward-Forward connection with per-timestep batch normalization
+
+# Method 1: Using the helper function
+connection = create_arctangent_surrogate_connection(
+    source=input_layer,
+    target=hidden_layer,
+    use_batch_norm=True,
+    batch_norm_kwargs={
+        'eps': 1e-5,
+        'affine': True,
+        'momentum': 0.1,
+        'per_timestep': True
+    }
+)
+
+# Method 2: Adding batch norm to existing ArctangentSurrogateFeature
+surrogate_feature = ArctangentSurrogateFeature(
+    name="ff_surrogate",
+    spike_threshold=1.0,
+    alpha=2.0
+)
+surrogate_feature.add_batch_normalization(
+    per_timestep=True,
+    momentum=0.1
+)
+
+# Method 3: Manual pipeline creation with per-timestep batch norm
+batch_norm = create_per_timestep_batch_norm(
+    name="per_timestep_bn",
+    num_features=hidden_layer.n
+)
+
+pipeline = [batch_norm, surrogate_feature]
+connection = MulticompartmentConnection(
+    source=input_layer,
+    target=hidden_layer,
+    w=weights,
+    pipeline=pipeline
+)
+
+# The per-timestep normalization will:
+# 1. Normalize inputs at each timestep using running statistics
+# 2. Update running mean and variance incrementally
+# 3. Enable proper Forward-Forward learning dynamics
+# 4. Maintain gradient flow for backpropagation through surrogate gradients
+"""

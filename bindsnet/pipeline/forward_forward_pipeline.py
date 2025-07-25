@@ -45,6 +45,12 @@ class BindsNETForwardForwardPipeline(BasePipeline):
         self.learning_rate = learning_rate
         self.time = time
         self.dt = dt
+        
+        # Initialize adaptive threshold tracking
+        self._recent_positive_goodness = {}
+        self._recent_negative_goodness = {}
+        self.min_separation = 5.0  # Minimum required separation between pos/neg
+        
         super().__init__(network, **kwargs)
         
     def _initialize_features(self):
@@ -76,11 +82,25 @@ class BindsNETForwardForwardPipeline(BasePipeline):
         if not hasattr(connection, 'w'):
             return
 
-        # Determine target goodness based on example type
+        # Determine target goodness based on example type with adaptive thresholds
+        layer_name = getattr(connection.target, 'name', 'unknown')
+        
         if is_positive:
-            target_goodness = self.positive_threshold
+            # For positive samples, ensure target maintains separation above negative
+            if layer_name in self._recent_negative_goodness:
+                recent_neg = self._recent_negative_goodness[layer_name]
+                adaptive_threshold = recent_neg + self.min_separation
+                target_goodness = max(adaptive_threshold, self.positive_threshold)
+            else:
+                target_goodness = self.positive_threshold
         else:
-            target_goodness = self.negative_threshold
+            # For negative samples, ensure target maintains separation below positive
+            if layer_name in self._recent_positive_goodness:
+                recent_pos = self._recent_positive_goodness[layer_name]
+                adaptive_threshold = recent_pos - self.min_separation
+                target_goodness = min(adaptive_threshold, self.negative_threshold)
+            else:
+                target_goodness = self.negative_threshold
 
         # Compute goodness error
         goodness_error = goodness - target_goodness
@@ -116,11 +136,10 @@ class BindsNETForwardForwardPipeline(BasePipeline):
         Predict labels for each sample in test_dataset using label scoring.
         For each sample, embed every possible label, run through the network,
         and select the label with the highest total goodness.
-
+        
         Args:
             test_dataset: Iterable of (data, target) pairs (targets not used for prediction)
             num_classes: Number of possible class labels
-            prepend_label_to_image: Function to embed label into input
 
         Returns:
             Tensor of predicted labels for each sample
@@ -128,15 +147,117 @@ class BindsNETForwardForwardPipeline(BasePipeline):
         from bindsnet.datasets.contrastive_transforms import prepend_label_to_image
 
         predictions = []
-        for data, _ in test_dataset:
+        print(f"\n🔍 DEBUG: Recent goodness tracking:")
+        print(f"   Positive: {self._recent_positive_goodness}")
+        print(f"   Negative: {self._recent_negative_goodness}")
+        
+        for i, (data, _) in enumerate(test_dataset):
             goodness_scores = []
+            
             for label in range(num_classes):
                 sample = prepend_label_to_image(data, label, num_classes)
-                goodness = self.compute_goodness(sample.unsqueeze(0))["total_goodness"]
-                goodness_scores.append(goodness.item())
+                
+                # Use the same step_ method as training for consistency
+                step_result = self.step_(sample.unsqueeze(0), is_positive=True)
+                total_goodness = step_result['total_goodness']
+                
+                if isinstance(total_goodness, torch.Tensor):
+                    goodness_scores.append(total_goodness.item())
+                else:
+                    goodness_scores.append(total_goodness)
+                
+                # DEBUG: Print scores for first sample
+                if i == 0:
+                    print(f"   Label {label}: goodness={goodness_scores[-1]:.3f}")
+            
+            # The label with highest goodness should be the prediction
+            # (network should give high goodness to positive/correct samples)
             predicted_label = int(torch.tensor(goodness_scores).argmax())
             predictions.append(predicted_label)
+            
+            # DEBUG: Print prediction for first few samples
+            if i < 3:
+                print(f"\nSample {i}: goodness_scores={[f'{g:.3f}' for g in goodness_scores]}, predicted={predicted_label}")
+                
         return torch.tensor(predictions)
+
+    def compute_goodness_per_layer(self, sample: torch.Tensor) -> dict:
+        """
+        Compute goodness for each layer separately to identify which layers have learned.
+        
+        Args:
+            sample: Input tensor for a single sample
+            
+        Returns:
+            Dictionary of goodness scores per layer
+        """
+        # Reset network state
+        self.network.reset_state_variables()
+        for feature in self.features.values():
+            feature.reset_state_variables()
+
+        # Prepare inputs
+        encoded_batch = {'input': sample}
+        layer_activities = {layer_name: [] for layer_name in self.network.layers}
+        
+        # Run network simulation
+        for t in range(self.time):
+            if 'input' in encoded_batch:
+                input_data = encoded_batch['input']
+                input_probs = torch.clamp(input_data, 0.0, 1.0)
+                spike_input = torch.bernoulli(input_probs)
+                timestep_inputs = {'input': spike_input}
+            else:
+                timestep_inputs = encoded_batch
+            
+            self.network.run(timestep_inputs, time=1)
+            
+            # Collect layer activities
+            for layer_name, layer in self.network.layers.items():
+                layer_activities[layer_name].append(layer.s.clone())
+
+        # Compute goodness for each layer
+        goodness_dict = {}
+        total_goodness = torch.tensor(0.0, requires_grad=True)
+        
+        for conn_key, feature in self.features.items():
+            # Find the target layer for this connection
+            target_layer_name = None
+            for name, conn in self.network.connections.items():
+                if str(name) == str(conn_key):
+                    for layer_name, layer in self.network.layers.items():
+                        if layer is conn.target:
+                            target_layer_name = layer_name
+                            break
+                    break
+            
+            if target_layer_name and target_layer_name in layer_activities:
+                # Sum activity over time
+                target_activity = torch.stack(layer_activities[target_layer_name], dim=0)
+                target_activity_sum = target_activity.sum(dim=0).float()
+                
+                if target_activity_sum.dim() == 1:
+                    target_activity_sum = target_activity_sum.unsqueeze(0)
+                
+                # Set feature value and apply batch normalization
+                feature.value = target_activity_sum.requires_grad_(True)
+                
+                batch_norm = getattr(feature, 'batch_norm', None)
+                if batch_norm is not None:
+                    try:
+                        normalized_activity = batch_norm.batch_normalize()
+                        feature.value = normalized_activity
+                    except:
+                        # Skip batch norm if it fails (e.g., single sample issues)
+                        pass
+                
+                # Compute goodness
+                layer_goodness = (feature.value ** 2).sum()
+                goodness_dict[f"layer_{target_layer_name}"] = layer_goodness
+                total_goodness = total_goodness + layer_goodness
+
+        goodness_dict["total_goodness"] = total_goodness
+        return goodness_dict
 
         
     def reset_state_variables(self):
@@ -214,27 +335,65 @@ class BindsNETForwardForwardPipeline(BasePipeline):
     def generate_positive_negative_data(self, train_dataset, num_classes):
         """
         Generate positive and hard negative samples for Forward-Forward training.
+        Uses hard labeling with square root transformation and probabilistic sampling
+        as described in the Forward-Forward paper.
         """
         from bindsnet.datasets.contrastive_transforms import prepend_label_to_image
 
         positive_data = []
         negative_data = []
-        for data, target in train_dataset:
+        
+        print("Generating hard negative samples with square root transformation...")
+        hard_label_distribution = [0] * num_classes  # Track distribution of hard labels
+        
+        for i, (data, target) in enumerate(train_dataset):
+            # Create positive sample with true label
             pos_sample = prepend_label_to_image(data, target, num_classes)
             positive_data.append(pos_sample)
 
+            # Compute goodness scores for all possible class labels
+            goodness_scores = []
             candidate_samples = []
-            candidate_goodness = []
-            for neg_label in range(num_classes):
-                if neg_label == target:
-                    continue
-                neg_sample = prepend_label_to_image(data, neg_label, num_classes)
-                candidate_samples.append(neg_sample)
-                goodness = self.goodness_score.compute(sample=neg_sample.unsqueeze(0))["total_goodness"]
-                candidate_goodness.append(goodness)
             
-            best_idx = int(torch.tensor(candidate_goodness).argmax())
-            negative_data.append(candidate_samples[best_idx])
+            for label in range(num_classes):
+                candidate_sample = prepend_label_to_image(data, label, num_classes)
+                candidate_samples.append(candidate_sample)
+                
+                # Compute goodness score for this label
+                goodness = self.goodness_score.compute(sample=candidate_sample.unsqueeze(0))["total_goodness"]
+                goodness_scores.append(goodness.item() if isinstance(goodness, torch.Tensor) else goodness)
+            
+            # Set goodness score for true class label to zero (exclude from hard labeling)
+            goodness_scores[target] = 0.0
+            
+            # Apply square root transformation to flatten the distribution
+            # This makes the distribution less peaked and more uniform
+            transformed_scores = [max(0.0, score) ** 0.5 for score in goodness_scores]
+            
+            # Convert to probability distribution (normalize)
+            total_score = sum(transformed_scores)
+            if total_score > 0:
+                probabilities = [score / total_score for score in transformed_scores]
+            else:
+                # Fallback: uniform distribution over non-true labels
+                probabilities = [1.0 / (num_classes - 1) if i != target else 0.0 for i in range(num_classes)]
+            
+            # Sample hard label using the transformed probability distribution
+            # This chooses labels that the network finds relatively difficult to distinguish
+            hard_label = torch.multinomial(torch.tensor(probabilities), 1).item()
+            hard_label_distribution[hard_label] += 1
+            
+            # Add the hard negative sample
+            negative_data.append(candidate_samples[hard_label])
+            
+        #     # Print progress for first few samples
+        #     if i < 5:
+        #         print(f"  Sample {i}: true={target}, hard_negative={hard_label}")
+        #         print(f"    Raw goodness: {[f'{g:.2f}' for g in goodness_scores]}")
+        #         print(f"    Transformed:  {[f'{t:.2f}' for t in transformed_scores]}")
+        #         print(f"    Probabilities: {[f'{p:.3f}' for p in probabilities]}")
+        
+        # print(f"Hard label distribution: {hard_label_distribution}")
         return positive_data, negative_data
 
     def step_(self, batch, **kwargs):
@@ -266,36 +425,90 @@ class BindsNETForwardForwardPipeline(BasePipeline):
         self.network.reset_state_variables()
         for feature in self.features.values():
             feature.reset_state_variables()
+            # Ensure batch normalization is in training mode during training
+            batch_norm = getattr(feature, 'batch_norm', None)
+            if batch_norm is not None:
+                batch_norm.set_training_mode(training=True)
 
         # Run the network for self.time steps and extract features
         outputs = {pop_name: [] for pop_name in self.network.layers}
         layer_activities = {layer_name: [] for layer_name in self.network.layers}
         
+        # Track normalized activities per timestep for proper Forward-Forward learning
+        normalized_activities = {layer_name: [] for layer_name in self.network.layers}
+        
         for t in range(self.time):
-            # For each timestep, generate spikes from the batch using bernoulli sampling
+            # For each timestep, generate spikes from the batch
             if 'input' in encoded_batch:
                 # Generate spikes for this timestep
                 input_data = encoded_batch['input']
                 
-                # Ensure input data is in [0, 1] range for bernoulli sampling
-                input_probs = torch.clamp(input_data, 0.0, 1.0)
-                spike_input = torch.bernoulli(input_probs)
+                # Use Poisson encoding for intensity-scaled data (MNIST with intensity scaling)
+                # Check if data is intensity-scaled (values > 1.0) or probability-scaled (values <= 1.0)
+                if input_data.max() > 1.0:
+                    # Intensity-scaled data: use Poisson encoding
+                    from bindsnet.encoding.encodings import poisson
+                    spike_input = poisson(input_data, time=1, dt=self.dt).squeeze(0)  # Remove time dimension
+                else:
+                    # Probability data: use Bernoulli encoding
+                    input_probs = torch.clamp(input_data, 0.0, 1.0)
+                    spike_input = torch.bernoulli(input_probs)
+                
                 timestep_inputs = {'input': spike_input}
             else:
                 timestep_inputs = encoded_batch
             
             self.network.run(timestep_inputs, time=1)
             
-            # Collect layer activities for feature extraction
+            # Apply per-timestep batch normalization and collect activities
+            for conn_key, feature in self.features.items():
+                # Get connection to determine target layer
+                connection = None
+                for name, conn in self.network.connections.items():
+                    if str(name) == str(conn_key):
+                        connection = conn
+                        break
+                
+                if connection is not None:
+                    # Get target layer name
+                    target_layer_name = None
+                    for layer_name, layer in self.network.layers.items():
+                        if layer is connection.target:
+                            target_layer_name = layer_name
+                            break
+                    
+                    if target_layer_name is not None:
+                        # Get current timestep activity
+                        current_activity = self.network.layers[target_layer_name].s.clone().float()
+                        
+                        # Ensure proper batch dimension
+                        if current_activity.dim() == 1:
+                            current_activity = current_activity.unsqueeze(0)
+                        
+                        # Apply per-timestep batch normalization if present
+                        batch_norm = getattr(feature, 'batch_norm', None)
+                        if batch_norm is not None:
+                            # Set the current activity as feature value for normalization
+                            feature.value = current_activity.requires_grad_(True)
+                            
+                            # Apply batch normalization at this timestep
+                            normalized_activity = batch_norm.batch_normalize()
+                            
+                            # Store normalized activity for this timestep
+                            normalized_activities[target_layer_name].append(normalized_activity)
+                        else:
+                            # No batch norm, just store the raw activity
+                            normalized_activities[target_layer_name].append(current_activity)
+            
+            # Collect layer activities for all layers (store original for outputs)
             for layer_name, layer in self.network.layers.items():
                 layer_activities[layer_name].append(layer.s.clone())
             
-            # Collect outputs for each layer
+            # Collect outputs for each layer (original spike outputs)
             for pop_name, population in self.network.layers.items():
                 outputs[pop_name].append(population.s.clone())
 
-        # After simulation, extract features and apply batch normalization
-        # Also compute goodness from normalized features
+        # Compute goodness from normalized activities accumulated over time
         total_goodness = torch.tensor(0.0, requires_grad=True)
         goodness_dict = {}
         
@@ -308,36 +521,25 @@ class BindsNETForwardForwardPipeline(BasePipeline):
                     break
             
             if connection is not None:
-                # Get target layer activity (sum over time)
+                # Get target layer name
                 target_layer_name = None
                 for layer_name, layer in self.network.layers.items():
                     if layer is connection.target:
                         target_layer_name = layer_name
                         break
                 
-                if target_layer_name is not None:
-                    # Sum target layer activity over time to get feature representation
-                    target_activity = torch.stack(layer_activities[target_layer_name], dim=0)  # [time, batch, neurons]
-                    target_activity_sum = target_activity.sum(dim=0).float()  # [batch, neurons] - convert to float
-                    
-                    # Ensure proper batch dimension
-                    if target_activity_sum.dim() == 1:
-                        target_activity_sum = target_activity_sum.unsqueeze(0)
-                    
-                    # Set feature value for batch normalization (with gradients)
-                    feature.value = target_activity_sum.requires_grad_(True)
-                    
-                    # Apply batch normalization if present
-                    batch_norm = getattr(feature, 'batch_norm', None)
-                    if batch_norm is not None:
-                        normalized_activity = batch_norm.batch_normalize()
-                        # Update feature value with normalized activity
-                        feature.value = normalized_activity
-                    
-                    # Compute goodness from the (possibly normalized) feature values
-                    feature_goodness = (feature.value ** 2).sum()
-                    goodness_dict[f"layer_{target_layer_name}"] = feature_goodness
-                    total_goodness = total_goodness + feature_goodness
+                if target_layer_name is not None and target_layer_name in normalized_activities:
+                    # Sum normalized activities over time to get feature representation
+                    if len(normalized_activities[target_layer_name]) > 0:
+                        target_activity_sum = torch.stack(normalized_activities[target_layer_name], dim=0).sum(dim=0)
+                        
+                        # Set final feature value 
+                        feature.value = target_activity_sum.requires_grad_(True)
+                        
+                        # Compute goodness from the normalized feature values
+                        feature_goodness = (feature.value ** 2).sum()
+                        goodness_dict[f"layer_{target_layer_name}"] = feature_goodness
+                        total_goodness = total_goodness + feature_goodness
 
         # Add total goodness
         goodness_dict["total_goodness"] = total_goodness
@@ -374,9 +576,9 @@ class BindsNETForwardForwardPipeline(BasePipeline):
         **kwargs
     ) -> Dict[str, float]:
         """
-        Train the network using Forward-Forward learning and update learnable parameters (e.g., gamma, beta).
+        Train the network using Forward-Forward learning with sequential layer-wise training.
+        Each sample goes through layer 1 and is trained on it BEFORE going to the next layer.
         If optimizer is not provided, creates Adam optimizer for learnable parameters.
-        Uses MSE loss between total_goodness and target threshold as a simple example.
         """
         if optimizer is None:
             params = self.get_learnable_parameters()
@@ -384,66 +586,404 @@ class BindsNETForwardForwardPipeline(BasePipeline):
                 optimizer = torch.optim.Adam(params, lr=self.learning_rate)
             else:
                 optimizer = None
+        
         loss_fn = torch.nn.MSELoss()
+        
+        # Determine layer order from network connections
+        layer_order = self._get_layer_training_order()
+        print(f"Training layers in order: {layer_order}")
+        
         metrics = {
             'positive_goodness': [],
             'negative_goodness': [],
-            'goodness_separation': []
+            'goodness_separation': [],
+            'layer_goodness': {layer_info['target_layer']: [] for layer_info in layer_order},
+            'layer_losses': {layer_info['target_layer']: {'positive': [], 'negative': [], 'total': []} for layer_info in layer_order},
+            'epoch_total_loss': []
         }
+        
         for epoch in range(n_epochs):
-            epoch_pos_goodness = 0
-            epoch_neg_goodness = 0
-            # Train on positive examples in batches
-            for i in range(0, len(positive_data), batch_size):
-                batch_list = positive_data[i:i+batch_size]
-                if len(batch_list) < 2:
-                    continue  # Skip batches too small for BatchNorm1d
-
-                batch = torch.stack(batch_list)
-                if optimizer:
-                    optimizer.zero_grad()
-                inputs = {'input': batch}
-                result = self.step(inputs, is_positive=True)
-                # result['total_goodness'] should be a tensor of batch_size or scalar; ensure it's meaned if needed
-                if isinstance(result['total_goodness'], torch.Tensor) and result['total_goodness'].numel() > 1:
-                    batch_goodness = result['total_goodness'].mean()
-                else:
-                    batch_goodness = result['total_goodness']
-                epoch_pos_goodness += batch_goodness.item() * batch.size(0)
-                if optimizer:
-                    target = torch.full_like(result['total_goodness'], self.positive_threshold, dtype=torch.float32)
-                    output = result['total_goodness']
-                    loss = loss_fn(output, target)
-                    loss.backward()
-                    optimizer.step()
-            # Train on negative examples in batches
-            for i in range(0, len(negative_data), batch_size):
-                batch_list = negative_data[i:i+batch_size]
-                if len(batch_list) < 2:
-                    continue  # Skip batches too small for BatchNorm1d
-                batch = torch.stack(batch_list)
-                if optimizer:
-                    optimizer.zero_grad()
-                inputs = {'input': batch}
-                result = self.step(inputs, is_positive=False)
-                if isinstance(result['total_goodness'], torch.Tensor) and result['total_goodness'].numel() > 1:
-                    batch_goodness = result['total_goodness'].mean()
-                else:
-                    batch_goodness = result['total_goodness']
-                epoch_neg_goodness += batch_goodness.item() * batch.size(0)
-                if optimizer:
-                    target = torch.full_like(result['total_goodness'], self.negative_threshold, dtype=torch.float32)
-                    output = result['total_goodness']
-                    loss = loss_fn(output, target)
-                    loss.backward()
-                    optimizer.step()
-            # Calculate average goodness
-            avg_pos_goodness = epoch_pos_goodness / len(positive_data)
-            avg_neg_goodness = epoch_neg_goodness / len(negative_data)
-            goodness_separation = avg_pos_goodness - avg_neg_goodness
+            print(f"\nEpoch {epoch + 1}/{n_epochs}")
+            print("=" * 50)
+            epoch_metrics = {}
+            epoch_total_loss = 0.0
+            
+            # Train layer by layer, sample by sample
+            for layer_idx, layer_info in enumerate(layer_order):
+                layer_name = layer_info['target_layer']
+                connection_name = layer_info['connection']
+                print(f"\nTraining layer: {layer_name} via connection: {connection_name}")
+                
+                # Train on positive examples for this layer
+                layer_pos_goodness, layer_pos_loss = self._train_layer_on_samples(
+                    positive_data, layer_name, connection_name, 
+                    is_positive=True, batch_size=batch_size, 
+                    optimizer=optimizer, loss_fn=loss_fn
+                )
+                
+                # Train on negative examples for this layer
+                layer_neg_goodness, layer_neg_loss = self._train_layer_on_samples(
+                    negative_data, layer_name, connection_name,
+                    is_positive=False, batch_size=batch_size,
+                    optimizer=optimizer, loss_fn=loss_fn
+                )
+                
+                layer_separation = layer_pos_goodness - layer_neg_goodness
+                layer_total_loss = layer_pos_loss + layer_neg_loss
+                epoch_total_loss += layer_total_loss
+                
+                # Store layer metrics
+                epoch_metrics[layer_name] = {
+                    'pos': layer_pos_goodness,
+                    'neg': layer_neg_goodness,
+                    'separation': layer_separation,
+                    'pos_loss': layer_pos_loss,
+                    'neg_loss': layer_neg_loss,
+                    'total_loss': layer_total_loss
+                }
+                
+                metrics['layer_goodness'][layer_name].append(layer_separation)
+                metrics['layer_losses'][layer_name]['positive'].append(layer_pos_loss)
+                metrics['layer_losses'][layer_name]['negative'].append(layer_neg_loss)
+                metrics['layer_losses'][layer_name]['total'].append(layer_total_loss)
+                
+                print(f"  Goodness - Pos: {layer_pos_goodness:.3f}, Neg: {layer_neg_goodness:.3f}, Sep: {layer_separation:.3f}")
+                print(f"  Loss     - Pos: {layer_pos_loss:.4f}, Neg: {layer_neg_loss:.4f}, Total: {layer_total_loss:.4f}")
+                
+                # Check if layer is learning (loss should decrease over time)
+                if len(metrics['layer_losses'][layer_name]['total']) >= 2:
+                    prev_loss = metrics['layer_losses'][layer_name]['total'][-2]
+                    curr_loss = metrics['layer_losses'][layer_name]['total'][-1]
+                    loss_change = curr_loss - prev_loss
+                    trend = "↓" if loss_change < 0 else "↑"
+                    print(f"  Loss trend: {trend} ({loss_change:+.4f}) {'[LEARNING]' if loss_change < 0 else '[NOT LEARNING]'}")
+                
+                # If this layer shows good separation, we can start training the next layer
+                # Otherwise, spend more time on this layer
+                if abs(layer_separation) < 0.5 and layer_idx == 0:  # First layer needs to learn well
+                    print(f"  ⚠️  Layer {layer_name} separation too low ({layer_separation:.3f}), may need more training")
+            
+            # Store epoch-level metrics
+            metrics['epoch_total_loss'].append(epoch_total_loss)
+            
+            # Calculate overall metrics (focus on layers that are actually learning)
+            learning_layers = []
+            total_pos = 0
+            total_neg = 0
+            
+            for layer_name, layer_metrics in epoch_metrics.items():
+                if abs(layer_metrics['separation']) > 0.1:  # Layer is showing some learning
+                    learning_layers.append(layer_name)
+                    total_pos += layer_metrics['pos']
+                    total_neg += layer_metrics['neg']
+            
+            if learning_layers:
+                avg_pos_goodness = total_pos / len(learning_layers)
+                avg_neg_goodness = total_neg / len(learning_layers)
+                goodness_separation = avg_pos_goodness - avg_neg_goodness
+                
+                print(f"\n📊 Epoch {epoch + 1} Summary:")
+                print(f"   Learning layers: {learning_layers}")
+                print(f"   Overall separation: {goodness_separation:.3f}")
+                print(f"   Total loss: {epoch_total_loss:.4f}")
+                
+                # Check epoch-level learning trend
+                if len(metrics['epoch_total_loss']) >= 2:
+                    prev_epoch_loss = metrics['epoch_total_loss'][-2]
+                    curr_epoch_loss = metrics['epoch_total_loss'][-1]
+                    epoch_loss_change = curr_epoch_loss - prev_epoch_loss
+                    epoch_trend = "↓" if epoch_loss_change < 0 else "↑"
+                    print(f"   Epoch loss trend: {epoch_trend} ({epoch_loss_change:+.4f}) {'[IMPROVING]' if epoch_loss_change < 0 else '[NOT IMPROVING]'}")
+            else:
+                avg_pos_goodness = 0
+                avg_neg_goodness = 0
+                goodness_separation = 0
+                print(f"\n⚠️  Epoch {epoch + 1}: No layers showing meaningful learning yet")
+                print(f"   Total loss: {epoch_total_loss:.4f}")
+            
             metrics['positive_goodness'].append(avg_pos_goodness)
             metrics['negative_goodness'].append(avg_neg_goodness)
             metrics['goodness_separation'].append(goodness_separation)
+            
+        
+        print(f"\n{'='*60}")
+        print(f"🎯 FINAL TRAINING SUMMARY")
+        print(f"{'='*60}")
+        print(f"Final goodness separation: {metrics['goodness_separation'][-1]:.3f}")
+        print(f"Final total loss: {metrics['epoch_total_loss'][-1]:.4f}")
+        
+        print(f"\n📈 Layer-wise Learning Analysis:")
+        for layer_name, separations in metrics['layer_goodness'].items():
+            if len(separations) > 0:
+                final_sep = separations[-1] if isinstance(separations[-1], (int, float)) else separations[-1].item()
+                initial_sep = separations[0] if isinstance(separations[0], (int, float)) else separations[0].item()
+                sep_change = final_sep - initial_sep
+                
+                final_loss = metrics['layer_losses'][layer_name]['total'][-1]
+                initial_loss = metrics['layer_losses'][layer_name]['total'][0]
+                loss_change = final_loss - initial_loss
+                
+                print(f"  {layer_name}:")
+                print(f"    Goodness separation: {initial_sep:.3f} → {final_sep:.3f} ({sep_change:+.3f})")
+                print(f"    Total loss: {initial_loss:.4f} → {final_loss:.4f} ({loss_change:+.4f})")
+                
+                # Determine if layer learned
+                learned = loss_change < -0.01  # Significant loss decrease
+                status = "✅ LEARNED" if learned else "❌ NO LEARNING"
+                print(f"    Status: {status}")
+        
+        # Overall learning assessment
+        overall_loss_change = metrics['epoch_total_loss'][-1] - metrics['epoch_total_loss'][0]
+        overall_learned = overall_loss_change < -0.1
+        print(f"\n🏆 Overall Assessment:")
+        print(f"   Total loss change: {overall_loss_change:+.4f}")
+        print(f"   Network status: {'✅ LEARNING' if overall_learned else '❌ NOT LEARNING'}")
+        
+        if not overall_learned:
+            print(f"\n💡 Possible Issues:")
+            print(f"   - Learning rate too high/low")
+            print(f"   - Insufficient training data")
+            print(f"   - Network architecture problems")
+            print(f"   - Threshold mismatch")
+        
+        return metrics
+
+    def _get_layer_training_order(self) -> list:
+        """
+        Determine the order in which layers should be trained based on network topology.
+        Returns list of dicts with 'target_layer', 'source_layer', 'connection' keys.
+        """
+        layer_order = []
+        
+        # Identify layer connections and their order
+        for conn_name, connection in self.network.connections.items():
+            # Find source and target layer names
+            source_layer_name = None
+            target_layer_name = None
+            
+            for layer_name, layer in self.network.layers.items():
+                if layer is connection.source:
+                    source_layer_name = layer_name
+                if layer is connection.target:
+                    target_layer_name = layer_name
+            
+            if source_layer_name and target_layer_name:
+                layer_order.append({
+                    'source_layer': source_layer_name,
+                    'target_layer': target_layer_name,
+                    'connection': str(conn_name)
+                })
+        
+        # Sort by layer depth (input -> hidden_0 -> hidden_1, etc.)
+        def layer_depth(layer_info):
+            target = layer_info['target_layer']
+            if 'input' in target:
+                return -1  # Input layer
+            elif 'hidden_0' in target:
+                return 0
+            elif 'hidden_1' in target:
+                return 1
+            elif 'hidden_2' in target:
+                return 2
+            else:
+                return 999  # Unknown, put at end
+        
+        layer_order.sort(key=layer_depth)
+        return layer_order
+
+    def _train_layer_on_samples(
+        self,
+        data: torch.Tensor,
+        target_layer_name: str,
+        connection_name: str,
+        is_positive: bool,
+        batch_size: int,
+        optimizer: torch.optim.Optimizer,
+        loss_fn: torch.nn.Module
+    ) -> Tuple[float, float]:
+        """
+        Train a specific layer on all samples before moving to the next layer.
+        Each sample completes training on this layer before proceeding.
+        
+        Returns:
+            Tuple of (average_goodness, average_loss)
+        """
+        total_goodness = 0.0
+        total_loss = 0.0
+        sample_count = 0
+        
+        # Process samples in batches for this specific layer
+        for i in range(0, len(data), batch_size):
+            batch_list = data[i:i+batch_size]
+            if len(batch_list) < 1:  # Allow single samples
+                continue
+                
+            batch = torch.stack(batch_list) if len(batch_list) > 1 else batch_list[0].unsqueeze(0)
+            
+            # Forward pass for this specific layer only
+            layer_goodness = self._forward_through_layer(
+                batch, target_layer_name, connection_name, is_positive
+            )
+            
+            total_goodness += layer_goodness * batch.size(0)
+            sample_count += batch.size(0)
+            
+            # Backward pass and optimization for this layer
+            batch_loss = 0.0
+            if optimizer is not None:
+                optimizer.zero_grad()
+                
+                # Compute loss for this layer
+                target_goodness = self.positive_threshold if is_positive else self.negative_threshold
+                target = torch.tensor(target_goodness, dtype=torch.float32)
+                
+                if isinstance(layer_goodness, torch.Tensor):
+                    loss = loss_fn(layer_goodness, target)
+                else:
+                    loss = loss_fn(torch.tensor(layer_goodness), target)
+                
+                batch_loss = loss.item()
+                total_loss += batch_loss * batch.size(0)
+                
+                loss.backward()
+                optimizer.step()
+            else:
+                # If no optimizer, still compute loss for tracking
+                target_goodness = self.positive_threshold if is_positive else self.negative_threshold
+                target = torch.tensor(target_goodness, dtype=torch.float32)
+                
+                if isinstance(layer_goodness, torch.Tensor):
+                    loss = loss_fn(layer_goodness, target)
+                else:
+                    loss = loss_fn(torch.tensor(layer_goodness), target)
+                
+                batch_loss = loss.item()
+                total_loss += batch_loss * batch.size(0)
+        
+        avg_goodness = total_goodness / max(sample_count, 1)
+        avg_loss = total_loss / max(sample_count, 1)
+        
+        # Update recent goodness tracking for adaptive thresholds
+        if is_positive:
+            self._recent_positive_goodness[target_layer_name] = avg_goodness
+        else:
+            self._recent_negative_goodness[target_layer_name] = avg_goodness
+        
+        return avg_goodness, avg_loss
+
+    def _forward_through_layer(
+        self,
+        batch: torch.Tensor,
+        target_layer_name: str,
+        connection_name: str,
+        is_positive: bool
+    ) -> torch.Tensor:
+        """
+        Forward pass through a specific layer and compute its goodness.
+        Accumulates activations from input through the target layer only.
+        """
+        # Reset network state
+        self.network.reset_state_variables()
+        for feature in self.features.values():
+            feature.reset_state_variables()
+        
+        # Prepare inputs
+        encoded_batch = {'input': batch}
+        layer_activities = {layer_name: [] for layer_name in self.network.layers}
+        
+        # Run network through target layer only
+        for t in range(self.time):
+            # Generate spikes for this timestep
+            if 'input' in encoded_batch:
+                input_data = encoded_batch['input']
+                input_probs = torch.clamp(input_data, 0.0, 1.0)
+                spike_input = torch.bernoulli(input_probs)
+                timestep_inputs = {'input': spike_input}
+            else:
+                timestep_inputs = encoded_batch
+            
+            # Run only up to the target layer
+            self._run_network_to_layer(timestep_inputs, target_layer_name)
+            
+            # Collect activities for the target layer
+            target_layer = self.network.layers[target_layer_name]
+            layer_activities[target_layer_name].append(target_layer.s.clone())
+        
+        # Compute goodness for this specific layer
+        layer_goodness = self._compute_layer_goodness(
+            layer_activities[target_layer_name], connection_name
+        )
+        
+        return layer_goodness
+
+    def _run_network_to_layer(self, inputs: dict, target_layer_name: str):
+        """
+        Run network computation only up to the specified target layer.
+        Uses BindsNET's standard network.run() but limits propagation.
+        """
+        # Use BindsNET's standard simulation but only collect results up to target layer
+        self.network.run(inputs, time=1)
+        
+        # Note: BindsNET already handles the full forward pass internally
+        # We just need to ensure we only use the target layer's output
+
+    def _is_layer_before_or_equal(self, layer1: str, layer2: str) -> bool:
+        """Check if layer1 comes before or is equal to layer2 in network hierarchy."""
+        def get_layer_index(layer_name):
+            if 'input' in layer_name:
+                return -1
+            elif 'hidden_0' in layer_name:
+                return 0
+            elif 'hidden_1' in layer_name:
+                return 1
+            elif 'hidden_2' in layer_name:
+                return 2
+            else:
+                return 999
+        
+        return get_layer_index(layer1) <= get_layer_index(layer2)
+
+    def _compute_layer_goodness(
+        self,
+        layer_activity_over_time: list,
+        connection_name: str
+    ) -> torch.Tensor:
+        """
+        Compute goodness for a specific layer from its activity over time.
+        """
+        # Get the feature for this connection
+        feature = self.features.get(connection_name)
+        if feature is None:
+            # Fallback: compute simple goodness from activity
+            if len(layer_activity_over_time) > 0:
+                total_activity = torch.stack(layer_activity_over_time, dim=0).sum(dim=0).float()
+                return (total_activity ** 2).sum()
+            else:
+                return torch.tensor(0.0)
+        
+        # Sum activity over time
+        if len(layer_activity_over_time) > 0:
+            total_activity = torch.stack(layer_activity_over_time, dim=0).sum(dim=0).float()
+            
+            # Ensure proper batch dimension
+            if total_activity.dim() == 1:
+                total_activity = total_activity.unsqueeze(0)
+            
+            # Set feature value with gradients
+            feature.value = total_activity.requires_grad_(True)
+            
+            # Apply batch normalization if present
+            batch_norm = getattr(feature, 'batch_norm', None)
+            if batch_norm is not None:
+                normalized_activity = batch_norm.batch_normalize()
+                feature.value = normalized_activity
+
+            # Compute goodness from normalized features
+            goodness = (feature.value ** 2).sum()
+            return goodness
+        else:
+            return torch.tensor(0.0)
+
         return metrics
 
 

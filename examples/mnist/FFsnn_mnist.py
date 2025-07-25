@@ -45,17 +45,20 @@ def create_bindsnet_ff_network(input_size: int, hidden_sizes: list, device: torc
     layer_names = ["input"] + [f"hidden_{i}" for i in range(len(hidden_sizes))]
     
     for i in range(len(hidden_sizes)):
-        # Create LIF hidden layer
+        # Create LIF hidden layer with BindsNET standard voltage scale
         hidden_layer = LIFNodes(
             n=hidden_sizes[i], 
-            decay=0.99,  # β = 0.99
-            thresh=0.5,  # Lower threshold
-            reset=0.0,
+            decay=0.99,        # β = 0.99 (standard decay)
+            thresh=-52.0,      # Standard BindsNET threshold
+            rest=-65.0,        # Standard BindsNET rest potential  
+            reset=-60.0,       # Reset slightly above rest
+            refrac=5,          # 5ms refractory period
+            tc_decay=100.0,    # Standard membrane time constant
             name=f"hidden_{i}"
         )
         network.add_layer(hidden_layer, name=f"hidden_{i}")
         
-        # Create regular connection (features handled in pipeline)
+        # Create connection with larger weights to encourage spiking
         source_layer_name = layer_names[i]
         target_layer_name = layer_names[i + 1]
         source_layer = network.layers[source_layer_name]
@@ -63,7 +66,7 @@ def create_bindsnet_ff_network(input_size: int, hidden_sizes: list, device: torc
         connection = Connection(
             source=source_layer,
             target=target_layer,
-            w=torch.randn(layer_sizes[i], layer_sizes[i + 1]) * 0.5,  # Larger random weights
+            w=torch.randn(layer_sizes[i], layer_sizes[i + 1]) * 5.0,  # Larger weights for BindsNET voltage scale
             wmin=-torch.inf,
             wmax=torch.inf
         )
@@ -124,17 +127,19 @@ def main():
     # Device setup
     device = torch.device("cpu")  # Use CPU to avoid MPS issues during debugging
 
-
+    # Intensity scaling for Poisson encoding (like other BindsNET examples)
+    intensity = 128.0  # Standard BindsNET intensity for MNIST
 
     print(f"Using device: {device}")
     
     # Data loading and preprocessing
     print("\nPreparing MNIST dataset...")
     
+    # Use BindsNET-compatible transform (no normalization, intensity scaling)
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,)),
-        transforms.Lambda(lambda x: x.view(-1))      
+        transforms.Lambda(lambda x: x * intensity),  # Scale for Poisson encoding
+        transforms.Lambda(lambda x: x.view(-1))      # Flatten to [784]
     ])
     
     full_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
@@ -183,20 +188,24 @@ def main():
         feature.prime_feature(connection, device)
         feature.initialize_value()
         
+        # DISABLED: Batch normalization interferes with sparse spike data in Forward-Forward learning
+        # The normalization to zero mean makes goodness scores (sum of squared activations) near zero
+        # Re-enable batch normalization now that the network produces spikes
         # Add batch normalization - determine size from target layer
-        target_layer_size = connection.target.n
-        feature.batch_norm = BatchNormalization(
-            name=f"batch_norm_{connection_key}",
-            parent_feature=feature,
-            eps=1e-5,
-            affine=True
-        )
-        # Manually initialize BatchNorm with known size
-        feature.batch_norm._init_bn(target_layer_size)
-        feature.batch_norm.bn.to(device)
-        # Enable gradients for batch norm parameters
-        for param in feature.batch_norm.bn.parameters():
-            param.requires_grad_(True)
+        # target_layer_size = connection.target.n
+        # feature.batch_norm = BatchNormalization(
+        #     name=f"batch_norm_{connection_key}",
+        #     parent_feature=feature,
+        #     eps=1e-5,
+        #     affine=True,
+        #     per_timestep=True  # Enable per-timestep normalization for Forward-Forward
+        # )
+        # # Manually initialize BatchNorm with known size
+        # feature.batch_norm._init_bn(target_layer_size)
+        # feature.batch_norm.bn.to(device)
+        # # Enable gradients for batch norm parameters
+        # for param in feature.batch_norm.bn.parameters():
+        #     param.requires_grad_(True)
         
         features[str(connection_key)] = feature
     print(f"Created features for: {list(features.keys())}")
