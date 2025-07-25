@@ -147,7 +147,7 @@ class BindsNETForwardForwardPipeline(BasePipeline):
         from bindsnet.datasets.contrastive_transforms import prepend_label_to_image
 
         predictions = []
-        print(f"\n🔍 DEBUG: Recent goodness tracking:")
+        print(f"\nDEBUG: Recent goodness tracking:")
         print(f"   Positive: {self._recent_positive_goodness}")
         print(f"   Negative: {self._recent_negative_goodness}")
         
@@ -729,18 +729,17 @@ class BindsNETForwardForwardPipeline(BasePipeline):
                 
                 # Determine if layer learned
                 learned = loss_change < -0.01  # Significant loss decrease
-                status = "✅ LEARNED" if learned else "❌ NO LEARNING"
+                status = "LEARNED" if learned else "NO LEARNING"
                 print(f"    Status: {status}")
         
         # Overall learning assessment
         overall_loss_change = metrics['epoch_total_loss'][-1] - metrics['epoch_total_loss'][0]
         overall_learned = overall_loss_change < -0.1
-        print(f"\n🏆 Overall Assessment:")
         print(f"   Total loss change: {overall_loss_change:+.4f}")
-        print(f"   Network status: {'✅ LEARNING' if overall_learned else '❌ NOT LEARNING'}")
+        print(f"   Network status: {'LEARNING' if overall_learned else 'NOT LEARNING'}")
         
         if not overall_learned:
-            print(f"\n💡 Possible Issues:")
+            print(f"\nPossible Issues:")
             print(f"   - Learning rate too high/low")
             print(f"   - Insufficient training data")
             print(f"   - Network architecture problems")
