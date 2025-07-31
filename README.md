@@ -12,7 +12,7 @@ Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/mast
 ![Build Status](https://github.com/BindsNET/bindsnet/actions/workflows/python-app.yml/badge.svg?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
 [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/bindsnet_/community)
-[![Neuromorphic Computing](https://img.shields.io/badge/Community-Open_Neuromorphic-blue)](https://open-neuromorphic.org/neuromorphic-computing/)
+[![Neuromorphic Computing](https://img.shields.io/badge/Collaboration_Network-Open_Neuromorphic-blue)](https://open-neuromorphic.org/neuromorphic-computing/)
 
 ## Requirements
 
