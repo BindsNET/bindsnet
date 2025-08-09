@@ -209,7 +209,15 @@ class AbstractMulticompartmentConnection(ABC, Module):
 
         :param bool learning: Whether to allow connection updates.
         """
-        pass
+        mask = kwargs.get("mask", None)
+        if mask is None:
+            return
+
+        for f in self.pipeline:
+            if type(f).__name__ != 'Weight':
+                continue
+
+            f.value.masked_fill_(mask, 0)
 
     @abstractmethod
     def reset_state_variables(self) -> None:
@@ -484,6 +492,8 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         """
         learning = kwargs.get("learning", False)
         if learning and not self.manual_update:
+            super().update(**kwargs)
+
             # Pipeline learning
             for f in self.pipeline:
                 f.update(**kwargs)
