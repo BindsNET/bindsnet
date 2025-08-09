@@ -37,7 +37,4 @@ network.run(
        ('input', 'output'): ~torch.tril(torch.ones((5, 5)), diagonal=-1).bool()
     }
 )
-
-print(network.layers['input'].v)
-print(network.layers['output'].v)
 print(connection.pipeline[0].value)
