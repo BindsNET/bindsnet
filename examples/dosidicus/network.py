@@ -3,7 +3,7 @@ import torch
 from bindsnet.network import Network
 from bindsnet.network.nodes import LIFNodes
 from bindsnet.network.topology import MulticompartmentConnection
-from bindsnet.network.topology_features import Weight, Bias, Mask
+from bindsnet.network.topology_features import Weight, Bias
 from bindsnet.learning.MCC_learning import PostPre
 
 network = Network(dt=1.0)
@@ -22,17 +22,22 @@ weight = Weight(
 )
 bias = Bias(name='bias_feature', value=torch.rand(5, 5))
 
-mask = torch.tril(torch.ones((5, 5)), diagonal=-1).bool()
-
 connection = MulticompartmentConnection(
     source=source_layer,
     target=target_layer,
-    pipeline=[weight, Mask(name='mask', value=mask), bias],
+    pipeline=[weight, bias],
     device='cpu'
 )
 network.add_connection(connection, source="input", target="output")
 print(connection.pipeline[0].value)
 network.run(
-    inputs={"input": torch.bernoulli(torch.rand(250, 5)).byte()}, time=250
+    inputs={"input": torch.bernoulli(torch.rand(250, 5)).byte()},
+    time=250,
+    masks={
+       ('input', 'output'): ~torch.tril(torch.ones((5, 5)), diagonal=-1).bool()
+    }
 )
+
+print(network.layers['input'].v)
+print(network.layers['output'].v)
 print(connection.pipeline[0].value)
