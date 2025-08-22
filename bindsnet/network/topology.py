@@ -209,15 +209,7 @@ class AbstractMulticompartmentConnection(ABC, Module):
 
         :param bool learning: Whether to allow connection updates.
         """
-        mask = kwargs.get("mask", None)
-        if mask is None:
-            return
-
-        for f in self.pipeline:
-            if type(f).__name__ != 'Weight':
-                continue
-
-            f.value.masked_fill_(mask, 0)
+        pass
 
     @abstractmethod
     def reset_state_variables(self) -> None:
@@ -403,6 +395,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         pipeline: list = [],
         manual_update: bool = False,
         traces: bool = False,
+        mask: torch.Tensor = None,
         **kwargs,
     ) -> None:
         # language=rst
@@ -416,11 +409,13 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         :param manual_update: Set to :code:`True` to disable automatic updates (applying learning rules) to connection features.
             False by default, updates called after each time step
         :param traces: Set to :code:`True` to record history of connection activity (for monitors)
+        :param mask: A mask to zero out weights
         """
 
         super().__init__(source, target, device, pipeline, **kwargs)
         self.traces = traces
         self.manual_update = manual_update
+        self.mask = mask
         if self.traces:
             self.activity = None
 
@@ -446,6 +441,8 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         # Run through pipeline
         for f in self.pipeline:
+            if type(f).__name__ == 'Weight' and self.mask:
+                f.value.masked_fill_(self.mask, 0)
             conn_spikes = f.compute(conn_spikes)
 
         # Sum signals for each of the output/terminal neurons
@@ -492,8 +489,6 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         """
         learning = kwargs.get("learning", False)
         if learning and not self.manual_update:
-            super().update(**kwargs)
-
             # Pipeline learning
             for f in self.pipeline:
                 f.update(**kwargs)
