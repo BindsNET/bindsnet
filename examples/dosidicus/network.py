@@ -26,15 +26,13 @@ connection = MulticompartmentConnection(
     source=source_layer,
     target=target_layer,
     pipeline=[weight, bias],
+    mask=~torch.tril(torch.ones((5, 5)), diagonal=-1).bool(),
     device='cpu'
 )
 network.add_connection(connection, source="input", target="output")
 print(connection.pipeline[0].value)
 network.run(
     inputs={"input": torch.bernoulli(torch.rand(250, 5)).byte()},
-    time=250,
-    masks={
-       ('input', 'output'): ~torch.tril(torch.ones((5, 5)), diagonal=-1).bool()
-    }
+    time=250
 )
 print(connection.pipeline[0].value)

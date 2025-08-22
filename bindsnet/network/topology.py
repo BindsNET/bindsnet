@@ -441,7 +441,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         # Run through pipeline
         for f in self.pipeline:
-            if type(f).__name__ == 'Weight' and self.mask:
+            if type(f).__name__ == 'Weight' and self.mask is not None:
                 f.value.masked_fill_(self.mask, 0)
             conn_spikes = f.compute(conn_spikes)
 
