@@ -441,8 +441,6 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         # Run through pipeline
         for f in self.pipeline:
-            if type(f).__name__ == 'Weight' and self.mask is not None:
-                f.value.masked_fill_(self.mask, 0)
             conn_spikes = f.compute(conn_spikes)
 
         # Sum signals for each of the output/terminal neurons
@@ -492,6 +490,8 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
             # Pipeline learning
             for f in self.pipeline:
                 f.update(**kwargs)
+                if type(f).__name__ == 'Weight' and self.mask is not None:
+                    f.value.masked_fill_(self.mask, 0)
 
     def normalize(self) -> None:
         # language=rst
