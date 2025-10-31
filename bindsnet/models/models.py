@@ -9,7 +9,11 @@ from bindsnet.learning import PostPre
 from bindsnet.learning.MCC_learning import PostPre as MMCPostPre
 from bindsnet.network import Network
 from bindsnet.network.nodes import DiehlAndCookNodes, Input, LIFNodes
-from bindsnet.network.topology import Connection, LocalConnection, MulticompartmentConnection
+from bindsnet.network.topology import (
+    Connection,
+    LocalConnection,
+    MulticompartmentConnection,
+)
 from bindsnet.network.topology_features import Weight
 
 
@@ -181,30 +185,23 @@ class DiehlAndCook2015(Network):
             device=device,
             pipeline=[
                 Weight(
-                    'weight',
+                    "weight",
                     w,
                     value_dtype=w_dtype,
                     range=[wmin, wmax],
                     norm=norm,
                     reduction=reduction,
                     nu=nu,
-                    learning_rule=MMCPostPre
+                    learning_rule=MMCPostPre,
                 )
-            ]
+            ],
         )
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
         exc_inh_conn = MulticompartmentConnection(
             source=exc_layer,
             target=inh_layer,
             device=device,
-            pipeline=[
-                Weight(
-                    'weight',
-                    w,
-                    value_dtype=w_dtype,
-                    range=[0, self.exc]
-                )
-            ]
+            pipeline=[Weight("weight", w, value_dtype=w_dtype, range=[0, self.exc])],
         )
         w = -self.inh * (
             torch.ones(self.n_neurons, self.n_neurons)
@@ -214,14 +211,7 @@ class DiehlAndCook2015(Network):
             source=inh_layer,
             target=exc_layer,
             device=device,
-            pipeline=[
-                Weight(
-                    'weight',
-                    w,
-                    value_dtype=w_dtype,
-                    range=[-self.inh, 0]
-                )
-            ]
+            pipeline=[Weight("weight", w, value_dtype=w_dtype, range=[-self.inh, 0])],
         )
 
         # Add to network

@@ -127,7 +127,9 @@ class AbstractFeature(ABC):
     @staticmethod
     def cast_dtype_if_needed(value, value_dtype):
         if value.dtype != value_dtype:
-            warnings.warn(f"Provided value has data type {value.dtype} but parameter w_dtype is {value_dtype}")
+            warnings.warn(
+                f"Provided value has data type {value.dtype} but parameter w_dtype is {value_dtype}"
+            )
             return value.to(dtype=value_dtype)
         else:
             return value
@@ -431,11 +433,7 @@ class Mask(AbstractFeature):
             # Send boolean to tensor (priming wont work if it's not a tensor)
             value = torch.tensor(value)
 
-        super().__init__(
-            name=name,
-            value=value,
-            value_dtype=torch.bool
-        )
+        super().__init__(name=name, value=value, value_dtype=torch.bool)
 
         self.name = name
         self.value = value
@@ -705,7 +703,12 @@ class Degradation(AbstractFeature):
         """
 
         # Note: parent_feature will override value. See abstract constructor
-        super().__init__(name=name, value=value, value_dtype=value_dtype, parent_feature=parent_feature)
+        super().__init__(
+            name=name,
+            value=value,
+            value_dtype=value_dtype,
+            parent_feature=parent_feature,
+        )
 
         self.degrade_function = degrade_function
 
