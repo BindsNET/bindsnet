@@ -147,7 +147,11 @@ network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 spikes = {}
 for layer in set(network.layers):
     spikes[layer] = Monitor(
-        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device, sparse=sparse
+        network.layers[layer],
+        state_vars=["s"],
+        time=int(time / dt),
+        device=device,
+        sparse=sparse,
     )
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
@@ -165,7 +169,10 @@ assigns_im = None
 perf_ax = None
 voltage_axes, voltage_ims = None, None
 
-spike_record = [torch.zeros((batch_size, int(time / dt), n_neurons), device=device).to_sparse() for _ in range(update_interval // batch_size)]
+spike_record = [
+    torch.zeros((batch_size, int(time / dt), n_neurons), device=device).to_sparse()
+    for _ in range(update_interval // batch_size)
+]
 spike_record_idx = 0
 
 # Train the network.
@@ -277,7 +284,9 @@ for epoch in range(n_epochs):
             image = batch["image"][:, 0].view(28, 28)
             inpt = inputs["X"][:, 0].view(time, 784).sum(0).view(28, 28)
             lable = batch["label"][0]
-            input_exc_weights = network.connections[("X", "Ae")].feature_index['weight'].value
+            input_exc_weights = (
+                network.connections[("X", "Ae")].feature_index["weight"].value
+            )
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
             )

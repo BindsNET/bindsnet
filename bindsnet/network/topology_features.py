@@ -134,8 +134,9 @@ class AbstractFeature(ABC):
             self.value = self.value.unsqueeze(0).repeat(self.batch_size, 1, 1)
 
         self.value = self.value.to_sparse()
-        assert not getattr(self, 'enforce_polarity', False), \
-            "enforce_polarity isn't supported for sparse tensors"
+        assert not getattr(
+            self, "enforce_polarity", False
+        ), "enforce_polarity isn't supported for sparse tensors"
 
     @abstractmethod
     def reset_state_variables(self) -> None:
@@ -179,9 +180,15 @@ class AbstractFeature(ABC):
         # Check if values/norms are the correct shape
         if isinstance(self.value, torch.Tensor):
             if self.sparse:
-                assert tuple(self.value.shape[1:]) == (connection.source.n, connection.target.n)
+                assert tuple(self.value.shape[1:]) == (
+                    connection.source.n,
+                    connection.target.n,
+                )
             else:
-                assert tuple(self.value.shape) == (connection.source.n, connection.target.n)
+                assert tuple(self.value.shape) == (
+                    connection.source.n,
+                    connection.target.n,
+                )
 
         if self.norm is not None and isinstance(self.norm, torch.Tensor):
             assert self.norm.shape[0] == connection.target.n
@@ -325,10 +332,12 @@ class AbstractFeature(ABC):
 
     def assert_valid_shape(self, source_shape, target_shape, f):
         # Multidimensional feat
-        if (not self.sparse and len(f.shape) > 1) or (self.sparse and len(f.shape[1:]) > 1):
+        if (not self.sparse and len(f.shape) > 1) or (
+            self.sparse and len(f.shape[1:]) > 1
+        ):
             if self.sparse:
                 f_shape = f.shape[1:]
-                expected = ('batch_size', source_shape, target_shape)
+                expected = ("batch_size", source_shape, target_shape)
             else:
                 f_shape = f.shape
                 expected = (source_shape, target_shape)
@@ -352,7 +361,7 @@ class Probability(AbstractFeature):
         decay: float = 0.0,
         parent_feature=None,
         sparse: Optional[bool] = False,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -386,7 +395,7 @@ class Probability(AbstractFeature):
             decay=decay,
             parent_feature=parent_feature,
             sparse=sparse,
-            batch_size=batch_size
+            batch_size=batch_size,
         )
 
     def sparse_bernoulli(self):
@@ -394,11 +403,7 @@ class Probability(AbstractFeature):
         mask = values != 0
         indices = self.value.indices()[:, mask]
         non_zero = values[mask]
-        return torch.sparse_coo_tensor(
-            indices,
-            non_zero,
-            self.value.size()
-        )
+        return torch.sparse_coo_tensor(indices, non_zero, self.value.size())
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
         if self.sparse:
@@ -448,7 +453,7 @@ class Mask(AbstractFeature):
         name: str,
         value: Union[torch.Tensor, float, int] = None,
         sparse: Optional[bool] = False,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -472,12 +477,7 @@ class Mask(AbstractFeature):
             # Send boolean to tensor (priming wont work if it's not a tensor)
             value = torch.tensor(value)
 
-        super().__init__(
-            name=name,
-            value=value,
-            sparse=sparse,
-            batch_size=batch_size
-        )
+        super().__init__(name=name, value=value, sparse=sparse, batch_size=batch_size)
 
     def compute(self, conn_spikes) -> torch.Tensor:
         return conn_spikes * self.value
@@ -561,7 +561,7 @@ class Weight(AbstractFeature):
         enforce_polarity: Optional[bool] = False,
         decay: float = 0.0,
         sparse: Optional[bool] = False,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -596,7 +596,7 @@ class Weight(AbstractFeature):
             reduction=reduction,
             decay=decay,
             sparse=sparse,
-            batch_size=batch_size
+            batch_size=batch_size,
         )
 
     def reset_state_variables(self) -> None:
@@ -651,7 +651,7 @@ class Bias(AbstractFeature):
         range: Optional[Sequence[float]] = None,
         norm: Optional[Union[torch.Tensor, float, int]] = None,
         sparse: Optional[bool] = False,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -671,7 +671,7 @@ class Bias(AbstractFeature):
             range=[-torch.inf, +torch.inf] if range is None else range,
             norm=norm,
             sparse=sparse,
-            batch_size=batch_size
+            batch_size=batch_size,
         )
 
     def reset_state_variables(self) -> None:
@@ -697,7 +697,7 @@ class Intensity(AbstractFeature):
         value: Union[torch.Tensor, float, int] = None,
         range: Optional[Sequence[float]] = None,
         sparse: Optional[bool] = False,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -708,7 +708,9 @@ class Intensity(AbstractFeature):
         :param batch_size: Mini-batch size.
         """
 
-        super().__init__(name=name, value=value, range=range, sparse=sparse, batch_size=batch_size)
+        super().__init__(
+            name=name, value=value, range=range, sparse=sparse, batch_size=batch_size
+        )
 
     def reset_state_variables(self) -> None:
         pass
@@ -738,7 +740,7 @@ class Degradation(AbstractFeature):
         degrade_function: callable = None,
         parent_feature: Optional[AbstractFeature] = None,
         sparse: Optional[bool] = False,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -754,7 +756,13 @@ class Degradation(AbstractFeature):
         """
 
         # Note: parent_feature will override value. See abstract constructor
-        super().__init__(name=name, value=value, parent_feature=parent_feature, sparse=sparse, batch_size=batch_size)
+        super().__init__(
+            name=name,
+            value=value,
+            parent_feature=parent_feature,
+            sparse=sparse,
+            batch_size=batch_size,
+        )
 
         self.degrade_function = degrade_function
 
@@ -774,7 +782,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         const_update_rate: float = 0.1,
         const_decay: float = 0.001,
         sparse: Optional[bool] = False,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -833,7 +841,9 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
                 flat_conn_spikes = conn_spikes.to_dense().flatten()
             else:
                 flat_conn_spikes = conn_spikes.flatten()
-            self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = flat_conn_spikes
+            self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = (
+                flat_conn_spikes
+            )
             self.counter += 1
 
         # Update the masks
@@ -872,7 +882,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         const_update_rate: float = 0.1,
         const_decay: float = 0.01,
         sparse: Optional[bool] = False,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -931,7 +941,9 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
                 flat_conn_spikes = conn_spikes.to_dense().flatten()
             else:
                 flat_conn_spikes = conn_spikes.flatten()
-            self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = flat_conn_spikes
+            self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = (
+                flat_conn_spikes
+            )
             self.counter += 1
 
         # Update the masks

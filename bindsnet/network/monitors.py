@@ -45,7 +45,7 @@ class Monitor(AbstractMonitor):
         time: Optional[int] = None,
         batch_size: int = 1,
         device: str = "cpu",
-        sparse: Optional[bool] = False
+        sparse: Optional[bool] = False,
     ):
         # language=rst
         """
@@ -100,9 +100,9 @@ class Monitor(AbstractMonitor):
         for v in self.state_vars:
             data = getattr(self.obj, v).unsqueeze(0)
             # self.recording[v].append(data.detach().clone().to(self.device))
-            record = torch.empty_like(data, device=self.device, requires_grad=False).copy_(
-                data, non_blocking=True
-            )
+            record = torch.empty_like(
+                data, device=self.device, requires_grad=False
+            ).copy_(data, non_blocking=True)
             if self.sparse:
                 record = record.to_sparse()
             self.recording[v].append(record)

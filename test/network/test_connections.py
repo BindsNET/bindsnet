@@ -111,8 +111,9 @@ class TestConnection:
 
                     # SparseConnection isn't supported for wmin\\wmax
                     elif (conn_type == SparseConnection) and not (
-                            (torch.tensor(wmin, dtype=torch.float32) == -np.inf).all()
-                            and (torch.tensor(wmax, dtype=torch.float32) == np.inf).all()):
+                        (torch.tensor(wmin, dtype=torch.float32) == -np.inf).all()
+                        and (torch.tensor(wmax, dtype=torch.float32) == np.inf).all()
+                    ):
                         continue
 
                     print(

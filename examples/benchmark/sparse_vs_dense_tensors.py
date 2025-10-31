@@ -6,11 +6,11 @@ from bindsnet.evaluation import all_activity, assign_labels, proportion_weightin
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--benchmark_type", choices=['memory', 'runtime'], default='memory')
+parser.add_argument("--benchmark_type", choices=["memory", "runtime"], default="memory")
 args = parser.parse_args()
 
 
-assert torch.cuda.is_available(), 'Benchmark works only on cuda'
+assert torch.cuda.is_available(), "Benchmark works only on cuda"
 device = torch.device("cuda")
 shape = (300, 500, 500)
 
@@ -24,15 +24,21 @@ def create_spikes_tensor(percent_of_true_values, sparse, return_memory_usage=Tru
 
     if return_memory_usage:
         torch.cuda.reset_peak_memory_stats(device=device)
-        return round(torch.cuda.max_memory_allocated(device=device) / (1024 ** 2))
+        return round(torch.cuda.max_memory_allocated(device=device) / (1024**2))
     else:
         return spikes_tensor
 
 
 def memory_benchmark():
-    print('======================= ====================== ====================== ====================')
-    print('Sparse (megabytes used) Dense (megabytes used) Ratio (Sparse/Dense) % % of non zero values')
-    print('======================= ====================== ====================== ====================')
+    print(
+        "======================= ====================== ====================== ===================="
+    )
+    print(
+        "Sparse (megabytes used) Dense (megabytes used) Ratio (Sparse/Dense) % % of non zero values"
+    )
+    print(
+        "======================= ====================== ====================== ===================="
+    )
     percent_of_true_values = 0.005
     while percent_of_true_values < 0.1:
         result = {}
@@ -46,10 +52,12 @@ def memory_benchmark():
             str(percent).ljust(22),
             str(round(percent_of_true_values * 100, 1)).ljust(20),
         ]
-        print(' '.join(row))
+        print(" ".join(row))
         percent_of_true_values += 0.005
 
-    print('======================= ====================== ====================== ====================')
+    print(
+        "======================= ====================== ====================== ===================="
+    )
 
 
 def run(sparse):
@@ -87,9 +95,7 @@ def run(sparse):
         )
         delta += time.perf_counter() - start
         spike_record[spike_record_idx] = create_spikes_tensor(
-            0.03,
-            sparse,
-            return_memory_usage=False
+            0.03, sparse, return_memory_usage=False
         )
         spike_record_idx += 1
         if spike_record_idx == len(spike_record):
@@ -102,7 +108,7 @@ def runtime_benchmark():
     print(f"Dense runtime: {run(False)} seconds")
 
 
-if args.benchmark_type == 'memory':
+if args.benchmark_type == "memory":
     memory_benchmark()
 else:
     runtime_benchmark()

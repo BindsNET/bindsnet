@@ -103,7 +103,9 @@ class MCC_LearningRule(ABC):
             self, NoOp
         ):
             if self.feature_value.is_sparse:
-                self.feature_value = self.feature_value.to_dense().clamp_(self.min, self.max).to_sparse()
+                self.feature_value = (
+                    self.feature_value.to_dense().clamp_(self.min, self.max).to_sparse()
+                )
             else:
                 self.feature_value.clamp_(self.min, self.max)
 
@@ -252,8 +254,7 @@ class PostPre(MCC_LearningRule):
             else:
                 if self.feature_value.is_sparse:
                     self.feature_value -= (
-                            torch.bmm(source_s, target_x)
-                            * self.connection.dt
+                        torch.bmm(source_s, target_x) * self.connection.dt
                     ).to_sparse()
                 else:
                     self.feature_value -= (
@@ -289,8 +290,7 @@ class PostPre(MCC_LearningRule):
             else:
                 if self.feature_value.is_sparse:
                     self.feature_value += (
-                            torch.bmm(source_x, target_s)
-                            * self.connection.dt
+                        torch.bmm(source_x, target_s) * self.connection.dt
                     ).to_sparse()
                 else:
                     self.feature_value += (
@@ -524,9 +524,7 @@ class MSTDP(MCC_LearningRule):
             ) % self.average_update
 
             if self.continues_update or self.average_buffer_index == 0:
-                update = self.nu[0] * torch.mean(
-                    self.average_buffer, dim=0
-                )
+                update = self.nu[0] * torch.mean(self.average_buffer, dim=0)
                 if self.feature_value.is_sparse:
                     update = update.to_sparse()
                 self.feature_value += update

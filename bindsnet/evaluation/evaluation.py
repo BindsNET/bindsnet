@@ -44,7 +44,9 @@ def assign_labels(
             indices = torch.nonzero(labels == i).view(-1)
 
             # Compute average firing rates for this label.
-            selected_spikes = torch.index_select(spikes, dim=0, index=torch.tensor(indices))
+            selected_spikes = torch.index_select(
+                spikes, dim=0, index=torch.tensor(indices)
+            )
             rates[:, i] = alpha * rates[:, i] + (
                 torch.sum(selected_spikes, 0) / n_labeled
             )

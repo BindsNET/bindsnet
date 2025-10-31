@@ -10,7 +10,11 @@ from bindsnet.learning import PostPre
 from bindsnet.learning.MCC_learning import PostPre as MMCPostPre
 from bindsnet.network import Network
 from bindsnet.network.nodes import DiehlAndCookNodes, Input, LIFNodes
-from bindsnet.network.topology import Connection, LocalConnection, MulticompartmentConnection
+from bindsnet.network.topology import (
+    Connection,
+    LocalConnection,
+    MulticompartmentConnection,
+)
 from bindsnet.network.topology_features import Weight
 
 
@@ -182,7 +186,7 @@ class DiehlAndCook2015(Network):
             device=device,
             pipeline=[
                 Weight(
-                    'weight',
+                    "weight",
                     w,
                     range=[wmin, wmax],
                     norm=norm,
@@ -190,9 +194,9 @@ class DiehlAndCook2015(Network):
                     nu=nu,
                     learning_rule=MMCPostPre,
                     sparse=sparse,
-                    batch_size=batch_size
+                    batch_size=batch_size,
                 )
-            ]
+            ],
         )
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
         if sparse:
@@ -201,14 +205,7 @@ class DiehlAndCook2015(Network):
             source=exc_layer,
             target=inh_layer,
             device=device,
-            pipeline=[
-                Weight(
-                    'weight',
-                    w,
-                    range=[0, self.exc],
-                    sparse=sparse
-                )
-            ]
+            pipeline=[Weight("weight", w, range=[0, self.exc], sparse=sparse)],
         )
         w = -self.inh * (
             torch.ones(self.n_neurons, self.n_neurons)
@@ -220,14 +217,7 @@ class DiehlAndCook2015(Network):
             source=inh_layer,
             target=exc_layer,
             device=device,
-            pipeline=[
-                Weight(
-                    'weight',
-                    w,
-                    range=[-self.inh, 0],
-                    sparse=sparse
-                )
-            ]
+            pipeline=[Weight("weight", w, range=[-self.inh, 0], sparse=sparse)],
         )
 
         # Add to network
