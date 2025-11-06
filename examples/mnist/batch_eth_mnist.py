@@ -43,8 +43,8 @@ parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument(
     "--w_dtype",
     type=str,
-    default='float32',
-    help='Datatype to use for weights. Examples: float32, float16, bfloat16 etc'
+    default="float32",
+    help="Datatype to use for weights. Examples: float32, float16, bfloat16 etc",
 )
 parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
@@ -109,7 +109,7 @@ network = DiehlAndCook2015(
     theta_plus=theta_plus,
     inpt_shape=(1, 28, 28),
     device=device,
-    w_dtype=getattr(torch, args.w_dtype)
+    w_dtype=getattr(torch, args.w_dtype),
 )
 
 # Directs network to GPU
@@ -279,7 +279,9 @@ for epoch in range(n_epochs):
             image = batch["image"][:, 0].view(28, 28)
             inpt = inputs["X"][:, 0].view(time, 784).sum(0).view(28, 28)
             lable = batch["label"][0]
-            input_exc_weights = network.connections[("X", "Ae")].feature_index['weight'].value
+            input_exc_weights = (
+                network.connections[("X", "Ae")].feature_index["weight"].value
+            )
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
             )
