@@ -142,7 +142,6 @@ class AbstractFeature(ABC):
             self, "enforce_polarity", False
         ), "enforce_polarity isn't supported for sparse tensors"
 
-
     @staticmethod
     def cast_dtype_if_needed(value, value_dtype):
         if value.dtype != value_dtype:
@@ -495,7 +494,13 @@ class Mask(AbstractFeature):
             # Send boolean to tensor (priming wont work if it's not a tensor)
             value = torch.tensor(value)
 
-        super().__init__(name=name, value=value, value_dtype=torch.bool, sparse=sparse, batch_size=batch_size)
+        super().__init__(
+            name=name,
+            value=value,
+            value_dtype=torch.bool,
+            sparse=sparse,
+            batch_size=batch_size,
+        )
         self.name = name
         self.value = value
 
@@ -736,7 +741,12 @@ class Intensity(AbstractFeature):
         :param batch_size: Mini-batch size.
         """
         super().__init__(
-            name=name, value=value, value_dtype=value_dtype, range=range, sparse=sparse, batch_size=batch_size
+            name=name,
+            value=value,
+            value_dtype=value_dtype,
+            range=range,
+            sparse=sparse,
+            batch_size=batch_size,
         )
 
     def reset_state_variables(self) -> None:
@@ -864,7 +874,13 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         self.const_update_rate = const_update_rate
         self.const_decay = const_decay
 
-        super().__init__(name=name, value=value, value_dtype=self.value_dtype, sparse=sparse, batch_size=batch_size)
+        super().__init__(
+            name=name,
+            value=value,
+            value_dtype=self.value_dtype,
+            sparse=sparse,
+            batch_size=batch_size,
+        )
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
 
@@ -968,7 +984,13 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         self.const_update_rate = const_update_rate
         self.const_decay = const_decay
 
-        super().__init__(name=name, value=value, value_dtype=self.value_dtype, sparse=sparse, batch_size=batch_size)
+        super().__init__(
+            name=name,
+            value=value,
+            value_dtype=self.value_dtype,
+            sparse=sparse,
+            batch_size=batch_size,
+        )
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
 

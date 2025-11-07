@@ -208,7 +208,11 @@ class DiehlAndCook2015(Network):
             source=exc_layer,
             target=inh_layer,
             device=device,
-            pipeline=[Weight("weight", w, value_dtype=w_dtype, range=[0, self.exc], sparse=sparse)],
+            pipeline=[
+                Weight(
+                    "weight", w, value_dtype=w_dtype, range=[0, self.exc], sparse=sparse
+                )
+            ],
         )
         w = -self.inh * (
             torch.ones(self.n_neurons, self.n_neurons)
@@ -220,7 +224,15 @@ class DiehlAndCook2015(Network):
             source=inh_layer,
             target=exc_layer,
             device=device,
-            pipeline=[Weight("weight", w, value_dtype=w_dtype, range=[-self.inh, 0], sparse=sparse)],
+            pipeline=[
+                Weight(
+                    "weight",
+                    w,
+                    value_dtype=w_dtype,
+                    range=[-self.inh, 0],
+                    sparse=sparse,
+                )
+            ],
         )
 
         # Add to network
