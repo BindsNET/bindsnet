@@ -386,7 +386,9 @@ pbar.close()
 
 print("\nAll activity accuracy: %.2f" % (accuracy["all"] / n_test))
 print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_test))
-print(f"Memory consumption: {round(torch.cuda.max_memory_allocated(device=None) / 1024 ** 2)}mb")
+print(
+    f"Memory consumption: {round(torch.cuda.max_memory_allocated(device=None) / 1024 ** 2)}mb"
+)
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("\nTesting complete.\n")
