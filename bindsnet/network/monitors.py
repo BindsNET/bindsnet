@@ -45,6 +45,7 @@ class Monitor(AbstractMonitor):
         time: Optional[int] = None,
         batch_size: int = 1,
         device: str = "cpu",
+        sparse: Optional[bool] = False,
     ):
         # language=rst
         """
@@ -62,6 +63,7 @@ class Monitor(AbstractMonitor):
         self.time = time
         self.batch_size = batch_size
         self.device = device
+        self.sparse = sparse
 
         # if time is not specified the monitor variable accumulate the logs
         if self.time is None:
@@ -98,11 +100,12 @@ class Monitor(AbstractMonitor):
         for v in self.state_vars:
             data = getattr(self.obj, v).unsqueeze(0)
             # self.recording[v].append(data.detach().clone().to(self.device))
-            self.recording[v].append(
-                torch.empty_like(data, device=self.device, requires_grad=False).copy_(
-                    data, non_blocking=True
-                )
-            )
+            record = torch.empty_like(
+                data, device=self.device, requires_grad=False
+            ).copy_(data, non_blocking=True)
+            if self.sparse:
+                record = record.to_sparse()
+            self.recording[v].append(record)
             # remove the oldest element (first in the list)
             if self.time is not None:
                 self.recording[v].pop(0)
