@@ -447,3 +447,53 @@ their simulation separately at the temporal granularity of chosen :code:`dt`, in
 This is a strict departure from the computation of *deep neural networks* (DNNs), in which an ordering of layers is
 supposed, and layers' activations are computed *in sequence* from the shallowest to the deepest layer in a single time
 step, with the exclusion of recurrent layers, whose computations are still ordered in time.
+
+
+Lowering precision
+------------------
+
+You can choose the precision for the weights.
+It can be specified as the :code:`value_dtype` parameter of the Weight class.
+
+.. code-block:: python
+
+    MulticompartmentConnection(
+        ...
+        pipeline=[
+            Weight(
+                'weight',
+                w,
+                value_dtype='float16',
+                ...
+            )
+        ]
+    )
+
+Below is the performance statistics for float16 and float32.
+
+The data was obtained by running examples/benchmark/lowering_precision.py
+
+
+.. code-block:: text
+
+    precision: float32
+    Time (sec) | GPU memory (Mb)
+    19.7812    | 52
+    19.4812    | 52
+    19.0769    | 52
+    19.1530    | 52
+    Average time: 19.373075
+    Average memory: 52.0
+
+    precision: float16
+    Time (sec) | GPU memory (Mb)
+    19.5023    | 49
+    20.5734    | 49
+    19.8735    | 49
+    19.8931    | 49
+    Average time: 19.960575
+    Average memory: 49.0
+
+
+As you can see, reducing from float32 to float16 does not provide a significant advantage in terms of time or memory.
+The float16 option only reduces memory usage by 6%.

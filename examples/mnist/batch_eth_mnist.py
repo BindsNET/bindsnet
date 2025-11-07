@@ -40,6 +40,12 @@ parser.add_argument("--time", type=int, default=100)
 parser.add_argument("--dt", type=int, default=1.0)
 parser.add_argument("--intensity", type=float, default=128)
 parser.add_argument("--progress_interval", type=int, default=10)
+parser.add_argument(
+    "--w_dtype",
+    type=str,
+    default="float32",
+    help="Datatype to use for weights. Examples: float32, float16, bfloat16 etc",
+)
 parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
@@ -107,6 +113,8 @@ network = DiehlAndCook2015(
     nu=(1e-4, 1e-2),
     theta_plus=theta_plus,
     inpt_shape=(1, 28, 28),
+    device=device,
+    w_dtype=getattr(torch, args.w_dtype),
 )
 
 # Directs network to GPU
@@ -391,6 +399,9 @@ pbar.close()
 
 print("\nAll activity accuracy: %.2f" % (accuracy["all"] / n_test))
 print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_test))
+print(
+    f"Memory consumption: {round(torch.cuda.max_memory_allocated(device=None) / 1024 ** 2)}mb"
+)
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("\nTesting complete.\n")

@@ -112,6 +112,7 @@ class DiehlAndCook2015(Network):
         reduction: Optional[callable] = None,
         wmin: float = 0.0,
         wmax: float = 1.0,
+        w_dtype: torch.dtype = torch.float32,
         norm: float = 78.4,
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
@@ -134,6 +135,7 @@ class DiehlAndCook2015(Network):
             dimension.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
+        :param w_dtype: Data type for :code:`w` tensor
         :param norm: Input to excitatory layer connection weights normalization
             constant.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane
@@ -188,6 +190,7 @@ class DiehlAndCook2015(Network):
                 Weight(
                     "weight",
                     w,
+                    value_dtype=w_dtype,
                     range=[wmin, wmax],
                     norm=norm,
                     reduction=reduction,
@@ -205,7 +208,11 @@ class DiehlAndCook2015(Network):
             source=exc_layer,
             target=inh_layer,
             device=device,
-            pipeline=[Weight("weight", w, range=[0, self.exc], sparse=sparse)],
+            pipeline=[
+                Weight(
+                    "weight", w, value_dtype=w_dtype, range=[0, self.exc], sparse=sparse
+                )
+            ],
         )
         w = -self.inh * (
             torch.ones(self.n_neurons, self.n_neurons)
@@ -217,7 +224,15 @@ class DiehlAndCook2015(Network):
             source=inh_layer,
             target=exc_layer,
             device=device,
-            pipeline=[Weight("weight", w, range=[-self.inh, 0], sparse=sparse)],
+            pipeline=[
+                Weight(
+                    "weight",
+                    w,
+                    value_dtype=w_dtype,
+                    range=[-self.inh, 0],
+                    sparse=sparse,
+                )
+            ],
         )
 
         # Add to network
