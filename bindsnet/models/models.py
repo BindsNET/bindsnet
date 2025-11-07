@@ -4,11 +4,18 @@ import numpy as np
 import torch
 from scipy.spatial.distance import euclidean
 from torch.nn.modules.utils import _pair
+from torch import device
 
 from bindsnet.learning import PostPre
+from bindsnet.learning.MCC_learning import PostPre as MMCPostPre
 from bindsnet.network import Network
 from bindsnet.network.nodes import DiehlAndCookNodes, Input, LIFNodes
-from bindsnet.network.topology import Connection, LocalConnection
+from bindsnet.network.topology import (
+    Connection,
+    LocalConnection,
+    MulticompartmentConnection,
+)
+from bindsnet.network.topology_features import Weight
 
 
 class TwoLayerNetwork(Network):
@@ -94,6 +101,9 @@ class DiehlAndCook2015(Network):
     def __init__(
         self,
         n_inpt: int,
+        device: str = "cpu",
+        batch_size: int = None,
+        sparse: bool = False,
         n_neurons: int = 100,
         exc: float = 22.5,
         inh: float = 17.5,
@@ -102,6 +112,7 @@ class DiehlAndCook2015(Network):
         reduction: Optional[callable] = None,
         wmin: float = 0.0,
         wmax: float = 1.0,
+        w_dtype: torch.dtype = torch.float32,
         norm: float = 78.4,
         theta_plus: float = 0.05,
         tc_theta_decay: float = 1e7,
@@ -124,6 +135,7 @@ class DiehlAndCook2015(Network):
             dimension.
         :param wmin: Minimum allowed weight on input to excitatory synapses.
         :param wmax: Maximum allowed weight on input to excitatory synapses.
+        :param w_dtype: Data type for :code:`w` tensor
         :param norm: Input to excitatory layer connection weights normalization
             constant.
         :param theta_plus: On-spike increment of ``DiehlAndCookNodes`` membrane
@@ -170,27 +182,57 @@ class DiehlAndCook2015(Network):
 
         # Connections
         w = 0.3 * torch.rand(self.n_inpt, self.n_neurons)
-        input_exc_conn = Connection(
+        input_exc_conn = MulticompartmentConnection(
             source=input_layer,
             target=exc_layer,
-            w=w,
-            update_rule=PostPre,
-            nu=nu,
-            reduction=reduction,
-            wmin=wmin,
-            wmax=wmax,
-            norm=norm,
+            device=device,
+            pipeline=[
+                Weight(
+                    "weight",
+                    w,
+                    value_dtype=w_dtype,
+                    range=[wmin, wmax],
+                    norm=norm,
+                    reduction=reduction,
+                    nu=nu,
+                    learning_rule=MMCPostPre,
+                    sparse=sparse,
+                    batch_size=batch_size,
+                )
+            ],
         )
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
-        exc_inh_conn = Connection(
-            source=exc_layer, target=inh_layer, w=w, wmin=0, wmax=self.exc
+        if sparse:
+            w = w.unsqueeze(0).expand(batch_size, -1, -1)
+        exc_inh_conn = MulticompartmentConnection(
+            source=exc_layer,
+            target=inh_layer,
+            device=device,
+            pipeline=[
+                Weight(
+                    "weight", w, value_dtype=w_dtype, range=[0, self.exc], sparse=sparse
+                )
+            ],
         )
         w = -self.inh * (
             torch.ones(self.n_neurons, self.n_neurons)
             - torch.diag(torch.ones(self.n_neurons))
         )
-        inh_exc_conn = Connection(
-            source=inh_layer, target=exc_layer, w=w, wmin=-self.inh, wmax=0
+        if sparse:
+            w = w.unsqueeze(0).expand(batch_size, -1, -1)
+        inh_exc_conn = MulticompartmentConnection(
+            source=inh_layer,
+            target=exc_layer,
+            device=device,
+            pipeline=[
+                Weight(
+                    "weight",
+                    w,
+                    value_dtype=w_dtype,
+                    range=[-self.inh, 0],
+                    sparse=sparse,
+                )
+            ],
         )
 
         # Add to network
