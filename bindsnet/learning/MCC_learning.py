@@ -102,7 +102,12 @@ class MCC_LearningRule(ABC):
         if ((self.min is not None) or (self.max is not None)) and not isinstance(
             self, NoOp
         ):
-            self.feature_value.clamp_(self.min, self.max)
+            if self.feature_value.is_sparse:
+                self.feature_value = (
+                    self.feature_value.to_dense().clamp_(self.min, self.max).to_sparse()
+                )
+            else:
+                self.feature_value.clamp_(self.min, self.max)
 
     @abstractmethod
     def reset_state_variables(self) -> None:
@@ -247,10 +252,15 @@ class PostPre(MCC_LearningRule):
                         torch.mean(self.average_buffer_pre, dim=0) * self.connection.dt
                     )
             else:
-                self.feature_value -= (
-                    self.reduction(torch.bmm(source_s, target_x), dim=0)
-                    * self.connection.dt
-                )
+                if self.feature_value.is_sparse:
+                    self.feature_value -= (
+                        torch.bmm(source_s, target_x) * self.connection.dt
+                    ).to_sparse()
+                else:
+                    self.feature_value -= (
+                        self.reduction(torch.bmm(source_s, target_x), dim=0)
+                        * self.connection.dt
+                    )
             del source_s, target_x
 
         # Post-synaptic update.
@@ -278,10 +288,15 @@ class PostPre(MCC_LearningRule):
                         torch.mean(self.average_buffer_post, dim=0) * self.connection.dt
                     )
             else:
-                self.feature_value += (
-                    self.reduction(torch.bmm(source_x, target_s), dim=0)
-                    * self.connection.dt
-                )
+                if self.feature_value.is_sparse:
+                    self.feature_value += (
+                        torch.bmm(source_x, target_s) * self.connection.dt
+                    ).to_sparse()
+                else:
+                    self.feature_value += (
+                        self.reduction(torch.bmm(source_x, target_s), dim=0)
+                        * self.connection.dt
+                    )
             del source_x, target_s
 
         super().update()
@@ -508,16 +523,16 @@ class MSTDP(MCC_LearningRule):
                 self.average_buffer_index + 1
             ) % self.average_update
 
-            if self.continues_update:
-                self.feature_value += self.nu[0] * torch.mean(
-                    self.average_buffer, dim=0
-                )
-            elif self.average_buffer_index == 0:
-                self.feature_value += self.nu[0] * torch.mean(
-                    self.average_buffer, dim=0
-                )
+            if self.continues_update or self.average_buffer_index == 0:
+                update = self.nu[0] * torch.mean(self.average_buffer, dim=0)
+                if self.feature_value.is_sparse:
+                    update = update.to_sparse()
+                self.feature_value += update
         else:
-            self.feature_value += self.nu[0] * self.reduction(update, dim=0)
+            update = self.nu[0] * self.reduction(update, dim=0)
+            if self.feature_value.is_sparse:
+                update = update.to_sparse()
+            self.feature_value += update
 
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
@@ -686,14 +701,16 @@ class MSTDPET(MCC_LearningRule):
                 self.average_buffer_index + 1
             ) % self.average_update
 
-            if self.continues_update:
-                self.feature_value += torch.mean(self.average_buffer, dim=0)
-            elif self.average_buffer_index == 0:
-                self.feature_value += torch.mean(self.average_buffer, dim=0)
+            if self.continues_update or self.average_buffer_index == 0:
+                update = torch.mean(self.average_buffer, dim=0)
+                if self.feature_value.is_sparse:
+                    update = update.to_sparse()
+                self.feature_value += update
         else:
-            self.feature_value += (
-                self.nu[0] * self.connection.dt * reward * self.eligibility_trace
-            )
+            update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
+            if self.feature_value.is_sparse:
+                update = update.to_sparse()
+            self.feature_value += update
 
         # Update P^+ and P^- values.
         self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)  # Decay

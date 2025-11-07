@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from scipy.spatial.distance import euclidean
 from torch.nn.modules.utils import _pair
+from torch import device
 
 from bindsnet.learning import PostPre
 from bindsnet.learning.MCC_learning import PostPre as MMCPostPre
@@ -101,6 +102,8 @@ class DiehlAndCook2015(Network):
         self,
         n_inpt: int,
         device: str = "cpu",
+        batch_size: int = None,
+        sparse: bool = False,
         n_neurons: int = 100,
         exc: float = 22.5,
         inh: float = 17.5,
@@ -193,25 +196,31 @@ class DiehlAndCook2015(Network):
                     reduction=reduction,
                     nu=nu,
                     learning_rule=MMCPostPre,
+                    sparse=sparse,
+                    batch_size=batch_size,
                 )
             ],
         )
         w = self.exc * torch.diag(torch.ones(self.n_neurons))
+        if sparse:
+            w = w.unsqueeze(0).expand(batch_size, -1, -1)
         exc_inh_conn = MulticompartmentConnection(
             source=exc_layer,
             target=inh_layer,
             device=device,
-            pipeline=[Weight("weight", w, value_dtype=w_dtype, range=[0, self.exc])],
+            pipeline=[Weight("weight", w, value_dtype=w_dtype, range=[0, self.exc], sparse=sparse)],
         )
         w = -self.inh * (
             torch.ones(self.n_neurons, self.n_neurons)
             - torch.diag(torch.ones(self.n_neurons))
         )
+        if sparse:
+            w = w.unsqueeze(0).expand(batch_size, -1, -1)
         inh_exc_conn = MulticompartmentConnection(
             source=inh_layer,
             target=exc_layer,
             device=device,
-            pipeline=[Weight("weight", w, value_dtype=w_dtype, range=[-self.inh, 0])],
+            pipeline=[Weight("weight", w, value_dtype=w_dtype, range=[-self.inh, 0], sparse=sparse)],
         )
 
         # Add to network

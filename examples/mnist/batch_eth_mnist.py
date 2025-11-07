@@ -50,7 +50,8 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=True)
+parser.add_argument("--sparse", dest="sparse", action="store_true")
+parser.set_defaults(gpu=True)
 
 args = parser.parse_args()
 
@@ -72,6 +73,7 @@ progress_interval = args.progress_interval
 train = args.train
 plot = args.plot
 gpu = args.gpu
+sparse = args.sparse
 
 update_steps = int(n_train / batch_size / n_updates)
 update_interval = update_steps * batch_size
@@ -99,6 +101,9 @@ start_intensity = intensity
 
 # Build network.
 network = DiehlAndCook2015(
+    device=device,
+    sparse=sparse,
+    batch_size=batch_size,
     n_inpt=784,
     n_neurons=n_neurons,
     exc=exc,
@@ -150,7 +155,11 @@ network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 spikes = {}
 for layer in set(network.layers):
     spikes[layer] = Monitor(
-        network.layers[layer], state_vars=["s"], time=int(time / dt), device=device
+        network.layers[layer],
+        state_vars=["s"],
+        time=int(time / dt),
+        device=device,
+        sparse=sparse,
     )
     network.add_monitor(spikes[layer], name="%s_spikes" % layer)
 
@@ -168,7 +177,11 @@ assigns_im = None
 perf_ax = None
 voltage_axes, voltage_ims = None, None
 
-spike_record = torch.zeros((update_interval, int(time / dt), n_neurons), device=device)
+spike_record = [
+    torch.zeros((batch_size, int(time / dt), n_neurons), device=device).to_sparse()
+    for _ in range(update_interval // batch_size)
+]
+spike_record_idx = 0
 
 # Train the network.
 print("\nBegin training...")
@@ -200,12 +213,13 @@ for epoch in range(n_epochs):
             # Convert the array of labels into a tensor
             label_tensor = torch.tensor(labels, device=device)
 
+            spike_record_tensor = torch.cat(spike_record, dim=0)
             # Get network predictions.
             all_activity_pred = all_activity(
-                spikes=spike_record, assignments=assignments, n_labels=n_classes
+                spikes=spike_record_tensor, assignments=assignments, n_labels=n_classes
             )
             proportion_pred = proportion_weighting(
-                spikes=spike_record,
+                spikes=spike_record_tensor,
                 assignments=assignments,
                 proportions=proportions,
                 n_labels=n_classes,
@@ -243,7 +257,7 @@ for epoch in range(n_epochs):
 
             # Assign labels to excitatory layer neurons.
             assignments, proportions, rates = assign_labels(
-                spikes=spike_record,
+                spikes=spike_record_tensor,
                 labels=label_tensor,
                 n_labels=n_classes,
                 rates=rates,
@@ -264,11 +278,10 @@ for epoch in range(n_epochs):
 
         # Add to spikes recording.
         s = spikes["Ae"].get("s").permute((1, 0, 2))
-        spike_record[
-            (step * batch_size)
-            % update_interval : (step * batch_size % update_interval)
-            + s.size(0)
-        ] = s
+        spike_record[spike_record_idx] = s
+        spike_record_idx += 1
+        if spike_record_idx == len(spike_record):
+            spike_record_idx = 0
 
         # Get voltage recording.
         exc_voltages = exc_voltage_monitor.get("v")

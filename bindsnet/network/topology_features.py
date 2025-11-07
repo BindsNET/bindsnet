@@ -33,6 +33,8 @@ class AbstractFeature(ABC):
         enforce_polarity: Optional[bool] = False,
         decay: float = 0.0,
         parent_feature=None,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
         **kwargs,
     ) -> None:
         # language=rst
@@ -50,6 +52,8 @@ class AbstractFeature(ABC):
             dimension
         :param decay: Constant multiple to decay weights by on each iteration
         :param parent_feature: Parent feature to inherit :code:`value` from
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         #### Initialize class variables ####
@@ -64,6 +68,8 @@ class AbstractFeature(ABC):
         self.reduction = reduction
         self.decay = decay
         self.parent_feature = parent_feature
+        self.sparse = sparse
+        self.batch_size = batch_size
         self.kwargs = kwargs
 
         ## Backend ##
@@ -120,9 +126,22 @@ class AbstractFeature(ABC):
         )
 
         self.assert_valid_range()
-        if value is not None:
-            self.assert_feature_in_range()
-            self.value = self.cast_dtype_if_needed(self.value, value_dtype)
+        if value is None:
+            return
+
+        self.assert_feature_in_range()
+        self.value = self.cast_dtype_if_needed(self.value, value_dtype)
+        if not self.sparse:
+            return
+
+        if len(self.value.shape) == 2:
+            self.value = self.value.unsqueeze(0).repeat(self.batch_size, 1, 1)
+
+        self.value = self.value.to_sparse()
+        assert not getattr(
+            self, "enforce_polarity", False
+        ), "enforce_polarity isn't supported for sparse tensors"
+
 
     @staticmethod
     def cast_dtype_if_needed(value, value_dtype):
@@ -175,7 +194,16 @@ class AbstractFeature(ABC):
 
         # Check if values/norms are the correct shape
         if isinstance(self.value, torch.Tensor):
-            assert tuple(self.value.shape) == (connection.source.n, connection.target.n)
+            if self.sparse:
+                assert tuple(self.value.shape[1:]) == (
+                    connection.source.n,
+                    connection.target.n,
+                )
+            else:
+                assert tuple(self.value.shape) == (
+                    connection.source.n,
+                    connection.target.n,
+                )
 
         if self.norm is not None and isinstance(self.norm, torch.Tensor):
             assert self.norm.shape[0] == connection.target.n
@@ -228,9 +256,15 @@ class AbstractFeature(ABC):
         """
 
         if self.norm is not None:
-            abs_sum = self.value.sum(0).unsqueeze(0)
-            abs_sum[abs_sum == 0] = 1.0
-            self.value *= self.norm / abs_sum
+            if self.sparse:
+                abs_sum = self.value.sum(1).to_dense()
+                abs_sum[abs_sum == 0] = 1.0
+                abs_sum = abs_sum.unsqueeze(1).expand(-1, *self.value.shape[1:])
+                self.value = self.value * (self.norm / abs_sum)
+            else:
+                abs_sum = self.value.sum(0).unsqueeze(0)
+                abs_sum[abs_sum == 0] = 1.0
+                self.value *= self.norm / abs_sum
 
     def degrade(self) -> None:
         # language=rst
@@ -313,11 +347,19 @@ class AbstractFeature(ABC):
 
     def assert_valid_shape(self, source_shape, target_shape, f):
         # Multidimensional feat
-        if len(f.shape) > 1:
-            assert f.shape == (
+        if (not self.sparse and len(f.shape) > 1) or (
+            self.sparse and len(f.shape[1:]) > 1
+        ):
+            if self.sparse:
+                f_shape = f.shape[1:]
+                expected = ("batch_size", source_shape, target_shape)
+            else:
+                f_shape = f.shape
+                expected = (source_shape, target_shape)
+            assert f_shape == (
                 source_shape,
                 target_shape,
-            ), f"Feature {self.name} has an incorrect shape of {f.shape}. Should be of shape {(source_shape, target_shape)}"
+            ), f"Feature {self.name} has an incorrect shape of {f.shape}. Should be of shape {expected}"
         # Else assume scalar, which is a valid shape
 
 
@@ -334,6 +376,8 @@ class Probability(AbstractFeature):
         reduction: Optional[callable] = None,
         decay: float = 0.0,
         parent_feature=None,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -352,6 +396,8 @@ class Probability(AbstractFeature):
             dimension
         :param decay: Constant multiple to decay weights by on each iteration
         :param parent_feature: Parent feature to inherit :code:`value` from
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         ### Assertions ###
@@ -366,10 +412,22 @@ class Probability(AbstractFeature):
             reduction=reduction,
             decay=decay,
             parent_feature=parent_feature,
+            sparse=sparse,
+            batch_size=batch_size,
         )
 
+    def sparse_bernoulli(self):
+        values = torch.bernoulli(self.value.values())
+        mask = values != 0
+        indices = self.value.indices()[:, mask]
+        non_zero = values[mask]
+        return torch.sparse_coo_tensor(indices, non_zero, self.value.size())
+
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes * torch.bernoulli(self.value)
+        if self.sparse:
+            return conn_spikes * self.sparse_bernoulli()
+        else:
+            return conn_spikes * torch.bernoulli(self.value)
 
     def reset_state_variables(self) -> None:
         pass
@@ -412,12 +470,16 @@ class Mask(AbstractFeature):
         self,
         name: str,
         value: Union[torch.Tensor, float, int] = None,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
         Boolean mask which determines whether or not signals are allowed to traverse certain synapses.
         :param name: Name of the feature
         :param value: Boolean mask. :code:`True` means a signal can pass, :code:`False` means the synapse is impassable
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         ### Assertions ###
@@ -433,8 +495,7 @@ class Mask(AbstractFeature):
             # Send boolean to tensor (priming wont work if it's not a tensor)
             value = torch.tensor(value)
 
-        super().__init__(name=name, value=value, value_dtype=torch.bool)
-
+        super().__init__(name=name, value=value, value_dtype=torch.bool, sparse=sparse, batch_size=batch_size)
         self.name = name
         self.value = value
 
@@ -520,6 +581,8 @@ class Weight(AbstractFeature):
         reduction: Optional[callable] = None,
         enforce_polarity: Optional[bool] = False,
         decay: float = 0.0,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -539,6 +602,8 @@ class Weight(AbstractFeature):
             dimension
         :param enforce_polarity: Will prevent synapses from changing signs if :code:`True`
         :param decay: Constant multiple to decay weights by on each iteration
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         self.norm_frequency = norm_frequency
@@ -553,6 +618,8 @@ class Weight(AbstractFeature):
             nu=nu,
             reduction=reduction,
             decay=decay,
+            sparse=sparse,
+            batch_size=batch_size,
         )
 
     def reset_state_variables(self) -> None:
@@ -607,6 +674,8 @@ class Bias(AbstractFeature):
         value_dtype: torch.dtype = torch.float32,
         range: Optional[Sequence[float]] = None,
         norm: Optional[Union[torch.Tensor, float, int]] = None,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -617,6 +686,8 @@ class Bias(AbstractFeature):
         :param range: Range of acceptable values for the :code:`value` parameter
         :param norm: Value which all values in :code:`value` will sum to. Normalization of values occurs after each sample
             and after the value has been updated by the learning rule (if there is one)
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         super().__init__(
@@ -625,6 +696,8 @@ class Bias(AbstractFeature):
             value_dtype=value_dtype,
             range=[-torch.inf, +torch.inf] if range is None else range,
             norm=norm,
+            sparse=sparse,
+            batch_size=batch_size,
         )
 
     def reset_state_variables(self) -> None:
@@ -650,6 +723,8 @@ class Intensity(AbstractFeature):
         value: Union[torch.Tensor, float, int] = None,
         value_dtype: torch.dtype = torch.float32,
         range: Optional[Sequence[float]] = None,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -657,9 +732,12 @@ class Intensity(AbstractFeature):
         :param name: Name of the feature
         :param value: Values to scale signals by
         :param value_dtype: Data type for :code:`value` tensor
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
-
-        super().__init__(name=name, value=value, value_dtype=value_dtype, range=range)
+        super().__init__(
+            name=name, value=value, value_dtype=value_dtype, range=range, sparse=sparse, batch_size=batch_size
+        )
 
     def reset_state_variables(self) -> None:
         pass
@@ -689,6 +767,8 @@ class Degradation(AbstractFeature):
         value_dtype: torch.dtype = torch.float32,
         degrade_function: callable = None,
         parent_feature: Optional[AbstractFeature] = None,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -700,6 +780,8 @@ class Degradation(AbstractFeature):
         :param degrade_function: Callable function which takes a single argument (:code:`value`) and returns a tensor or
         constant to be *subtracted* from the propagating spikes.
         :param parent_feature: Parent feature with desired :code:`value` to inherit
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         # Note: parent_feature will override value. See abstract constructor
@@ -708,6 +790,8 @@ class Degradation(AbstractFeature):
             value=value,
             value_dtype=value_dtype,
             parent_feature=parent_feature,
+            sparse=sparse,
+            batch_size=batch_size,
         )
 
         self.degrade_function = degrade_function
@@ -728,6 +812,8 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         ann_values: Union[list, tuple] = None,
         const_update_rate: float = 0.1,
         const_decay: float = 0.001,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -738,6 +824,8 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         :param value: Values to be use to build an initial mask for the synapses.
         :param const_update_rate: The mask upatate rate of the ANN decision.
         :param const_decay: The spontaneous activation of the synapses.
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
 
         self.value_dtype = value_dtype
@@ -776,15 +864,19 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         self.const_update_rate = const_update_rate
         self.const_decay = const_decay
 
-        super().__init__(name=name, value=value, value_dtype=self.value_dtype)
+        super().__init__(name=name, value=value, value_dtype=self.value_dtype, sparse=sparse, batch_size=batch_size)
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
 
         # Update the spike buffer
         if self.start_counter == False or conn_spikes.sum() > 0:
             self.start_counter = True
+            if self.sparse:
+                flat_conn_spikes = conn_spikes.to_dense().flatten()
+            else:
+                flat_conn_spikes = conn_spikes.flatten()
             self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = (
-                conn_spikes.flatten()
+                flat_conn_spikes
             )
             self.counter += 1
 
@@ -800,6 +892,8 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
 
             # self.mask = torch.clamp(self.mask, -1, 1)
             self.value = (self.mask > 0).to(self.value_dtype)
+            if self.sparse:
+                self.value = self.value.to_sparse()
 
         return conn_spikes * self.value
 
@@ -822,6 +916,8 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         ann_values: Union[list, tuple] = None,
         const_update_rate: float = 0.1,
         const_decay: float = 0.01,
+        sparse: Optional[bool] = False,
+        batch_size: int = 1,
     ) -> None:
         # language=rst
         """
@@ -833,6 +929,8 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         :param value_dtype: Data type for :code:`value` tensor
         :param const_update_rate: The mask upatate rate of the ANN decision.
         :param const_decay: The spontaneous activation of the synapses.
+        :param sparse: Should :code:`value` parameter be sparse tensor or not
+        :param batch_size: Mini-batch size.
         """
         self.value_dtype = value_dtype
         value = value.to(self.value_dtype)
@@ -870,15 +968,19 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         self.const_update_rate = const_update_rate
         self.const_decay = const_decay
 
-        super().__init__(name=name, value=value, value_dtype=self.value_dtype)
+        super().__init__(name=name, value=value, value_dtype=self.value_dtype, sparse=sparse, batch_size=batch_size)
 
     def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
 
         # Update the spike buffer
         if self.start_counter == False or conn_spikes.sum() > 0:
             self.start_counter = True
+            if self.sparse:
+                flat_conn_spikes = conn_spikes.to_dense().flatten()
+            else:
+                flat_conn_spikes = conn_spikes.flatten()
             self.spike_buffer[:, self.counter % self.spike_buffer.shape[1]] = (
-                conn_spikes.flatten()
+                flat_conn_spikes
             )
             self.counter += 1
 
@@ -894,6 +996,8 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
 
             # self.mask = torch.clamp(self.mask, -1, 1)
             self.value = (self.mask > 0).to(self.value_dtype)
+            if self.sparse:
+                self.value = self.value.to_sparse()
 
         return conn_spikes * self.value
 

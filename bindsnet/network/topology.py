@@ -126,9 +126,13 @@ class AbstractConnection(ABC, Module):
 
         mask = kwargs.get("mask", None)
         if mask is not None:
+            if self.w.is_sparse:
+                raise Exception("Mask isn't supported for SparseConnection")
             self.w.masked_fill_(mask, 0)
 
         if self.Dales_rule is not None:
+            if self.w.is_sparse:
+                raise Exception("Dales_rule isn't supported for SparseConnection")
             # weight that are negative and should be positive are set to 0
             self.w[self.w < 0 * self.Dales_rule.to(torch.float)] = 0
             # weight that are positive and should be negative are set to 0
@@ -456,12 +460,23 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         # Sum signals for each of the output/terminal neurons
         # |out_signal| = [batch_size, target.n]
-        out_signal = conn_spikes.view(s.size(0), self.source.n, self.target.n).sum(1)
+        if conn_spikes.size() != torch.Size([s.size(0), self.source.n, self.target.n]):
+            if conn_spikes.is_sparse:
+                conn_spikes = conn_spikes.to_dense()
+            conn_spikes = conn_spikes.view(s.size(0), self.source.n, self.target.n)
+
+        if conn_spikes.is_sparse:
+            out_signal = conn_spikes.to_dense().sum(1)
+        else:
+            out_signal = conn_spikes.sum(1)
 
         if self.traces:
             self.activity = out_signal
 
-        return out_signal.view(s.size(0), *self.target.shape)
+        if out_signal.size() != torch.Size([s.size(0)] + self.target.shape):
+            return out_signal.view(s.size(0), *self.target.shape)
+        else:
+            return out_signal
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -1991,105 +2006,12 @@ class MeanFieldConnection(AbstractConnection):
         super().reset_state_variables()
 
 
-class SparseConnection(AbstractConnection):
+class SparseConnection(Connection):
     # language=rst
     """
     Specifies sparse synapses between one or two populations of neurons.
     """
 
-    def __init__(
-        self,
-        source: Nodes,
-        target: Nodes,
-        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
-        reduction: Optional[callable] = None,
-        weight_decay: float = None,
-        **kwargs,
-    ) -> None:
-        # language=rst
-        """
-        Instantiates a :code:`Connection` object with sparse weights.
-
-        :param source: A layer of nodes from which the connection originates.
-        :param target: A layer of nodes to which the connection connects.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
-            accepts a pair of tensors to individualize learning rates of each neuron.
-            In this case, their shape should be the same size as the connection weights.
-        :param reduction: Method for reducing parameter updates along the minibatch
-            dimension.
-        :param weight_decay: Constant multiple to decay weights by on each iteration.
-
-        Keyword arguments:
-
-        :param torch.Tensor w: Strengths of synapses. Must be in ``torch.sparse`` format
-        :param float sparsity: Fraction of sparse connections to use.
-        :param LearningRule update_rule: Modifies connection parameters according to
-            some rule.
-        :param float wmin: Minimum allowed value on the connection weights.
-        :param float wmax: Maximum allowed value on the connection weights.
-        :param float norm: Total weight per target neuron normalization constant.
-        """
-        super().__init__(source, target, nu, reduction, weight_decay, **kwargs)
-
-        w = kwargs.get("w", None)
-        self.sparsity = kwargs.get("sparsity", None)
-
-        assert (
-            w is not None
-            and self.sparsity is None
-            or w is None
-            and self.sparsity is not None
-        ), 'Only one of "weights" or "sparsity" must be specified'
-
-        if w is None and self.sparsity is not None:
-            i = torch.bernoulli(
-                1 - self.sparsity * torch.ones(*source.shape, *target.shape)
-            )
-            if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
-                v = torch.clamp(
-                    torch.rand(*source.shape, *target.shape), self.wmin, self.wmax
-                )[i.bool()]
-            else:
-                v = (
-                    self.wmin
-                    + torch.rand(*source.shape, *target.shape) * (self.wmax - self.wmin)
-                )[i.bool()]
-            w = torch.sparse.FloatTensor(i.nonzero().t(), v)
-        elif w is not None and self.sparsity is None:
-            assert w.is_sparse, "Weight matrix is not sparse (see torch.sparse module)"
-            if self.wmin != -np.inf or self.wmax != np.inf:
-                w = torch.clamp(w, self.wmin, self.wmax)
-
-        self.w = Parameter(w, requires_grad=False)
-
-    def compute(self, s: torch.Tensor) -> torch.Tensor:
-        # language=rst
-        """
-        Compute convolutional pre-activations given spikes using layer weights.
-
-        :param s: Incoming spikes.
-        :return: Incoming spikes multiplied by synaptic weights (with or without
-            decaying spike activation).
-        """
-        return torch.mm(self.w, s.view(s.shape[1], 1).float()).squeeze(-1)
-        # return torch.mm(self.w, s.unsqueeze(-1).float()).squeeze(-1)
-
-    def update(self, **kwargs) -> None:
-        # language=rst
-        """
-        Compute connection's update rule.
-        """
-
-    def normalize(self) -> None:
-        # language=rst
-        """
-        Normalize weights along the first axis according to total weight per target
-        neuron.
-        """
-
-    def reset_state_variables(self) -> None:
-        # language=rst
-        """
-        Contains resetting logic for the connection.
-        """
-        super().reset_state_variables()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.w = Parameter(self.w.to_sparse(), requires_grad=False)

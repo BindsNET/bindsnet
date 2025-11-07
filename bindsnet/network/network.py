@@ -19,7 +19,9 @@ def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "N
     :param learning: Whether to load with learning enabled. Default loads value from
         disk.
     """
-    network = torch.load(open(file_name, "rb"), map_location=map_location)
+    network = torch.load(
+        open(file_name, "rb"), map_location=map_location, weights_only=False
+    )
     if learning is not None and "learning" in vars(network):
         network.learning = learning
 
@@ -191,6 +193,7 @@ class Network(torch.nn.Module):
             # Save the network to disk.
             network.save(str(Path.home()) + '/network.pt')
         """
+        torch.serialization.add_safe_globals([self])
         torch.save(self, open(file_name, "wb"))
 
     def clone(self) -> "Network":

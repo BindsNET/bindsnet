@@ -109,6 +109,13 @@ class TestConnection:
                     ):
                         return
 
+                    # SparseConnection isn't supported for wmin\\wmax
+                    elif (conn_type == SparseConnection) and not (
+                        (torch.tensor(wmin, dtype=torch.float32) == -np.inf).all()
+                        and (torch.tensor(wmax, dtype=torch.float32) == np.inf).all()
+                    ):
+                        continue
+
                     print(
                         f"- w: {type(w).__name__}, "
                         f"wmin: {type(wmax).__name__}, wmax: {type(wmax).__name__}"
@@ -163,8 +170,9 @@ if __name__ == "__main__":
     # tester.test_transfer()
 
     # Connections with learning ability
-    conn_types = [Connection, Conv2dConnection, LocalConnection]
+    conn_types = [Connection, SparseConnection, Conv2dConnection, LocalConnection]
     args = [
+        [[100], [50], (100, 50)],
         [[100], [50], (100, 50)],
         [[1, 28, 28], [1, 26, 26], (1, 1, 3, 3), 3],
         [[1, 28, 28], [1, 26, 26], (784, 676), 3, 1, 1],
