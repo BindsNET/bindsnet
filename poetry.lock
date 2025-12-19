@@ -1207,14 +1207,14 @@ test = ["coverage[toml]", "ddt (>=1.1.1,!=1.4.3)", "mock ; python_version < \"3.
 
 [[package]]
 name = "gymnasium"
-version = "1.2.2"
+version = "1.2.3"
 description = "A standard API for reinforcement learning and a diverse set of reference environments (formerly Gym)."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "gymnasium-1.2.2-py3-none-any.whl", hash = "sha256:f04ec362b1fdf73a8b327db5ef89384a3f2ba411e05d3521513414fbbb2199c8"},
-    {file = "gymnasium-1.2.2.tar.gz", hash = "sha256:46d927328f8518bb5a689dbe270d228c1da2b08bcb71ae0152c10aa66f48d530"},
+    {file = "gymnasium-1.2.3-py3-none-any.whl", hash = "sha256:e6314bba8f549c7fdcc8677f7cd786b64908af6e79b57ddaa5ce1825bffb5373"},
+    {file = "gymnasium-1.2.3.tar.gz", hash = "sha256:2b2cb5b5fbbbdf3afb9f38ca952cc48aa6aa3e26561400d940747fda3ad42509"},
 ]
 
 [package.dependencies]
@@ -1225,10 +1225,10 @@ numpy = ">=1.21.0"
 typing-extensions = ">=4.3.0"
 
 [package.extras]
-all = ["ale_py (>=0.9)", "array-api-compat (>=1.11.0)", "array-api-compat (>=1.11.0)", "array-api-compat (>=1.11.0)", "box2d-py (==2.3.5)", "flax (>=0.5.0)", "imageio (>=2.14.1)", "jax (>=0.4.16)", "jaxlib (>=0.4.16)", "matplotlib (>=3.0)", "moviepy (>=1.0.0)", "mujoco (>=2.1.5)", "numpy (>=2.1)", "numpy (>=2.1)", "numpy (>=2.1)", "opencv-python (>=3.0)", "packaging (>=23.0)", "pygame (>=2.1.3)", "pygame (>=2.1.3)", "pygame (>=2.1.3)", "swig (==4.*)", "torch (>=1.13.0)"]
+all = ["ale_py (>=0.9)", "array-api-compat (>=1.11.0)", "array-api-compat (>=1.11.0)", "array-api-compat (>=1.11.0)", "box2d (==2.3.10)", "flax (>=0.5.0)", "imageio (>=2.14.1)", "jax (>=0.4.16)", "jaxlib (>=0.4.16)", "matplotlib (>=3.0)", "moviepy (>=1.0.0)", "mujoco (>=2.1.5)", "numpy (>=2.1)", "numpy (>=2.1)", "numpy (>=2.1)", "opencv-python (>=3.0)", "packaging (>=23.0)", "pygame (>=2.1.3)", "pygame (>=2.1.3)", "pygame (>=2.1.3)", "swig (==4.*)", "torch (>=1.13.0)"]
 array-api = ["array-api-compat (>=1.11.0)", "numpy (>=2.1)", "packaging (>=23.0)"]
 atari = ["ale_py (>=0.9)"]
-box2d = ["box2d-py (==2.3.5)", "pygame (>=2.1.3)", "swig (==4.*)"]
+box2d = ["box2d (==2.3.10)", "pygame (>=2.1.3)", "swig (==4.*)"]
 classic-control = ["pygame (>=2.1.3)", "pygame (>=2.1.3)"]
 jax = ["array-api-compat (>=1.11.0)", "flax (>=0.5.0)", "jax (>=0.4.16)", "jaxlib (>=0.4.16)", "numpy (>=2.1)"]
 mujoco = ["imageio (>=2.14.1)", "mujoco (>=2.1.5)", "packaging (>=23.0)"]
@@ -2287,26 +2287,26 @@ files = [
 
 [[package]]
 name = "nbclient"
-version = "0.10.2"
+version = "0.10.3"
 description = "A client library for executing notebooks. Formerly nbconvert's ExecutePreprocessor."
 optional = false
-python-versions = ">=3.9.0"
+python-versions = ">=3.10.0"
 groups = ["dev"]
 files = [
-    {file = "nbclient-0.10.2-py3-none-any.whl", hash = "sha256:4ffee11e788b4a27fabeb7955547e4318a5298f34342a4bfd01f2e1faaeadc3d"},
-    {file = "nbclient-0.10.2.tar.gz", hash = "sha256:90b7fc6b810630db87a6d0c2250b1f0ab4cf4d3c27a299b0cde78a4ed3fd9193"},
+    {file = "nbclient-0.10.3-py3-none-any.whl", hash = "sha256:39e9bd403504dd2484dd0fd25235bb6a683ce8cd9873356e40d880696adc9e35"},
+    {file = "nbclient-0.10.3.tar.gz", hash = "sha256:0baf171ee246e3bb2391da0635e719f27dc77d99aef59e0b04dcb935ee04c575"},
 ]
 
 [package.dependencies]
 jupyter-client = ">=6.1.12"
 jupyter-core = ">=4.12,<5.0.dev0 || >=5.1.dev0"
-nbformat = ">=5.1"
+nbformat = ">=5.1.3"
 traitlets = ">=5.4"
 
 [package.extras]
 dev = ["pre-commit"]
-docs = ["autodoc-traits", "flaky", "ipykernel (>=6.19.3)", "ipython", "ipywidgets", "mock", "moto", "myst-parser", "nbconvert (>=7.1.0)", "pytest (>=7.0,<8)", "pytest-asyncio", "pytest-cov (>=4.0)", "sphinx (>=1.7)", "sphinx-book-theme", "sphinxcontrib-spelling", "testpath", "xmltodict"]
-test = ["flaky", "ipykernel (>=6.19.3)", "ipython", "ipywidgets", "nbconvert (>=7.1.0)", "pytest (>=7.0,<8)", "pytest-asyncio", "pytest-cov (>=4.0)", "testpath", "xmltodict"]
+docs = ["autodoc-traits", "flaky", "ipykernel (>=6.19.3)", "ipython", "ipywidgets", "mock", "moto", "myst-parser", "nbconvert (>=7.1.0)", "pytest (>=9.0.1,<10)", "pytest-asyncio (>=1.3.0)", "pytest-cov (>=4.0)", "sphinx (>=1.7)", "sphinx-book-theme", "sphinxcontrib-spelling", "testpath", "xmltodict"]
+test = ["flaky", "ipykernel (>=6.19.3)", "ipython", "ipywidgets", "nbconvert (>=7.1.0)", "pytest (>=9.0.1,<10)", "pytest-asyncio (>=1.3.0)", "pytest-cov (>=4.0)", "testpath", "xmltodict"]
 
 [[package]]
 name = "nbconvert"
@@ -4214,14 +4214,14 @@ files = [
 
 [[package]]
 name = "soupsieve"
-version = "2.8"
+version = "2.8.1"
 description = "A modern CSS selector implementation for Beautiful Soup."
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "soupsieve-2.8-py3-none-any.whl", hash = "sha256:0cc76456a30e20f5d7f2e14a98a4ae2ee4e5abdc7c5ea0aafe795f344bc7984c"},
-    {file = "soupsieve-2.8.tar.gz", hash = "sha256:e2dd4a40a628cb5f28f6d4b0db8800b8f581b65bb380b97de22ba5ca8d72572f"},
+    {file = "soupsieve-2.8.1-py3-none-any.whl", hash = "sha256:a11fe2a6f3d76ab3cf2de04eb339c1be5b506a8a47f2ceb6d139803177f85434"},
+    {file = "soupsieve-2.8.1.tar.gz", hash = "sha256:4cf733bc50fa805f5df4b8ef4740fc0e0fa6218cf3006269afd3f9d6d80fd350"},
 ]
 
 [[package]]
