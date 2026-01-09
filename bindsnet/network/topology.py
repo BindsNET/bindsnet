@@ -413,6 +413,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         pipeline: list = [],
         manual_update: bool = False,
         traces: bool = False,
+        mask: torch.Tensor = None,
         **kwargs,
     ) -> None:
         # language=rst
@@ -426,11 +427,13 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         :param manual_update: Set to :code:`True` to disable automatic updates (applying learning rules) to connection features.
             False by default, updates called after each time step
         :param traces: Set to :code:`True` to record history of connection activity (for monitors)
+        :param mask: A mask to zero out weights
         """
 
         super().__init__(source, target, device, pipeline, **kwargs)
         self.traces = traces
         self.manual_update = manual_update
+        self.mask = mask
         if self.traces:
             self.activity = None
 
@@ -516,6 +519,8 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
             # Pipeline learning
             for f in self.pipeline:
                 f.update(**kwargs)
+                if type(f).__name__ == 'Weight' and self.mask is not None:
+                    f.value.masked_fill_(self.mask, 0)
 
     def normalize(self) -> None:
         # language=rst
