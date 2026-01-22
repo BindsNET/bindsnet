@@ -7,5 +7,5 @@ dependencies = [
   "readthedocs-sphinx-search==0.3.2",
   "imagecodecs == 2023.9.18",
   "Jinja2 == 3.1.6",
-  "wheel == 0.41.3",
+  "wheel == 0.46.2",
 ]
