@@ -877,7 +877,7 @@ class WeightDependentPostPre(LearningRule):
         ``AbstractConnection`` class.
         """
         # Get convolutional layer parameters.
-        (out_channels, in_channels, kernel_size) = self.connection.w.size()
+        out_channels, in_channels, kernel_size = self.connection.w.size()
         padding, stride = self.connection.padding, self.connection.stride
         batch_size = self.source.batch_size
 

@@ -508,7 +508,7 @@ class Delay(AbstractFeature):
         super().__init__(
             name=name,
             value=value,
-            range=[0, 1],       # note: Value isn't used, not 'None' to avoid errors
+            range=[0, 1],  # note: Value isn't used, not 'None' to avoid errors
             norm=norm,
             learning_rule=learning_rule,
             nu=nu,
@@ -580,9 +580,9 @@ class Delay(AbstractFeature):
         # Decay
         if self.delay_decay:
             self.delay_buffer = self.delay_buffer - self.delay_decay.to("cuda")
-            self.delay_buffer[
-                self.delay_decay < 0
-            ] = 0  # TODO: Determine if this is faster than clamp(min=0)
+            self.delay_buffer[self.delay_decay < 0] = (
+                0  # TODO: Determine if this is faster than clamp(min=0)
+            )
 
         return out_signal
 

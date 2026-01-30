@@ -28,7 +28,6 @@ from bindsnet.network.topology import MulticompartmentConnection
 from bindsnet.network.topology_features import Delay, Mask, Probability, Weight
 from bindsnet.learning.MCC_learning import PostPre, MSTDP, NoOp
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=500)
