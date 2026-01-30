@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import argparse
 import matplotlib.pyplot as plt
+from bindsnet import network
 
 from torchvision import transforms
 from tqdm import tqdm
@@ -18,18 +19,19 @@ from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.network import Network
 from bindsnet.network.nodes import Input
-from bindsnet.network.topology_features import Probability, Weight, Mask
 
 # Build a simple two-layer, input-output network.
 from bindsnet.network.monitors import Monitor
 from bindsnet.network.nodes import LIFNodes
 from bindsnet.network.topology import MulticompartmentConnection
-from bindsnet.utils import get_square_weights
+
+from bindsnet.network.topology_features import Delay, Mask, Probability, Weight
+from bindsnet.learning.MCC_learning import PostPre, MSTDP, NoOp
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=500)
-parser.add_argument("--n_epochs", type=int, default=100)
+parser.add_argument("--n_epochs", type=int, default=500)
 parser.add_argument("--examples", type=int, default=500)
 parser.add_argument("--n_workers", type=int, default=-1)
 parser.add_argument("--time", type=int, default=250)
@@ -89,31 +91,35 @@ model.add_layer(input_l, name="X")
 model.add_layer(output_l, name="Y")
 
 
-### Connections ###
-p = torch.rand(input_l.n, output_l.n)
-d = torch.rand(input_l.n, output_l.n) / 5
-w = torch.sign(torch.randint(-1, +2, (input_l.n, output_l.n)))
-prob_feature = Probability(name="input_prob_feature", value=p)
-weight_feature = Weight(name="input_weight_feature", value=w)
-pipeline = [prob_feature, weight_feature]
+## Connections ###
+# Initialize features
+weight_feature = Weight(name="my_weights", value=torch.rand(input_l.n, output_l.n))
+delay_feature = Delay(name="my_delay", value=torch.rand(input_l.n, output_l.n))
+
+# Construct pipeline
+pl_in = [weight_feature, delay_feature]
+
+# Add pipeline to a new connection
 input_con = MulticompartmentConnection(
-    source=input_l,
-    target=output_l,
-    device=device,
-    pipeline=pipeline,
+    source=input_l, target=output_l, device=device, pipeline=pl_in
 )
 
-p = torch.rand(output_l.n, output_l.n)
-d = torch.rand(output_l.n, output_l.n) / 5
-w = torch.sign(torch.randint(-1, +2, (output_l.n, output_l.n)))
-prob_feature = Probability(name="recc_prob_feature", value=p)
-weight_feature = Weight(name="recc_weight_feature", value=w)
-pipeline = [prob_feature, weight_feature]
+
+# Initialize features
+weight_feature = Weight(
+    name="my_weights2",
+    value=torch.randn(output_l.n, output_l.n),
+    norm=1,
+    nu=[0.001, 0.002],
+    learning_rule=PostPre,
+)
+
+# Construct pipeline
+pl_rec = [weight_feature]
+
+# Add pipeline to a new connection
 recurrent_con = MulticompartmentConnection(
-    source=output_l,
-    target=output_l,
-    device=device,
-    pipeline=pipeline,
+    source=output_l, target=output_l, device=device, pipeline=pl_rec
 )
 
 model.add_connection(input_con, source="X", target="Y")
@@ -150,8 +156,9 @@ for l in model.layers:
     spikes[l] = Monitor(model.layers[l], ["s"], time=time, device=device)
     model.add_monitor(spikes[l], name="%s_spikes" % l)
 
-voltages = {"Y": Monitor(model.layers["Y"], ["v"], time=time, device=device)}
-model.add_monitor(voltages["Y"], name="Y_voltages")
+    if type(model.layers[l]) != Input:
+        voltages[l] = Monitor(model.layers[l], ["v"], time=time, device=device)
+        model.add_monitor(voltages[l], name="%s_voltages" % l)
 
 
 ### Running model on MNIST ###
@@ -162,8 +169,10 @@ dataloader = torch.utils.data.DataLoader(
 )
 
 n_iters = examples
-training_pairs = []
+
+# Connection tunning
 pbar = tqdm(enumerate(dataloader))
+model.train(True)
 for i, dataPoint in pbar:
     if i > n_iters:
         break
@@ -177,17 +186,58 @@ for i, dataPoint in pbar:
 
     # Run network on sample image
     model.run(inputs={"X": datum}, time=time, input_time_dim=1, reward=1.0)
+
+    # Plot spiking activity using monitors
+    if plot:
+        # inpt_axes, inpt_ims = plot_input(
+        #     dataPoint["image"].view(28, 28),
+        #     datum.view(int(time / dt), 784).sum(0).view(28, 28),
+        #     label=label,
+        #     axes=inpt_axes,
+        #     ims=inpt_ims,
+        # )
+        spike_ims, spike_axes = plot_spikes(
+            {layer: spikes[layer].get("s").view(time, -1) for layer in spikes},
+            axes=spike_axes,
+            ims=spike_ims,
+        )
+        voltage_ims, voltage_axes = plot_voltages(
+            {layer: voltages[layer].get("v").view(time, -1) for layer in voltages},
+            ims=voltage_ims,
+            axes=voltage_axes,
+        )
+
+        plt.pause(1e-8)
+    model.reset_state_variables()
+
+# Run the model on the data for training the detactor.
+training_pairs = []
+pbar = tqdm(enumerate(dataloader))
+model.train(False)
+for i, dataPoint in pbar:
+    if i > n_iters:
+        break
+
+    # Extract & resize the MNIST samples image data for training
+    #       int(time / dt)  -> length of spike train
+    #       28 x 28         -> size of sample
+    datum = dataPoint["encoded_image"].view(int(time / dt), 1, 1, 28, 28).to(device)
+    label = dataPoint["label"]
+    pbar.set_description_str("Data extraction progress: (%d / %d)" % (i, n_iters))
+
+    # Run network on sample image
+    model.run(inputs={"X": datum}, time=time, input_time_dim=1, reward=1.0)
     training_pairs.append([spikes["Y"].get("s").sum(0), label])
 
     # Plot spiking activity using monitors
     if plot:
-        inpt_axes, inpt_ims = plot_input(
-            dataPoint["image"].view(28, 28),
-            datum.view(int(time / dt), 784).sum(0).view(28, 28),
-            label=label,
-            axes=inpt_axes,
-            ims=inpt_ims,
-        )
+        # inpt_axes, inpt_ims = plot_input(
+        #     dataPoint["image"].view(28, 28),
+        #     datum.view(int(time / dt), 784).sum(0).view(28, 28),
+        #     label=label,
+        #     axes=inpt_axes,
+        #     ims=inpt_ims,
+        # )
         spike_ims, spike_axes = plot_spikes(
             {layer: spikes[layer].get("s").view(time, -1) for layer in spikes},
             axes=spike_axes,
@@ -203,7 +253,10 @@ for i, dataPoint in pbar:
     model.reset_state_variables()
 
 
+# TODO: Delete this portion for fully delay/prob-conn dependent learning
 ### Classification ###
+
+
 # Define logistic regression model using PyTorch.
 # These neurons will take the reservoirs output as its input, and be trained to classify the images.
 class NN(nn.Module):
@@ -273,13 +326,13 @@ for i, dataPoint in pbar:
     test_pairs.append([spikes["Y"].get("s").sum(0), label])
 
     if plot:
-        inpt_axes, inpt_ims = plot_input(
-            dataPoint["image"].view(28, 28),
-            datum.view(time, 784).sum(0).view(28, 28),
-            label=label,
-            axes=inpt_axes,
-            ims=inpt_ims,
-        )
+        # inpt_axes, inpt_ims = plot_input(
+        #     dataPoint["image"].view(28, 28),
+        #     datum.view(time, 784).sum(0).view(28, 28),
+        #     label=label,
+        #     axes=inpt_axes,
+        #     ims=inpt_ims,
+        # )
         spike_ims, spike_axes = plot_spikes(
             {layer: spikes[layer].get("s").view(time, -1) for layer in spikes},
             axes=spike_axes,

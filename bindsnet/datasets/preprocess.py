@@ -151,7 +151,7 @@ def crop_sample(sample):
     opts = {}
     image, bb = sample["image"], sample["bb"]
     orig_bbox = BoundingBox(bb[0], bb[1], bb[2], bb[3])
-    (output_image, pad_image_location, edge_spacing_x, edge_spacing_y) = cropPadImage(
+    output_image, pad_image_location, edge_spacing_x, edge_spacing_y = cropPadImage(
         orig_bbox, image
     )
     new_bbox = BoundingBox(0, 0, 0, 0)
