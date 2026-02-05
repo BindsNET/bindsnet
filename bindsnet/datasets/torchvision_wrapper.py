@@ -16,18 +16,13 @@ def create_torchvision_dataset_wrapper(ds_type):
         ds_type = getattr(torchDB, ds_type)
 
     class TorchvisionDatasetWrapper(ds_type):
-        __doc__ = (
-            """BindsNET torchvision dataset wrapper for:
+        __doc__ = """BindsNET torchvision dataset wrapper for:
 
         The core difference is the output of __getitem__ is no longer
         (image, label) rather a dictionary containing the image, label,
         and their encoded versions if encoders were provided.
 
-            \n\n"""
-            + str(ds_type)
-            if ds_type.__doc__ is None
-            else ds_type.__doc__
-        )
+            \n\n""" + str(ds_type) if ds_type.__doc__ is None else ds_type.__doc__
 
         def __init__(
             self,

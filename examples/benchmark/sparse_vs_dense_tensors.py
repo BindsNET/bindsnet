@@ -4,7 +4,6 @@ import argparse
 
 from bindsnet.evaluation import all_activity, assign_labels, proportion_weighting
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--benchmark_type", choices=["memory", "runtime"], default="memory")
 args = parser.parse_args()

@@ -26,7 +26,6 @@ from bindsnet.network.nodes import LIFNodes
 from bindsnet.network.topology import MulticompartmentConnection
 from bindsnet.utils import get_square_weights
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--n_neurons", type=int, default=500)
