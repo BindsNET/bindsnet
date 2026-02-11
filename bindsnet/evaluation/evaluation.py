@@ -12,6 +12,21 @@ def assign_labels(
     rates: Optional[torch.Tensor] = None,
     alpha: float = 1.0,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    # language=rst
+    """
+    Assign labels to the neurons based on highest average spiking activity.
+
+    :param spikes: Binary tensor of shape ``(n_samples, time, n_neurons)`` of a single
+        layer's spiking activity.
+    :param labels: Vector of shape ``(n_samples,)`` with data labels corresponding to
+        spiking activity.
+    :param n_labels: The number of target labels in the data.
+    :param rates: If passed, these represent spike rates from a previous
+        ``assign_labels()`` call.
+    :param alpha: Rate of decay of label assignments.
+    :return: Tuple of class assignments, per-class spike proportions, and per-class
+        firing rates.
+    """
 
     n_neurons = spikes.size(2)
 
