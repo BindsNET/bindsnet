@@ -14,26 +14,26 @@ def assign_labels(
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
     n_neurons = spikes.size(2)
-    device = spikes.device # Keep everything on the same device.
 
     if rates is None:
-        rates = torch.zeros((n_neurons, n_labels), device=device)
+        rates = torch.zeros((n_neurons, n_labels), device=spikes.device)
 
     # Sum over time dimension (spike ordering doesn't matter).
-    summed_spikes = spikes.sum(1)
+    spikes = spikes.sum(1)
     
     for i in range(n_labels):
-        # Count the number of samples with this label.
+        # Create mask (faster and allows future steps to stay on GPU).
         mask = (labels == i)
+        # Count the number of samples with this label.
         n_labeled = mask.sum().float()
 
         if n_labeled > 0:
             # Get indices of samples with this label (masking is faster and stays on the GPU).
-            label_sum = summed_spikes[mask].sum(0)
+            label_sum = spikes[mask].sum(0)
             # Update rates.
             rates[:, i] = alpha * rates[:, i] + (label_sum / n_labeled)
 
-    # 3. Compute proportions (and use 'torch.where' to avoid NaN bug).
+    # Compute proportions (and use 'torch.where' to avoid NaN bug).
     total_activity = rates.sum(1, keepdim=True)
     proportions = torch.where(total_activity > 0, rates / total_activity, torch.zeros_like(rates))
 
