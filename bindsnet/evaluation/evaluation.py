@@ -202,13 +202,13 @@ def ngram(
 
         # Aggregate all of the firing neurons' indices
         fire_order = []
-        for t in range(activity.size()[0]):
-            ordering = torch.nonzero(activity[t].view(-1))
+        for t in range(activity.size(0)):
+            ordering = torch.nonzero(activity[t]).view(-1)
             if ordering.numel() > 0:
-                fire_order += ordering[:, 0].tolist()
+                fire_order += ordering.tolist()
 
         # Consider all n-gram sequences.
-        for j in range(len(fire_order) - n):
+        for j in range(len(fire_order) - n + 1):
             if tuple(fire_order[j : j + n]) in ngram_scores:
                 score += ngram_scores[tuple(fire_order[j : j + n])]
 
