@@ -974,14 +974,14 @@ devel = ["colorama", "json-spec", "jsonschema", "pylint", "pytest", "pytest-benc
 
 [[package]]
 name = "filelock"
-version = "3.24.3"
+version = "3.25.0"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "dev"]
 files = [
-    {file = "filelock-3.24.3-py3-none-any.whl", hash = "sha256:426e9a4660391f7f8a810d71b0555bce9008b0a1cc342ab1f6947d37639e002d"},
-    {file = "filelock-3.24.3.tar.gz", hash = "sha256:011a5644dc937c22699943ebbfc46e969cdde3e171470a6e40b9533e5a72affa"},
+    {file = "filelock-3.25.0-py3-none-any.whl", hash = "sha256:5ccf8069f7948f494968fc0713c10e5c182a9c9d9eef3a636307a20c2490f047"},
+    {file = "filelock-3.25.0.tar.gz", hash = "sha256:8f00faf3abf9dc730a1ffe9c354ae5c04e079ab7d3a683b7c32da5dd05f26af3"},
 ]
 
 [[package]]
@@ -1260,14 +1260,14 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "identify"
-version = "2.6.16"
+version = "2.6.17"
 description = "File identification library for Python"
 optional = false
 python-versions = ">=3.10"
 groups = ["dev"]
 files = [
-    {file = "identify-2.6.16-py2.py3-none-any.whl", hash = "sha256:391ee4d77741d994189522896270b787aed8670389bfd60f326d677d64a6dfb0"},
-    {file = "identify-2.6.16.tar.gz", hash = "sha256:846857203b5511bbe94d5a352a48ef2359532bc8f6727b5544077a0dcfb24980"},
+    {file = "identify-2.6.17-py2.py3-none-any.whl", hash = "sha256:be5f8412d5ed4b20f2bd41a65f920990bdccaa6a4a18a08f1eefdcd0bdd885f0"},
+    {file = "identify-2.6.17.tar.gz", hash = "sha256:f816b0b596b204c9fdf076ded172322f2723cf958d02f9c3587504834c8ff04d"},
 ]
 
 [package.extras]
@@ -3783,14 +3783,14 @@ files = [
 
 [[package]]
 name = "scikit-build"
-version = "0.18.1"
+version = "0.19.0"
 description = "Improved build system generator for Python C/C++/Fortran/Cython extensions"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "scikit_build-0.18.1-py3-none-any.whl", hash = "sha256:a6860e300f6807e76f21854163bdb9db16afc74eadf34bd6a9947d3fdfcd725a"},
-    {file = "scikit_build-0.18.1.tar.gz", hash = "sha256:a4152ac5a084d499c28a7797be0628d8366c336e2fb0e1a063eb32e55efcb8e7"},
+    {file = "scikit_build-0.19.0-py3-none-any.whl", hash = "sha256:956d1a179917e3994cb425662bb9e0ec052ef497995ce8e3f15b4030e02c5b94"},
+    {file = "scikit_build-0.19.0.tar.gz", hash = "sha256:46e1b2d71343d14e4c07d7e60902e673c78defb9a2c282b70ad80fb8502ade2e"},
 ]
 
 [package.dependencies]
@@ -3803,7 +3803,7 @@ wheel = ">=0.32.0"
 cov = ["coverage[toml] (>=4.2)", "pytest-cov (>=2.7.1)"]
 docs = ["pygments", "sphinx (>=4)", "sphinx-issues", "sphinx-rtd-theme (>=1.0)", "sphinxcontrib-moderncmakedomain (>=3.19)"]
 doctest = ["ubelt (>=0.8.2)", "xdoctest (>=0.10.0)"]
-test = ["build (>=0.7)", "cython (>=0.25.1)", "importlib-metadata ; python_version < \"3.8\"", "pip", "pytest (>=6.0.0)", "pytest-mock (>=1.10.4)", "requests", "virtualenv"]
+test = ["build (>=0.7)", "cython (>=0.25.1)", "pip", "pytest (>=6.0.0)", "pytest-mock (>=1.10.4)", "requests", "virtualenv"]
 
 [[package]]
 name = "scikit-image"
@@ -4189,14 +4189,14 @@ files = [
 
 [[package]]
 name = "tifffile"
-version = "2026.2.24"
+version = "2026.3.3"
 description = "Read and write TIFF files"
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "tifffile-2026.2.24-py3-none-any.whl", hash = "sha256:38ef6258c2bd8dd3551c7480c6d75a36c041616262e6cd55a50dd16046b71863"},
-    {file = "tifffile-2026.2.24.tar.gz", hash = "sha256:d73cfa6d7a8f5775a1e3c9f3bfca77c992946639fb41a5bbe888878cb6964dc6"},
+    {file = "tifffile-2026.3.3-py3-none-any.whl", hash = "sha256:e8be15c94273113d31ecb7aa3a39822189dd11c4967e3cc88c178f1ad2fd1170"},
+    {file = "tifffile-2026.3.3.tar.gz", hash = "sha256:d9a1266bed6f2ee1dd0abde2018a38b4f8b2935cb843df381d70ac4eac5458b7"},
 ]
 
 [package.dependencies]
