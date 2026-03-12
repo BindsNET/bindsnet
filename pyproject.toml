@@ -50,7 +50,7 @@ pre-commit = "^3"
 notebook = "^7"
 jupyterlab = "^4"
 isort = "^5.9.3"
-black = "^24"
+black = ">=24,<27"
 autoflake = "^2"
 
 [build-system]
