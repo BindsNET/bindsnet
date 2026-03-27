@@ -4,10 +4,6 @@ from typing import TYPE_CHECKING, Dict, Iterable, Optional, Union
 
 import numpy as np
 import torch
-import numpy as np
-
-from abc import ABC
-from typing import Union, Optional, Iterable, Dict
 
 from bindsnet.network.nodes import Nodes
 from bindsnet.network.topology import (
