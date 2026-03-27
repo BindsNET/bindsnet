@@ -1507,14 +1507,14 @@ test = ["flaky", "ipyparallel", "pre-commit", "pytest (>=7.0,<10)", "pytest-asyn
 
 [[package]]
 name = "ipython"
-version = "9.10.0"
+version = "9.10.1"
 description = "IPython: Productive Interactive Computing"
 optional = false
 python-versions = ">=3.11"
 groups = ["dev"]
 files = [
-    {file = "ipython-9.10.0-py3-none-any.whl", hash = "sha256:c6ab68cc23bba8c7e18e9b932797014cc61ea7fd6f19de180ab9ba73e65ee58d"},
-    {file = "ipython-9.10.0.tar.gz", hash = "sha256:cd9e656be97618a0676d058134cd44e6dc7012c0e5cb36a9ce96a8c904adaf77"},
+    {file = "ipython-9.10.1-py3-none-any.whl", hash = "sha256:82d18ae9fb9164ded080c71ef92a182ee35ee7db2395f67616034bebb020a232"},
+    {file = "ipython-9.10.1.tar.gz", hash = "sha256:e170e9b2a44312484415bdb750492699bf329233b03f2557a9692cce6466ada4"},
 ]
 
 [package.dependencies]
@@ -3493,14 +3493,14 @@ six = ">=1.5"
 
 [[package]]
 name = "python-discovery"
-version = "1.2.0"
+version = "1.2.1"
 description = "Python interpreter discovery"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "python_discovery-1.2.0-py3-none-any.whl", hash = "sha256:1e108f1bbe2ed0ef089823d28805d5ad32be8e734b86a5f212bf89b71c266e4a"},
-    {file = "python_discovery-1.2.0.tar.gz", hash = "sha256:7d33e350704818b09e3da2bd419d37e21e7c30db6e0977bb438916e06b41b5b1"},
+    {file = "python_discovery-1.2.1-py3-none-any.whl", hash = "sha256:b6a957b24c1cd79252484d3566d1b49527581d46e789aaf43181005e56201502"},
+    {file = "python_discovery-1.2.1.tar.gz", hash = "sha256:180c4d114bff1c32462537eac5d6a332b768242b76b69c0259c7d14b1b680c9e"},
 ]
 
 [package.dependencies]
