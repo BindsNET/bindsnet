@@ -10,33 +10,33 @@ documentation = "https://bindsnet-docs.readthedocs.io/"
 keywords = ["spiking", "neural", "networks", "pytorch"]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.14"
+python = ">=3.11,<3.14"
 numpy = "^2"
 numba = "^0"
 scipy = "^1"
 Cython = "^3"
 torch = [
-    {version = "2.9.1", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
-    {version = "2.9.1", markers = "sys_platform == 'darwin'" },
+    {version = "2.10.0", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
+    {version = "2.10.0", markers = "sys_platform == 'darwin'" },
 ]
 torchvision = [
-    {version = "0.24.1", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
-    {version = "0.24.1", markers = "sys_platform == 'darwin'" },
+    {version = "0.25.0", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
+    {version = "0.25.0", markers = "sys_platform == 'darwin'" },
 ]
 torchaudio = [
-    {version = "2.9.1", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
-    {version = "2.9.1", markers = "sys_platform == 'darwin'" },
+    {version = "2.10.0", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
+    {version = "2.10.0", markers = "sys_platform == 'darwin'" },
 ]
 tensorboardX = "^2.6.4"
 tqdm = "^4"
 matplotlib = "^3"
-ale-py = "^0.10.2"
+ale-py = "^0"
 gymnasium = {extras = ["atari"], version = "^1"}
-scikit-build = "^0.18"
-scikit-image = "^0.25.2"
-scikit-learn = "^1.5"
+scikit-build = "^0"
+scikit-image = "^0"
+scikit-learn = "^1"
 opencv-python = "^4"
-pandas = "^2"
+pandas = "^3"
 foolbox = "^3"
 
 [[tool.poetry.source]]
@@ -45,12 +45,12 @@ foolbox = "^3"
  priority = "explicit"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8"
-pre-commit = "^3"
+pytest = "^9"
+pre-commit = "^4"
 notebook = "^7"
 jupyterlab = "^4"
-isort = "^5.9.3"
-black = "^24"
+isort = "^7"
+black = "^26"
 autoflake = "^2"
 
 [build-system]
