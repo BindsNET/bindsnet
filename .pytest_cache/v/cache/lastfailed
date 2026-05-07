@@ -1,1 +1,11 @@
-{}
+{
+  "test/analysis/test_analyzers.py": true,
+  "test/conversion/test_conversion.py": true,
+  "test/encoding/test_encoding.py": true,
+  "test/models/test_models.py": true,
+  "test/network/test_connections.py": true,
+  "test/network/test_learning.py": true,
+  "test/network/test_monitors.py": true,
+  "test/network/test_network.py": true,
+  "test/network/test_nodes.py": true
+}
