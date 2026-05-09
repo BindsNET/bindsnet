@@ -26,7 +26,7 @@ def bernoulli_loader(
     :param float max_prob: Maximum probability of spike per Bernoulli trial.
     """
     # Setting kwargs.
-    max_prob = kwargs.get("dt", 1.0)
+    max_prob = kwargs.get("max_prob", 1.0)
 
     for i in range(len(data)):
         # Encode datum as Bernoulli spike trains.

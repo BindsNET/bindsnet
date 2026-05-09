@@ -410,7 +410,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         source: Nodes,
         target: Nodes,
         device: device,
-        pipeline: list = [],
+        pipeline: Optional[list] = None,
         manual_update: bool = False,
         traces: bool = False,
         **kwargs,
