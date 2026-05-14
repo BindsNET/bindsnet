@@ -253,7 +253,7 @@ for epoch in range(n_epochs):
         if plot:
             image = batch["image"].view(28, 28)
             inpt = inputs["X"].view(time, 784).sum(0).view(28, 28)
-            input_exc_weights = network.connections[("X", "Ae")].w
+            input_exc_weights = network.connections[("X", "Ae")].pipeline[0].value
             square_weights = get_square_weights(
                 input_exc_weights.view(784, n_neurons), n_sqrt, 28
             )
