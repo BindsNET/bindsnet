@@ -1,12 +1,14 @@
 import tempfile
-from typing import Dict, Iterable, Optional, Type
+from typing import Dict, Iterable, Optional, Type, Any
 
 import torch
+from numpy import dtype
+from torch import Tensor
 
 from bindsnet.learning.reward import AbstractReward
 from bindsnet.network.monitors import AbstractMonitor
 from bindsnet.network.nodes import CSRMNodes, Nodes
-from bindsnet.network.topology import AbstractConnection
+from bindsnet.network.topology import AbstractConnection, AbstractMulticompartmentConnection
 
 
 def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
@@ -132,7 +134,7 @@ class Network(torch.nn.Module):
         layer.set_batch_size(self.batch_size)
 
     def add_connection(
-        self, connection: AbstractConnection, source: str, target: str
+        self, connection: AbstractConnection | AbstractMulticompartmentConnection, source: str, target: str
     ) -> None:
         # language=rst
         """
@@ -489,3 +491,352 @@ class Network(torch.nn.Module):
         """
         self.learning = mode
         return super().train(mode)
+
+
+# ---------------------------
+# Shaders
+# ---------------------------
+vertex_shader_src = """
+#version 330 core
+
+layout(location = 0) in float spike;
+
+uniform float time_x;
+uniform float neuron_count;
+
+void main()
+{
+    // Convert neuron index to y-position
+    float y = (float(gl_VertexID) / neuron_count) * 2.0 - 1.0;
+
+    // Current time position
+    float x = time_x;
+
+    // Hide inactive neurons
+    if (spike < 0.95)
+    {
+        gl_Position = vec4(-10.0, -10.0, 0.0, 1.0);
+    }
+    else
+    {
+        gl_Position = vec4(x, y, 0.0, 1.0);
+    }
+
+    gl_PointSize = 2.0;
+}
+"""
+fragment_shader_src = """
+#version 330 core
+
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+}
+"""
+
+import glfw
+import OpenGL.GL as gl
+from cuda.bindings import driver
+from cuda.bindings import runtime
+import cupy as cp
+import warnings
+import numpy as np
+pytorch_cp_type_map = {
+    torch.float32: cp.float32,
+    torch.float64: cp.float64,
+    torch.int32: cp.int32,
+    torch.int64: cp.int64,
+    torch.uint8: cp.uint8,
+    torch.bool: cp.bool_,
+}
+pytorch_opengl_type_map = {
+    torch.float32: gl.GL_FLOAT,
+    torch.float64: gl.GL_DOUBLE,
+    torch.int32: gl.GL_INT,
+    torch.uint8: gl.GL_UNSIGNED_BYTE,
+    torch.bool: gl.GL_BOOL,
+}
+class GUINetwork(Network):
+    # language=rst
+    """
+    Subclass of ``Network`` with added functionality for live plotting using VisPy.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        # Setup GUI window
+        glfw.init()
+        self.window = glfw.create_window(800, 600, "Network GUI", None, None)
+        glfw.make_context_current(self.window)
+
+        # OpenGL buffers for plotting
+        # Connections: Values of topology features
+        # Layers: Spikes & voltages
+        self.opengl_buffers = {'connections': {}, 'layers': {}}
+        self.buffer_types = {}
+
+        # Initialize CUDA driver
+        err, = driver.cuInit(0)  # Initialize CUDA driver
+        if err != 0: raise RuntimeError(f"Failed to initialize CUDA: error code {err}")
+        err, self.cuda_device = driver.cuDeviceGet(0)  # Get CUDA device
+        if err != 0: raise RuntimeError(f"Failed to get CUDA device: error code {err}")
+        err, self.cuda_context = driver.cuCtxCreate(None, 0, self.cuda_device)  # Create CUDA context
+        if err != 0: raise RuntimeError(f"Failed to create CUDA context: error code {err}")
+
+        # Compile shaders & create OpengGL program
+        vs = self._compile_shader(vertex_shader_src, gl.GL_VERTEX_SHADER)
+        fs = self._compile_shader(fragment_shader_src, gl.GL_FRAGMENT_SHADER)
+        self.program = gl.glCreateProgram()
+        gl.glAttachShader(self.program, vs)
+        gl.glAttachShader(self.program, fs)
+        gl.glLinkProgram(self.program)
+        gl.glDeleteShader(vs)
+        gl.glDeleteShader(fs)
+        self.x_pointer = gl.glGetUniformLocation(self.program, "x")
+
+    def _compile_shader(self, src, shader_type):
+        shader = gl.glCreateShader(shader_type)
+        gl.glShaderSource(shader, src)
+        gl.glCompileShader(shader)
+        if not gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS):
+            raise RuntimeError(gl.glGetShaderInfoLog(shader))
+        return shader
+
+    def add_layer(self, layer: Nodes, name: str) -> None:
+        super().add_layer(layer, name)
+
+        layer_data = {}
+        if isinstance(layer, Input):
+            layer_data['s'] = layer.s
+        elif isinstance(layer, LIFNodes):
+            layer_data['s'] = layer.s
+            layer_data['v'] = layer.v
+        else:
+            raise NotImplementedError("GUINetwork only supports Input and LIFNodes layers for now.")
+
+        self.opengl_buffers['layers'][name] = {}
+        for data_name, data in layer_data.items():
+            shared_buffer, vbo = self._create_shared_buffer(data)
+            layer.__setattr__(data_name, shared_buffer)
+            self.opengl_buffers['layers'][name][data_name] = vbo
+            self.buffer_types[vbo] = pytorch_opengl_type_map[data.dtype]
+
+
+    # def add_connection(self, connection: AbstractMulticompartmentConnection, source: str, target: str) -> None:
+    #     if isinstance(connection, AbstractConnection):
+    #         raise NotImplementedError("GUINetwork does not support AbstractConnection, only AbstractMulticompartmentConnection.")
+    #
+    #     super().add_connection(connection, source, target)
+    #
+    #     self.opengl_buffers['connections'][(source, target)] = {}
+    #     for f in connection.pipeline:
+    #         shared_buffer, vbo = self._create_shared_buffer(f.value)
+    #         f.value = shared_buffer
+    #         self.opengl_buffers['connections'][(source, target)][f.name] = vbo
+
+    def _create_shared_buffer(self, org_tensor: torch.Tensor) -> tuple[Tensor, int]:
+        # language=rst
+        """
+        Create a shared buffer for a class variable tensor/buffer.
+
+        :param org_tensor: PyTorch tensor to create a shared buffer for.
+        :return:
+            ``shared_buffer``: New PyTorch tensor that shares memory with an OpenGL buffer registered with CUDA
+            ``vbo``: OpenGL buffer object ID that is shared with the new PyTorch tensor.
+        """
+
+        # ### Setup OpenGL buffer ###
+        # buffer_size = org_tensor.numel() * org_tensor.element_size()  # Size in bytes
+        # vbo = gl.glGenBuffers(1)                    # Vertex Buffer Object
+        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)    # Bind to GL_ARRAY_BUFFER
+        # gl.glBufferData(target=gl.GL_ARRAY_BUFFER,  # Allocate buffer space
+        #                 size=buffer_size,           # Size in bytes
+        #                 data=org_tensor.cpu().numpy(),    # Initial data
+        #                 usage=gl.GL_DYNAMIC_DRAW)   # Frequent updates expected
+        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)      # Unbind GL_ARRAY_BUFFER
+        # if gl.glIsBuffer(vbo) == 0:
+        #     raise RuntimeError("Failed to create OpenGL buffer")
+        #
+        # ### Register OpenGL buffer with CUDA ###
+        # err, = driver.cuInit(0)  # Initialize CUDA driver
+        # if err != 0: raise RuntimeError(f"Failed to initialize CUDA: error code {err}")
+        #
+        # err, device = driver.cuDeviceGet(0)  # Get CUDA device
+        # if err != 0: raise RuntimeError(f"Failed to get CUDA device: error code {err}")
+        #
+        # err, context = driver.cuCtxCreate(None, 0, device)  # Create CUDA context
+        # if err != 0: raise RuntimeError(f"Failed to create CUDA context: error code {err}")
+        #
+        # err, cuda_resource = driver.cuGraphicsGLRegisterBuffer(
+        #     buffer=vbo,
+        #     Flags=2  # cuda.CU_GRAPHICS_REGISTER_FLAGS_WRITE_DISCARD        # TODO: consider other flags
+        # )
+        # if err != 0: raise RuntimeError(f"Failed to register OpenGL buffer with CUDA: error code {err}")
+        #
+        # err, = driver.cuGraphicsMapResources(1, cuda_resource, 0)
+        # if err != 0: raise RuntimeError(f"Failed to map CUDA graphics resource: error code {err}")
+        #
+        # err, ptr, size = driver.cuGraphicsResourceGetMappedPointer(cuda_resource)
+        # if err != 0: raise RuntimeError(f"Failed to get mapped pointer for CUDA graphics resource: error code {err}")
+        #
+        # ### Create PyTorch tensor from CUDA pointer ###
+        # cp_ptr = cp.cuda.MemoryPointer(cp.cuda.UnownedMemory(int(ptr), size, cuda_resource), 0)
+        # dtype = pytorch_cp_type_map[org_tensor.dtype]
+        # cp_array = cp.ndarray(shape=org_tensor.shape,
+        #                       dtype=dtype,
+        #                       memptr=cp_ptr)
+        # new_tensor = torch.as_tensor(cp_array)
+
+        N = org_tensor.numel()
+        buffer_size = N * org_tensor.element_size()
+
+        ### Setup OpenGL buffer ###
+        vbo = gl.glGenBuffers(1)  # Vertex Buffer Object
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)  # Bind to GL_ARRAY_BUFFER
+        gl.glBufferData(target=gl.GL_ARRAY_BUFFER,  # Allocate buffer space
+                        size=buffer_size,  # Size in bytes
+                        data=None,  # No initial data
+                        usage=gl.GL_DYNAMIC_DRAW)  # Frequent updates expected
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)  # Unbind buffer
+        if gl.glIsBuffer(vbo) == 0:
+            raise RuntimeError("Failed to create OpenGL buffer")
+
+        ### Register OpenGL buffer with CUDA ###
+        err, = driver.cuInit(0)  # Initialize CUDA driver
+        if err != 0: raise RuntimeError(f"Failed to initialize CUDA: error code {err}")
+
+        err, device = driver.cuDeviceGet(0)  # Get CUDA device
+        if err != 0: raise RuntimeError(f"Failed to get CUDA device: error code {err}")
+
+        err, context = driver.cuCtxCreate(None, 0, device)  # Create CUDA context
+        if err != 0: raise RuntimeError(f"Failed to create CUDA context: error code {err}")
+
+        err, cuda_resource = driver.cuGraphicsGLRegisterBuffer(
+            buffer=vbo,
+            Flags=2  # cuda.CU_GRAPHICS_REGISTER_FLAGS_WRITE_DISCARD
+        )
+        if err != 0: raise RuntimeError(f"Failed to register OpenGL buffer with CUDA: error code {err}")
+
+        err, = driver.cuGraphicsMapResources(1, cuda_resource, 0)
+        if err != 0: raise RuntimeError(f"Failed to map CUDA graphics resource: error code {err}")
+
+        err, cuda, size = driver.cuGraphicsResourceGetMappedPointer(cuda_resource)
+        if err != 0: raise RuntimeError(f"Failed to get mapped pointer for CUDA graphics resource: error code {err}")
+
+        ### Create PyTorch tensor from CUDA pointer ###
+        cp_ptr = cp.cuda.MemoryPointer(cp.cuda.UnownedMemory(int(cuda), size, cuda_resource), 0)
+        dtype = pytorch_cp_type_map[org_tensor.dtype]
+        cp_array = cp.ndarray(N, dtype=dtype, memptr=cp_ptr)
+        torch_tensor = torch.as_tensor(cp_array)
+
+        return torch_tensor, vbo
+
+    def run(self, inputs: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
+        # Check input type
+        assert type(inputs) == dict, (
+                "'inputs' must be a dict of names of layers "
+                + f"(str) and relevant input tensors. Got {type(inputs).__name__} instead."
+        )
+
+        ### Compute reward ###
+        if self.reward_fn is not None:
+            kwargs["reward"] = self.reward_fn.compute(**kwargs)
+
+        ### Simulate network activity for `time` timesteps ###
+        timesteps = int(time / self.dt)
+        for t in range(timesteps):
+            current_inputs = {}
+            current_inputs.update(self._get_inputs())
+            for l in self.layers:
+                # Update each layer of nodes.
+                if l in inputs:
+                    if l in current_inputs:
+                        current_inputs[l] += inputs[l][t]
+                    else:
+                        current_inputs[l] = inputs[l][t]
+
+                if l in current_inputs:
+                    self.layers[l].forward(x=current_inputs[l])
+                else:
+                    self.layers[l].forward(
+                        x=torch.zeros(
+                            self.layers[l].s.shape, device=self.layers[l].s.device
+                        )
+                    )
+
+            self.layers['LIF'].s.copy_(torch.rand(self.layers['LIF'].s.shape, device=self.layers['LIF'].s.device))
+            self._render_spikes(self.opengl_buffers['layers']['LIF']['s'], self.layers['LIF'].s.shape[1], t, time)
+
+        # TODO: I don't care for this
+        # Re-normalize connections.
+        # for c in self.connections:
+        #     self.connections[c].normalize()
+
+
+    def _render_spikes(self, vbo: np.uint32, layer_size: int, time_step: int, max_time: int) -> None:
+        # language=rst
+        """
+        Render a raster plot
+
+        :return: None
+        """
+
+        vao = gl.glGenVertexArrays(1)
+        gl.glBindVertexArray(vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 1, gl.GL_FLOAT, False, 0, None)
+        gl.glBindVertexArray(0)
+
+        # gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+
+        gl.glUseProgram(self.program)
+        gl.glUniform1f(self.x_pointer, (time_step / max_time)*2.0-1.0)  # constant y value
+
+        gl.glBindVertexArray(vao)
+        gl.glDrawArrays(gl.GL_POINTS, 0, layer_size)
+
+        glfw.swap_buffers(self.window)
+        glfw.poll_events()
+
+        # x = np.random.randn(1000).astype(np.float32)  # update x data
+        # gl.glBufferData(gl.GL_ARRAY_BUFFER, x.nbytes, x, gl.GL_STATIC_DRAW)
+
+
+if __name__ == '__main__':
+    from bindsnet.network.nodes import Input, LIFNodes
+    from bindsnet.network.topology import MulticompartmentConnection
+    from bindsnet.network.topology_features import Weight
+
+    IN_SIZE = 1000
+    LIF_SIZE = 10_000
+    SIM_TIME = 75
+    BATCH_SIZE = 1
+
+    device = torch.device('cuda:0')
+    network = GUINetwork()
+    network._create_shared_buffer(torch.rand(LIF_SIZE))
+    network.add_layer(layer=Input(IN_SIZE), name='I')
+    network.add_layer(layer=LIFNodes(LIF_SIZE), name='LIF')
+    network.add_connection(
+        connection=MulticompartmentConnection(
+            source=network.layers['I'],
+            target=network.layers['LIF'],
+            device=device,
+            pipeline=[
+                Weight(
+                    name='I_to_LIF_weight',
+                    value=torch.rand(IN_SIZE, LIF_SIZE, device=device) > 0.05,
+                )
+            ]),
+        source='I',
+        target='LIF')
+
+
+
+    network.to(device)
+    network.run(inputs={'I': torch.ones(SIM_TIME, BATCH_SIZE, IN_SIZE, device=device)}, time=SIM_TIME)
+    print()
