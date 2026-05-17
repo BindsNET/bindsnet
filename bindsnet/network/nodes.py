@@ -516,7 +516,7 @@ class LIFNodes(Nodes):
         self.v += x  # interlaced
 
         # Check for spiking neurons.
-        self.s = self.v >= self.thresh
+        torch.ge(self.v, self.thresh, out=self.s)
 
         # Refractoriness and voltage reset.
         self.refrac_count.masked_fill_(self.s, self.refrac)

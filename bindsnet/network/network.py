@@ -538,6 +538,7 @@ void main()
 
 import glfw
 import OpenGL.GL as gl
+from OpenGL.GL.shaders import compileShader, compileProgram
 from cuda.bindings import driver
 from cuda.bindings import runtime
 import cupy as cp
@@ -556,7 +557,7 @@ pytorch_opengl_type_map = {
     torch.float64: gl.GL_DOUBLE,
     torch.int32: gl.GL_INT,
     torch.uint8: gl.GL_UNSIGNED_BYTE,
-    torch.bool: gl.GL_BOOL,
+    torch.bool: gl.GL_UNSIGNED_BYTE,
 }
 class GUINetwork(Network):
     # language=rst
@@ -567,7 +568,7 @@ class GUINetwork(Network):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        # Setup GUI window
+        ### Setup GUI window ###
         glfw.init()
         self.window = glfw.create_window(800, 600, "Network GUI", None, None)
         glfw.make_context_current(self.window)
@@ -575,10 +576,10 @@ class GUINetwork(Network):
         # OpenGL buffers for plotting
         # Connections: Values of topology features
         # Layers: Spikes & voltages
-        self.opengl_buffers = {'connections': {}, 'layers': {}}
-        self.buffer_types = {}
+        self.opengl_vaos = {'connections': {}, 'layers': {}}
+        self.opengl_vao_dtypes = {}
 
-        # Initialize CUDA driver
+        ### Initialize CUDA driver ###
         err, = driver.cuInit(0)  # Initialize CUDA driver
         if err != 0: raise RuntimeError(f"Failed to initialize CUDA: error code {err}")
         err, self.cuda_device = driver.cuDeviceGet(0)  # Get CUDA device
@@ -586,28 +587,74 @@ class GUINetwork(Network):
         err, self.cuda_context = driver.cuCtxCreate(None, 0, self.cuda_device)  # Create CUDA context
         if err != 0: raise RuntimeError(f"Failed to create CUDA context: error code {err}")
 
-        # Compile shaders & create OpengGL program
-        vs = self._compile_shader(vertex_shader_src, gl.GL_VERTEX_SHADER)
-        fs = self._compile_shader(fragment_shader_src, gl.GL_FRAGMENT_SHADER)
-        self.program = gl.glCreateProgram()
-        gl.glAttachShader(self.program, vs)
-        gl.glAttachShader(self.program, fs)
-        gl.glLinkProgram(self.program)
-        gl.glDeleteShader(vs)
-        gl.glDeleteShader(fs)
-        self.x_pointer = gl.glGetUniformLocation(self.program, "x")
+        ### Compile shaders & create OpengGL program ###
+        # Spike Raster Plots
+        raster_plot_vertex_shader_src = """
+        #version 330 core
 
-    def _compile_shader(self, src, shader_type):
-        shader = gl.glCreateShader(shader_type)
-        gl.glShaderSource(shader, src)
-        gl.glCompileShader(shader)
-        if not gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS):
-            raise RuntimeError(gl.glGetShaderInfoLog(shader))
-        return shader
+        layout(location = 0) in uint spike;
+
+        uniform float time_x;
+        uniform float neuron_count;
+
+        void main()
+        {
+            // Convert neuron index to y-position
+            float y = (float(gl_VertexID) / neuron_count) * 2.0 - 1.0;
+
+            // Current time position
+            float x = time_x;
+
+            // Hide inactive neurons
+            if (spike == uint(0))
+            {
+                gl_Position = vec4(-10.0, -10.0, 0.0, 1.0);
+            }
+            else
+            {
+                gl_Position = vec4(x, y, 0.0, 1.0);
+            }
+
+            gl_PointSize = 2.0;
+        }
+        """
+        raster_plot_fragment_shader_src = """
+        #version 330 core
+
+        out vec4 FragColor;
+
+        void main()
+        {
+            FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        }
+        """
+        self.raster_plot_program = compileProgram(
+            compileShader(raster_plot_vertex_shader_src, gl.GL_VERTEX_SHADER),
+            compileShader(raster_plot_fragment_shader_src, gl.GL_FRAGMENT_SHADER)
+        )
+        self.max_time_steps = 100       # Max time-steps (value on x-axis) plotted
+        # vs = self._compile_shader(raster_plot_vertex_shader_src, gl.GL_VERTEX_SHADER)
+        # fs = self._compile_shader(raster_plot_fragment_shader_src, gl.GL_FRAGMENT_SHADER)
+        # self.program = gl.glCreateProgram()
+        # gl.glAttachShader(self.program, vs)
+        # gl.glAttachShader(self.program, fs)
+        # gl.glLinkProgram(self.program)
+        # gl.glDeleteShader(vs)
+        # gl.glDeleteShader(fs)
+        # self.x_pointer = gl.glGetUniformLocation(self.program, "x")
+
+    # def _compile_shader(self, src, shader_type):
+    #     shader = gl.glCreateShader(shader_type)
+    #     gl.glShaderSource(shader, src)
+    #     gl.glCompileShader(shader)
+    #     if not gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS):
+    #         raise RuntimeError(gl.glGetShaderInfoLog(shader))
+    #     return shader
 
     def add_layer(self, layer: Nodes, name: str) -> None:
         super().add_layer(layer, name)
 
+        ### Determine which data needs a shared buffer ###
         layer_data = {}
         if isinstance(layer, Input):
             layer_data['s'] = layer.s
@@ -617,25 +664,13 @@ class GUINetwork(Network):
         else:
             raise NotImplementedError("GUINetwork only supports Input and LIFNodes layers for now.")
 
-        self.opengl_buffers['layers'][name] = {}
+        ### Create shared buffers ###
+        self.opengl_vaos['layers'][name] = {}
         for data_name, data in layer_data.items():
-            shared_buffer, vbo = self._create_shared_buffer(data)
-            layer.__setattr__(data_name, shared_buffer)
-            self.opengl_buffers['layers'][name][data_name] = vbo
-            self.buffer_types[vbo] = pytorch_opengl_type_map[data.dtype]
-
-
-    # def add_connection(self, connection: AbstractMulticompartmentConnection, source: str, target: str) -> None:
-    #     if isinstance(connection, AbstractConnection):
-    #         raise NotImplementedError("GUINetwork does not support AbstractConnection, only AbstractMulticompartmentConnection.")
-    #
-    #     super().add_connection(connection, source, target)
-    #
-    #     self.opengl_buffers['connections'][(source, target)] = {}
-    #     for f in connection.pipeline:
-    #         shared_buffer, vbo = self._create_shared_buffer(f.value)
-    #         f.value = shared_buffer
-    #         self.opengl_buffers['connections'][(source, target)][f.name] = vbo
+            shared_buffer, vao = self._create_shared_buffer(data)           # Generate buffer
+            layer.__setattr__(data_name, shared_buffer)                     # Replace original tensor with shared buffer
+            self.opengl_vaos['layers'][name][data_name] = vao            # Map VBO to layer attribute
+            self.opengl_vao_dtypes[vao] = pytorch_opengl_type_map[data.dtype]    # Store OpenGL type for this buffer
 
     def _create_shared_buffer(self, org_tensor: torch.Tensor) -> tuple[Tensor, int]:
         # language=rst
@@ -645,50 +680,8 @@ class GUINetwork(Network):
         :param org_tensor: PyTorch tensor to create a shared buffer for.
         :return:
             ``shared_buffer``: New PyTorch tensor that shares memory with an OpenGL buffer registered with CUDA
-            ``vbo``: OpenGL buffer object ID that is shared with the new PyTorch tensor.
+            ``vao``: OpenGL buffer object ID that is shared with the new PyTorch tensor.
         """
-
-        # ### Setup OpenGL buffer ###
-        # buffer_size = org_tensor.numel() * org_tensor.element_size()  # Size in bytes
-        # vbo = gl.glGenBuffers(1)                    # Vertex Buffer Object
-        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)    # Bind to GL_ARRAY_BUFFER
-        # gl.glBufferData(target=gl.GL_ARRAY_BUFFER,  # Allocate buffer space
-        #                 size=buffer_size,           # Size in bytes
-        #                 data=org_tensor.cpu().numpy(),    # Initial data
-        #                 usage=gl.GL_DYNAMIC_DRAW)   # Frequent updates expected
-        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)      # Unbind GL_ARRAY_BUFFER
-        # if gl.glIsBuffer(vbo) == 0:
-        #     raise RuntimeError("Failed to create OpenGL buffer")
-        #
-        # ### Register OpenGL buffer with CUDA ###
-        # err, = driver.cuInit(0)  # Initialize CUDA driver
-        # if err != 0: raise RuntimeError(f"Failed to initialize CUDA: error code {err}")
-        #
-        # err, device = driver.cuDeviceGet(0)  # Get CUDA device
-        # if err != 0: raise RuntimeError(f"Failed to get CUDA device: error code {err}")
-        #
-        # err, context = driver.cuCtxCreate(None, 0, device)  # Create CUDA context
-        # if err != 0: raise RuntimeError(f"Failed to create CUDA context: error code {err}")
-        #
-        # err, cuda_resource = driver.cuGraphicsGLRegisterBuffer(
-        #     buffer=vbo,
-        #     Flags=2  # cuda.CU_GRAPHICS_REGISTER_FLAGS_WRITE_DISCARD        # TODO: consider other flags
-        # )
-        # if err != 0: raise RuntimeError(f"Failed to register OpenGL buffer with CUDA: error code {err}")
-        #
-        # err, = driver.cuGraphicsMapResources(1, cuda_resource, 0)
-        # if err != 0: raise RuntimeError(f"Failed to map CUDA graphics resource: error code {err}")
-        #
-        # err, ptr, size = driver.cuGraphicsResourceGetMappedPointer(cuda_resource)
-        # if err != 0: raise RuntimeError(f"Failed to get mapped pointer for CUDA graphics resource: error code {err}")
-        #
-        # ### Create PyTorch tensor from CUDA pointer ###
-        # cp_ptr = cp.cuda.MemoryPointer(cp.cuda.UnownedMemory(int(ptr), size, cuda_resource), 0)
-        # dtype = pytorch_cp_type_map[org_tensor.dtype]
-        # cp_array = cp.ndarray(shape=org_tensor.shape,
-        #                       dtype=dtype,
-        #                       memptr=cp_ptr)
-        # new_tensor = torch.as_tensor(cp_array)
 
         N = org_tensor.numel()
         buffer_size = N * org_tensor.element_size()
@@ -726,13 +719,23 @@ class GUINetwork(Network):
         err, cuda, size = driver.cuGraphicsResourceGetMappedPointer(cuda_resource)
         if err != 0: raise RuntimeError(f"Failed to get mapped pointer for CUDA graphics resource: error code {err}")
 
+        ### Define VAO ###
+        vao = gl.glGenVertexArrays(1)
+        gl.glBindVertexArray(vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 1, pytorch_opengl_type_map[org_tensor.dtype], False, 0, None)
+        gl.glBindVertexArray(0)
+
         ### Create PyTorch tensor from CUDA pointer ###
         cp_ptr = cp.cuda.MemoryPointer(cp.cuda.UnownedMemory(int(cuda), size, cuda_resource), 0)
         dtype = pytorch_cp_type_map[org_tensor.dtype]
         cp_array = cp.ndarray(N, dtype=dtype, memptr=cp_ptr)
-        torch_tensor = torch.as_tensor(cp_array)
+        torch_tensor = torch.as_tensor(cp_array)                # Create tensor with shared memory location
+        torch_tensor = torch_tensor.reshape(org_tensor.shape)   # Reshape to original tensor shape
+        torch_tensor.copy_(org_tensor)  # Copy original tensor values to shared buffer
 
-        return torch_tensor, vbo
+        return torch_tensor, vao
 
     def run(self, inputs: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
         # Check input type
@@ -766,17 +769,19 @@ class GUINetwork(Network):
                             self.layers[l].s.shape, device=self.layers[l].s.device
                         )
                     )
+            # self.layers['LIF'].s.copy_(torch.rand(self.layers['LIF'].s.shape, device=self.layers['LIF'].s.device) > 0.5)
+            self._render_spikes(self.opengl_vaos['layers']['EXC_LIF']['s'], self.layers['EXC_LIF'].s.shape[1], t, time)
 
-            self.layers['LIF'].s.copy_(torch.rand(self.layers['LIF'].s.shape, device=self.layers['LIF'].s.device))
-            self._render_spikes(self.opengl_buffers['layers']['LIF']['s'], self.layers['LIF'].s.shape[1], t, time)
+        # for i in range(500):
+        #     self.layers['LIF'].s.copy_(torch.rand(self.layers['LIF'].s.shape, device=self.layers['LIF'].s.device) > 0.99)
+        #     self._render_spikes(self.opengl_vaos['layers']['LIF']['s'], self.layers['LIF'].s.shape[1], i, time)
 
         # TODO: I don't care for this
         # Re-normalize connections.
         # for c in self.connections:
         #     self.connections[c].normalize()
 
-
-    def _render_spikes(self, vbo: np.uint32, layer_size: int, time_step: int, max_time: int) -> None:
+    def _render_spikes(self, vao: np.uint32, layer_size: int, time_step: int) -> None:
         # language=rst
         """
         Render a raster plot
@@ -784,59 +789,116 @@ class GUINetwork(Network):
         :return: None
         """
 
-        vao = gl.glGenVertexArrays(1)
-        gl.glBindVertexArray(vao)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
-        gl.glEnableVertexAttribArray(0)
-        gl.glVertexAttribPointer(0, 1, gl.GL_FLOAT, False, 0, None)
-        gl.glBindVertexArray(0)
+        ### Wrapping over plotted index ###
+        wrapped_time_step = time_step % self.max_time_steps
+        # Clear screen if we've plotted to the edge of the window
+        if wrapped_time_step == 0:
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+        # Normalize to range [-1.0, +1.0]
+        time_step_adjusted = (wrapped_time_step) / self.max_time_steps * 2.0 - 1.0
 
-        # gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-
-        gl.glUseProgram(self.program)
-        gl.glUniform1f(self.x_pointer, (time_step / max_time)*2.0-1.0)  # constant y value
-
+        ### Bind raster plot shader & variables ###
+        gl.glUseProgram(self.raster_plot_program)
+        gl.glUniform1f(
+            gl.glGetUniformLocation(self.raster_plot_program, "time_x"),
+            time_step_adjusted
+        )
+        gl.glUniform1f(
+            gl.glGetUniformLocation(self.raster_plot_program, "neuron_count"),
+            float(layer_size)
+        )
         gl.glBindVertexArray(vao)
         gl.glDrawArrays(gl.GL_POINTS, 0, layer_size)
 
         glfw.swap_buffers(self.window)
         glfw.poll_events()
 
-        # x = np.random.randn(1000).astype(np.float32)  # update x data
-        # gl.glBufferData(gl.GL_ARRAY_BUFFER, x.nbytes, x, gl.GL_STATIC_DRAW)
-
 
 if __name__ == '__main__':
     from bindsnet.network.nodes import Input, LIFNodes
     from bindsnet.network.topology import MulticompartmentConnection
-    from bindsnet.network.topology_features import Weight
+    from bindsnet.network.topology_features import Weight, Mask
 
-    IN_SIZE = 1000
-    LIF_SIZE = 10_000
-    SIM_TIME = 75
+    IN_SIZE = 100
+    EXC_SIZE = 10_000
+    INH_SIZE = 1_500
+    SIM_TIME = 500
     BATCH_SIZE = 1
 
     device = torch.device('cuda:0')
     network = GUINetwork()
-    network._create_shared_buffer(torch.rand(LIF_SIZE))
     network.add_layer(layer=Input(IN_SIZE), name='I')
-    network.add_layer(layer=LIFNodes(LIF_SIZE), name='LIF')
+    network.add_layer(layer=LIFNodes(EXC_SIZE), name='EXC_LIF')
+    network.add_layer(layer=LIFNodes(INH_SIZE), name='INH_LIF')
     network.add_connection(
         connection=MulticompartmentConnection(
             source=network.layers['I'],
-            target=network.layers['LIF'],
+            target=network.layers['EXC_LIF'],
+            device=device,
+            pipeline=[
+                Weight(
+                    name='I_to_EXC_LIF_weight',
+                    value=torch.rand(IN_SIZE, EXC_SIZE, device=device),
+                ),
+                Mask(
+                    name='EXC_LIF_mask',
+                    value=torch.rand(IN_SIZE, EXC_SIZE, device=device) > 0.95,
+                )
+            ]),
+        source='I',
+        target='EXC_LIF')
+    network.add_connection(
+        connection=MulticompartmentConnection(
+            source=network.layers['I'],
+            target=network.layers['INH_LIF'],
+            device=device,
+            pipeline=[
+                Weight(
+                    name='I_to_INH_LIF_weight',
+                    value=torch.rand(IN_SIZE, INH_SIZE, device=device),
+                ),
+                Mask(
+                    name='EXC_LIF_mask',
+                    value=torch.rand(IN_SIZE, INH_SIZE, device=device) > 0.95,
+                )
+            ]),
+        source='I',
+        target='INH_LIF')
+    network.add_connection(
+        connection=MulticompartmentConnection(
+            source=network.layers['INH_LIF'],
+            target=network.layers['EXC_LIF'],
             device=device,
             pipeline=[
                 Weight(
                     name='I_to_LIF_weight',
-                    value=torch.rand(IN_SIZE, LIF_SIZE, device=device) > 0.05,
+                    value=-torch.rand(INH_SIZE, EXC_SIZE, device=device),
+                ),
+                Mask(
+                    name='LIF_to_mask',
+                    value=torch.rand(INH_SIZE, EXC_SIZE, device=device) > 0.95,
                 )
             ]),
-        source='I',
-        target='LIF')
-
-
+        source='INH_LIF',
+        target='EXC_LIF')
+    network.add_connection(
+        connection=MulticompartmentConnection(
+            source=network.layers['EXC_LIF'],
+            target=network.layers['INH_LIF'],
+            device=device,
+            pipeline=[
+                Weight(
+                    name='I_to_LIF_weight',
+                    value=torch.rand(EXC_SIZE, INH_SIZE, device=device),
+                ),
+                Mask(
+                    name='LIF_to_mask',
+                    value=torch.rand(EXC_SIZE, INH_SIZE, device=device) > 0.95,
+                )
+            ]),
+        source='EXC_LIF',
+        target='INH_LIF')
 
     network.to(device)
-    network.run(inputs={'I': torch.ones(SIM_TIME, BATCH_SIZE, IN_SIZE, device=device)}, time=SIM_TIME)
-    print()
+    inputs = torch.rand(SIM_TIME, BATCH_SIZE, IN_SIZE, device=device) > 0.90
+    network.run(inputs={'I': inputs}, time=SIM_TIME)
