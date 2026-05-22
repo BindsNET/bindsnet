@@ -7,7 +7,7 @@ from torch import Tensor
 
 from bindsnet.learning.reward import AbstractReward
 from bindsnet.network.monitors import AbstractMonitor
-from bindsnet.network.nodes import CSRMNodes, Nodes
+from bindsnet.network.nodes import CSRMNodes, Nodes, Input, LIFNodes
 from bindsnet.network.topology import AbstractConnection, AbstractMulticompartmentConnection
 
 
@@ -493,49 +493,6 @@ class Network(torch.nn.Module):
         return super().train(mode)
 
 
-# ---------------------------
-# Shaders
-# ---------------------------
-vertex_shader_src = """
-#version 330 core
-
-layout(location = 0) in float spike;
-
-uniform float time_x;
-uniform float neuron_count;
-
-void main()
-{
-    // Convert neuron index to y-position
-    float y = (float(gl_VertexID) / neuron_count) * 2.0 - 1.0;
-
-    // Current time position
-    float x = time_x;
-
-    // Hide inactive neurons
-    if (spike < 0.95)
-    {
-        gl_Position = vec4(-10.0, -10.0, 0.0, 1.0);
-    }
-    else
-    {
-        gl_Position = vec4(x, y, 0.0, 1.0);
-    }
-
-    gl_PointSize = 2.0;
-}
-"""
-fragment_shader_src = """
-#version 330 core
-
-out vec4 FragColor;
-
-void main()
-{
-    FragColor = vec4(1.0, 0.0, 1.0, 1.0);
-}
-"""
-
 import glfw
 import OpenGL.GL as gl
 from OpenGL.GL.shaders import compileShader, compileProgram
@@ -568,93 +525,25 @@ class GUINetwork(Network):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        ### Setup GUI window ###
-        glfw.init()
-        self.window = glfw.create_window(800, 600, "Network GUI", None, None)
-        glfw.make_context_current(self.window)
-
-        # OpenGL buffers for plotting
-        # Connections: Values of topology features
-        # Layers: Spikes & voltages
+        # OpenGL array objects for plotting
+        # {
+        #   'layers': {
+        #       layer_name: {
+        #           's': vao_index,
+        #           ...
+        #    },
+        #    ...
         self.opengl_vaos = {'connections': {}, 'layers': {}}
         self.opengl_vao_dtypes = {}
 
-        ### Initialize CUDA driver ###
-        err, = driver.cuInit(0)  # Initialize CUDA driver
-        if err != 0: raise RuntimeError(f"Failed to initialize CUDA: error code {err}")
-        err, self.cuda_device = driver.cuDeviceGet(0)  # Get CUDA device
-        if err != 0: raise RuntimeError(f"Failed to get CUDA device: error code {err}")
-        err, self.cuda_context = driver.cuCtxCreate(None, 0, self.cuda_device)  # Create CUDA context
-        if err != 0: raise RuntimeError(f"Failed to create CUDA context: error code {err}")
+    def migrate(self) -> None:
+        ### Migrate all layers and connections to shared buffers ###
+        for name in self.layers:
+            self.migrate_layer(name)
 
-        ### Compile shaders & create OpengGL program ###
-        # Spike Raster Plots
-        raster_plot_vertex_shader_src = """
-        #version 330 core
-
-        layout(location = 0) in uint spike;
-
-        uniform float time_x;
-        uniform float neuron_count;
-
-        void main()
-        {
-            // Convert neuron index to y-position
-            float y = (float(gl_VertexID) / neuron_count) * 2.0 - 1.0;
-
-            // Current time position
-            float x = time_x;
-
-            // Hide inactive neurons
-            if (spike == uint(0))
-            {
-                gl_Position = vec4(-10.0, -10.0, 0.0, 1.0);
-            }
-            else
-            {
-                gl_Position = vec4(x, y, 0.0, 1.0);
-            }
-
-            gl_PointSize = 2.0;
-        }
-        """
-        raster_plot_fragment_shader_src = """
-        #version 330 core
-
-        out vec4 FragColor;
-
-        void main()
-        {
-            FragColor = vec4(1.0, 0.0, 1.0, 1.0);
-        }
-        """
-        self.raster_plot_program = compileProgram(
-            compileShader(raster_plot_vertex_shader_src, gl.GL_VERTEX_SHADER),
-            compileShader(raster_plot_fragment_shader_src, gl.GL_FRAGMENT_SHADER)
-        )
-        self.max_time_steps = 100       # Max time-steps (value on x-axis) plotted
-        # vs = self._compile_shader(raster_plot_vertex_shader_src, gl.GL_VERTEX_SHADER)
-        # fs = self._compile_shader(raster_plot_fragment_shader_src, gl.GL_FRAGMENT_SHADER)
-        # self.program = gl.glCreateProgram()
-        # gl.glAttachShader(self.program, vs)
-        # gl.glAttachShader(self.program, fs)
-        # gl.glLinkProgram(self.program)
-        # gl.glDeleteShader(vs)
-        # gl.glDeleteShader(fs)
-        # self.x_pointer = gl.glGetUniformLocation(self.program, "x")
-
-    # def _compile_shader(self, src, shader_type):
-    #     shader = gl.glCreateShader(shader_type)
-    #     gl.glShaderSource(shader, src)
-    #     gl.glCompileShader(shader)
-    #     if not gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS):
-    #         raise RuntimeError(gl.glGetShaderInfoLog(shader))
-    #     return shader
-
-    def add_layer(self, layer: Nodes, name: str) -> None:
-        super().add_layer(layer, name)
-
+    def migrate_layer(self, name: str) -> None:
         ### Determine which data needs a shared buffer ###
+        layer = self.layers[name]
         layer_data = {}
         if isinstance(layer, Input):
             layer_data['s'] = layer.s
@@ -737,168 +626,61 @@ class GUINetwork(Network):
 
         return torch_tensor, vao
 
-    def run(self, inputs: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
-        # Check input type
-        assert type(inputs) == dict, (
-                "'inputs' must be a dict of names of layers "
-                + f"(str) and relevant input tensors. Got {type(inputs).__name__} instead."
-        )
-
-        ### Compute reward ###
-        if self.reward_fn is not None:
-            kwargs["reward"] = self.reward_fn.compute(**kwargs)
-
-        ### Simulate network activity for `time` timesteps ###
-        timesteps = int(time / self.dt)
-        for t in range(timesteps):
-            current_inputs = {}
-            current_inputs.update(self._get_inputs())
-            for l in self.layers:
-                # Update each layer of nodes.
-                if l in inputs:
-                    if l in current_inputs:
-                        current_inputs[l] += inputs[l][t]
-                    else:
-                        current_inputs[l] = inputs[l][t]
-
+    def step(self, input: Dict[str, torch.Tensor]) -> None:
+        ### Simulate network activity for one time step ###
+        current_inputs = {}
+        current_inputs.update(self._get_inputs())
+        for l in self.layers:
+            # Update each layer of nodes.
+            if l in input:
                 if l in current_inputs:
-                    self.layers[l].forward(x=current_inputs[l])
+                    current_inputs[l] += input[l]
                 else:
-                    self.layers[l].forward(
-                        x=torch.zeros(
-                            self.layers[l].s.shape, device=self.layers[l].s.device
-                        )
+                    current_inputs[l] = input[l]
+
+            if l in current_inputs:
+                self.layers[l].forward(x=current_inputs[l])
+            else:
+                self.layers[l].forward(
+                    x=torch.zeros(
+                        self.layers[l].s.shape, device=self.layers[l].s.device
                     )
-            # self.layers['LIF'].s.copy_(torch.rand(self.layers['LIF'].s.shape, device=self.layers['LIF'].s.device) > 0.5)
-            self._render_spikes(self.opengl_vaos['layers']['EXC_LIF']['s'], self.layers['EXC_LIF'].s.shape[1], t, time)
+                )
 
-        # for i in range(500):
-        #     self.layers['LIF'].s.copy_(torch.rand(self.layers['LIF'].s.shape, device=self.layers['LIF'].s.device) > 0.99)
-        #     self._render_spikes(self.opengl_vaos['layers']['LIF']['s'], self.layers['LIF'].s.shape[1], i, time)
-
-        # TODO: I don't care for this
-        # Re-normalize connections.
-        # for c in self.connections:
-        #     self.connections[c].normalize()
-
-    def _render_spikes(self, vao: np.uint32, layer_size: int, time_step: int) -> None:
-        # language=rst
-        """
-        Render a raster plot
-
-        :return: None
-        """
-
-        ### Wrapping over plotted index ###
-        wrapped_time_step = time_step % self.max_time_steps
-        # Clear screen if we've plotted to the edge of the window
-        if wrapped_time_step == 0:
-            gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-        # Normalize to range [-1.0, +1.0]
-        time_step_adjusted = (wrapped_time_step) / self.max_time_steps * 2.0 - 1.0
-
-        ### Bind raster plot shader & variables ###
-        gl.glUseProgram(self.raster_plot_program)
-        gl.glUniform1f(
-            gl.glGetUniformLocation(self.raster_plot_program, "time_x"),
-            time_step_adjusted
+    def run(self, inputs: Dict[str, torch.Tensor], time: int, **kwargs) -> None:
+        raise NotImplementedError(
+            "GUI Network does not currently support the 'run' method."
+            "Please use the 'step' function to run the network one time step at a time"
         )
-        gl.glUniform1f(
-            gl.glGetUniformLocation(self.raster_plot_program, "neuron_count"),
-            float(layer_size)
-        )
-        gl.glBindVertexArray(vao)
-        gl.glDrawArrays(gl.GL_POINTS, 0, layer_size)
 
-        glfw.swap_buffers(self.window)
-        glfw.poll_events()
-
-
-if __name__ == '__main__':
-    from bindsnet.network.nodes import Input, LIFNodes
-    from bindsnet.network.topology import MulticompartmentConnection
-    from bindsnet.network.topology_features import Weight, Mask
-
-    IN_SIZE = 100
-    EXC_SIZE = 10_000
-    INH_SIZE = 1_500
-    SIM_TIME = 500
-    BATCH_SIZE = 1
-
-    device = torch.device('cuda:0')
-    network = GUINetwork()
-    network.add_layer(layer=Input(IN_SIZE), name='I')
-    network.add_layer(layer=LIFNodes(EXC_SIZE), name='EXC_LIF')
-    network.add_layer(layer=LIFNodes(INH_SIZE), name='INH_LIF')
-    network.add_connection(
-        connection=MulticompartmentConnection(
-            source=network.layers['I'],
-            target=network.layers['EXC_LIF'],
-            device=device,
-            pipeline=[
-                Weight(
-                    name='I_to_EXC_LIF_weight',
-                    value=torch.rand(IN_SIZE, EXC_SIZE, device=device),
-                ),
-                Mask(
-                    name='EXC_LIF_mask',
-                    value=torch.rand(IN_SIZE, EXC_SIZE, device=device) > 0.95,
-                )
-            ]),
-        source='I',
-        target='EXC_LIF')
-    network.add_connection(
-        connection=MulticompartmentConnection(
-            source=network.layers['I'],
-            target=network.layers['INH_LIF'],
-            device=device,
-            pipeline=[
-                Weight(
-                    name='I_to_INH_LIF_weight',
-                    value=torch.rand(IN_SIZE, INH_SIZE, device=device),
-                ),
-                Mask(
-                    name='EXC_LIF_mask',
-                    value=torch.rand(IN_SIZE, INH_SIZE, device=device) > 0.95,
-                )
-            ]),
-        source='I',
-        target='INH_LIF')
-    network.add_connection(
-        connection=MulticompartmentConnection(
-            source=network.layers['INH_LIF'],
-            target=network.layers['EXC_LIF'],
-            device=device,
-            pipeline=[
-                Weight(
-                    name='I_to_LIF_weight',
-                    value=-torch.rand(INH_SIZE, EXC_SIZE, device=device),
-                ),
-                Mask(
-                    name='LIF_to_mask',
-                    value=torch.rand(INH_SIZE, EXC_SIZE, device=device) > 0.95,
-                )
-            ]),
-        source='INH_LIF',
-        target='EXC_LIF')
-    network.add_connection(
-        connection=MulticompartmentConnection(
-            source=network.layers['EXC_LIF'],
-            target=network.layers['INH_LIF'],
-            device=device,
-            pipeline=[
-                Weight(
-                    name='I_to_LIF_weight',
-                    value=torch.rand(EXC_SIZE, INH_SIZE, device=device),
-                ),
-                Mask(
-                    name='LIF_to_mask',
-                    value=torch.rand(EXC_SIZE, INH_SIZE, device=device) > 0.95,
-                )
-            ]),
-        source='EXC_LIF',
-        target='INH_LIF')
-
-    network.to(device)
-    inputs = torch.rand(SIM_TIME, BATCH_SIZE, IN_SIZE, device=device) > 0.90
-    network.run(inputs={'I': inputs}, time=SIM_TIME)
+    # def _render_spikes(self, vao: np.uint32, layer_size: int, time_step: int) -> None:
+    #     # language=rst
+    #     """
+    #     Render a raster plot
+    #
+    #     :return: None
+    #     """
+    #
+    #     ### Wrapping over plotted index ###
+    #     wrapped_time_step = time_step % self.max_time_steps
+    #     # Clear screen if we've plotted to the edge of the window
+    #     if wrapped_time_step == 0:
+    #         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+    #     # Normalize to range [-1.0, +1.0]
+    #     time_step_adjusted = (wrapped_time_step) / self.max_time_steps * 2.0 - 1.0
+    #
+    #     ### Bind raster plot shader & variables ###
+    #     gl.glUseProgram(self.raster_plot_program)
+    #     gl.glUniform1f(
+    #         gl.glGetUniformLocation(self.raster_plot_program, "time_x"),
+    #         time_step_adjusted
+    #     )
+    #     gl.glUniform1f(
+    #         gl.glGetUniformLocation(self.raster_plot_program, "neuron_count"),
+    #         float(layer_size)
+    #     )
+    #     gl.glBindVertexArray(vao)
+    #     gl.glDrawArrays(gl.GL_POINTS, 0, layer_size)
+    #
+    #     glfw.swap_buffers(self.window)
+    #     glfw.poll_events()

@@ -12,6 +12,7 @@ from bindsnet import (
     network,
     pipeline,
     preprocessing,
+    rendering,
     utils,
 )
 
@@ -31,4 +32,5 @@ __all__ = [
     "environment",
     "conversion",
     "ROOT_DIR",
+    "rendering",
 ]
