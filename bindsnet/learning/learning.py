@@ -2569,6 +2569,101 @@ class MSTDPET(LearningRule):
 
         super().update()
 
+class MSTDPET_MA(MSTDPET):
+    # language=rst
+    """
+    Reward-modulated STDP with eligibility trace and moving-average smoothing.
+    Extends ``MSTDPET`` by maintaining a rolling history of the eligibility
+    trace and replacing the raw trace with its moving average before the
+    reward-modulated weight update is applied.
+
+    This smoothing reduces the variance of individual weight updates, which
+    stabilises learning in settings where reward signals are sparse or delayed,
+    such as spiking cellular automata controlling a continuous task.
+
+    It is a drop-in replacement for ``MSTDPET`` with one additional
+    keyword argument.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractConnection,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        **kwargs,
+    ) -> None:
+        # language=rst
+        """
+        Constructor for ``MSTDPET_MA`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the
+            ``MSTDPET_MA`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic
+            events, respectively.
+        :param reduction: Method for reducing parameter updates along the
+            minibatch dimension.
+        :param weight_decay: Coefficient controlling rate of decay of the
+            weights each iteration.
+
+        Keyword arguments:
+
+        :param float tc_plus: Time constant for pre-synaptic firing trace.
+        :param float tc_minus: Time constant for post-synaptic firing trace.
+        :param float tc_e_trace: Time constant for the eligibility trace.
+        :param int ma_window: Number of timesteps over which to average the
+            eligibility trace before applying reward modulation. Larger values
+            produce smoother, more conservative updates. Default: ``10``.
+        """
+        self.ma_window: int = kwargs.pop("ma_window", 10)
+        self._trace_history: list = []
+
+        super().__init__(
+            connection=connection,
+            nu=nu,
+            reduction=reduction,
+            weight_decay=weight_decay,
+            **kwargs,
+        )
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        MSTDPET_MA learning rule for ``Connection`` subclass of
+        ``AbstractConnection`` class.
+
+        Stores the current eligibility trace in a rolling buffer, replaces
+        it with the buffer mean, calls the parent ``_connection_update``,
+        then restores the original trace so that the underlying decay
+        dynamics are unaffected.
+
+        Keyword arguments:
+
+        :param Union[float, torch.Tensor] reward: Reward signal from
+            reinforcement learning task.
+        :param float a_plus: Learning rate (post-synaptic).
+        :param float a_minus: Learning rate (pre-synaptic).
+        """
+        # Ensure the eligibility trace has been initialised by the parent
+        # before we try to read it.
+        if not hasattr(self, "eligibility_trace"):
+            super()._connection_update(**kwargs)
+            return
+
+        # Store current trace in rolling buffer.
+        self._trace_history.append(self.eligibility_trace.clone())
+        if len(self._trace_history) > self.ma_window:
+            self._trace_history.pop(0)
+
+        # Replace eligibility trace with moving average.
+        raw_trace = self.eligibility_trace
+        self.eligibility_trace = torch.stack(self._trace_history).mean(dim=0)
+
+        # Call parent update with smoothed trace.
+        super()._connection_update(**kwargs)
+
+        # Restore the raw trace so its exponential decay is unaffected.
+        self.eligibility_trace = raw_trace
 
 class Rmax(LearningRule):
     # language=rst

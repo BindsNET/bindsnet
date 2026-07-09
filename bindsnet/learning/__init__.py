@@ -1,6 +1,7 @@
 from bindsnet.learning.learning import (
     MSTDP,
     MSTDPET,
+    MSTDPET_MA,
     Hebbian,
     LearningRule,
     NoOp,
@@ -17,5 +18,6 @@ __all__ = [
     "Hebbian",
     "MSTDP",
     "MSTDPET",
+    "MSTDPET_MA",
     "Rmax",
 ]
