@@ -21,14 +21,13 @@ jobs:
       env:
         POETRY_VERSION: 2.1.2
       run: |
-        curl -sSL https://install.python-poetry.org | python - -y &&\
-            poetry config virtualenvs.create false
+        curl -sSL https://install.python-poetry.org | python - -y
     - name: Install dependencies
       run: |
         poetry install
     - name: Format with black
       run: |
-        black .
+        poetry run black .
     - name: Test with pytest
       run: |
-        pytest
+        poetry run pytest
