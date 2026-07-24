@@ -414,6 +414,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         manual_update: bool = False,
         traces: bool = False,
         compute_dtype: Optional[torch.dtype] = None,
+        sparse_compute: bool = False,
         **kwargs,
     ) -> None:
         # language=rst
@@ -429,6 +430,8 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         :param traces: Set to :code:`True` to record history of connection activity (for monitors)
         :param compute_dtype: Optional low-precision dtype (e.g. ``torch.bfloat16``)
             for the matmul fast path only; ``None`` (default) keeps full ``float32``.
+        :param sparse_compute: Set to :code:`True` to compute sparse activity (<~20% neurons active)
+        efficiently
         """
 
         super().__init__(source, target, device, pipeline, **kwargs)
@@ -440,6 +443,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         self._w_eff = None          # 'Folded' weight matrix for faster computing
         self._has_learning = None
         self.compute_dtype = compute_dtype
+        self.sparse_compute = sparse_compute
 
     def _pipeline_has_learning(self) -> bool:
         # language=rst
@@ -480,6 +484,20 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
             self._w_eff = w_eff
         return w_eff
 
+    def _sparse_matmul(self, s_flat: torch.Tensor, w_eff: torch.Tensor) -> torch.Tensor:
+        # language=rst
+        """
+        Activity-sparse form of ``s_flat @ w_eff``. Read only
+        the rows of ``w_eff`` for source neurons that spiked this step. Numerically
+        identical to the dense matmul. More efficient when few source neurons are active.
+        """
+        active = s_flat.any(dim=0).nonzero(as_tuple=False).squeeze(1)
+        if active.numel() == 0:
+            return torch.zeros(
+                s_flat.size(0), self.target.n, device=w_eff.device, dtype=w_eff.dtype
+            )
+        return s_flat[:, active].to(w_eff.dtype) @ w_eff.index_select(0, active)
+
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
         """
@@ -493,7 +511,11 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         # Fast path: when the whole pipeline folds to a static elementwise-multiply
         w_eff = self._folded_weight()
         if w_eff is not None:
-            out_signal = s.view(s.size(0), self.source.n).to(w_eff.dtype) @ w_eff
+            s_flat = s.view(s.size(0), self.source.n)
+            if self.sparse_compute:
+                out_signal = self._sparse_matmul(s_flat, w_eff)
+            else:
+                out_signal = s_flat.to(w_eff.dtype) @ w_eff
             if out_signal.dtype != torch.float32:
                 out_signal = out_signal.float()
             if self.traces:
