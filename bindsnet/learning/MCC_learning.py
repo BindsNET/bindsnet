@@ -503,13 +503,28 @@ class MSTDP(MCC_LearningRule):
         source_s = self.source.s.view(batch_size, -1).float()
         target_s = self.target.s.view(batch_size, -1).float()
 
-        # Parse keyword arguments.
+        # Reward from current time step
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.feature_value.device
+
+        # Build learning-rate and decay tensors
+        if not hasattr(self, "_a_plus_default"):
+            dev = self.feature_value.device
+            self._a_plus_default = torch.tensor(1.0, device=dev)
+            self._a_minus_default = torch.tensor(-1.0, device=dev)
+            dt = float(self.connection.dt)
+            self._decay_plus = torch.exp(-dt / self.tc_plus.to(dev))
+            self._decay_minus = torch.exp(-dt / self.tc_minus.to(dev))
+        a_plus = kwargs.get("a_plus", None)
+        a_plus = (
+            self._a_plus_default
+            if a_plus is None
+            else torch.as_tensor(a_plus, device=self.feature_value.device)
         )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.feature_value.device
+        a_minus = kwargs.get("a_minus", None)
+        a_minus = (
+            self._a_minus_default
+            if a_minus is None
+            else torch.as_tensor(a_minus, device=self.feature_value.device)
         )
 
         # Compute weight update based on the eligibility value of the past timestep.
@@ -535,9 +550,9 @@ class MSTDP(MCC_LearningRule):
             self.feature_value += update
 
         # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+        self.p_plus *= self._decay_plus
         self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+        self.p_minus *= self._decay_minus
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
