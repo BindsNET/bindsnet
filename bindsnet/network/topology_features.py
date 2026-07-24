@@ -170,6 +170,21 @@ class AbstractFeature(ABC):
         """
         pass
 
+    def matmul_fold_value(self) -> Optional[torch.Tensor]:
+        # language=rst
+        """
+        Fast-path hook for :class:`MulticompartmentConnection`.
+
+        If this feature is a *pure elementwise multiply* by a static
+        ``[source.n, target.n]`` tensor -- i.e. ``compute(x) == x * V`` with no
+        per-call side effects on ``V`` -- return that ``V`` so the connection can
+        fold the whole pipeline into one weight matrix and evaluate as a matmul
+        (``out = s @ W_eff``) instead of materialising ``[B, source.n,
+        target.n]``. Returning ``None`` (the safe default) forces the generic
+        pipeline path.
+        """
+        return None
+
     def prime_feature(self, connection, device, **kwargs) -> None:
         # language=rst
         """
@@ -507,6 +522,12 @@ class Mask(AbstractFeature):
     def compute(self, conn_spikes) -> torch.Tensor:
         return conn_spikes * self.value
 
+    def matmul_fold_value(self) -> Optional[torch.Tensor]:
+        # A boolean mask is a pure elementwise multiply (True->1, False->0).
+        if getattr(self, "sparse", False):
+            return None
+        return self.value
+
     def reset_state_variables(self) -> None:
         pass
 
@@ -643,6 +664,14 @@ class Weight(AbstractFeature):
             self.normalize(time_step_norm=True)
 
         return return_val
+
+    def matmul_fold_value(self) -> Optional[torch.Tensor]:
+        # Foldable only as a plain multiply: skip when polarity enforcement or
+        # per-time-step normalisation would mutate ``value`` during compute, or
+        # when the value is stored sparse.
+        if self.enforce_polarity or self.norm_frequency == "time step" or self.sparse:
+            return None
+        return self.value
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         #### Initialize value ####
