@@ -413,6 +413,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         pipeline: list = [],
         manual_update: bool = False,
         traces: bool = False,
+        compute_dtype: Optional[torch.dtype] = None,
         **kwargs,
     ) -> None:
         # language=rst
@@ -426,6 +427,8 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         :param manual_update: Set to :code:`True` to disable automatic updates (applying learning rules) to connection features.
             False by default, updates called after each time step
         :param traces: Set to :code:`True` to record history of connection activity (for monitors)
+        :param compute_dtype: Optional low-precision dtype (e.g. ``torch.bfloat16``)
+            for the matmul fast path only; ``None`` (default) keeps full ``float32``.
         """
 
         super().__init__(source, target, device, pipeline, **kwargs)
@@ -433,6 +436,49 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         self.manual_update = manual_update
         if self.traces:
             self.activity = None
+
+        self._w_eff = None          # 'Folded' weight matrix for faster computing
+        self._has_learning = None
+        self.compute_dtype = compute_dtype
+
+    def _pipeline_has_learning(self) -> bool:
+        # language=rst
+        """Whether any pipeline feature carries a real (non-``NoOp``) learning
+        rule, i.e. whether the folded-weight cache must be invalidated on update."""
+        if self._has_learning is None:
+            from ..learning.MCC_learning import NoOp
+
+            self._has_learning = any(
+                not isinstance(getattr(f, "learning_rule", None), NoOp)
+                for f in self.pipeline
+            )
+        return self._has_learning
+
+    def _folded_weight(self) -> Optional[torch.Tensor]:
+        # language=rst
+        """
+        Return the product of the pipeline's foldable feature values. If the
+        pipeline is empty or contains a non-foldable feature, returns none.
+        """
+        if not self.pipeline:
+            return None
+        if self._w_eff is not None:
+            return self._w_eff
+        w_eff = None
+        for f in self.pipeline:
+            v = f.matmul_fold_value()
+            if v is None:
+                return None  # a non-foldable feature -> use the generic path
+            w_eff = v if w_eff is None else w_eff * v
+        # A product of only boolean masks would be non-float; force the matmul
+        # dtype (float32 by default, or the opt-in low-precision compute_dtype).
+        if self.compute_dtype is not None:
+            w_eff = w_eff.to(self.compute_dtype)
+        elif not torch.is_floating_point(w_eff):
+            w_eff = w_eff.float()
+        if not self.manual_update:
+            self._w_eff = w_eff
+        return w_eff
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -443,6 +489,18 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
                  decaying spike activation).
         """
+
+        # Fast path: when the whole pipeline folds to a static elementwise-multiply
+        w_eff = self._folded_weight()
+        if w_eff is not None:
+            out_signal = s.view(s.size(0), self.source.n).to(w_eff.dtype) @ w_eff
+            if out_signal.dtype != torch.float32:
+                out_signal = out_signal.float()
+            if self.traces:
+                self.activity = out_signal
+            if out_signal.size() != torch.Size([s.size(0)] + self.target.shape):
+                return out_signal.view(s.size(0), *self.target.shape)
+            return out_signal
 
         # Change to numeric type (torch doesn't like booleans for matrix ops)
         # Note: .float() is an expensive operation. Use as minimally as possible!
@@ -516,6 +574,8 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
             # Pipeline learning
             for f in self.pipeline:
                 f.update(**kwargs)
+            if self._pipeline_has_learning():
+                self._w_eff = None  # weights changed -> rebuild fold next compute
 
     def normalize(self) -> None:
         # language=rst
@@ -525,6 +585,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         # Normalize pipeline features
         for f in self.pipeline:
             f.normalize()
+        self._w_eff = None  # normalization may change weights -> invalidate fold
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -535,6 +596,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         for f in self.pipeline:
             f.reset_state_variables()
+        self._w_eff = None  # rebuild the fold cache at the next sample
 
 
 class Conv1dConnection(AbstractConnection):
