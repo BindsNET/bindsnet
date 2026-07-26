@@ -18,6 +18,12 @@ class AbstractFeature(ABC):
     Features to operate on signals traversing a connection.
     """
 
+    # How this feature folds in the connection's affine pipeline (see
+    # :meth:`MulticompartmentConnection.compute`): ``"mul"`` (elementwise multiply,
+    # the default), ``"add"`` or ``"sub"`` (elementwise add/subtract of the value
+    # returned by :meth:`compute`).
+    op = "mul"
+
     @abstractmethod
     def __init__(
         self,
@@ -163,27 +169,15 @@ class AbstractFeature(ABC):
         pass
 
     @abstractmethod
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
         # language=rst
         """
-        Computes the feature being operated on a set of incoming signals.
+        Return this feature's ``[source.n, target.n]`` value, given pre-synaptic
+        spikes ``s`` of shape ``[batch, source.n]``. How the value folds into the
+        connection is set by :attr:`op` -- a multiplicative factor (``"mul"``, the
+        default), or an additive/subtractive offset (``"add"``/``"sub"``).
         """
         pass
-
-    def matmul_fold_value(self) -> Optional[torch.Tensor]:
-        # language=rst
-        """
-        Fast-path hook for :class:`MulticompartmentConnection`.
-
-        If this feature is a *pure elementwise multiply* by a static
-        ``[source.n, target.n]`` tensor -- i.e. ``compute(x) == x * V`` with no
-        per-call side effects on ``V`` -- return that ``V`` so the connection can
-        fold the whole pipeline into one weight matrix and evaluate as a matmul
-        (``out = s @ W_eff``) instead of materialising ``[B, source.n,
-        target.n]``. Returning ``None`` (the safe default) forces the generic
-        pipeline path.
-        """
-        return None
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         # language=rst
@@ -437,11 +431,11 @@ class Probability(AbstractFeature):
         non_zero = values[mask]
         return torch.sparse_coo_tensor(indices, non_zero, self.value.size())
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # Factor: a fresh Bernoulli draw each step (resampled, never cached).
         if self.sparse:
-            return conn_spikes * self.sparse_bernoulli()
-        else:
-            return conn_spikes * torch.bernoulli(self.value)
+            return self.sparse_bernoulli()
+        return torch.bernoulli(self.value)
 
     def reset_state_variables(self) -> None:
         pass
@@ -519,13 +513,7 @@ class Mask(AbstractFeature):
         self.name = name
         self.value = value
 
-    def compute(self, conn_spikes) -> torch.Tensor:
-        return conn_spikes * self.value
-
-    def matmul_fold_value(self) -> Optional[torch.Tensor]:
-        # A boolean mask is a pure elementwise multiply (True->1, False->0).
-        if getattr(self, "sparse", False):
-            return None
+    def compute(self, s) -> torch.Tensor:
         return self.value
 
     def reset_state_variables(self) -> None:
@@ -581,9 +569,9 @@ class MeanField(AbstractFeature):
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes.mean() * torch.ones(
-            self.source_n * self.target_n, device=self.device
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        return s.float().mean() * torch.ones(
+            self.source_n, self.target_n, device=s.device
         )
 
     def prime_feature(self, connection, device, **kwargs) -> None:
@@ -651,7 +639,7 @@ class Weight(AbstractFeature):
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
         if self.enforce_polarity:
             pos_mask = ~torch.logical_xor(self.value > 0, self.positive_mask)
             neg_mask = ~torch.logical_xor(self.value < 0, ~self.positive_mask)
@@ -659,19 +647,11 @@ class Weight(AbstractFeature):
             self.value[~pos_mask] = 0.0001
             self.value[~neg_mask] = -0.0001
 
-        return_val = self.value * conn_spikes
+        factor = self.value
         if self.norm_frequency == "time step":
+            factor = factor.clone()
             self.normalize(time_step_norm=True)
-
-        return return_val
-
-    def matmul_fold_value(self) -> Optional[torch.Tensor]:
-        # Foldable only as a plain multiply: skip when polarity enforcement or
-        # per-time-step normalisation would mutate ``value`` during compute, or
-        # when the value is stored sparse.
-        if self.enforce_polarity or self.norm_frequency == "time step" or self.sparse:
-            return None
-        return self.value
+        return factor
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         #### Initialize value ####
@@ -734,11 +714,15 @@ class Bias(AbstractFeature):
             batch_size=batch_size,
         )
 
+    # Bias is additive: folds as ``B <- B + value`` in the connection's pipeline.
+    op = "add"
+
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes + self.value
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # Additive offset added to every synapse (independent of the spikes).
+        return self.value
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         #### Initialize value ####
@@ -762,7 +746,7 @@ class Intensity(AbstractFeature):
     ) -> None:
         # language=rst
         """
-        Adds scalars to signals
+        Multiply all signals by a scalar
         :param name: Name of the feature
         :param value: Values to scale signals by
         :param value_dtype: Data type for :code:`value` tensor
@@ -781,8 +765,8 @@ class Intensity(AbstractFeature):
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes * self.value
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        return self.value
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         #### Initialize value ####
@@ -835,11 +819,17 @@ class Degradation(AbstractFeature):
 
         self.degrade_function = degrade_function
 
+    # Degradation is subtractive: folded as ``B <- B - degrade_function(value)``.
+    op = "sub"
+
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes - self.degrade_function(self.value)
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # Subtractive offset (via degrade_function) applied to every synapse.
+        if self.degrade_function is not None:
+            return self.degrade_function(self.value)
+        return self.value
 
 
 class AdaptationBaseSynapsHistory(AbstractFeature):
@@ -911,7 +901,11 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
             batch_size=batch_size,
         )
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # This feature needs the per-synapse spikes, so build them from s
+        conn_spikes = s.view(s.size(0), -1, 1).expand(
+            s.size(0), s.size(1), self.value.size(-1)
+        )
 
         # Update the spike buffer
         if self.start_counter == False or conn_spikes.sum() > 0:
@@ -940,7 +934,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
             if self.sparse:
                 self.value = self.value.to_sparse()
 
-        return conn_spikes * self.value
+        return self.value
 
     def reset_state_variables(
         self,
@@ -1021,7 +1015,11 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
             batch_size=batch_size,
         )
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # This feature needs the per-synapse spikes, so build them from s
+        conn_spikes = s.view(s.size(0), -1, 1).expand(
+            s.size(0), s.size(1), self.value.size(-1)
+        )
 
         # Update the spike buffer
         if self.start_counter == False or conn_spikes.sum() > 0:
@@ -1050,7 +1048,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
             if self.sparse:
                 self.value = self.value.to_sparse()
 
-        return conn_spikes * self.value
+        return self.value
 
     def reset_state_variables(
         self,
@@ -1089,15 +1087,16 @@ class AbstractSubFeature(ABC):
         self.parent = parent_feature
         self.sub_feature = None  # <-- Defined in non-abstract constructor
 
-    def compute(self, _) -> None:
+    def compute(self, s):
         # language=rst
         """
-        Proxy function to catch a pipeline execution from topology.py's :code:`compute` function. Allows :code:`SubFeature`
-        objects to be executed like real features in the pipeline.
+        Proxy to run a parent feature's side-effect (e.g. normalize/update) from
+        inside the pipeline. Returns ``1`` so it is the identity factor in the fold.
         """
 
         # sub_feature should be defined in the non-abstract constructor
         self.sub_feature()
+        return 1
 
 
 class Normalization(AbstractSubFeature):

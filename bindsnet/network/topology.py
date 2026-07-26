@@ -413,7 +413,6 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         pipeline: list = [],
         manual_update: bool = False,
         traces: bool = False,
-        compute_dtype: Optional[torch.dtype] = None,
         sparse_compute: bool = False,
         **kwargs,
     ) -> None:
@@ -428,10 +427,8 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         :param manual_update: Set to :code:`True` to disable automatic updates (applying learning rules) to connection features.
             False by default, updates called after each time step
         :param traces: Set to :code:`True` to record history of connection activity (for monitors)
-        :param compute_dtype: Optional low-precision dtype (e.g. ``torch.bfloat16``)
-            for the matmul fast path only; ``None`` (default) keeps full ``float32``.
-        :param sparse_compute: Set to :code:`True` to compute sparse activity (<~20% neurons active)
-        efficiently
+        :param sparse_compute: Set to :code:`True` to read only the rows of the effective
+            weight for source neurons that spiked (a win only when few are active).
         """
 
         super().__init__(source, target, device, pipeline, **kwargs)
@@ -440,123 +437,75 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         if self.traces:
             self.activity = None
 
-        self._w_eff = None          # 'Folded' weight matrix for faster computing
-        self._has_learning = None
-        self.compute_dtype = compute_dtype
         self.sparse_compute = sparse_compute
-
-    def _pipeline_has_learning(self) -> bool:
-        # language=rst
-        """Whether any pipeline feature carries a real (non-``NoOp``) learning
-        rule, i.e. whether the folded-weight cache must be invalidated on update."""
-        if self._has_learning is None:
-            from ..learning.MCC_learning import NoOp
-
-            self._has_learning = any(
-                not isinstance(getattr(f, "learning_rule", None), NoOp)
-                for f in self.pipeline
-            )
-        return self._has_learning
-
-    def _folded_weight(self) -> Optional[torch.Tensor]:
-        # language=rst
-        """
-        Return the product of the pipeline's foldable feature values. If the
-        pipeline is empty or contains a non-foldable feature, returns none.
-        """
-        if not self.pipeline:
-            return None
-        if self._w_eff is not None:
-            return self._w_eff
-        w_eff = None
-        for f in self.pipeline:
-            v = f.matmul_fold_value()
-            if v is None:
-                return None  # a non-foldable feature -> use the generic path
-            w_eff = v if w_eff is None else w_eff * v
-        # A product of only boolean masks would be non-float; force the matmul
-        # dtype (float32 by default, or the opt-in low-precision compute_dtype).
-        if self.compute_dtype is not None:
-            w_eff = w_eff.to(self.compute_dtype)
-        elif not torch.is_floating_point(w_eff):
-            w_eff = w_eff.float()
-        if not self.manual_update:
-            self._w_eff = w_eff
-        return w_eff
-
-    def _sparse_matmul(self, s_flat: torch.Tensor, w_eff: torch.Tensor) -> torch.Tensor:
-        # language=rst
-        """
-        Activity-sparse form of ``s_flat @ w_eff``. Read only
-        the rows of ``w_eff`` for source neurons that spiked this step. Numerically
-        identical to the dense matmul. More efficient when few source neurons are active.
-        """
-        active = s_flat.any(dim=0).nonzero(as_tuple=False).squeeze(1)
-        if active.numel() == 0:
-            return torch.zeros(
-                s_flat.size(0), self.target.n, device=w_eff.device, dtype=w_eff.dtype
-            )
-        return s_flat[:, active].to(w_eff.dtype) @ w_eff.index_select(0, active)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
         """
-        Compute pre-activations given spikes using connection weights.
+        Direct incoming spikes through the connection's feature pipeline.
 
-        :param s: Incoming spikes.
-        :return: Incoming spikes multiplied by synaptic weights (with or without
-                 decaying spike activation).
+        Each feature's ``compute`` returns its ``[source.n, target.n]`` value; how
+        it folds is set by the feature's ``op`` (``"mul"`` default, ``"add"``,
+        ``"sub"``). Folding the recurrence (start ``A = 1``, ``B = 0``):
+
+        * ``mul`` factor ``a``: ``A <- a * A`` and ``B <- a * B``
+        * ``add`` term  ``b``: ``B <- B + b``
+        * ``sub`` term  ``b``: ``B <- B - b``
+
+        ``B`` stays ``None`` (unallocated) unless an additive feature is present,
+        so a purely multiplicative pipeline is exactly the single ``s @ A`` matmul.
+
+        :param s: Incoming spikes, shape ``[batch, *source.shape]``.
+        :return: Post-synaptic input, shape ``[batch, *target.shape]``.
         """
+        s = s.view(s.size(0), self.source.n)
 
-        # Fast path: when the whole pipeline folds to a static elementwise-multiply
-        w_eff = self._folded_weight()
-        if w_eff is not None:
-            s_flat = s.view(s.size(0), self.source.n)
-            if self.sparse_compute:
-                out_signal = self._sparse_matmul(s_flat, w_eff)
-            else:
-                out_signal = s_flat.to(w_eff.dtype) @ w_eff
-            if out_signal.dtype != torch.float32:
-                out_signal = out_signal.float()
-            if self.traces:
-                self.activity = out_signal
-            if out_signal.size() != torch.Size([s.size(0)] + self.target.shape):
-                return out_signal.view(s.size(0), *self.target.shape)
-            return out_signal
-
-        # Change to numeric type (torch doesn't like booleans for matrix ops)
-        # Note: .float() is an expensive operation. Use as minimally as possible!
-        # if s.dtype != torch.float32:
-        #     s = s.float()
-
-        # Prepare broadcast from incoming spikes to all output neurons
-        # |conn_spikes| = [batch_size, source.n * target.n]
-        conn_spikes = s.view(s.size(0), self.source.n, 1).repeat(1, 1, self.target.n)
-        # TODO: ^ This could probably be optimized
-
-        # Run through pipeline
+        # running product of multiplicative factors, [source.n, target.n]
+        a_eff = None
+        # running additive offset, [source.n, target.n]; None while still zero
+        b_eff = None
         for f in self.pipeline:
-            conn_spikes = f.compute(conn_spikes)
+            factor = f.compute(s)
+            op = getattr(f, "op", "mul")
+            if op == "mul":
+                a_eff = factor if a_eff is None else a_eff * factor
+                if b_eff is not None:
+                    b_eff = b_eff * factor
+            else:  # additive contribution: "add" -> +factor, "sub" -> -factor
+                term = factor if op == "add" else -factor
+                b_eff = term if b_eff is None else b_eff + term
 
-        # Sum signals for each of the output/terminal neurons
-        # |out_signal| = [batch_size, target.n]
-        if conn_spikes.size() != torch.Size([s.size(0), self.source.n, self.target.n]):
-            if conn_spikes.is_sparse:
-                conn_spikes = conn_spikes.to_dense()
-            conn_spikes = conn_spikes.view(s.size(0), self.source.n, self.target.n)
+        if a_eff is None:
+            # Degenerate pipeline with no multiplicative feature: every source
+            # neuron contributes with unit weight.
+            a_eff = torch.ones(s.size(1), b_eff.size(-1), device=s.device)
+        if not torch.is_floating_point(a_eff):
+            a_eff = a_eff.float()
 
-        if conn_spikes.is_sparse:
-            out_signal = conn_spikes.to_dense().sum(1)
+        if self.sparse_compute:
+            # Read only the rows of A for source neurons that spiked this step
+            # (numerically identical; faster only when few are active).
+            active = s.any(dim=0).nonzero(as_tuple=False).squeeze(1)
+            if active.numel() == 0:
+                out = torch.zeros(
+                    s.size(0), a_eff.size(-1), device=a_eff.device, dtype=a_eff.dtype
+                )
+            else:
+                out = s[:, active].to(a_eff.dtype) @ a_eff.index_select(0, active)
         else:
-            out_signal = conn_spikes.sum(1)
+            out = s.to(a_eff.dtype) @ a_eff
+
+        # Additive terms apply to every synapse regardless of spikes, so sum over
+        # all source rows (the closed form of the [batch, source.n, target.n]
+        # source-sum).
+        if b_eff is not None:
+            out = out + b_eff.sum(dim=0)
 
         if self.traces:
-            self.activity = out_signal
-
-        if out_signal.size() != torch.Size([s.size(0)] + self.target.shape):
-            return out_signal.view(s.size(0), *self.target.shape)
-        else:
-            return out_signal
+            self.activity = out
+        if out.size() != torch.Size([s.size(0)] + self.target.shape):
+            return out.view(s.size(0), *self.target.shape)
+        return out
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -596,8 +545,6 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
             # Pipeline learning
             for f in self.pipeline:
                 f.update(**kwargs)
-            if self._pipeline_has_learning():
-                self._w_eff = None  # weights changed -> rebuild fold next compute
 
     def normalize(self) -> None:
         # language=rst
@@ -607,7 +554,6 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         # Normalize pipeline features
         for f in self.pipeline:
             f.normalize()
-        self._w_eff = None  # normalization may change weights -> invalidate fold
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -618,7 +564,6 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         for f in self.pipeline:
             f.reset_state_variables()
-        self._w_eff = None  # rebuild the fold cache at the next sample
 
 
 class Conv1dConnection(AbstractConnection):
