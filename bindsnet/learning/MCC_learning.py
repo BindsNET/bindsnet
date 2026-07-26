@@ -315,6 +315,7 @@ class Hebbian(MCC_LearningRule):
         self,
         connection: AbstractMulticompartmentConnection,
         feature_value: Union[torch.Tensor, float, int],
+        range: Optional[Sequence[float]] = None,
         nu: Optional[Union[float, Sequence[float]]] = None,
         reduction: Optional[callable] = None,
         decay: float = 0.0,
@@ -334,6 +335,7 @@ class Hebbian(MCC_LearningRule):
         super().__init__(
             connection=connection,
             feature_value=feature_value,
+            range=[-1, +1] if range is None else range,
             nu=nu,
             reduction=reduction,
             decay=decay,
@@ -344,7 +346,7 @@ class Hebbian(MCC_LearningRule):
             self.source.traces and self.target.traces
         ), "Both pre- and post-synaptic nodes must record spike traces."
 
-        if isinstance(MulticompartmentConnection):
+        if isinstance(connection, MulticompartmentConnection):
             self.update = self._connection_update
             self.feature_value = feature_value
         # elif isinstance(connection, Conv2dConnection):

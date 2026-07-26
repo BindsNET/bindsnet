@@ -84,6 +84,7 @@ class AbstractFeature(ABC):
         from ..learning.MCC_learning import (
             NoOp,
             PostPre,
+            Hebbian,
             MSTDP,
             MSTDPET,
         )
@@ -91,6 +92,7 @@ class AbstractFeature(ABC):
         supported_rules = [
             NoOp,
             PostPre,
+            Hebbian,
             MSTDP,
             MSTDPET,
         ]
