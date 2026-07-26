@@ -304,89 +304,90 @@ class PostPre(MCC_LearningRule):
     def reset_state_variables(self):
         return
 
-    class Hebbian(MCC_LearningRule):
+
+class Hebbian(MCC_LearningRule):
+    # language=rst
+    """
+    Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractMulticompartmentConnection,
+        feature_value: Union[torch.Tensor, float, int],
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        reduction: Optional[callable] = None,
+        decay: float = 0.0,
+        **kwargs,
+    ) -> None:
         # language=rst
         """
-        Simple Hebbian learning rule. Pre- and post-synaptic updates are both positive.
+        Constructor for ``Hebbian`` learning rule.
+
+        :param connection: An ``AbstractConnection`` object whose weights the
+            ``Hebbian`` learning rule will modify.
+        :param nu: Single or pair of learning rates for pre- and post-synaptic events.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param decay: Coefficient controlling rate of decay of the weights each iteration.
         """
-
-        def __init__(
-            self,
-            connection: AbstractMulticompartmentConnection,
-            feature_value: Union[torch.Tensor, float, int],
-            nu: Optional[Union[float, Sequence[float]]] = None,
-            reduction: Optional[callable] = None,
-            decay: float = 0.0,
+        super().__init__(
+            connection=connection,
+            feature_value=feature_value,
+            nu=nu,
+            reduction=reduction,
+            decay=decay,
             **kwargs,
-        ) -> None:
-            # language=rst
-            """
-            Constructor for ``Hebbian`` learning rule.
+        )
 
-            :param connection: An ``AbstractConnection`` object whose weights the
-                ``Hebbian`` learning rule will modify.
-            :param nu: Single or pair of learning rates for pre- and post-synaptic events.
-            :param reduction: Method for reducing parameter updates along the batch
-                dimension.
-            :param decay: Coefficient controlling rate of decay of the weights each iteration.
-            """
-            super().__init__(
-                connection=connection,
-                feature_value=feature_value,
-                nu=nu,
-                reduction=reduction,
-                decay=decay,
-                **kwargs,
+        assert (
+            self.source.traces and self.target.traces
+        ), "Both pre- and post-synaptic nodes must record spike traces."
+
+        if isinstance(MulticompartmentConnection):
+            self.update = self._connection_update
+            self.feature_value = feature_value
+        # elif isinstance(connection, Conv2dConnection):
+        #     self.update = self._conv2d_connection_update
+        else:
+            raise NotImplementedError(
+                "This learning rule is not supported for this Connection type."
             )
 
-            assert (
-                self.source.traces and self.target.traces
-            ), "Both pre- and post-synaptic nodes must record spike traces."
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection``
+        class.
+        """
 
-            if isinstance(MulticompartmentConnection):
-                self.update = self._connection_update
-                self.feature_value = feature_value
-            # elif isinstance(connection, Conv2dConnection):
-            #     self.update = self._conv2d_connection_update
-            else:
-                raise NotImplementedError(
-                    "This learning rule is not supported for this Connection type."
-                )
+        # Add polarities back to feature after updates
+        if self.enforce_polarity:
+            self.feature_value = torch.abs(self.feature_value)
 
-        def _connection_update(self, **kwargs) -> None:
-            # language=rst
-            """
-            Hebbian learning rule for ``Connection`` subclass of ``AbstractConnection``
-            class.
-            """
+        batch_size = self.source.batch_size
 
-            # Add polarities back to feature after updates
-            if self.enforce_polarity:
-                self.feature_value = torch.abs(self.feature_value)
+        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+        source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
+        target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
 
-            batch_size = self.source.batch_size
+        # Pre-synaptic update.
+        update = self.reduction(torch.bmm(source_s, target_x), dim=0)
+        self.feature_value += self.nu[0] * update
 
-            source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
-            source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
-            target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
-            target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
+        # Post-synaptic update.
+        update = self.reduction(torch.bmm(source_x, target_s), dim=0)
+        self.feature_value += self.nu[1] * update
 
-            # Pre-synaptic update.
-            update = self.reduction(torch.bmm(source_s, target_x), dim=0)
-            self.feature_value += self.nu[0] * update
+        # Add polarities back to feature after updates
+        if self.enforce_polarity:
+            self.feature_value = self.feature_value * self.polarities
 
-            # Post-synaptic update.
-            update = self.reduction(torch.bmm(source_x, target_s), dim=0)
-            self.feature_value += self.nu[1] * update
+        super().update()
 
-            # Add polarities back to feature after updates
-            if self.enforce_polarity:
-                self.feature_value = self.feature_value * self.polarities
-
-            super().update()
-
-        def reset_state_variables(self):
-            return
+    def reset_state_variables(self):
+        return
 
 
 class MSTDP(MCC_LearningRule):
