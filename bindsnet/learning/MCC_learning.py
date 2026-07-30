@@ -731,8 +731,13 @@ class MSTDPET(MCC_LearningRule):
         )
 
         super().update()
-
+    
     def reset_state_variables(self) -> None:
         self.eligibility.zero_()
         self.eligibility_trace.zero_()
+        self.p_plus.zero_()
+        self.p_minus.zero_()
+        if self.average_update > 0:
+            self.average_buffer.zero_()
+            self.average_buffer_index = 0
         return
