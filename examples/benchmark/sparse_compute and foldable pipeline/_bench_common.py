@@ -54,7 +54,11 @@ def _expansion_compute(self, s):
         if isinstance(f, Probability):
             v = torch.bernoulli(f.value)
         elif isinstance(f, Degradation):
-            v = f.degrade_function(f.value) if f.degrade_function is not None else f.value
+            v = (
+                f.degrade_function(f.value)
+                if f.degrade_function is not None
+                else f.value
+            )
         else:
             v = f.value
         if op == "mul":

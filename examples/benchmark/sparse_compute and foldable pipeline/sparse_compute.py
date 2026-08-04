@@ -5,4 +5,6 @@ from _bench_common import run_speedup
 # only the weight rows of source neurons that spiked) over the dense folded compute,
 # on the ExampleNetwork (CPU and GPU).
 if __name__ == "__main__":
-    run_speedup(baseline_mode="fold", test_mode="fold_sparse", technique="Sparse compute")
+    run_speedup(
+        baseline_mode="fold", test_mode="fold_sparse", technique="Sparse compute"
+    )

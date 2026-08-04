@@ -143,9 +143,7 @@ class ExampleNetwork(Network):
     def make_input(self, runtime):
         # Poisson-ish random spike train into the input layer.
         return {
-            "I": torch.rand(
-                runtime, self.batch_size, self.in_size, device=self.device
-            )
+            "I": torch.rand(runtime, self.batch_size, self.in_size, device=self.device)
             > 0.90
         }
 

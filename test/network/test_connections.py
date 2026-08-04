@@ -195,7 +195,7 @@ class TestMultiCompartmentConnection:
         return conn
 
     def _reference_expansion(self, pipeline, s, tgt_n):
-        """Pre-collapse pipeline features """
+        """Pre-collapse pipeline features"""
         b, src = s.shape
         x = s.view(b, src, 1).expand(b, src, tgt_n).clone().float()
         for f in pipeline:
@@ -222,7 +222,11 @@ class TestMultiCompartmentConnection:
         """MCC with a single learnable Weight; returns (connection, feature)."""
         src_n, tgt_n = w0.shape
         conn = self._make_mcc(
-            [tf.Weight(name="w", value=w0.clone(), learning_rule=rule, nu=nu, range=rng)],
+            [
+                tf.Weight(
+                    name="w", value=w0.clone(), learning_rule=rule, nu=nu, range=rng
+                )
+            ],
             src_n,
             tgt_n,
             batch=1,
@@ -237,7 +241,9 @@ class TestMultiCompartmentConnection:
             (torch.tensor([0.0, 0.0, 0.0]), torch.tensor([0.0, 0.0]), 1.0),
         ]
 
-    def _mstdp_reference(self, w0, seq, nu0, dt, tc_plus=20.0, tc_minus=20.0, rng=(-1.0, 1.0)):
+    def _mstdp_reference(
+        self, w0, seq, nu0, dt, tc_plus=20.0, tc_minus=20.0, rng=(-1.0, 1.0)
+    ):
         w = w0.clone().float()
         src_n, tgt_n = w.shape
         p_plus, p_minus = torch.zeros(src_n), torch.zeros(tgt_n)
@@ -283,7 +289,10 @@ class TestMultiCompartmentConnection:
         w = torch.tensor([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
         mask = torch.tensor([[True, False], [True, True], [False, True]])
         conn = self._make_mcc(
-            [tf.Weight(name="w", value=w.clone()), tf.Mask(name="m", value=mask.clone())],
+            [
+                tf.Weight(name="w", value=w.clone()),
+                tf.Mask(name="m", value=mask.clone()),
+            ],
             3,
             2,
         )
@@ -295,7 +304,10 @@ class TestMultiCompartmentConnection:
         w = torch.tensor([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
         bias = torch.tensor([[0.5, -0.5], [0.1, 0.2], [0.0, 1.0]])
         conn = self._make_mcc(
-            [tf.Weight(name="w", value=w.clone()), tf.Bias(name="b", value=bias.clone())],
+            [
+                tf.Weight(name="w", value=w.clone()),
+                tf.Bias(name="b", value=bias.clone()),
+            ],
             3,
             2,
             batch=2,
@@ -496,7 +508,9 @@ class TestMultiCompartmentConnection:
     def test_learning_respects_range_clamp(self):
         # Post-only potentiation of +5 per synapse must clamp to the range max (1.0).
         w0 = torch.full((2, 2), 0.9)
-        conn, feat = self._learning_conn(mcc.PostPre, w0, nu=(0.0, 5.0), rng=(-1.0, 1.0))
+        conn, feat = self._learning_conn(
+            mcc.PostPre, w0, nu=(0.0, 5.0), rng=(-1.0, 1.0)
+        )
         conn.source.s = torch.zeros(1, 2)
         conn.target.s = torch.ones(1, 2)
         conn.source.x = torch.ones(1, 2)
