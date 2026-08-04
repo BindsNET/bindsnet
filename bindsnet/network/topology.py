@@ -443,6 +443,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         pipeline: list = [],
         manual_update: bool = False,
         traces: bool = False,
+        sparse_compute: bool = False,
         **kwargs,
     ) -> None:
         # language=rst
@@ -456,6 +457,11 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         :param manual_update: Set to :code:`True` to disable automatic updates (applying learning rules) to connection features.
             False by default, updates called after each time step
         :param traces: Set to :code:`True` to record history of connection activity (for monitors)
+        :param sparse_compute: Set to :code:`True` to read only the rows of the effective
+            weight for source neurons that spiked. A win when few sources are active;
+            on CUDA it is applied only for large connections
+            (``source.n * target.n >= 4e6``), where the required device sync pays
+            for itself. Ignored otherwise.
         """
 
         super().__init__(source, target, device, pipeline, **kwargs)
@@ -464,49 +470,114 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         if self.traces:
             self.activity = None
 
+        self.sparse_compute = sparse_compute
+
+        # Cached (a_eff, b_sum) for pipelines whose features are all static
+        # (see AbstractFeature.is_static). Invalidated whenever a feature can
+        # change: learning updates, normalize, reset, device/dtype moves.
+        self._fold_cache = None
+
+    def _apply(self, fn, recurse=True):
+        self._fold_cache = None
+        return super()._apply(fn, recurse)
+
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
         """
-        Compute pre-activations given spikes using connection weights.
+        Direct incoming spikes through the connection's feature pipeline.
 
-        :param s: Incoming spikes.
-        :return: Incoming spikes multiplied by synaptic weights (with or without
-                 decaying spike activation).
+        Each feature's ``compute`` returns its ``[source.n, target.n]`` value; how
+        it folds is set by the feature's ``op`` (``"mul"`` default, ``"add"``,
+        ``"sub"``). Folding the recurrence (start ``A = 1``, ``B = 0``):
+
+        * ``mul`` factor ``a``: ``A <- a * A`` and ``B <- a * B``
+        * ``add`` term  ``b``: ``B <- B + b``
+        * ``sub`` term  ``b``: ``B <- B - b``
+
+        ``B`` stays ``None`` (unallocated) unless an additive feature is present,
+        so a purely multiplicative pipeline is exactly the single ``s @ A`` matmul.
+
+        :param s: Incoming spikes, shape ``[batch, *source.shape]``.
+        :return: Post-synaptic input, shape ``[batch, *target.shape]``.
         """
+        s = s.view(s.size(0), self.source.n)
 
-        # Change to numeric type (torch doesn't like booleans for matrix ops)
-        # Note: .float() is an expensive operation. Use as minimally as possible!
-        # if s.dtype != torch.float32:
-        #     s = s.float()
-
-        # Prepare broadcast from incoming spikes to all output neurons
-        # |conn_spikes| = [batch_size, source.n * target.n]
-        conn_spikes = s.view(s.size(0), self.source.n, 1).repeat(1, 1, self.target.n)
-        # TODO: ^ This could probably be optimized
-
-        # Run through pipeline
-        for f in self.pipeline:
-            conn_spikes = f.compute(conn_spikes)
-
-        # Sum signals for each of the output/terminal neurons
-        # |out_signal| = [batch_size, target.n]
-        if conn_spikes.size() != torch.Size([s.size(0), self.source.n, self.target.n]):
-            if conn_spikes.is_sparse:
-                conn_spikes = conn_spikes.to_dense()
-            conn_spikes = conn_spikes.view(s.size(0), self.source.n, self.target.n)
-
-        if conn_spikes.is_sparse:
-            out_signal = conn_spikes.to_dense().sum(1)
+        deferred = None
+        if self._fold_cache is not None:
+            a_eff, b_sum = self._fold_cache
         else:
-            out_signal = conn_spikes.sum(1)
+            # running product of multiplicative factors, [source.n, target.n]
+            a_eff = None
+            # running additive offset, [source.n, target.n]; None while still zero
+            b_eff = None
+            for f in self.pipeline:
+                factor = f.compute(s)
+                # Compute-time side effects (e.g. per-time-step weight
+                # normalization) run after the fold has consumed this value.
+                d = getattr(f, "defer", None)
+                if d is not None:
+                    deferred = [d] if deferred is None else deferred + [d]
+                if factor is None:
+                    # Side-effect-only pipeline entries (sub-features) fold as identity.
+                    continue
+                if isinstance(factor, torch.Tensor) and factor.is_sparse:
+                    # Sparse feature values carry a leading batch dim ([1, src, tgt])
+                    # from prime_feature; densify to the fold's [src, tgt] shape.
+                    factor = factor.to_dense().view(self.source.n, self.target.n)
+                op = getattr(f, "op", "mul")
+                if op == "mul":
+                    a_eff = factor if a_eff is None else a_eff * factor
+                    if b_eff is not None:
+                        b_eff = b_eff * factor
+                else:  # additive contribution: "add" -> +factor, "sub" -> -factor
+                    term = factor if op == "add" else -factor
+                    b_eff = term if b_eff is None else b_eff + term
+
+            if a_eff is None:
+                # Degenerate pipeline with no multiplicative feature: every source
+                # neuron contributes with unit weight.
+                a_eff = torch.ones(self.source.n, self.target.n, device=s.device)
+            if not torch.is_floating_point(a_eff):
+                a_eff = a_eff.float()
+
+            # Additive terms apply to every synapse regardless of spikes, so
+            # their contribution is the source-sum, a constant [target.n] row.
+            b_sum = b_eff.sum(dim=0) if b_eff is not None else None
+
+            if all(getattr(f, "is_static", True) for f in self.pipeline):
+                self._fold_cache = (a_eff, b_sum)
+
+        # The gather pays for its ``nonzero()`` only where that sync is expensive
+        # relative to the matmul: on CUDA it needs a large weight matrix to win;
+        # on CPU there is no device sync, so it helps even at small sizes.
+        use_gather = self.sparse_compute and (
+            not a_eff.is_cuda or self.source.n * self.target.n >= 4_000_000
+        )
+        if use_gather:
+            # Read only the rows of A for source neurons that spiked this step
+            # (numerically identical; faster only when few are active).
+            active = s.any(dim=0).nonzero(as_tuple=False).squeeze(1)
+            if active.numel() == 0:
+                out = torch.zeros(
+                    s.size(0), a_eff.size(-1), device=a_eff.device, dtype=a_eff.dtype
+                )
+            else:
+                out = s[:, active].to(a_eff.dtype) @ a_eff.index_select(0, active)
+        else:
+            out = s.to(a_eff.dtype) @ a_eff
+
+        if b_sum is not None:
+            out = out + b_sum
+
+        if deferred is not None:
+            for fn in deferred:
+                fn()
 
         if self.traces:
-            self.activity = out_signal
-
-        if out_signal.size() != torch.Size([s.size(0)] + self.target.shape):
-            return out_signal.view(s.size(0), *self.target.shape)
-        else:
-            return out_signal
+            self.activity = out
+        if out.size() != torch.Size([s.size(0)] + self.target.shape):
+            return out.view(s.size(0), *self.target.shape)
+        return out
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -544,6 +615,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         learning = kwargs.get("learning", False)
         if learning and not self.manual_update:
             # Pipeline learning
+            self._fold_cache = None
             for f in self.pipeline:
                 f.update(**kwargs)
 
@@ -553,6 +625,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         Normalize all features in the connection.
         """
         # Normalize pipeline features
+        self._fold_cache = None
         for f in self.pipeline:
             f.normalize()
 
@@ -563,6 +636,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         """
         super().reset_state_variables()
 
+        self._fold_cache = None
         for f in self.pipeline:
             f.reset_state_variables()
 
