@@ -14,6 +14,7 @@ Usage:
     python harvest_slurm.py --label "ES run (E009)" --run-id 2026-06-03-r01 \
         --glob 'scripts/stage_b/slurm_logs/*.out' [--json out.json] [--md]
 """
+
 from __future__ import annotations
 
 import argparse
