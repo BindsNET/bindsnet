@@ -428,7 +428,10 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
             False by default, updates called after each time step
         :param traces: Set to :code:`True` to record history of connection activity (for monitors)
         :param sparse_compute: Set to :code:`True` to read only the rows of the effective
-            weight for source neurons that spiked (a win only when few are active).
+            weight for source neurons that spiked. A win when few sources are active;
+            on CUDA it is applied only for large connections
+            (``source.n * target.n >= 4e6``), where the required device sync pays
+            for itself. Ignored otherwise.
         """
 
         super().__init__(source, target, device, pipeline, **kwargs)
@@ -466,6 +469,13 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         b_eff = None
         for f in self.pipeline:
             factor = f.compute(s)
+            if factor is None:
+                # Side-effect-only pipeline entries (sub-features) fold as identity.
+                continue
+            if isinstance(factor, torch.Tensor) and factor.is_sparse:
+                # Sparse feature values carry a leading batch dim ([1, src, tgt])
+                # from prime_feature; densify to the fold's [src, tgt] shape.
+                factor = factor.to_dense().view(self.source.n, self.target.n)
             op = getattr(f, "op", "mul")
             if op == "mul":
                 a_eff = factor if a_eff is None else a_eff * factor
@@ -478,11 +488,17 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         if a_eff is None:
             # Degenerate pipeline with no multiplicative feature: every source
             # neuron contributes with unit weight.
-            a_eff = torch.ones(s.size(1), b_eff.size(-1), device=s.device)
+            a_eff = torch.ones(self.source.n, self.target.n, device=s.device)
         if not torch.is_floating_point(a_eff):
             a_eff = a_eff.float()
 
-        if self.sparse_compute:
+        # The gather pays for its ``nonzero()`` only where that sync is expensive
+        # relative to the matmul: on CUDA it needs a large weight matrix to win;
+        # on CPU there is no device sync, so it helps even at small sizes.
+        use_gather = self.sparse_compute and (
+            not a_eff.is_cuda or self.source.n * self.target.n >= 4_000_000
+        )
+        if use_gather:
             # Read only the rows of A for source neurons that spiked this step
             # (numerically identical; faster only when few are active).
             active = s.any(dim=0).nonzero(as_tuple=False).squeeze(1)

@@ -24,9 +24,10 @@ import statistics
 import sys
 import time
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(os.path.dirname(_HERE))  # repo root (for ``bindsnet``)
-_STRESS = os.path.join(_ROOT, "stress_test")  # for ``example_network``
+_HERE = os.path.dirname(os.path.abspath(__file__))  # .../examples/benchmark/<name>
+_EXAMPLES = os.path.dirname(os.path.dirname(_HERE))  # .../examples
+_ROOT = os.path.dirname(_EXAMPLES)  # repo root (for ``bindsnet``)
+_STRESS = os.path.join(_EXAMPLES, "stress_test")  # for ``example_network``
 for _p in (_ROOT, _STRESS):
     if _p not in sys.path:
         sys.path.insert(0, _p)

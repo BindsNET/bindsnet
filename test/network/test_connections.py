@@ -22,12 +22,7 @@ class TestConnection:
     Tests all stable groups of neurons / nodes.
     """
 
-    def __init__(self):
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda:0")
-        else:
-            self.device = torch.device("cpu:0")
-        print(f"Using device '{self.device}' for the test")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def test_transfer(self):
         if not torch.cuda.is_available():
@@ -48,7 +43,7 @@ class TestConnection:
             l_b = LIFNodes(shape=[1, 26, 26])
             connection = conn_type(l_a, l_b, *args, **kwargs)
 
-            connection.to()
+            connection.to(self.device)
 
             connection_tensors = [
                 k
@@ -73,7 +68,9 @@ class TestConnection:
                 print(d, d == torch.device("cuda:0"))
                 assert d == torch.device("cuda:0")
 
-    def test_weights(self, conn_type, shape_a, shape_b, shape_w, *args, **kwargs):
+    # Not named test_*: this is a manual matrix check driven from __main__ (it
+    # takes arguments, so pytest cannot collect it).
+    def check_weights(self, conn_type, shape_a, shape_b, shape_w, *args, **kwargs):
         print("Testing:", conn_type)
         time = 100
         weights = [None, torch.Tensor(*shape_w)]
@@ -169,9 +166,7 @@ class TestConnection:
 
 class TestMultiCompartmentConnection:
 
-    def __init__(self):
-        self.device = torch.device("cpu")
-        print(f"Using device '{self.device}' for the MCC test")
+    device = torch.device("cpu")
 
     # ----------------------------------------------------------------------- #
     # Helpers                                                                 #
@@ -478,6 +473,98 @@ class TestMultiCompartmentConnection:
                 assert torch.allclose(dense, sparse, atol=1e-5)
 
     # ----------------------------------------------------------------------- #
+    # Regressions                                                             #
+    # ----------------------------------------------------------------------- #
+
+    def test_sparse_probability_feature(self):
+        # Probability(sparse=True) stores its value as a sparse [1, src, tgt]
+        # tensor; the fold must densify it to a [src, tgt] factor (regression:
+        # "expand is unsupported for Sparse tensors").
+        s = torch.tensor([[1.0, 0.0, 1.0], [1.0, 1.0, 1.0]])
+        w = torch.tensor([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
+        for sparse_compute in (False, True):
+            passes = self._make_mcc(
+                [
+                    tf.Weight(name="w", value=w.clone()),
+                    tf.Probability(name="p", value=torch.ones(3, 2), sparse=True),
+                ],
+                3,
+                2,
+                batch=2,
+                sparse_compute=sparse_compute,
+            )
+            assert torch.allclose(passes.compute(s), s @ w, atol=1e-6)
+            blocked = self._make_mcc(
+                [
+                    tf.Weight(name="w", value=w.clone()),
+                    tf.Probability(name="p", value=torch.zeros(3, 2), sparse=True),
+                ],
+                3,
+                2,
+                batch=2,
+                sparse_compute=sparse_compute,
+            )
+            assert torch.allclose(blocked.compute(s), torch.zeros(2, 2), atol=1e-6)
+
+    def test_empty_pipeline_fan_in(self):
+        # No features: every source contributes with unit weight.
+        conn = self._make_mcc([], 5, 3, batch=2)
+        s = torch.tensor([[1.0, 1.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 0.0, 0.0]])
+        out = conn.compute(s)
+        assert torch.allclose(out, s.sum(1, keepdim=True).expand(2, 3))
+
+    def test_subfeature_folds_as_identity(self):
+        # A sub-feature runs its side effect and contributes nothing to the
+        # fold, even when it precedes every real feature (regression: returned
+        # the int 1, which broke torch.is_floating_point when first).
+        w = torch.tensor([[0.5, 1.5], [1.0, 0.5], [0.5, 1.0]])
+        conn = self._make_mcc([tf.Weight(name="w", value=w.clone(), norm=2.0)], 3, 2)
+        wf = conn.pipeline[0]
+        conn.pipeline = [tf.Normalization(name="n", parent_feature=wf), wf]
+        s = torch.tensor([[1.0, 1.0, 1.0]])
+        out = conn.compute(s)
+        # normalize ran inside the fold (before Weight), so each target column
+        # of the weight sums to `norm` and the output uses those values.
+        assert torch.allclose(wf.value.sum(0), torch.full((2,), 2.0), atol=1e-5)
+        assert torch.allclose(out, s @ wf.value, atol=1e-5)
+
+    def test_mstdp_decay_tracks_dt_change(self):
+        # The cached MSTDP trace-decay factors must follow connection.dt
+        # (regression: frozen at first update).
+        w0 = torch.rand(3, 2)
+        conn, feat = self._learning_conn(mcc.MSTDP, w0, nu=(0.1, 0.1))
+        rule = feat.learning_rule
+        conn.source.s = torch.tensor([[1.0, 0.0, 0.0]])
+        conn.target.s = torch.tensor([[0.0, 1.0]])
+        rule.update(reward=0.0)
+        assert torch.allclose(rule._decay_plus, torch.exp(torch.tensor(-1.0 / 20.0)))
+        conn.dt = 5.0
+        rule.update(reward=0.0)
+        assert torch.allclose(rule._decay_plus, torch.exp(torch.tensor(-5.0 / 20.0)))
+
+    def test_sparse_compute_matches_dense_cuda(self):
+        # On CUDA the gather is gated by connection size; both the gated-off
+        # (small) and gated-on (large) paths must match the dense result.
+        if not torch.cuda.is_available():
+            return
+        torch.manual_seed(2)
+        dev = torch.device("cuda")
+        for src_n, tgt_n in ((80, 40), (2100, 2000)):  # below / above the gate
+            w = torch.randn(src_n, tgt_n, device=dev)
+            s = (torch.rand(2, src_n, device=dev) > 0.9).float()
+            outs = []
+            for sc in (False, True):
+                conn = MulticompartmentConnection(
+                    source=Input(n=src_n),
+                    target=LIFNodes(n=tgt_n),
+                    device=dev,
+                    pipeline=[tf.Weight(name="w", value=w.clone())],
+                    sparse_compute=sc,
+                )
+                outs.append(conn.compute(s))
+            assert torch.allclose(outs[0], outs[1], atol=1e-4)
+
+    # ----------------------------------------------------------------------- #
     # MCC learning rules                                                      #
     # ----------------------------------------------------------------------- #
 
@@ -562,25 +649,11 @@ class TestMultiCompartmentConnection:
 
 
 if __name__ == "__main__":
-    # MulticompartmentConnection + MCC learning-rule tests.
+    # MulticompartmentConnection + MCC learning-rule tests (discovered
+    # dynamically so this list cannot go stale).
     mcc_tester = TestMultiCompartmentConnection()
     mcc_tests = [
-        mcc_tester.test_weight_feature_output,
-        mcc_tester.test_mask_feature_output,
-        mcc_tester.test_bias_feature_output,
-        mcc_tester.test_intensity_feature_output,
-        mcc_tester.test_degradation_feature_output,
-        mcc_tester.test_probability_feature_deterministic_bounds,
-        mcc_tester.test_meanfield_not_implemented,
-        mcc_tester.test_adaptation_features_output,
-        mcc_tester.test_pipeline_matches_expansion,
-        mcc_tester.test_sparse_compute_matches_dense,
-        mcc_tester.test_noop_leaves_weight_unchanged,
-        mcc_tester.test_postpre_predictable,
-        mcc_tester.test_learning_respects_range_clamp,
-        mcc_tester.test_mstdp_predictable,
-        mcc_tester.test_mstdpet_predictable,
-        mcc_tester.test_hebbian_predictable,
+        getattr(mcc_tester, n) for n in sorted(dir(mcc_tester)) if n.startswith("test_")
     ]
     for mcc_test in mcc_tests:
         mcc_test()
@@ -602,7 +675,7 @@ if __name__ == "__main__":
     for update_rule in (Hebbian, PostPre, WeightDependentPostPre, MSTDP, MSTDPET, Rmax):
         print("Learning Rule:", update_rule)
         for conn_type, arg in zip(conn_types, args):
-            tester.test_weights(conn_type, nu=1e-2, update_rule=update_rule, *arg)
+            tester.check_weights(conn_type, nu=1e-2, update_rule=update_rule, *arg)
 
     # Other connections
     # Note: Does not include MaxPool2dConnection because this connection
@@ -610,4 +683,4 @@ if __name__ == "__main__":
     conn_types = [MeanFieldConnection]
     args = [[[1, 28, 28], [1, 26, 26], (1, 26), 3, 1]]
     for conn_type, arg in zip(conn_types, args):
-        tester.test_weights(conn_type, decay=1, update_rule=NoOp, *arg)
+        tester.check_weights(conn_type, decay=1, update_rule=NoOp, *arg)

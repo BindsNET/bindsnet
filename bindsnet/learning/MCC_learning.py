@@ -509,12 +509,14 @@ class MSTDP(MCC_LearningRule):
         # Reward from current time step
         reward = kwargs["reward"]
 
-        # Build learning-rate and decay tensors
-        if not hasattr(self, "_a_plus_default"):
-            dev = self.feature_value.device
+        # Build learning-rate and decay tensors, cached on (dt, device) so a
+        # change to either (network.dt edits, .to(device) moves) recomputes them.
+        dev = self.feature_value.device
+        dt = float(self.connection.dt)
+        if getattr(self, "_decay_key", None) != (dt, dev):
+            self._decay_key = (dt, dev)
             self._a_plus_default = torch.tensor(1.0, device=dev)
             self._a_minus_default = torch.tensor(-1.0, device=dev)
-            dt = float(self.connection.dt)
             self._decay_plus = torch.exp(-dt / self.tc_plus.to(dev))
             self._decay_minus = torch.exp(-dt / self.tc_minus.to(dev))
         a_plus = kwargs.get("a_plus", None)

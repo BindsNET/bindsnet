@@ -1093,12 +1093,12 @@ class AbstractSubFeature(ABC):
         # language=rst
         """
         Proxy to run a parent feature's side-effect (e.g. normalize/update) from
-        inside the pipeline. Returns ``1`` so it is the identity factor in the fold.
+        inside the pipeline. Returns ``None`` so the fold skips it entirely.
         """
 
         # sub_feature should be defined in the non-abstract constructor
         self.sub_feature()
-        return 1
+        return None
 
 
 class Normalization(AbstractSubFeature):
