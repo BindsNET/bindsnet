@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(curl -sL \"https://zenodo.org/api/records/20695116\")",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('doi:', d.get\\('doi'\\)\\); print\\('conceptdoi:', d.get\\('conceptdoi'\\)\\); print\\('title:', d.get\\('metadata',{}\\).get\\('title'\\)\\); print\\('conceptrecid:', d.get\\('conceptrecid'\\)\\)\")"
-    ]
-  }
-}
