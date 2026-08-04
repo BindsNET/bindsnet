@@ -18,6 +18,19 @@ class AbstractFeature(ABC):
     Features to operate on signals traversing a connection.
     """
 
+    # How this feature folds in the connection's affine pipeline (see
+    # :meth:`MulticompartmentConnection.compute`): ``"mul"`` (elementwise multiply,
+    # the default), ``"add"`` or ``"sub"`` (elementwise add/subtract of the value
+    # returned by :meth:`compute`).
+    op = "mul"
+
+    # Whether :meth:`compute` returns the same value every step until the
+    # feature is mutated through the connection (learning update, normalize,
+    # reset, device move). Static-only pipelines let the connection cache the
+    # folded factors between mutations. Features whose value depends on the
+    # incoming spikes or is resampled per step must set this to ``False``.
+    is_static = True
+
     @abstractmethod
     def __init__(
         self,
@@ -78,6 +91,7 @@ class AbstractFeature(ABC):
         from ..learning.MCC_learning import (
             NoOp,
             PostPre,
+            Hebbian,
             MSTDP,
             MSTDPET,
         )
@@ -85,6 +99,7 @@ class AbstractFeature(ABC):
         supported_rules = [
             NoOp,
             PostPre,
+            Hebbian,
             MSTDP,
             MSTDPET,
         ]
@@ -114,9 +129,9 @@ class AbstractFeature(ABC):
         ), "Feature {0}'s nu should be of type list or tuple, not {1}".format(
             name, type(nu)
         )
-        assert reduction is None or isinstance(
-            reduction, callable
-        ), "Feature {0}'s reduction should be of type callable, not {1}".format(
+        assert reduction is None or callable(
+            reduction
+        ), "Feature {0}'s reduction should be callable, not {1}".format(
             name, type(reduction)
         )
         assert decay is None or isinstance(
@@ -163,10 +178,13 @@ class AbstractFeature(ABC):
         pass
 
     @abstractmethod
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
         # language=rst
         """
-        Computes the feature being operated on a set of incoming signals.
+        Return this feature's ``[source.n, target.n]`` value, given pre-synaptic
+        spikes ``s`` of shape ``[batch, source.n]``. How the value folds into the
+        connection is set by :attr:`op` -- a multiplicative factor (``"mul"``, the
+        default), or an additive/subtractive offset (``"add"``/``"sub"``).
         """
         pass
 
@@ -422,11 +440,14 @@ class Probability(AbstractFeature):
         non_zero = values[mask]
         return torch.sparse_coo_tensor(indices, non_zero, self.value.size())
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    # Resampled every step; never cacheable.
+    is_static = False
+
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # Factor: a fresh Bernoulli draw each step (resampled, never cached).
         if self.sparse:
-            return conn_spikes * self.sparse_bernoulli()
-        else:
-            return conn_spikes * torch.bernoulli(self.value)
+            return self.sparse_bernoulli()
+        return torch.bernoulli(self.value)
 
     def reset_state_variables(self) -> None:
         pass
@@ -504,8 +525,8 @@ class Mask(AbstractFeature):
         self.name = name
         self.value = value
 
-    def compute(self, conn_spikes) -> torch.Tensor:
-        return conn_spikes * self.value
+    def compute(self, s) -> torch.Tensor:
+        return self.value
 
     def reset_state_variables(self) -> None:
         pass
@@ -550,6 +571,9 @@ class Mask(AbstractFeature):
 
 
 class MeanField(AbstractFeature):
+    # Depends on the incoming spikes; never cacheable.
+    is_static = False
+
     def __init__(self) -> None:
         # language=rst
         """
@@ -560,9 +584,9 @@ class MeanField(AbstractFeature):
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes.mean() * torch.ones(
-            self.source_n * self.target_n, device=self.device
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        return s.float().mean() * torch.ones(
+            self.source_n, self.target_n, device=s.device
         )
 
     def prime_feature(self, connection, device, **kwargs) -> None:
@@ -613,6 +637,12 @@ class Weight(AbstractFeature):
 
         self.norm_frequency = norm_frequency
         self.enforce_polarity = enforce_polarity
+        if norm_frequency == "time step":
+            # Normalization mutates ``value`` on every compute; the connection
+            # runs ``defer`` after the fold has consumed the pre-normalization
+            # value (this avoids cloning the full matrix every step).
+            self.is_static = False
+            self.defer = lambda: self.normalize(time_step_norm=True)
         super().__init__(
             name=name,
             value=value,
@@ -630,7 +660,7 @@ class Weight(AbstractFeature):
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
         if self.enforce_polarity:
             pos_mask = ~torch.logical_xor(self.value > 0, self.positive_mask)
             neg_mask = ~torch.logical_xor(self.value < 0, ~self.positive_mask)
@@ -638,11 +668,7 @@ class Weight(AbstractFeature):
             self.value[~pos_mask] = 0.0001
             self.value[~neg_mask] = -0.0001
 
-        return_val = self.value * conn_spikes
-        if self.norm_frequency == "time step":
-            self.normalize(time_step_norm=True)
-
-        return return_val
+        return self.value
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         #### Initialize value ####
@@ -705,11 +731,15 @@ class Bias(AbstractFeature):
             batch_size=batch_size,
         )
 
+    # Bias is additive: folds as ``B <- B + value`` in the connection's pipeline.
+    op = "add"
+
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes + self.value
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # Additive offset added to every synapse (independent of the spikes).
+        return self.value
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         #### Initialize value ####
@@ -733,7 +763,7 @@ class Intensity(AbstractFeature):
     ) -> None:
         # language=rst
         """
-        Adds scalars to signals
+        Multiply all signals by a scalar
         :param name: Name of the feature
         :param value: Values to scale signals by
         :param value_dtype: Data type for :code:`value` tensor
@@ -752,8 +782,8 @@ class Intensity(AbstractFeature):
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes * self.value
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        return self.value
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         #### Initialize value ####
@@ -806,14 +836,23 @@ class Degradation(AbstractFeature):
 
         self.degrade_function = degrade_function
 
+    # Degradation is subtractive: folded as ``B <- B - degrade_function(value)``.
+    op = "sub"
+
     def reset_state_variables(self) -> None:
         pass
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
-        return conn_spikes - self.degrade_function(self.value)
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # Subtractive offset (via degrade_function) applied to every synapse.
+        if self.degrade_function is not None:
+            return self.degrade_function(self.value)
+        return self.value
 
 
 class AdaptationBaseSynapsHistory(AbstractFeature):
+    # Value evolves with the spike history every step; never cacheable.
+    is_static = False
+
     def __init__(
         self,
         name: str,
@@ -882,7 +921,11 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
             batch_size=batch_size,
         )
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # This feature needs the per-synapse spikes, so build them from s
+        conn_spikes = s.view(s.size(0), -1, 1).expand(
+            s.size(0), s.size(1), self.value.size(-1)
+        )
 
         # Update the spike buffer
         if self.start_counter == False or conn_spikes.sum() > 0:
@@ -911,7 +954,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
             if self.sparse:
                 self.value = self.value.to_sparse()
 
-        return conn_spikes * self.value
+        return self.value
 
     def reset_state_variables(
         self,
@@ -924,6 +967,9 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
 
 
 class AdaptationBaseOtherSynaps(AbstractFeature):
+    # Value evolves with the spike history every step; never cacheable.
+    is_static = False
+
     def __init__(
         self,
         name: str,
@@ -992,7 +1038,11 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
             batch_size=batch_size,
         )
 
-    def compute(self, conn_spikes) -> Union[torch.Tensor, float, int]:
+    def compute(self, s) -> Union[torch.Tensor, float, int]:
+        # This feature needs the per-synapse spikes, so build them from s
+        conn_spikes = s.view(s.size(0), -1, 1).expand(
+            s.size(0), s.size(1), self.value.size(-1)
+        )
 
         # Update the spike buffer
         if self.start_counter == False or conn_spikes.sum() > 0:
@@ -1021,7 +1071,7 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
             if self.sparse:
                 self.value = self.value.to_sparse()
 
-        return conn_spikes * self.value
+        return self.value
 
     def reset_state_variables(
         self,
@@ -1043,6 +1093,10 @@ class AbstractSubFeature(ABC):
     execution.
     """
 
+    # Runs a side effect on every step; the pipeline must never be cached
+    # around it.
+    is_static = False
+
     @abstractmethod
     def __init__(
         self,
@@ -1060,15 +1114,16 @@ class AbstractSubFeature(ABC):
         self.parent = parent_feature
         self.sub_feature = None  # <-- Defined in non-abstract constructor
 
-    def compute(self, _) -> None:
+    def compute(self, s):
         # language=rst
         """
-        Proxy function to catch a pipeline execution from topology.py's :code:`compute` function. Allows :code:`SubFeature`
-        objects to be executed like real features in the pipeline.
+        Proxy to run a parent feature's side-effect (e.g. normalize/update) from
+        inside the pipeline. Returns ``None`` so the fold skips it entirely.
         """
 
         # sub_feature should be defined in the non-abstract constructor
         self.sub_feature()
+        return None
 
 
 class Normalization(AbstractSubFeature):

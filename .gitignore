@@ -23,5 +23,6 @@ dist/*
 logs/*
 .pytest_cache/*
 .vscode/*
-.claude/
 data/*
+.claude/*
+.claude
