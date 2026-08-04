@@ -24,6 +24,13 @@ class AbstractFeature(ABC):
     # returned by :meth:`compute`).
     op = "mul"
 
+    # Whether :meth:`compute` returns the same value every step until the
+    # feature is mutated through the connection (learning update, normalize,
+    # reset, device move). Static-only pipelines let the connection cache the
+    # folded factors between mutations. Features whose value depends on the
+    # incoming spikes or is resampled per step must set this to ``False``.
+    is_static = True
+
     @abstractmethod
     def __init__(
         self,
@@ -122,9 +129,9 @@ class AbstractFeature(ABC):
         ), "Feature {0}'s nu should be of type list or tuple, not {1}".format(
             name, type(nu)
         )
-        assert reduction is None or isinstance(
-            reduction, callable
-        ), "Feature {0}'s reduction should be of type callable, not {1}".format(
+        assert reduction is None or callable(
+            reduction
+        ), "Feature {0}'s reduction should be callable, not {1}".format(
             name, type(reduction)
         )
         assert decay is None or isinstance(
@@ -433,6 +440,9 @@ class Probability(AbstractFeature):
         non_zero = values[mask]
         return torch.sparse_coo_tensor(indices, non_zero, self.value.size())
 
+    # Resampled every step; never cacheable.
+    is_static = False
+
     def compute(self, s) -> Union[torch.Tensor, float, int]:
         # Factor: a fresh Bernoulli draw each step (resampled, never cached).
         if self.sparse:
@@ -561,6 +571,9 @@ class Mask(AbstractFeature):
 
 
 class MeanField(AbstractFeature):
+    # Depends on the incoming spikes; never cacheable.
+    is_static = False
+
     def __init__(self) -> None:
         # language=rst
         """
@@ -624,6 +637,12 @@ class Weight(AbstractFeature):
 
         self.norm_frequency = norm_frequency
         self.enforce_polarity = enforce_polarity
+        if norm_frequency == "time step":
+            # Normalization mutates ``value`` on every compute; the connection
+            # runs ``defer`` after the fold has consumed the pre-normalization
+            # value (this avoids cloning the full matrix every step).
+            self.is_static = False
+            self.defer = lambda: self.normalize(time_step_norm=True)
         super().__init__(
             name=name,
             value=value,
@@ -649,11 +668,7 @@ class Weight(AbstractFeature):
             self.value[~pos_mask] = 0.0001
             self.value[~neg_mask] = -0.0001
 
-        factor = self.value
-        if self.norm_frequency == "time step":
-            factor = factor.clone()
-            self.normalize(time_step_norm=True)
-        return factor
+        return self.value
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         #### Initialize value ####
@@ -835,6 +850,9 @@ class Degradation(AbstractFeature):
 
 
 class AdaptationBaseSynapsHistory(AbstractFeature):
+    # Value evolves with the spike history every step; never cacheable.
+    is_static = False
+
     def __init__(
         self,
         name: str,
@@ -949,6 +967,9 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
 
 
 class AdaptationBaseOtherSynaps(AbstractFeature):
+    # Value evolves with the spike history every step; never cacheable.
+    is_static = False
+
     def __init__(
         self,
         name: str,
@@ -1071,6 +1092,10 @@ class AbstractSubFeature(ABC):
     A way to inject a features methods (like normalization, learning, etc.) into the pipeline for user controlled
     execution.
     """
+
+    # Runs a side effect on every step; the pipeline must never be cached
+    # around it.
+    is_static = False
 
     @abstractmethod
     def __init__(

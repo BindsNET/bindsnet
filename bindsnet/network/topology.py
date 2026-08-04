@@ -442,6 +442,15 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         self.sparse_compute = sparse_compute
 
+        # Cached (a_eff, b_sum) for pipelines whose features are all static
+        # (see AbstractFeature.is_static). Invalidated whenever a feature can
+        # change: learning updates, normalize, reset, device/dtype moves.
+        self._fold_cache = None
+
+    def _apply(self, fn, recurse=True):
+        self._fold_cache = None
+        return super()._apply(fn, recurse)
+
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
         """
@@ -463,34 +472,50 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         """
         s = s.view(s.size(0), self.source.n)
 
-        # running product of multiplicative factors, [source.n, target.n]
-        a_eff = None
-        # running additive offset, [source.n, target.n]; None while still zero
-        b_eff = None
-        for f in self.pipeline:
-            factor = f.compute(s)
-            if factor is None:
-                # Side-effect-only pipeline entries (sub-features) fold as identity.
-                continue
-            if isinstance(factor, torch.Tensor) and factor.is_sparse:
-                # Sparse feature values carry a leading batch dim ([1, src, tgt])
-                # from prime_feature; densify to the fold's [src, tgt] shape.
-                factor = factor.to_dense().view(self.source.n, self.target.n)
-            op = getattr(f, "op", "mul")
-            if op == "mul":
-                a_eff = factor if a_eff is None else a_eff * factor
-                if b_eff is not None:
-                    b_eff = b_eff * factor
-            else:  # additive contribution: "add" -> +factor, "sub" -> -factor
-                term = factor if op == "add" else -factor
-                b_eff = term if b_eff is None else b_eff + term
+        deferred = None
+        if self._fold_cache is not None:
+            a_eff, b_sum = self._fold_cache
+        else:
+            # running product of multiplicative factors, [source.n, target.n]
+            a_eff = None
+            # running additive offset, [source.n, target.n]; None while still zero
+            b_eff = None
+            for f in self.pipeline:
+                factor = f.compute(s)
+                # Compute-time side effects (e.g. per-time-step weight
+                # normalization) run after the fold has consumed this value.
+                d = getattr(f, "defer", None)
+                if d is not None:
+                    deferred = [d] if deferred is None else deferred + [d]
+                if factor is None:
+                    # Side-effect-only pipeline entries (sub-features) fold as identity.
+                    continue
+                if isinstance(factor, torch.Tensor) and factor.is_sparse:
+                    # Sparse feature values carry a leading batch dim ([1, src, tgt])
+                    # from prime_feature; densify to the fold's [src, tgt] shape.
+                    factor = factor.to_dense().view(self.source.n, self.target.n)
+                op = getattr(f, "op", "mul")
+                if op == "mul":
+                    a_eff = factor if a_eff is None else a_eff * factor
+                    if b_eff is not None:
+                        b_eff = b_eff * factor
+                else:  # additive contribution: "add" -> +factor, "sub" -> -factor
+                    term = factor if op == "add" else -factor
+                    b_eff = term if b_eff is None else b_eff + term
 
-        if a_eff is None:
-            # Degenerate pipeline with no multiplicative feature: every source
-            # neuron contributes with unit weight.
-            a_eff = torch.ones(self.source.n, self.target.n, device=s.device)
-        if not torch.is_floating_point(a_eff):
-            a_eff = a_eff.float()
+            if a_eff is None:
+                # Degenerate pipeline with no multiplicative feature: every source
+                # neuron contributes with unit weight.
+                a_eff = torch.ones(self.source.n, self.target.n, device=s.device)
+            if not torch.is_floating_point(a_eff):
+                a_eff = a_eff.float()
+
+            # Additive terms apply to every synapse regardless of spikes, so
+            # their contribution is the source-sum, a constant [target.n] row.
+            b_sum = b_eff.sum(dim=0) if b_eff is not None else None
+
+            if all(getattr(f, "is_static", True) for f in self.pipeline):
+                self._fold_cache = (a_eff, b_sum)
 
         # The gather pays for its ``nonzero()`` only where that sync is expensive
         # relative to the matmul: on CUDA it needs a large weight matrix to win;
@@ -511,11 +536,12 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         else:
             out = s.to(a_eff.dtype) @ a_eff
 
-        # Additive terms apply to every synapse regardless of spikes, so sum over
-        # all source rows (the closed form of the [batch, source.n, target.n]
-        # source-sum).
-        if b_eff is not None:
-            out = out + b_eff.sum(dim=0)
+        if b_sum is not None:
+            out = out + b_sum
+
+        if deferred is not None:
+            for fn in deferred:
+                fn()
 
         if self.traces:
             self.activity = out
@@ -559,6 +585,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         learning = kwargs.get("learning", False)
         if learning and not self.manual_update:
             # Pipeline learning
+            self._fold_cache = None
             for f in self.pipeline:
                 f.update(**kwargs)
 
@@ -568,6 +595,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         Normalize all features in the connection.
         """
         # Normalize pipeline features
+        self._fold_cache = None
         for f in self.pipeline:
             f.normalize()
 
@@ -578,6 +606,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         """
         super().reset_state_variables()
 
+        self._fold_cache = None
         for f in self.pipeline:
             f.reset_state_variables()
 

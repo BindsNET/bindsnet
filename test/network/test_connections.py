@@ -565,6 +565,126 @@ class TestMultiCompartmentConnection:
             assert torch.allclose(outs[0], outs[1], atol=1e-4)
 
     # ----------------------------------------------------------------------- #
+    # Performance-path equivalence                                            #
+    # ----------------------------------------------------------------------- #
+
+    def _run_mstdp(self, batch, reduction, reward_seq, seed=0):
+        """Run an MSTDP-learned Weight over a spike/reward sequence."""
+        torch.manual_seed(seed)
+        src_n, tgt_n = 7, 5
+        w0 = torch.rand(src_n, tgt_n)
+        conn = self._make_mcc(
+            [
+                tf.Weight(
+                    name="w",
+                    value=w0.clone(),
+                    learning_rule=mcc.MSTDP,
+                    nu=(0.05, 0.05),
+                    range=[-10, 10],
+                    reduction=reduction,
+                )
+            ],
+            src_n,
+            tgt_n,
+            batch=batch,
+        )
+        feat = conn.pipeline[0]
+        rule = feat.learning_rule
+        torch.manual_seed(seed + 1)
+        for r in reward_seq:
+            conn.source.s = torch.bernoulli(torch.full((batch, src_n), 0.4))
+            conn.target.s = torch.bernoulli(torch.full((batch, tgt_n), 0.4))
+            rule.update(reward=r)
+        return feat.value.clone()
+
+    def test_mstdp_rank1_matches_dense(self):
+        # The rank-1 addmm_ fast path (default reductions) must match the
+        # dense-eligibility path (forced here via equivalent custom lambdas).
+        rewards = [0.0, 1.0, 0.5, -2.0, 1.0, 0.0, 3.0]
+        slow_squeeze = lambda x, dim: torch.squeeze(x, dim)
+        slow_sum = lambda x, dim: torch.sum(x, dim)
+        for batch, fast_red, slow_red in (
+            (1, None, slow_squeeze),
+            (4, torch.sum, slow_sum),
+        ):
+            w_fast = self._run_mstdp(batch, fast_red, rewards)
+            w_slow = self._run_mstdp(batch, slow_red, rewards)
+            assert torch.allclose(
+                w_fast, w_slow, atol=1e-5
+            ), f"batch={batch}: {(w_fast - w_slow).abs().max()}"
+        # Tensor rewards take the sync-free tensor branch; same numbers.
+        w_fast = self._run_mstdp(1, None, [torch.tensor(r) for r in rewards])
+        w_slow = self._run_mstdp(1, slow_squeeze, rewards)
+        assert torch.allclose(w_fast, w_slow, atol=1e-5)
+
+    def test_fold_cache_static_and_invalidation(self):
+        # Static pipelines cache the folded factors; dynamic ones must not;
+        # learning updates through the connection invalidate the cache.
+        s = torch.ones(1, 6, dtype=torch.bool)
+        w = torch.rand(6, 4)
+        static = self._make_mcc([tf.Weight(name="w", value=w.clone())], 6, 4)
+        out1 = static.compute(s)
+        assert static._fold_cache is not None
+        assert torch.allclose(static.compute(s), out1)
+
+        dynamic = self._make_mcc(
+            [
+                tf.Weight(name="w", value=w.clone()),
+                tf.Probability(name="p", value=torch.full((6, 4), 0.5)),
+            ],
+            6,
+            4,
+        )
+        dynamic.compute(s)
+        assert dynamic._fold_cache is None
+
+        # A learning step through connection.update must drop the cache and
+        # the next compute must see the new weights.
+        learned = self._make_mcc(
+            [
+                tf.Weight(
+                    name="w",
+                    value=w.clone(),
+                    learning_rule=mcc.PostPre,
+                    nu=(0.5, 0.5),
+                    range=[-10, 10],
+                )
+            ],
+            6,
+            4,
+        )
+        learned.compute(s)
+        learned.source.s = torch.ones(1, 6)
+        learned.target.s = torch.ones(1, 4)
+        learned.source.x = torch.ones(1, 6)
+        learned.target.x = torch.ones(1, 4)
+        learned.update(learning=True)
+        assert learned._fold_cache is None
+        w_new = learned.pipeline[0].value
+        assert torch.allclose(learned.compute(s), s.float() @ w_new, atol=1e-5)
+
+    def test_time_step_norm_deferred(self):
+        # Per-time-step normalization runs after the fold: each step's output
+        # uses the pre-normalization weights (old expansion semantics).
+        w0 = torch.tensor([[1.0, 4.0], [3.0, 4.0], [1.0, 2.0]])
+        conn = self._make_mcc(
+            [
+                tf.Weight(
+                    name="w", value=w0.clone(), norm=1.0, norm_frequency="time step"
+                )
+            ],
+            3,
+            2,
+        )
+        s = torch.ones(1, 3)
+        ref_w = w0.clone()
+        for step in range(3):
+            out = conn.compute(s)
+            assert torch.allclose(out, s @ ref_w, atol=1e-5), f"step {step}"
+            ref_w = ref_w / ref_w.abs().sum(0, keepdim=True)
+        assert conn._fold_cache is None  # never cached while norm runs per step
+
+    # ----------------------------------------------------------------------- #
     # MCC learning rules                                                      #
     # ----------------------------------------------------------------------- #
 

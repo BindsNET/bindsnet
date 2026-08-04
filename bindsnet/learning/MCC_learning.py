@@ -89,8 +89,9 @@ class MCC_LearningRule(ABC):
         Abstract method for a learning rule update.
         """
 
-        # Implement decay.
-        if self.decay:
+        # Implement decay (self.decay == 1.0 is the no-op default; skip the
+        # full-matrix multiply in that case).
+        if self.decay != 1.0:
             self.feature_value *= self.decay
 
         # Enforce polarities
@@ -497,11 +498,6 @@ class MSTDP(MCC_LearningRule):
                 self.target.n,
                 device=self.target.s.device,
             )
-        if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(
-                batch_size, *self.feature_value.shape, device=self.feature_value.device
-            )
-
         # Reshape pre- and post-synaptic spikes.
         source_s = self.source.s.view(batch_size, -1).float()
         target_s = self.target.s.view(batch_size, -1).float()
@@ -532,27 +528,66 @@ class MSTDP(MCC_LearningRule):
             else torch.as_tensor(a_minus, device=self.feature_value.device)
         )
 
-        # Compute weight update based on the eligibility value of the past timestep.
-        update = reward * self.eligibility
+        # With no averaging and the standard batch reductions (squeeze for
+        # batch size 1, sum otherwise), the [batch, src, tgt] eligibility never
+        # needs to be materialized: its batch reduction is a sum of two matrix
+        # products applied to the weights directly. The eligibility of the past
+        # timestep is outer(p_plus, target_s) + outer(source_s, p_minus), with
+        # p_plus/p_minus still holding their previous-step values here.
+        fast = (
+            self.average_update == 0
+            and self.reduction in (torch.squeeze, torch.sum)
+            and not self.feature_value.is_sparse
+        )
+        if fast:
+            if hasattr(self, "_prev_target_s"):
+                if isinstance(reward, torch.Tensor):
+                    # Keep reward on-device (no host sync for tensor rewards).
+                    update = (
+                        self.p_plus.t() @ self._prev_target_s
+                        + self._prev_source_s.t() @ self.p_minus
+                    )
+                    self.feature_value += (self.nu[0].to(dev) * reward) * update
+                else:
+                    alpha = float(self.nu[0]) * reward
+                    if alpha != 0.0:
+                        self.feature_value.addmm_(
+                            self.p_plus.t(), self._prev_target_s, alpha=alpha
+                        )
+                        self.feature_value.addmm_(
+                            self._prev_source_s.t(), self.p_minus, alpha=alpha
+                        )
+        else:
+            # Dense-eligibility path: averaging buffers, custom reductions, or
+            # sparse weights.
+            if not hasattr(self, "eligibility"):
+                self.eligibility = torch.zeros(
+                    batch_size,
+                    *self.feature_value.shape,
+                    device=self.feature_value.device,
+                )
 
-        if self.average_update > 0:
-            self.average_buffer[self.average_buffer_index] = self.reduction(
-                update, dim=0
-            )
-            self.average_buffer_index = (
-                self.average_buffer_index + 1
-            ) % self.average_update
+            # Compute weight update based on the eligibility value of the past timestep.
+            update = reward * self.eligibility
 
-            if self.continues_update or self.average_buffer_index == 0:
-                update = self.nu[0] * torch.mean(self.average_buffer, dim=0)
+            if self.average_update > 0:
+                self.average_buffer[self.average_buffer_index] = self.reduction(
+                    update, dim=0
+                )
+                self.average_buffer_index = (
+                    self.average_buffer_index + 1
+                ) % self.average_update
+
+                if self.continues_update or self.average_buffer_index == 0:
+                    update = self.nu[0] * torch.mean(self.average_buffer, dim=0)
+                    if self.feature_value.is_sparse:
+                        update = update.to_sparse()
+                    self.feature_value += update
+            else:
+                update = self.nu[0] * self.reduction(update, dim=0)
                 if self.feature_value.is_sparse:
                     update = update.to_sparse()
                 self.feature_value += update
-        else:
-            update = self.nu[0] * self.reduction(update, dim=0)
-            if self.feature_value.is_sparse:
-                update = update.to_sparse()
-            self.feature_value += update
 
         # Update P^+ and P^- values.
         self.p_plus *= self._decay_plus
@@ -560,10 +595,15 @@ class MSTDP(MCC_LearningRule):
         self.p_minus *= self._decay_minus
         self.p_minus += a_minus * target_s
 
-        # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
-        ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
+        if fast:
+            # Keep this step's spikes for the next step's rank-1 update.
+            self._prev_source_s = source_s.clone()
+            self._prev_target_s = target_s.clone()
+        else:
+            # Calculate point eligibility value.
+            self.eligibility = torch.bmm(
+                self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
+            ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
 
         super().update()
 
@@ -688,26 +728,36 @@ class MSTDPET(MCC_LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = kwargs.get("a_plus", 1.0)
-        # if isinstance(a_plus, dict):
-        #     for k, v in a_plus.items():
-        #         a_plus[k] = torch.tensor(v, device=self.feature_value.device)
-        # else:
-        a_plus = torch.tensor(a_plus, device=self.feature_value.device)
-        a_minus = kwargs.get("a_minus", -1.0)
-        # if isinstance(a_minus, dict):
-        #     for k, v in a_minus.items():
-        #         a_minus[k] = torch.tensor(v, device=self.feature_value.device)
-        # else:
-        a_minus = torch.tensor(a_minus, device=self.feature_value.device)
+
+        # Build learning-rate and decay tensors, cached on (dt, device) so a
+        # change to either (network.dt edits, .to(device) moves) recomputes them.
+        dev = self.feature_value.device
+        dt = float(self.connection.dt)
+        if getattr(self, "_decay_key", None) != (dt, dev):
+            self._decay_key = (dt, dev)
+            self._a_plus_default = torch.tensor(1.0, device=dev)
+            self._a_minus_default = torch.tensor(-1.0, device=dev)
+            self._decay_plus = torch.exp(-dt / self.tc_plus.to(dev))
+            self._decay_minus = torch.exp(-dt / self.tc_minus.to(dev))
+            self._decay_e_trace = torch.exp(-dt / self.tc_e_trace.to(dev))
+        a_plus = kwargs.get("a_plus", None)
+        a_plus = (
+            self._a_plus_default
+            if a_plus is None
+            else torch.as_tensor(a_plus, device=dev)
+        )
+        a_minus = kwargs.get("a_minus", None)
+        a_minus = (
+            self._a_minus_default
+            if a_minus is None
+            else torch.as_tensor(a_minus, device=dev)
+        )
 
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
         # Note: eligibility = [source.n, target.n] > 0 where source and target spiked
         # Note: high negs. ->
-        self.eligibility_trace *= torch.exp(
-            -self.connection.dt / self.tc_e_trace
-        )  # Decay
+        self.eligibility_trace *= self._decay_e_trace  # Decay
         self.eligibility_trace += self.eligibility / self.tc_e_trace  # Additive changes
         # ^ Also effected by delay in last step
 
@@ -733,9 +783,9 @@ class MSTDPET(MCC_LearningRule):
             self.feature_value += update
 
         # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)  # Decay
+        self.p_plus *= self._decay_plus  # Decay
         self.p_plus += a_plus * source_s  # Scaled source spikes
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)  # Decay
+        self.p_minus *= self._decay_minus  # Decay
         self.p_minus += a_minus * target_s  # Scaled target spikes
 
         # Notes:
