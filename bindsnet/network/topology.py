@@ -261,6 +261,36 @@ class AbstractMulticompartmentConnection(ABC, Module):
         self.pipeline.remove(feature)
         del self.feature_index[feature.name]
 
+    def _apply(self, fn):
+        # language=rst
+        """
+        Relocate pipeline features (and their learning rules) along with the connection
+        on ``.to()`` / ``.cuda()`` / ``.cpu()``.
+
+        Feature tensors (e.g. ``Weight.value``) and the per-feature learning-rule state
+        live on non-``Module`` objects in ``self.pipeline``, so they are not moved by
+        ``torch.nn.Module._apply``. Without this, ``network.to(device)`` leaves them on
+        their original device and ``compute``/``update`` raise a cpu/cuda device
+        mismatch. The feature value is moved in place (via ``.data``) so it stays
+        aliased to the learning rule's cached reference.
+        """
+        super()._apply(fn)
+        for feature in self.pipeline:
+            value = getattr(feature, "value", None)
+            if isinstance(value, torch.Tensor):
+                value.data = fn(value.data)
+                self.device = value.device
+            for attr, val in list(vars(feature).items()):
+                if attr != "value" and isinstance(val, torch.Tensor):
+                    setattr(feature, attr, fn(val))
+            rule = getattr(feature, "learning_rule", None)
+            if rule is not None:
+                for attr, val in list(vars(rule).items()):
+                    # feature_value is aliased to (the already-moved) feature.value.
+                    if attr != "feature_value" and isinstance(val, torch.Tensor):
+                        setattr(rule, attr, fn(val))
+        return self
+
 
 class Connection(AbstractConnection):
     # language=rst

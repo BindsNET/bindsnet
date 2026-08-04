@@ -5,6 +5,7 @@ from typing import Optional, Sequence, Union
 import numpy as np
 import torch
 import torch.nn.functional as F
+import torch.nn.grad as conv_grad
 from torch.nn.modules.utils import _pair
 
 from bindsnet.utils import im2col_indices
@@ -20,6 +21,34 @@ from ..network.topology import (
     LocalConnection2D,
     LocalConnection3D,
 )
+
+_CONV_WEIGHT_GRAD = {
+    1: conv_grad.conv1d_weight,
+    2: conv_grad.conv2d_weight,
+    3: conv_grad.conv3d_weight,
+}
+
+
+def _conv_point_eligibility(connection, p_plus, p_minus, source_s, target_s, dim):
+    # language=rst
+    """
+    Florian (2007) point eligibility for a convolutional connection, computed as
+    the convolution weight-gradient so it matches the forward weight layout for
+    any number of channels / stride / padding / dilation. Returned batch-summed
+    with shape ``connection.w.shape``.
+
+    ``eligibility[o, i, *k] = sum_b sum_p  P+[b, i, rf(p,k)] * post[b, o, p]``
+    ``                              + pre[b, i, rf(p,k)] * P-[b, o, p]``
+    """
+    grad_fn = _CONV_WEIGHT_GRAD[dim]
+    kw = dict(
+        stride=connection.stride,
+        padding=connection.padding,
+        dilation=connection.dilation,
+    )
+    return grad_fn(p_plus, connection.w.shape, target_s, **kw) + grad_fn(
+        source_s, connection.w.shape, p_minus, **kw
+    )
 
 
 class LearningRule(ABC):
@@ -530,7 +559,7 @@ class PostPre(LearningRule):
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = F.pad(
-            self.source.s,
+            self.source.s.float(),
             (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
         )
         source_s = (
@@ -1009,7 +1038,7 @@ class WeightDependentPostPre(LearningRule):
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = F.pad(
-            self.source.s,
+            self.source.s.float(),
             (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
         )
         source_s = (
@@ -1412,7 +1441,7 @@ class Hebbian(LearningRule):
         )
         target_x = self.target.x.view(batch_size, out_channels, -1)
         source_s = F.pad(
-            self.source.s,
+            self.source.s.float(),
             (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
         )
         source_s = (
@@ -1500,6 +1529,11 @@ class MSTDP(LearningRule):
 
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
+        # If True, the reward at step t modulates the eligibility that already
+        # includes the spikes at step t (exact Florian 2007 timing). If False
+        # (default, backward-compatible) the eligibility is applied with a
+        # one-timestep lag. Currently honoured by the ``Connection`` path.
+        self.zero_lag = kwargs.get("zero_lag", False)
 
     def _connection_update(self, **kwargs) -> None:
         # language=rst
@@ -1554,22 +1588,31 @@ class MSTDP(LearningRule):
         else:
             a_minus = torch.tensor(a_minus, device=self.connection.w.device)
 
-        # Compute weight update based on the eligibility value of the past timestep.
+        # Update P^+/P^- traces and the point eligibility for this timestep.
+        def _update_traces_and_eligibility():
+            self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+            self.p_plus += a_plus * source_s
+            self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+            self.p_minus += a_minus * target_s
+            self.eligibility = torch.bmm(
+                self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
+            ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
+
+        # With zero_lag, fold in the current spikes before applying the update,
+        # so reward(t) multiplies eligibility(t) exactly as in Florian 2007.
+        if self.zero_lag:
+            _update_traces_and_eligibility()
+
+        # Compute weight update based on the (current or previous) eligibility.
         update = self.reduction(reward * self.eligibility, dim=0)
         if self.connection.w.is_sparse:
             update = update.to_sparse()
         self.connection.w += self.nu[0] * update
 
-        # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
-
-        # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
-        ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
+        # Default (backward-compatible): the eligibility computed here is applied
+        # on the next timestep (one-step lag).
+        if not self.zero_lag:
+            _update_traces_and_eligibility()
 
         super().update()
 
@@ -1868,157 +1911,37 @@ class MSTDP(LearningRule):
     def _conv1d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
-        MSTDP learning rule for ``Conv1dConnection`` subclass of ``AbstractConnection``
-        class.
-
-        Keyword arguments:
-
-        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
-            learning task.
-        :param float a_plus: Learning rate (post-synaptic).
-        :param float a_minus: Learning rate (pre-synaptic).
+        MSTDP learning rule for ``Conv1dConnection`` subclass of
+        ``AbstractConnection`` class.
         """
-        batch_size = self.source.batch_size
-
-        # Initialize eligibility.
-        if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
-            )
-
-        # Parse keyword arguments.
-        reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
-
-        # Compute weight update based on the eligibility value of the past timestep.
-        update = reward * self.eligibility
-        self.connection.w += self.nu[0] * torch.sum(update, dim=0)
-
-        out_channels, in_channels, kernel_size = self.connection.w.size()
-        padding, stride = self.connection.padding, self.connection.stride
-
-        # Initialize P^+ and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(
-                batch_size, *self.source.shape, device=self.connection.w.device
-            )
-            self.p_plus = F.pad(self.p_plus, _pair(padding))
-            self.p_plus = self.p_plus.unfold(-1, kernel_size, stride).reshape(
-                batch_size, -1, in_channels * kernel_size
-            )
-
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                batch_size, *self.target.shape, device=self.connection.w.device
-            )
-            self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
-
-        # Reshaping spike occurrences.
-        source_s = F.pad(self.source.s.float(), _pair(padding))
-        source_s = source_s.unfold(-1, kernel_size, stride).reshape(
-            batch_size, -1, in_channels * kernel_size
-        )
-        target_s = self.target.s.view(batch_size, out_channels, -1).float()
-
-        # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
-
-        # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
-            self.p_minus, source_s
-        )
-        self.eligibility = self.eligibility.view(self.connection.w.size())
-
-        super().update()
+        self._conv_connection_update(1, **kwargs)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
-        MSTDP learning rule for ``Conv2dConnection`` subclass of ``AbstractConnection``
-        class.
-
-        Keyword arguments:
-
-        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
-            learning task.
-        :param float a_plus: Learning rate (post-synaptic).
-        :param float a_minus: Learning rate (pre-synaptic).
+        MSTDP learning rule for ``Conv2dConnection`` subclass of
+        ``AbstractConnection`` class.
         """
-        batch_size = self.source.batch_size
-
-        # Initialize eligibility.
-        if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
-            )
-
-        # Parse keyword arguments.
-        reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
-
-        # Compute weight update based on the eligibility value of the past timestep.
-        update = reward * self.eligibility
-        self.connection.w += self.nu[0] * torch.sum(update, dim=0)
-
-        out_channels, _, kernel_height, kernel_width = self.connection.w.size()
-        padding, stride = self.connection.padding, self.connection.stride
-
-        # Initialize P^+ and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(
-                batch_size, *self.source.shape, device=self.connection.w.device
-            )
-            self.p_plus = im2col_indices(
-                self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
-            )
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                batch_size, *self.target.shape, device=self.connection.w.device
-            )
-            self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
-
-        # Reshaping spike occurrences.
-        source_s = im2col_indices(
-            self.source.s.float(),
-            kernel_height,
-            kernel_width,
-            padding=padding,
-            stride=stride,
-        )
-        target_s = self.target.s.view(batch_size, out_channels, -1).float()
-
-        # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
-
-        # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus.permute((0, 2, 1))
-        ) + torch.bmm(self.p_minus, source_s.permute((0, 2, 1)))
-        self.eligibility = self.eligibility.view(self.connection.w.size())
-
-        super().update()
+        self._conv_connection_update(2, **kwargs)
 
     def _conv3d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
-        MSTDP learning rule for ``Conv3dConnection`` subclass of ``AbstractConnection``
-        class.
+        MSTDP learning rule for ``Conv3dConnection`` subclass of
+        ``AbstractConnection`` class.
+        """
+        self._conv_connection_update(3, **kwargs)
+
+    def _conv_connection_update(self, dim: int, **kwargs) -> None:
+        # language=rst
+        """
+        Shared MSTDP update for 1D/2D/3D convolutional connections.
+
+        Traces are kept in neuron space and the point eligibility is computed as
+        a convolution weight-gradient (see ``_conv_point_eligibility``), so it
+        matches the forward weight layout and supports batches. Storing traces in
+        im2col space previously aliased overlapping kernel positions and
+        double-counted them.
 
         Keyword arguments:
 
@@ -2029,10 +1952,17 @@ class MSTDP(LearningRule):
         """
         batch_size = self.source.batch_size
 
-        # Initialize eligibility.
+        if not hasattr(self, "p_plus"):
+            self.p_plus = torch.zeros(
+                batch_size, *self.source.shape, device=self.connection.w.device
+            )
+        if not hasattr(self, "p_minus"):
+            self.p_minus = torch.zeros(
+                batch_size, *self.target.shape, device=self.connection.w.device
+            )
         if not hasattr(self, "eligibility"):
             self.eligibility = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
+                *self.connection.w.shape, device=self.connection.w.device
             )
 
         # Parse keyword arguments.
@@ -2044,79 +1974,27 @@ class MSTDP(LearningRule):
             kwargs.get("a_minus", -1.0), device=self.connection.w.device
         )
 
-        # Compute weight update based on the eligibility value of the past timestep.
-        update = reward * self.eligibility
-        self.connection.w += self.nu[0] * torch.sum(update, dim=0)
+        source_s = self.source.s.float()
+        target_s = self.target.s.float()
 
-        (
-            out_channels,
-            in_channels,
-            kernel_depth,
-            kernel_height,
-            kernel_width,
-        ) = self.connection.w.size()
-        padding, stride = self.connection.padding, self.connection.stride
+        def _update_traces_and_eligibility():
+            self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+            self.p_plus += a_plus * source_s
+            self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+            self.p_minus += a_minus * target_s
+            self.eligibility = _conv_point_eligibility(
+                self.connection, self.p_plus, self.p_minus, source_s, target_s, dim
+            )
 
-        # Initialize P^+ and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(
-                batch_size, *self.source.shape, device=self.connection.w.device
-            )
-            self.p_plus = F.pad(
-                self.p_plus,
-                (
-                    padding[0],
-                    padding[0],
-                    padding[1],
-                    padding[1],
-                    padding[2],
-                    padding[2],
-                ),
-            )
-            self.p_plus = (
-                self.p_plus.unfold(-3, kernel_width, stride[0])
-                .unfold(-3, kernel_height, stride[1])
-                .unfold(-3, kernel_depth, stride[2])
-                .reshape(
-                    batch_size,
-                    -1,
-                    in_channels * kernel_width * kernel_height * kernel_depth,
-                )
-            )
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                batch_size, *self.target.shape, device=self.connection.w.device
-            )
-            self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
+        # With zero_lag, fold in the current spikes before the weight update.
+        if self.zero_lag:
+            _update_traces_and_eligibility()
 
-        # Reshaping spike occurrences.
-        source_s = F.pad(
-            self.source.s,
-            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
-        )
-        source_s = (
-            source_s.unfold(-3, kernel_width, stride[0])
-            .unfold(-3, kernel_height, stride[1])
-            .unfold(-3, kernel_depth, stride[2])
-            .reshape(
-                batch_size,
-                -1,
-                in_channels * kernel_width * kernel_height * kernel_depth,
-            )
-        )
-        target_s = self.target.s.view(batch_size, out_channels, -1).float()
+        # Weight update from the (current or previous) batch-summed eligibility.
+        self.connection.w += self.nu[0] * reward * self.eligibility
 
-        # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
-
-        # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
-            self.p_minus, source_s
-        )
-        self.eligibility = self.eligibility.view(self.connection.w.size())
+        if not self.zero_lag:
+            _update_traces_and_eligibility()
 
         super().update()
 
@@ -2183,6 +2061,11 @@ class MSTDPET(LearningRule):
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
         self.tc_e_trace = torch.tensor(kwargs.get("tc_e_trace", 25.0))
+        # If True, the current spikes are folded into the eligibility before the
+        # eligibility trace is integrated (exact Florian 2007 timing). If False
+        # (default, backward-compatible) a one-timestep lag is kept. Currently
+        # honoured by the ``Connection`` path.
+        self.zero_lag = kwargs.get("zero_lag", False)
 
     def _connection_update(self, **kwargs) -> None:
         # language=rst
@@ -2197,23 +2080,29 @@ class MSTDPET(LearningRule):
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
-        # Initialize eligibility, eligibility trace, P^+, and P^-.
+        batch_size = self.source.batch_size
+
+        # Initialize eligibility, eligibility trace, P^+, and P^- (batch-aware).
         if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros((self.source.n), device=self.source.s.device)
+            self.p_plus = torch.zeros(
+                batch_size, self.source.n, device=self.source.s.device
+            )
         if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros((self.target.n), device=self.target.s.device)
+            self.p_minus = torch.zeros(
+                batch_size, self.target.n, device=self.target.s.device
+            )
         if not hasattr(self, "eligibility"):
             self.eligibility = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
             )
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
             )
 
         # Reshape pre- and post-synaptic spikes.
-        source_s = self.source.s.view(-1).float()
-        target_s = self.target.s.view(-1).float()
+        source_s = self.source.s.view(batch_size, -1).float()
+        target_s = self.target.s.view(batch_size, -1).float()
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
@@ -2224,27 +2113,38 @@ class MSTDPET(LearningRule):
             kwargs.get("a_minus", -1.0), device=self.connection.w.device
         )
 
+        # Update P^+/P^- traces and the point eligibility for this timestep.
+        def _update_traces_and_eligibility():
+            self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+            self.p_plus += a_plus * source_s
+            self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+            self.p_minus += a_minus * target_s
+            self.eligibility = torch.bmm(
+                self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
+            ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
+
+        # With zero_lag, fold in the current spikes before integrating the
+        # eligibility trace (exact Florian 2007 timing).
+        if self.zero_lag:
+            _update_traces_and_eligibility()
+
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
         self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
         self.eligibility_trace += self.eligibility / self.tc_e_trace
 
-        update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
+        # Compute weight update, reducing over the minibatch dimension.
+        update = self.reduction(
+            self.nu[0] * self.connection.dt * reward * self.eligibility_trace, dim=0
+        )
         if self.connection.w.is_sparse:
             update = update.to_sparse()
-        # Compute weight update.
         self.connection.w += update
 
-        # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
-
-        # Calculate point eligibility value.
-        self.eligibility = torch.outer(self.p_plus, target_s) + torch.outer(
-            source_s, self.p_minus
-        )
+        # Default (backward-compatible): the eligibility computed here is applied
+        # on the next timestep (one-step lag).
+        if not self.zero_lag:
+            _update_traces_and_eligibility()
 
         super().update()
 
@@ -2272,7 +2172,7 @@ class MSTDPET(LearningRule):
 
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
             )
 
         # Parse keyword arguments.
@@ -2284,11 +2184,12 @@ class MSTDPET(LearningRule):
             kwargs.get("a_minus", -1.0), device=self.connection.w.device
         )
 
-        # Calculate value of eligibility trace based on the value
-        # of the point eligibility value of the past timestep.
+        # Integrate the eligibility trace from the point eligibility of the
+        # previous timestep (decay then accumulate).
         self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace += self.eligibility / self.tc_e_trace
 
-        # Compute weight update.
+        # Compute weight update, reducing over the minibatch dimension.
         update = reward * self.eligibility_trace
         self.connection.w += self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
 
@@ -2371,7 +2272,7 @@ class MSTDPET(LearningRule):
 
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
             )
 
         # Parse keyword arguments.
@@ -2383,11 +2284,12 @@ class MSTDPET(LearningRule):
             kwargs.get("a_minus", -1.0), device=self.connection.w.device
         )
 
-        # Calculate value of eligibility trace based on the value
-        # of the point eligibility value of the past timestep.
+        # Integrate the eligibility trace from the point eligibility of the
+        # previous timestep (decay then accumulate).
         self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace += self.eligibility / self.tc_e_trace
 
-        # Compute weight update.
+        # Compute weight update, reducing over the minibatch dimension.
         update = reward * self.eligibility_trace
         self.connection.w += self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
 
@@ -2482,7 +2384,7 @@ class MSTDPET(LearningRule):
 
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
             )
 
         # Parse keyword arguments.
@@ -2494,11 +2396,12 @@ class MSTDPET(LearningRule):
             kwargs.get("a_minus", -1.0), device=self.connection.w.device
         )
 
-        # Calculate value of eligibility trace based on the value
-        # of the point eligibility value of the past timestep.
+        # Integrate the eligibility trace from the point eligibility of the
+        # previous timestep (decay then accumulate).
         self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace += self.eligibility / self.tc_e_trace
 
-        # Compute weight update.
+        # Compute weight update, reducing over the minibatch dimension.
         update = reward * self.eligibility_trace
         self.connection.w += self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
 
@@ -2573,174 +2476,35 @@ class MSTDPET(LearningRule):
         """
         MSTDPET learning rule for ``Conv1dConnection`` subclass of
         ``AbstractConnection`` class.
-
-        Keyword arguments:
-
-        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
-            learning task.
-        :param float a_plus: Learning rate (post-synaptic).
-        :param float a_minus: Learning rate (pre-synaptic).
         """
-        batch_size = self.source.batch_size
-
-        # Initialize eligibility and eligibility trace.
-        if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
-            )
-        if not hasattr(self, "eligibility_trace"):
-            self.eligibility_trace = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
-            )
-
-        # Parse keyword arguments.
-        reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
-
-        # Calculate value of eligibility trace based on the value
-        # of the point eligibility value of the past timestep.
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
-
-        # Compute weight update.
-        update = reward * self.eligibility_trace
-        self.connection.w += self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
-
-        out_channels, in_channels, kernel_size = self.connection.w.size()
-        padding, stride = self.connection.padding, self.connection.stride
-
-        # Initialize P^+ and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(
-                batch_size, *self.source.shape, device=self.connection.w.device
-            )
-            self.p_plus = F.pad(self.p_plus.float(), _pair(padding))
-            self.p_plus = self.p_plus.unfold(-1, kernel_size, stride).reshape(
-                batch_size, -1, in_channels * kernel_size
-            )
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                batch_size, *self.target.shape, device=self.connection.w.device
-            )
-            self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
-
-        # Reshaping spike occurrences.
-        source_s = F.pad(self.source.s.float(), _pair(padding))
-        source_s = source_s.unfold(-1, kernel_size, stride).reshape(
-            batch_size, -1, in_channels * kernel_size
-        )
-        target_s = (
-            self.target.s.permute(1, 2, 0).view(batch_size, out_channels, -1).float()
-        )
-
-        # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
-
-        # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
-            self.p_minus, source_s
-        )
-        self.eligibility = self.eligibility.view(self.connection.w.size())
-
-        super().update()
+        self._conv_connection_update(1, **kwargs)
 
     def _conv2d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         MSTDPET learning rule for ``Conv2dConnection`` subclass of
         ``AbstractConnection`` class.
-
-        Keyword arguments:
-
-        :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
-            learning task.
-        :param float a_plus: Learning rate (post-synaptic).
-        :param float a_minus: Learning rate (pre-synaptic).
         """
-        batch_size = self.source.batch_size
-
-        # Initialize eligibility and eligibility trace.
-        if not hasattr(self, "eligibility"):
-            self.eligibility = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
-            )
-        if not hasattr(self, "eligibility_trace"):
-            self.eligibility_trace = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
-            )
-
-        # Parse keyword arguments.
-        reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
-
-        # Calculate value of eligibility trace based on the value
-        # of the point eligibility value of the past timestep.
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
-
-        # Compute weight update.
-        update = reward * self.eligibility_trace
-        self.connection.w += self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
-
-        out_channels, _, kernel_height, kernel_width = self.connection.w.size()
-        padding, stride = self.connection.padding, self.connection.stride
-
-        # Initialize P^+ and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(
-                batch_size, *self.source.shape, device=self.connection.w.device
-            )
-            self.p_plus = im2col_indices(
-                self.p_plus, kernel_height, kernel_width, padding=padding, stride=stride
-            )
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                batch_size, *self.target.shape, device=self.connection.w.device
-            )
-            self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
-
-        # Reshaping spike occurrences.
-        source_s = im2col_indices(
-            self.source.s.float(),
-            kernel_height,
-            kernel_width,
-            padding=padding,
-            stride=stride,
-        )
-        target_s = (
-            self.target.s.permute(1, 2, 3, 0).view(batch_size, out_channels, -1).float()
-        )
-
-        # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
-
-        # Calculate point eligibility value.
-        self.eligibility = torch.bmm(
-            target_s, self.p_plus.permute((0, 2, 1))
-        ) + torch.bmm(self.p_minus, source_s.permute((0, 2, 1)))
-        self.eligibility = self.eligibility.view(self.connection.w.size())
-
-        super().update()
+        self._conv_connection_update(2, **kwargs)
 
     def _conv3d_connection_update(self, **kwargs) -> None:
         # language=rst
         """
         MSTDPET learning rule for ``Conv3dConnection`` subclass of
         ``AbstractConnection`` class.
+        """
+        self._conv_connection_update(3, **kwargs)
+
+    def _conv_connection_update(self, dim: int, **kwargs) -> None:
+        # language=rst
+        """
+        Shared MSTDPET update for 1D/2D/3D convolutional connections.
+
+        Traces are kept in neuron space and the point eligibility is computed as
+        a convolution weight-gradient (see ``_conv_point_eligibility``), so it
+        matches the forward weight layout and supports batches. Storing traces in
+        im2col space previously aliased overlapping kernel positions and
+        double-counted them.
 
         Keyword arguments:
 
@@ -2751,14 +2515,21 @@ class MSTDPET(LearningRule):
         """
         batch_size = self.source.batch_size
 
-        # Initialize eligibility and eligibility trace.
+        if not hasattr(self, "p_plus"):
+            self.p_plus = torch.zeros(
+                batch_size, *self.source.shape, device=self.connection.w.device
+            )
+        if not hasattr(self, "p_minus"):
+            self.p_minus = torch.zeros(
+                batch_size, *self.target.shape, device=self.connection.w.device
+            )
         if not hasattr(self, "eligibility"):
             self.eligibility = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
+                *self.connection.w.shape, device=self.connection.w.device
             )
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                batch_size, *self.connection.w.shape, device=self.connection.w.device
+                *self.connection.w.shape, device=self.connection.w.device
             )
 
         # Parse keyword arguments.
@@ -2770,87 +2541,31 @@ class MSTDPET(LearningRule):
             kwargs.get("a_minus", -1.0), device=self.connection.w.device
         )
 
-        # Calculate value of eligibility trace based on the value
-        # of the point eligibility value of the past timestep.
+        source_s = self.source.s.float()
+        target_s = self.target.s.float()
+
+        def _update_traces_and_eligibility():
+            self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+            self.p_plus += a_plus * source_s
+            self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+            self.p_minus += a_minus * target_s
+            self.eligibility = _conv_point_eligibility(
+                self.connection, self.p_plus, self.p_minus, source_s, target_s, dim
+            )
+
+        # With zero_lag, fold in the current spikes before the weight update.
+        if self.zero_lag:
+            _update_traces_and_eligibility()
+
+        # Integrate the eligibility trace and apply the weight update.
         self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
-
-        # Compute weight update.
-        update = reward * self.eligibility_trace
-        self.connection.w += self.nu[0] * self.connection.dt * torch.sum(update, dim=0)
-
-        (
-            out_channels,
-            in_channels,
-            kernel_depth,
-            kernel_height,
-            kernel_width,
-        ) = self.connection.w.size()
-        padding, stride = self.connection.padding, self.connection.stride
-
-        # Initialize P^+ and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros(
-                batch_size, *self.source.shape, device=self.connection.w.device
-            )
-            self.p_plus = F.pad(
-                self.p_plus,
-                (
-                    padding[0],
-                    padding[0],
-                    padding[1],
-                    padding[1],
-                    padding[2],
-                    padding[2],
-                ),
-            )
-            self.p_plus = (
-                self.p_plus.unfold(-3, kernel_width, stride[0])
-                .unfold(-3, kernel_height, stride[1])
-                .unfold(-3, kernel_depth, stride[2])
-                .reshape(
-                    batch_size,
-                    -1,
-                    in_channels * kernel_width * kernel_height * kernel_depth,
-                )
-            )
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                batch_size, *self.target.shape, device=self.connection.w.device
-            )
-            self.p_minus = self.p_minus.view(batch_size, out_channels, -1).float()
-
-        # Reshaping spike occurrences.
-        source_s = F.pad(
-            self.source.s,
-            (padding[0], padding[0], padding[1], padding[1], padding[2], padding[2]),
-        )
-        source_s = (
-            source_s.unfold(-3, kernel_width, stride[0])
-            .unfold(-3, kernel_height, stride[1])
-            .unfold(-3, kernel_depth, stride[2])
-            .reshape(
-                batch_size,
-                -1,
-                in_channels * kernel_width * kernel_height * kernel_depth,
-            )
-        )
-        target_s = (
-            self.target.s.permute(1, 2, 3, 4, 0)
-            .view(batch_size, out_channels, -1)
-            .float()
+        self.eligibility_trace += self.eligibility / self.tc_e_trace
+        self.connection.w += (
+            self.nu[0] * self.connection.dt * reward * self.eligibility_trace
         )
 
-        # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
-        self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
-        self.p_minus += a_minus * target_s
-
-        # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
-            self.p_minus, source_s
-        )
-        self.eligibility = self.eligibility.view(self.connection.w.size())
+        if not self.zero_lag:
+            _update_traces_and_eligibility()
 
         super().update()
 

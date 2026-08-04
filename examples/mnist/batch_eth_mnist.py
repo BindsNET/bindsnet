@@ -113,7 +113,6 @@ network = DiehlAndCook2015(
     nu=(1e-4, 1e-2),
     theta_plus=theta_plus,
     inpt_shape=(1, 28, 28),
-    device=device,
     w_dtype=getattr(torch, args.w_dtype),
 )
 

@@ -22,6 +22,8 @@ Neurons are connected together with directed edges (*synapses*) which are (in ge
 
 At its core, BindsNET provides software objects and methods which support the simulation of groups of different types of neurons (**bindsnet.network.nodes**), as well as different types of connections between them (**bindsnet.network.topology**). These may be arbitrarily combined together under a single **bindsnet.network.Network** object, which is responsible for the coordination of the simulation logic of all underlying components. On creation of a network, the user can specify a simulation timestep constant, :math:`dt`, which determines the granularity of the simulation. Choosing this parameter induces a trade-off between simulation speed and numerical precision: large values result in fast simulation, but poor simulation accuracy, and vice versa. Monitors (**bindsnet.network.monitors**) are available for recording state variables from arbitrary network components (e.g., the voltage :math:`v` of a group of neurons). 
 
+A full declaration of the datasets and synthetic stimuli used by the examples and benchmarks — with sources, retrieval methods, license pointers, and spike-encoding preprocessing — is maintained in `DATA.md <https://github.com/BindsNET/bindsnet/blob/master/DATA.md>`_. Commands to reproduce shipped models and published claims are tabulated in `REPRODUCING.md <https://github.com/BindsNET/bindsnet/blob/master/REPRODUCING.md>`_.
+
 The development of BindsNET is supported by the Defense Advanced Research Project Agency Grant DARPA/MTO HR0011-16-l-0006.
 
 .. toctree::
@@ -31,6 +33,7 @@ The development of BindsNET is supported by the Defense Advanced Research Projec
    installation
    quickstart
    guide
+   models_spec
 
 .. toctree::
    :maxdepth: 2

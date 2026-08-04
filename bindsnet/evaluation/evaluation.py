@@ -25,8 +25,10 @@ def assign_labels(
         ``assign_labels()`` call.
     :param alpha: Rate of decay of label assignments.
     :return: Tuple of class assignments, per-class spike proportions, and per-class
-        firing rates.
+        firing rates. Neurons that never fired are assigned ``-1`` (unassigned) so
+        they do not bias predictions toward class ``0``.
     """
+
     n_neurons = spikes.size(2)
 
     if rates is None:
@@ -36,27 +38,35 @@ def assign_labels(
     spikes = spikes.sum(1)
 
     for i in range(n_labels):
+        # Create mask.
+        mask = labels == i
         # Count the number of samples with this label.
-        n_labeled = torch.sum(labels == i).float()
+        n_labeled = mask.sum().float()
 
         if n_labeled > 0:
             # Get indices of samples with this label.
-            indices = torch.nonzero(labels == i).view(-1)
-
-            # Compute average firing rates for this label.
-            selected_spikes = torch.index_select(
-                spikes, dim=0, index=torch.tensor(indices)
-            )
-            rates[:, i] = alpha * rates[:, i] + (
-                torch.sum(selected_spikes, 0) / n_labeled
-            )
+            label_sum = spikes[mask].sum(0)
+            # Update rates.
+            rates[:, i] = alpha * rates[:, i] + (label_sum / n_labeled)
 
     # Compute proportions of spike activity per class.
-    proportions = rates / rates.sum(1, keepdim=True)
-    proportions[proportions != proportions] = 0  # Set NaNs to 0
+    total_activity = rates.sum(1, keepdim=True)
+    proportions = torch.where(
+        total_activity > 0, rates / total_activity, torch.zeros_like(rates)
+    )
+
+    # Noise for random tie breaking.
+    eps = 1e-6  # Small enough not to distort real decisions
+    noise = eps * torch.randn_like(proportions)
 
     # Neuron assignments are the labels they fire most for.
-    assignments = torch.max(proportions, 1)[1]
+    assignments = torch.argmax(proportions + noise, dim=1)
+
+    # Neurons that never fired have no class preference; mark them with -1 so
+    # they are masked out of downstream voting (issue #736: silent neurons must
+    # not default to a vote for class 0). Downstream schemes only match
+    # ``assignments == i`` for i >= 0, so -1 neurons are excluded.
+    assignments[rates.sum(1) == 0] = -1
 
     return assignments, proportions, rates
 
@@ -108,7 +118,9 @@ def all_activity(
     :param assignments: A vector of shape ``(n_neurons,)`` of neuron label assignments.
     :param n_labels: The number of target labels in the data.
     :return: Predictions tensor of shape ``(n_samples,)`` resulting from the "all
-        activity" classification scheme.
+        activity" classification scheme. Samples that elicit no activity from any
+        assigned neuron are predicted as ``-1`` (abstain) rather than defaulting to
+        class ``0``.
     """
     n_samples = spikes.size(0)
 
@@ -130,7 +142,12 @@ def all_activity(
             rates[:, i] = torch.sum(spikes[:, indices], 1) / n_assigns
 
     # Predictions are arg-max of layer-wise firing rates.
-    return torch.sort(rates, dim=1, descending=True)[1][:, 0]
+    predictions = torch.sort(rates, dim=1, descending=True)[1][:, 0]
+
+    # Abstain (-1) on samples with no activity, avoiding a biased vote for class 0.
+    predictions[rates.sum(1) == 0] = -1
+
+    return predictions
 
 
 def proportion_weighting(
@@ -151,7 +168,9 @@ def proportion_weighting(
         proportions of neuron spiking activity.
     :param n_labels: The number of target labels in the data.
     :return: Predictions tensor of shape ``(n_samples,)`` resulting from the "proportion
-        weighting" classification scheme.
+        weighting" classification scheme. Samples that elicit no weighted activity from
+        any assigned neuron are predicted as ``-1`` (abstain) rather than defaulting to
+        class ``0``.
     """
     n_samples = spikes.size(0)
 
@@ -176,6 +195,9 @@ def proportion_weighting(
 
     # Predictions are arg-max of layer-wise firing rates.
     predictions = torch.sort(rates, dim=1, descending=True)[1][:, 0]
+
+    # Abstain (-1) on samples with no activity, avoiding a biased vote for class 0.
+    predictions[rates.sum(1) == 0] = -1
 
     return predictions
 

@@ -9,15 +9,27 @@ This package is used as part of ongoing research on applying SNNs, machine learn
 
 Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/master/examples) for a collection of experiments, functions for the analysis of results, plots of experiment outcomes, and more. Documentation for the package can be found [here](https://bindsnet-docs.readthedocs.io).
 
+[![Build Status](https://github.com/BindsNET/bindsnet/actions/workflows/python-app.yml/badge.svg?branch=master)](https://github.com/BindsNET/bindsnet/actions/workflows/python-app.yml)
 [![CodeQL](https://github.com/BindsNET/bindsnet/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/BindsNET/bindsnet/actions/workflows/github-code-scanning/codeql)
 [![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
 [![Neuromorphic Computing](https://img.shields.io/badge/Collaboration_Network-Open_Neuromorphic-blue)](https://open-neuromorphic.org/neuromorphic-computing/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20695115.svg)](https://doi.org/10.5281/zenodo.20695115)
 
 ## Requirements
 
-- Python >=3.9,<3.12
+- Python >=3.11,<3.14 (continuously tested on 3.11, 3.12, and 3.13)
 
 ## Setting things up
+
+### Reproducible install
+For a byte-for-byte reproducible environment, install the pinned dependency set from
+the committed `poetry.lock`:
+
+```
+poetry install
+```
+
+Alternatively, the provided `Dockerfile` builds the full pinned stack (see *Using Docker* below).
 
 ## Using Pip
 To install the most recent stable release from the GitHub repository
@@ -84,6 +96,20 @@ python -m pytest test/
 
 Some tests will fail if Open AI `gym` is not installed on your machine.
 
+## Datasets
+
+BindsNET ships no third-party datasets; its loaders fetch them from upstream sources.
+Every dataset and synthetic stimulus used by the examples, benchmarks, and dataset
+loaders — with source, retrieval method, license pointer, and spike-encoding
+preprocessing — is declared in [DATA.md](DATA.md).
+
+## Reproducing results
+
+[REPRODUCING.md](REPRODUCING.md) maps each shipped model and published claim to its
+model class, example script, exact command, seed, and expected output (e.g. the
+Diehl & Cook 2015 MNIST replication via `examples/mnist/eth_mnist.py`, and the
+Hazan et al. 2018 scaling benchmark).
+
 ## Background
 
 The simulation of biologically plausible spiking neuron dynamics can be challenging. It is typically done by solving ordinary differential equations (ODEs) which describe said dynamics. PyTorch does not explicitly support the solution of differential equations (as opposed to [`brian2`](https://github.com/brian-team/brian2), for example), but we can convert the ODEs defining the dynamics into difference equations and solve them at regular, short intervals (a `dt` on the order of 1 millisecond) as an approximation. Of course, under the hood, packages like `brian2` are doing the same thing. Doing this in [`PyTorch`](http://pytorch.org/) is exciting for a few reasons:
@@ -127,6 +153,17 @@ If you use BindsNET in your research, please cite the following [article](https:
 }
 
 ```
+
+### Citing the software
+
+To cite a specific version of the BindsNET software, use the archived release on Zenodo.
+The concept DOI below always resolves to the latest version:
+
+> BindsNET contributors. *BindsNET*. Zenodo. https://doi.org/10.5281/zenodo.20695115
+
+(For the exact release used, cite its version DOI; e.g. v0.3.4 is
+[10.5281/zenodo.20695116](https://doi.org/10.5281/zenodo.20695116).) A machine-readable
+citation is provided in [`CITATION.cff`](CITATION.cff).
 
 ## Contributors
 

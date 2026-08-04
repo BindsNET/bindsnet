@@ -26,6 +26,9 @@ Run the tests, they all should pass
 poetry run pytest
 ```
 
+Notable changes are recorded in [`CHANGELOG.md`](CHANGELOG.md); please add an entry to the
+`Unreleased` section in your pull request.
+
 All development should take place on a branch separate from master. To create a branch, issue
 
 ```shell
