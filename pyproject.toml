@@ -31,7 +31,7 @@ gymnasium = {extras = ["atari"], version = "^1"}
 scikit-build = "^0"
 scikit-image = "^0"
 scikit-learn = "^1"
-opencv-python = "^4"
+opencv-python = ">=4,<6"
 pandas = "^3"
 foolbox = "^3"
 
