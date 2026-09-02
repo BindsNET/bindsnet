@@ -45,7 +45,7 @@ pytest = "^9"
 pre-commit = "^4"
 notebook = "^7"
 jupyterlab = "^4"
-isort = "^7"
+isort = ">=7,<10"
 black = "^26"
 autoflake = "^2"
 
