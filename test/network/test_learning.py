@@ -268,3 +268,52 @@ class TestLearningRules:
             time=250,
             reward=1.0,
         )
+
+    def test_mstdpet_reset_clears_moving_average_buffer(self):
+        # MCC_MSTDPET (MulticompartmentConnection) test
+        from bindsnet.learning.MCC_learning import MSTDPET as MCC_MSTDPET
+        from bindsnet.network.topology import MulticompartmentConnection
+        from bindsnet.network.topology_features import Weight
+
+        network = Network(dt=1.0)
+        network.add_layer(Input(n=10, traces=True), name="input")
+        network.add_layer(LIFNodes(n=10, traces=True), name="output")
+
+        weight = Weight(
+            "weight",
+            torch.rand(10, 10),
+            range=[0.0, 1.0],
+            nu=(1e-2, 1e-2),
+            learning_rule=MCC_MSTDPET,
+            tc_plus=20.0,
+            tc_minus=20.0,
+            average_update=5,
+            continues_update=True,
+        )
+        connection = MulticompartmentConnection(
+            source=network.layers["input"],
+            target=network.layers["output"],
+            pipeline=[weight],
+        )
+        network.add_connection(connection, source="input", target="output")
+
+        network.run(
+            inputs={"input": torch.bernoulli(torch.rand(250, 10)).byte()},
+            time=250,
+            reward=1.0,
+        )
+
+        rule = connection.pipeline[0].update_rule
+
+        # sanity check: after 250 steps of activity + reward, state should
+        # be non-zero before reset
+        assert rule.average_buffer.abs().sum() > 0 or rule.average_buffer_index != 0
+
+        rule.reset_state_variables()
+
+        assert torch.all(rule.eligibility == 0)
+        assert torch.all(rule.eligibility_trace == 0)
+        assert torch.all(rule.p_plus == 0)
+        assert torch.all(rule.p_minus == 0)
+        assert torch.all(rule.average_buffer == 0)
+        assert rule.average_buffer_index == 0
