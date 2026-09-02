@@ -16,16 +16,12 @@ numba = "^0"
 scipy = "^1"
 Cython = "^3"
 torch = [
-    {version = "2.11.0", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
-    {version = "2.11.0", markers = "sys_platform == 'darwin'" },
+    {version = "2.14.0", markers = "sys_platform != 'darwin'", source = "torch+cu130"},
+    {version = "2.14.0", markers = "sys_platform == 'darwin'" },
 ]
 torchvision = [
-    {version = "0.26.0", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
-    {version = "0.26.0", markers = "sys_platform == 'darwin'" },
-]
-torchaudio = [
-    {version = "2.11.0", markers = "sys_platform != 'darwin'", source = "torch+cu128"},
-    {version = "2.11.0", markers = "sys_platform == 'darwin'" },
+    {version = "0.29.0", markers = "sys_platform != 'darwin'", source = "torch+cu130"},
+    {version = "0.29.0", markers = "sys_platform == 'darwin'" },
 ]
 tensorboardX = "^2.6.4"
 tqdm = "^4"
@@ -40,8 +36,8 @@ pandas = "^3"
 foolbox = "^3"
 
 [[tool.poetry.source]]
- name = "torch+cu128"
- url = "https://download.pytorch.org/whl/cu128"
+ name = "torch+cu130"
+ url = "https://download.pytorch.org/whl/cu130"
  priority = "explicit"
 
 [tool.poetry.group.dev.dependencies]
