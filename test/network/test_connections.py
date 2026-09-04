@@ -341,6 +341,15 @@ class TestMultiCompartmentConnection:
         )
         assert torch.allclose(conn.compute(s), s @ w - (0.5 * deg).sum(0), atol=1e-6)
 
+    def test_degradation_feature_degrade_applies_degrade_function(self):
+        # degrade() must hand the value to degrade_function. It used to call
+        # itself with an argument, which is a TypeError on the first call.
+        deg = torch.tensor([[0.2, 0.4], [0.6, 0.8], [0.1, 0.3]])
+        feature = tf.Degradation(
+            name="d", value=deg.clone(), degrade_function=lambda v: v * 0.5
+        )
+        assert torch.allclose(feature.degrade(), 0.5 * deg, atol=1e-6)
+
     def test_probability_feature_deterministic_bounds(self):
         # bernoulli(1) == 1 (always passes); bernoulli(0) == 0 (always blocked).
         s = torch.tensor([[1.0, 0.0, 1.0], [1.0, 1.0, 1.0]])
