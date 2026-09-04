@@ -291,7 +291,7 @@ class AbstractFeature(ABC):
         be *subtracted* from the propagated spikes.
         """
 
-        return self.degrade(self.value)
+        return self.degrade_function(self.value)
 
     def link(self, parent_feature) -> None:
         # language=rst
