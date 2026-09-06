@@ -1,0 +1,55 @@
+version: 2
+
+updates:
+  # Python dependencies, resolved through poetry.lock.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    # Minor and patch bumps arrive as a single grouped pull request so routine
+    # maintenance is one review, not twenty. Major bumps stay separate, because
+    # they need to be looked at individually.
+    groups:
+      python-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # torch and torchvision are pinned to exact versions served from the
+      # custom CUDA wheel index declared in pyproject.toml, and the two must
+      # move together. Routine version bumps here would break that pairing or
+      # silently pull the plain PyPI build instead, so they are upgraded by
+      # hand. These conditions cover version updates only; Dependabot security
+      # alerts for torch and torchvision still come through.
+      - dependency-name: "torch"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+      - dependency-name: "torchvision"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+
+  # Keep the GitHub Actions used by CI current. Action versions are a supply
+  # chain surface of their own: a compromised or abandoned action runs with
+  # access to the workflow.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
