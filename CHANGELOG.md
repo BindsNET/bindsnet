@@ -17,6 +17,34 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 ### Changed
 - README Python requirement aligned to `>=3.11,<3.14`; added a reproducible-install note.
 - `pyproject.toml` version bumped to 0.3.4 to match the released tag.
+- Performance pass on the per-timestep hot paths (numerics unchanged; every item
+  is pinned by `test/network/test_perf_equivalence.py`, and a seeded old-vs-new
+  comparison of 59 networks was bit-identical except three batch>1 weight
+  matrices that differ by one float32 rounding step):
+  - `PostPre` / `Hebbian` on dense `Connection` and `MulticompartmentConnection`
+    apply the STDP update with one fused `addmm_` instead of materialising the
+    `[batch, source.n, target.n]` outer product (dense 784->1000 STDP,
+    batch 16, 250 steps on CPU: 9.6 s -> 0.42 s; Diehl & Cook 784->400,
+    batch 1: 1.6 s -> 0.26 s).
+  - `LearningRule.update` no longer multiplies the whole weight matrix by `1.0`
+    every step when no weight decay is configured.
+  - `LocalConnection1D/2D/3D` learning rules scale rows directly instead of
+    building an `[n, n]` identity matrix per step (64-filter local connection on
+    GPU: 61 MiB -> 2.8 MiB of per-step temporaries). `MSTDP`/`MSTDPET` keep
+    their post-synaptic trace as a `[batch, n, 1]` vector instead of a diagonal
+    matrix.
+  - `MSTDP` / `MSTDPET` cache `exp(-dt / tc)` and the default learning-rate
+    tensors instead of recomputing / re-copying them to the device each step.
+  - Neuron models update `v`, `refrac_count`, `theta`, `x`, ... in place with
+    the same operations in the same order, avoiding a `Module.__setattr__`
+    round-trip per assignment per step.
+  - `rank_order` encoding is vectorised.
+- Benchmark script for the above: `examples/benchmark/hot_path_bench.py`.
+
+### Fixed
+- `network.to(device)` crashed on any `MulticompartmentConnection` (used by
+  `DiehlAndCook2015`) with `_apply() takes 2 positional arguments but 3 were
+  given`; `AbstractMulticompartmentConnection._apply` now accepts `recurse`.
 
 ## [0.3.4] - 2026-06-15
 

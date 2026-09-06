@@ -182,10 +182,11 @@ def rank_order(
     times *= time / times.max()  # Extended through simulation time.
     times = torch.ceil(times).long()
 
-    # Create spike times tensor.
+    # Create spike times tensor (one spike per neuron whose time lies in
+    # ``(0, time)``; vectorised form of the per-neuron loop).
     spikes = torch.zeros(time, size, device=device).byte()
-    for i in range(size):
-        if 0 < times[i] < time:
-            spikes[times[i] - 1, i] = 1
+    fire = (times > 0) & (times < time)
+    idx = fire.nonzero(as_tuple=False).squeeze(1)
+    spikes[(times[fire] - 1).to(device), idx.to(device)] = 1
 
     return spikes.reshape(time, *shape)

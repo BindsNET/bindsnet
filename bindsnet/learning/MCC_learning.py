@@ -13,6 +13,23 @@ from ..network.topology import (
 from ..utils import im2col_indices
 
 
+def _dense_outer_update_ok(rule, w: torch.Tensor) -> bool:
+    # language=rst
+    """
+    Whether a rule's ``[batch, source.n] x [batch, target.n]`` outer-product
+    update can be applied with a single fused ``w.addmm_`` call: dense float32
+    weights and one of the two default batch reductions (``torch.squeeze`` for
+    batch size 1, ``torch.sum`` otherwise), both equal to the matrix product's
+    contraction over the batch dimension.
+    """
+    return (
+        isinstance(w, torch.Tensor)
+        and not w.is_sparse
+        and w.dtype == torch.float32
+        and rule.reduction in (torch.squeeze, torch.sum)
+    )
+
+
 class MCC_LearningRule(ABC):
     # language=rst
     """
@@ -229,6 +246,26 @@ class PostPre(MCC_LearningRule):
         class.
         """
         batch_size = self.source.batch_size
+        w = self.feature_value
+
+        if self.average_update == 0 and _dense_outer_update_ok(self, w):
+            # Fused path: ``w += alpha * s^T @ x`` folds the outer product, the
+            # batch reduction, the ``dt`` scaling and the in-place update into
+            # one ``addmm_`` call, so no ``[batch, source.n, target.n]``
+            # temporary is allocated. The learning rate is applied to the
+            # ``[batch, n]`` factor first (as in the un-fused formula) and spikes
+            # are exactly 0/1, so for batch size 1 the result is bit-identical.
+            dt = float(self.connection.dt)
+            if self.nu[0]:
+                source_s = self.source.s.view(batch_size, -1).float()
+                target_x = self.target.x.view(batch_size, -1) * self.nu[0]
+                w.addmm_(source_s.t(), target_x, alpha=-dt)
+            if self.nu[1]:
+                target_s = self.target.s.view(batch_size, -1).float() * self.nu[1]
+                source_x = self.source.x.view(batch_size, -1)
+                w.addmm_(source_x.t(), target_s, alpha=dt)
+            super().update()
+            return
 
         # Pre-synaptic update.
         if self.nu[0]:
@@ -370,18 +407,27 @@ class Hebbian(MCC_LearningRule):
 
         batch_size = self.source.batch_size
 
-        source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
-        source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
-        target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
-        target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
+        if _dense_outer_update_ok(self, self.feature_value):
+            # Fused path (see ``PostPre._connection_update``).
+            source_s = self.source.s.view(batch_size, -1).float()
+            source_x = self.source.x.view(batch_size, -1)
+            target_s = self.target.s.view(batch_size, -1).float()
+            target_x = self.target.x.view(batch_size, -1)
+            self.feature_value.addmm_(source_s.t(), target_x * self.nu[0], alpha=1.0)
+            self.feature_value.addmm_(source_x.t(), target_s * self.nu[1], alpha=1.0)
+        else:
+            source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
+            source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
+            target_s = self.target.s.view(batch_size, -1).unsqueeze(1).float()
+            target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
 
-        # Pre-synaptic update.
-        update = self.reduction(torch.bmm(source_s, target_x), dim=0)
-        self.feature_value += self.nu[0] * update
+            # Pre-synaptic update.
+            update = self.reduction(torch.bmm(source_s, target_x), dim=0)
+            self.feature_value += self.nu[0] * update
 
-        # Post-synaptic update.
-        update = self.reduction(torch.bmm(source_x, target_s), dim=0)
-        self.feature_value += self.nu[1] * update
+            # Post-synaptic update.
+            update = self.reduction(torch.bmm(source_x, target_s), dim=0)
+            self.feature_value += self.nu[1] * update
 
         # Add polarities back to feature after updates
         if self.enforce_polarity:
