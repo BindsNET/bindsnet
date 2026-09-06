@@ -31,7 +31,7 @@ gymnasium = {extras = ["atari"], version = "^1"}
 scikit-build = "^0"
 scikit-image = "^0"
 scikit-learn = "^1"
-opencv-python = "^4"
+opencv-python = ">=4.14,<6"
 pandas = "^3"
 foolbox = "^3"
 
@@ -45,7 +45,7 @@ pytest = "^9"
 pre-commit = "^4"
 notebook = "^7"
 jupyterlab = "^4"
-isort = "^7"
+isort = "^9"
 black = "^26"
 autoflake = "^2"
 
