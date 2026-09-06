@@ -53,6 +53,12 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
   whereas the default one-step lag is Florian's discrete-time eq. (3.9).
 
 ### Fixed
+- `network.run(clamp=...)` / `unclamp` are now applied inside `Nodes.forward` before
+  the spike trace is updated, so a forced spike leaves a trace (and a suppressed one
+  does not). Previously the clamp was applied after the trace update, so clamped
+  spikes entered the same-step potentiation term of STDP rules but never the trace
+  used by later depression terms (affected `examples/mnist/supervised_mnist.py`).
+  Pinned by `TestClampEntersTraces` and the clamp-driven STDP window test.
 - `network.to(device)` crashed on any `MulticompartmentConnection` (used by
   `DiehlAndCook2015`) with `_apply() takes 2 positional arguments but 3 were
   given`; `AbstractMulticompartmentConnection._apply` now accepts `recurse`.

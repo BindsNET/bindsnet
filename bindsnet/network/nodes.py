@@ -12,6 +12,13 @@ class Nodes(torch.nn.Module):
     Abstract base class for groups of neurons.
     """
 
+    # Per-step spike clamps set by ``Network.run`` (``clamp`` / ``unclamp``
+    # keyword arguments). They are applied in ``forward`` *before* the spike
+    # traces are updated, so a forced or suppressed spike is reflected in the
+    # traces that the learning rules read. Cleared after use.
+    _clamp: Optional[torch.Tensor] = None
+    _unclamp: Optional[torch.Tensor] = None
+
     def __init__(
         self,
         n: Optional[int] = None,
@@ -93,6 +100,15 @@ class Nodes(torch.nn.Module):
 
         :param x: Inputs to the layer.
         """
+        # Force / suppress spikes requested for this step (see ``Network.run``),
+        # before the traces below see ``self.s``.
+        if self._clamp is not None:
+            self.s[:, self._clamp] = 1
+            self._clamp = None
+        if self._unclamp is not None:
+            self.s[:, self._unclamp] = 0
+            self._unclamp = None
+
         if self.traces:
             # Decay and set spike traces.
             self.x.mul_(self.trace_decay)

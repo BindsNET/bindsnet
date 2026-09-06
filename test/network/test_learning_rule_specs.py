@@ -59,11 +59,11 @@ Sources
   forward-Euler decay and the per-step spike probability
   :math:`p = 1 - e^{-\\rho\\,\\delta t}` in place of :math:`\\rho\\,\\delta t`.
 
-Known limitation (not a rule defect): spikes forced with the ``clamp`` argument of
-``Network.run`` are applied after ``Nodes.forward`` has already updated the layer's
-spike trace, so a clamped spike enters the same-step potentiation term of the rule
-but never the trace used by later depression terms. The STDP-window test below
-therefore fires the post-synaptic neuron through a strong teacher input.
+Spikes forced with the ``clamp`` argument of ``Network.run`` (and spikes removed with
+``unclamp``) are applied inside ``Nodes.forward`` before the spike trace is updated,
+so they are seen by the learning rules exactly like naturally generated spikes.
+``TestClampEntersTraces`` pins that; the STDP-window test fires the post-synaptic
+neuron through a teacher input and repeats it with ``clamp``.
 """
 
 import math
@@ -205,12 +205,12 @@ class TestPairSTDPMorrison2008:
             w = w.clamp(0.0, 1.0)
         assert (w_b - torch.stack(hist)).abs().max().item() < TOL
 
-    def test_stdp_window_sign_and_shape(self):
+    @pytest.mark.parametrize("drive", ["teacher", "clamp"])
+    def test_stdp_window_sign_and_shape(self, drive):
         # Morrison (2008) eq. (10): pre-before-post potentiates by
         # F_+ exp(-|dt|/tau_+); post-before-pre depresses by F_- exp(-|dt|/tau_-).
-        # The post neuron is fired by a strong "teacher" input (not ``clamp``,
-        # see the note in the module docstring) and the actual spike times are
-        # read back from the layer.
+        # The post neuron is fired either by a strong "teacher" input or by the
+        # ``clamp`` argument of ``Network.run``; both must give the same window.
         tc = 20.0
         for delta in (1, 5, 15):
             for pre_first in (True, False):
@@ -248,9 +248,25 @@ class TestPairSTDPMorrison2008:
                     pre[10 + delta, 0, 0] = 1
                 post_times = []
                 for t in range(T):
-                    net.run(
-                        inputs={"in": pre[t].byte(), "teacher": teach[t].byte()}, time=1
-                    )
+                    if drive == "teacher":
+                        net.run(
+                            inputs={"in": pre[t].byte(), "teacher": teach[t].byte()},
+                            time=1,
+                        )
+                    else:
+                        # Force the post spike at the step the teacher would
+                        # have fired it (one step after the teacher spike).
+                        force = (
+                            teach[t - 1, 0].bool() if t > 0 else torch.zeros(1).bool()
+                        )
+                        net.run(
+                            inputs={
+                                "in": pre[t].byte(),
+                                "teacher": torch.zeros(1, 1).byte(),
+                            },
+                            time=1,
+                            clamp={"out": force},
+                        )
                     if net.layers["out"].s.any():
                         post_times.append(t)
                 assert post_times == [10 + delta if pre_first else 10], post_times
@@ -424,3 +440,53 @@ class TestRmaxVasilaki2009:
         assert torch.allclose(
             rule.eligibility_trace[0], torch.tensor([1.0, 0.0, 1.0, 0.0]), atol=1e-6
         )
+
+
+class TestClampEntersTraces:
+    """``clamp`` / ``unclamp`` spikes must be reflected in the spike traces."""
+
+    @staticmethod
+    def _layer_net():
+        net = Network(dt=1.0)
+        net.add_layer(Input(n=3), "in")
+        net.add_layer(LIFNodes(n=3, traces=True, tc_trace=20.0), "out")
+        net.add_connection(
+            Connection(net.layers["in"], net.layers["out"], w=torch.zeros(3, 3)),
+            "in",
+            "out",
+        )
+        return net
+
+    def test_clamped_spike_sets_trace(self):
+        net = self._layer_net()
+        mask = torch.tensor([True, False, False])
+        net.run(inputs={"in": torch.zeros(1, 3).byte()}, time=1, clamp={"out": mask})
+        assert torch.equal(net.layers["out"].s.view(-1), mask)
+        assert torch.equal(net.layers["out"].x.view(-1), mask.float())
+        # And it decays afterwards like any other spike.
+        net.run(inputs={"in": torch.zeros(1, 3).byte()}, time=1)
+        assert torch.allclose(
+            net.layers["out"].x.view(-1), mask.float() * math.exp(-1.0 / 20.0)
+        )
+
+    def test_time_indexed_clamp(self):
+        net = self._layer_net()
+        mask = torch.zeros(4, 3, dtype=torch.bool)
+        mask[2, 1] = True
+        net.run(inputs={"in": torch.zeros(4, 3).byte()}, time=4, clamp={"out": mask})
+        x = net.layers["out"].x.view(-1)
+        assert x[1].item() == pytest.approx(math.exp(-1.0 / 20.0))
+        assert x[0].item() == 0.0 and x[2].item() == 0.0
+
+    def test_unclamped_spike_leaves_no_trace(self):
+        net = self._layer_net()
+        net.layers["out"].thresh.fill_(-64.0)
+        net.run(
+            inputs={"in": torch.ones(1, 3).byte()},
+            time=1,
+            injects_v={"out": 100.0 * torch.ones(3)},
+            unclamp={"out": torch.tensor([False, False, True])},
+        )
+        s = net.layers["out"].s.view(-1)
+        assert s[0] and s[1] and not s[2]
+        assert torch.equal(net.layers["out"].x.view(-1), s.float())

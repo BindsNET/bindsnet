@@ -86,6 +86,24 @@ There are a number of optional command-line arguments which can be passed in, in
 
 A number of other examples are available in the `examples` directory that are meant to showcase BindsNET's functionality. Take a look, and let us know what you think!
 
+## Learning rules and their sources
+
+Every weight-changing rule is validated step by step against the equations of the
+paper it implements; the equations, with their numbers, are listed in
+[`docs/source/models_spec.rst`](docs/source/models_spec.rst) and pinned by tests.
+
+| Rule | Paper | Test |
+|---|---|---|
+| `PostPre`, `WeightDependentPostPre`, `Hebbian` | Morrison, Diesmann & Gerstner (2008), eqs. 11-14 | `test/network/test_learning_rule_specs.py` |
+| `MSTDP`, `MSTDPET` | Florian (2007), eqs. 3.9-3.12 and 2.7-2.8 | `test/network/test_mstdp_florian.py` |
+| `Rmax` | Vasilaki et al. (2009), eqs. 7, 8, 13 | `test/network/test_learning_rule_specs.py` |
+
+Two points that are easy to get wrong: the reward passed to `network.run` at a step
+multiplies the eligibility of the *previous* step (that is Florian's discrete rule,
+`zero_lag=False`); and `PostPre` is the standard pair-based STDP, not the Diehl & Cook
+(2015) rule, even though `DiehlAndCook2015` uses it. Spikes forced with the `clamp`
+argument of `network.run` enter the spike traces like any other spike.
+
 ## Running the tests
 
 Issue the following to run the tests:

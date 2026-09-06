@@ -231,9 +231,29 @@ pre-synaptic trace, where :math:`Y_i` is the post-synaptic spike and
 :math:`g'/g = 1/\Delta u` of eq. (8) is absorbed into ``nu``. Validated in
 ``test/network/test_learning_rule_specs.py``.
 
+Spike clamps and traces
+~~~~~~~~~~~~~~~~~~~~~~~
+``network.run(..., clamp={layer: mask}, unclamp={layer: mask})`` forces or suppresses
+spikes for a step. The clamp is applied inside ``Nodes.forward`` *before* the spike
+trace ``x`` is updated, so a forced spike leaves a trace and a suppressed spike does
+not; the learning rules therefore treat clamped spikes exactly like natural ones. A
+forced spike does not reset the neuron's voltage or start its refractory period.
+(Before September 2026 the clamp was applied after the trace update, so clamped
+spikes entered the same-step potentiation term but never the trace.)
+
+Known deviations from the papers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+These are documented rather than changed, because changing them alters results:
+
+* ``PostPre`` is not the Diehl & Cook (2015) rule (see the note above), although the
+  ``DiehlAndCook2015`` model uses it and reproduces the published accuracy with it.
+* ``bindsnet.learning.MCC_learning.PostPre`` (the multicompartment version) multiplies
+  each update by the simulation step ``dt``; the classic ``PostPre`` and Morrison et
+  al. (2008) eqs. (13)-(14) do not. The two agree only at ``dt = 1``.
+
 .. note::
 
-   Where this page summarizes a rule "see source", the equations were not reproduced here
-   to avoid mis-stating constants; consult ``bindsnet/learning/learning.py`` for the
-   authoritative form. If an implementation deviates from a textbook model, the code is
-   the specification.
+   Where this page does not reproduce an equation, consult
+   ``bindsnet/learning/learning.py`` for the authoritative form. If an implementation
+   deviates from a textbook model, the code is the specification, and the deviation
+   is listed above.

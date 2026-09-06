@@ -267,10 +267,15 @@ class Network(torch.nn.Module):
 
         :param Dict[str, torch.Tensor] clamp: Mapping of layer names to boolean masks if
             neurons should be clamped to spiking. The ``Tensor``s have shape
-            ``[n_neurons]`` or ``[time, n_neurons]``.
+            ``[n_neurons]`` or ``[time, n_neurons]``. A clamped spike is a real spike
+            for everything downstream: it is propagated through connections, enters
+            the layer's spike trace (``x``) and therefore the learning rules, and is
+            recorded by monitors. It does not reset the neuron's voltage or start its
+            refractory period.
         :param Dict[str, torch.Tensor] unclamp: Mapping of layer names to boolean masks
             if neurons should be clamped to not spiking. The ``Tensor``s should have
-            shape ``[n_neurons]`` or ``[time, n_neurons]``.
+            shape ``[n_neurons]`` or ``[time, n_neurons]``. A suppressed spike is
+            removed before the trace update, so it leaves no trace.
         :param Dict[str, torch.Tensor] injects_v: Mapping of layer names to boolean
             masks if neurons should be added voltage. The ``Tensor``s should have shape
             ``[n_neurons]`` or ``[time, n_neurons]``.
@@ -403,6 +408,21 @@ class Network(torch.nn.Module):
                     else:
                         self.layers[l].v += inject_v[t]
 
+                # Spike clamps for this step. The layer applies them inside
+                # ``forward`` before updating its spike traces, so forced /
+                # suppressed spikes are seen by the traces and hence by the
+                # learning rules (see ``Nodes.forward``).
+                clamp = clamps.get(l, None)
+                if clamp is not None:
+                    self.layers[l]._clamp = (
+                        clamp if clamp.ndimension() == 1 else clamp[t]
+                    )
+                unclamp = unclamps.get(l, None)
+                if unclamp is not None:
+                    self.layers[l]._unclamp = (
+                        unclamp if unclamp.ndimension() == 1 else unclamp[t]
+                    )
+
                 if l in current_inputs:
                     self.layers[l].forward(x=current_inputs[l])
                 else:
@@ -411,22 +431,6 @@ class Network(torch.nn.Module):
                             self.layers[l].s.shape, device=self.layers[l].s.device
                         )
                     )
-
-                # Clamp neurons to spike.
-                clamp = clamps.get(l, None)
-                if clamp is not None:
-                    if clamp.ndimension() == 1:
-                        self.layers[l].s[:, clamp] = 1
-                    else:
-                        self.layers[l].s[:, clamp[t]] = 1
-
-                # Clamp neurons not to spike.
-                unclamp = unclamps.get(l, None)
-                if unclamp is not None:
-                    if unclamp.ndimension() == 1:
-                        self.layers[l].s[:, unclamp] = 0
-                    else:
-                        self.layers[l].s[:, unclamp[t]] = 0
 
             for c in self.connections:
                 flad_m = False
