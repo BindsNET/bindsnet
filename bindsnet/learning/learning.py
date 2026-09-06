@@ -1522,6 +1522,103 @@ class Hebbian(LearningRule):
         super().update()
 
 
+class DiehlAndCook(LearningRule):
+    # language=rst
+    """
+    Post-synaptic-spike-only STDP of `Diehl & Cook (2015)
+    <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_, Sect. 2.3:
+
+    .. math::
+
+        \\Delta w = \\eta\\,(x_\\text{pre} - x_\\text{tar})\\,(w_\\max - w)^\\mu
+
+    applied on every post-synaptic spike. :math:`x_\\text{pre}` is the source layer's
+    spike trace (the paper's trace adds 1 per spike, i.e. ``traces_additive=True``);
+    :math:`x_\\text{tar}` is the target trace value ("the higher the target value, the
+    lower the synaptic weight will be"); :math:`w_\\max` is the connection's ``wmax``;
+    :math:`\\mu` sets the weight dependence. Pre-synaptic spikes do not change the
+    weight, unlike ``PostPre``. The paper gives no numeric values for
+    :math:`x_\\text{tar}` and :math:`\\mu`; the defaults here (0 and 1) are BindsNET's.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractConnection,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        **kwargs,
+    ) -> None:
+        # language=rst
+        """
+        Constructor for the ``DiehlAndCook`` learning rule.
+
+        :param connection: A ``Connection`` or ``LocalConnection`` whose weights the
+            rule will modify. It must have a finite ``wmax``.
+        :param nu: Learning rate :math:`\\eta`. A pair is accepted for API symmetry
+            with the other rules; only the second (post-synaptic) entry is used.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param weight_decay: Coefficient controlling rate of decay of the weights each
+            iteration.
+
+        Keyword arguments:
+
+        :param float x_tar: Target pre-synaptic trace :math:`x_\\text{tar}` (default 0).
+        :param float mu: Weight-dependence exponent :math:`\\mu` (default 1).
+        """
+        super().__init__(
+            connection=connection,
+            nu=nu,
+            reduction=reduction,
+            weight_decay=weight_decay,
+            **kwargs,
+        )
+
+        assert self.source.traces, "Pre-synaptic nodes must record spike traces."
+        assert (
+            connection.wmax != np.inf
+        ).all(), "DiehlAndCook needs a finite wmax (the paper's w_max)."
+
+        if isinstance(connection, (Connection, LocalConnection)):
+            self.update = self._connection_update
+        else:
+            raise NotImplementedError(
+                "This learning rule is not supported for this Connection type."
+            )
+
+        self.x_tar = float(kwargs.get("x_tar", 0.0))
+        self.mu = float(kwargs.get("mu", 1.0))
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        ``w += eta * ((x_pre - x_tar) outer s_post) * (wmax - w) ** mu`` reduced
+        over the batch.
+        """
+        if not self.nu[1].any():
+            super().update()
+            return
+        batch_size = self.source.batch_size
+        w = self.connection.w
+        source_x = self.source.x.view(batch_size, -1) - self.x_tar
+        target_s = self.target.s.view(batch_size, -1).float()
+        if self.reduction in (torch.squeeze, torch.sum):
+            outer = source_x.t() @ target_s
+        else:
+            outer = self.reduction(
+                torch.bmm(source_x.unsqueeze(2), target_s.unsqueeze(1)), dim=0
+            )
+        factor = self.connection.wmax - w
+        if self.mu != 1.0:
+            factor = factor.clamp(min=0.0) ** self.mu
+        update = self.nu[1] * outer * factor
+        if w.is_sparse:
+            update = update.to_sparse()
+        self.connection.w += update
+        super().update()
+
+
 class MSTDP(LearningRule):
     # language=rst
     """

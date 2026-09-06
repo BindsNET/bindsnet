@@ -31,6 +31,17 @@ Sources
   ``Hebbian`` is the same trace machinery with both terms positive (BindsNET's
   own definition; no paper equation).
 
+* Diehl & Cook STDP (``DiehlAndCook``): Diehl & Cook (2015), *Front. Comput.
+  Neurosci.* 9:99, Sect. 2.3 "Learning": on each post-synaptic spike
+
+  .. math::
+
+     \\Delta w = \\eta\\,(x_\\text{pre} - x_\\text{tar})\\,(w_\\max - w)^\\mu
+
+  with the pre-synaptic trace increased by 1 per spike and decaying
+  exponentially; pre-synaptic spikes do not change the weight. The paper gives
+  no numeric values for :math:`x_\\text{tar}` or :math:`\\mu`.
+
 * Reward-modulated STDP (``MSTDP``, ``MSTDPET``): Florian (2007), *Neural
   Comput.* 19:1468-1502, discrete-time eqs. (3.9)-(3.12) and (2.7)-(2.8). Those
   rules are validated in ``test_mstdp_florian.py``; this file only records the
@@ -71,8 +82,15 @@ import math
 import pytest
 import torch
 
-from bindsnet.learning import Hebbian, PostPre, Rmax, WeightDependentPostPre
+from bindsnet.learning import (
+    DiehlAndCook,
+    Hebbian,
+    PostPre,
+    Rmax,
+    WeightDependentPostPre,
+)
 from bindsnet.learning import MCC_learning
+from bindsnet.models import DiehlAndCook2015
 from bindsnet.network import Network
 from bindsnet.network.nodes import Input, LIFNodes, SRM0Nodes
 from bindsnet.network.topology import Connection, MulticompartmentConnection
@@ -302,22 +320,30 @@ class TestPairSTDPMorrison2008:
 
 
 class TestMulticompartmentRulesMatchClassic:
-    """The ``MCC_learning`` PostPre / Hebbian must apply the same equations as the
-    classic rules (at ``dt = 1``, where the MCC rule's extra ``dt`` factor is 1)."""
+    """The ``MCC_learning`` PostPre / Hebbian / DiehlAndCook must apply the same
+    equations as the classic rules at any ``dt`` (the MCC PostPre used to scale
+    its update by ``dt``; per-spike increments must not depend on the step)."""
 
+    @pytest.mark.parametrize("dt", [1.0, 0.5])
     @pytest.mark.parametrize(
-        "rule_pair", [(PostPre, MCC_learning.PostPre), (Hebbian, MCC_learning.Hebbian)]
+        "rule_pair",
+        [
+            (PostPre, MCC_learning.PostPre),
+            (Hebbian, MCC_learning.Hebbian),
+            (DiehlAndCook, MCC_learning.DiehlAndCook),
+        ],
     )
-    def test_same_weights_step_by_step(self, rule_pair):
+    def test_same_weights_step_by_step(self, rule_pair, dt):
         classic, mcc = rule_pair
+        rule_kw = {"x_tar": 0.3, "mu": 1.0} if classic is DiehlAndCook else {}
         torch.manual_seed(0)
         w0 = 0.5 * torch.rand(12, 6)
         torch.manual_seed(1)
         pre = torch.bernoulli(0.5 * torch.ones(40, 12)).byte()
 
         def build(use_mcc):
-            net = Network(dt=1.0)
-            net.add_layer(Input(n=12, traces=True), "in")
+            net = Network(dt=dt)
+            net.add_layer(Input(n=12, traces=True, traces_additive=True), "in")
             net.add_layer(LIFNodes(n=6, traces=True, thresh=-60.0), "out")
             if use_mcc:
                 conn = MulticompartmentConnection(
@@ -331,6 +357,7 @@ class TestMulticompartmentRulesMatchClassic:
                             range=[0.0, 1.0],
                             nu=(1e-2, 3e-2),
                             learning_rule=mcc,
+                            **rule_kw,
                         )
                     ],
                 )
@@ -343,6 +370,7 @@ class TestMulticompartmentRulesMatchClassic:
                     update_rule=classic,
                     wmin=0.0,
                     wmax=1.0,
+                    **rule_kw,
                 )
             net.add_connection(conn, "in", "out")
             return net, conn
@@ -350,10 +378,38 @@ class TestMulticompartmentRulesMatchClassic:
         net_a, conn_a = build(False)
         net_b, conn_b = build(True)
         for t in range(40):
-            net_a.run(inputs={"in": pre[t : t + 1]}, time=1)
-            net_b.run(inputs={"in": pre[t : t + 1]}, time=1)
+            net_a.run(inputs={"in": pre[t : t + 1]}, time=dt)
+            net_b.run(inputs={"in": pre[t : t + 1]}, time=dt)
             wa, wb = conn_a.w, conn_b.pipeline[0].value
             assert (wa - wb).abs().max().item() < TOL, t
+        assert (conn_a.w - w0).abs().max().item() > 1e-3, "vacuous: no learning"
+
+    def test_mcc_postpre_update_independent_of_dt(self):
+        # One post spike with a pre trace of 1 must add exactly nu_post,
+        # whatever the simulation step.
+        for dt in (1.0, 0.5, 0.1):
+            net = Network(dt=dt)
+            net.add_layer(Input(n=1, traces=True), "in")
+            net.add_layer(LIFNodes(n=1, traces=True), "out")
+            conn = MulticompartmentConnection(
+                net.layers["in"],
+                net.layers["out"],
+                device="cpu",
+                pipeline=[
+                    Weight(
+                        "w",
+                        torch.full((1, 1), 0.5),
+                        range=[0.0, 1.0],
+                        nu=(0.0, 0.1),
+                        learning_rule=MCC_learning.PostPre,
+                    )
+                ],
+            )
+            net.add_connection(conn, "in", "out")
+            net.layers["in"].x.fill_(1.0)
+            net.layers["out"].s.fill_(True)
+            conn.update(learning=True)
+            assert conn.pipeline[0].value.item() == pytest.approx(0.6), dt
 
 
 class TestRmaxVasilaki2009:
@@ -490,3 +546,141 @@ class TestClampEntersTraces:
         s = net.layers["out"].s.view(-1)
         assert s[0] and s[1] and not s[2]
         assert torch.equal(net.layers["out"].x.view(-1), s.float())
+
+
+class TestDiehlAndCook2015Rule:
+    """``DiehlAndCook`` against Diehl & Cook (2015) Sect. 2.3."""
+
+    @staticmethod
+    def _reference(pre, post, w0, eta, x_tar, mu, wmax, dt, tc, additive):
+        w = w0.clone()
+        x = torch.zeros(pre.shape[1])
+        decay = math.exp(-dt / tc)
+        hist = []
+        for t in range(pre.shape[0]):
+            x = _trace_step(x, pre[t], decay, additive)
+            # Post-synaptic spikes only: Delta w = eta (x_pre - x_tar) (w_max - w)^mu.
+            dw = eta * torch.outer(x - x_tar, post[t]) * (wmax - w).clamp(min=0) ** mu
+            w = (w + dw).clamp(0.0, wmax)
+            hist.append(w.clone())
+        return torch.stack(hist)
+
+    @pytest.mark.parametrize("x_tar", [0.0, 0.3])
+    @pytest.mark.parametrize("mu", [1.0, 0.5])
+    @pytest.mark.parametrize("additive", [True, False])
+    def test_matches_paper_rule(self, x_tar, mu, additive):
+        dt, tc, wmax, eta = 1.0, 20.0, 1.0, 2e-2
+        torch.manual_seed(0)
+        net = Network(dt=dt)
+        net.add_layer(
+            Input(n=12, traces=True, traces_additive=additive, tc_trace=tc), "in"
+        )
+        net.add_layer(LIFNodes(n=6, traces=True, thresh=-60.0), "out")
+        w0 = 0.5 * torch.rand(12, 6)
+        conn = Connection(
+            net.layers["in"],
+            net.layers["out"],
+            w=w0.clone(),
+            nu=(0.0, eta),
+            update_rule=DiehlAndCook,
+            wmin=0.0,
+            wmax=wmax,
+            x_tar=x_tar,
+            mu=mu,
+        )
+        net.add_connection(conn, "in", "out")
+        torch.manual_seed(1)
+        pre = torch.bernoulli(0.5 * torch.ones(40, 12))
+        w_hist, post_hist = [], []
+        for t in range(40):
+            net.run(inputs={"in": pre[t : t + 1].byte()}, time=dt)
+            post_hist.append(net.layers["out"].s.view(-1).float().clone())
+            w_hist.append(conn.w.detach().clone())
+        post = torch.stack(post_hist)
+        assert post.sum() > 0
+        w_ref = self._reference(pre, post, w0, eta, x_tar, mu, wmax, dt, tc, additive)
+        assert (torch.stack(w_hist) - w_ref).abs().max().item() < TOL
+
+    def test_pre_spike_alone_does_not_change_weight(self):
+        net = Network(dt=1.0)
+        net.add_layer(Input(n=1, traces=True, traces_additive=True), "in")
+        net.add_layer(LIFNodes(n=1, traces=True), "out")
+        conn = Connection(
+            net.layers["in"],
+            net.layers["out"],
+            w=torch.full((1, 1), 0.5),
+            nu=1.0,
+            update_rule=DiehlAndCook,
+            wmin=0.0,
+            wmax=1.0,
+            x_tar=0.5,
+        )
+        net.add_connection(conn, "in", "out")
+        net.layers["out"].x.fill_(0.3)
+        pre = torch.zeros(3, 1, 1)
+        pre[1, 0, 0] = 1
+        net.run(inputs={"in": pre.byte()}, time=3)
+        assert conn.w.item() == 0.5
+
+    def test_x_tar_depresses_silent_inputs(self):
+        # A post spike with no recent pre spike depresses by eta * x_tar * (wmax - w).
+        net = Network(dt=1.0)
+        net.add_layer(Input(n=1, traces=True, traces_additive=True), "in")
+        net.add_layer(LIFNodes(n=1, traces=True), "out")
+        conn = Connection(
+            net.layers["in"],
+            net.layers["out"],
+            w=torch.full((1, 1), 0.5),
+            nu=0.1,
+            update_rule=DiehlAndCook,
+            wmin=0.0,
+            wmax=1.0,
+            x_tar=0.4,
+            mu=1.0,
+        )
+        net.add_connection(conn, "in", "out")
+        net.run(
+            inputs={"in": torch.zeros(1, 1, 1).byte()},
+            time=1,
+            clamp={"out": torch.tensor([True])},
+        )
+        assert conn.w.item() == pytest.approx(0.5 - 0.1 * 0.4 * 0.5)
+
+    def test_requires_finite_wmax(self):
+        net = Network(dt=1.0)
+        net.add_layer(Input(n=2, traces=True), "in")
+        net.add_layer(LIFNodes(n=2, traces=True), "out")
+        with pytest.raises(AssertionError):
+            Connection(
+                net.layers["in"], net.layers["out"], nu=0.1, update_rule=DiehlAndCook
+            )
+
+    def test_model_opt_in(self):
+        torch.manual_seed(0)
+        net = DiehlAndCook2015(
+            n_inpt=16,
+            n_neurons=4,
+            inpt_shape=(1, 4, 4),
+            learning_rule=MCC_learning.DiehlAndCook,
+            learning_rule_kwargs={"x_tar": 0.2, "mu": 1.0},
+        )
+        rule = net.connections[("X", "Ae")].pipeline[0].learning_rule
+        assert isinstance(rule, MCC_learning.DiehlAndCook)
+        assert rule.x_tar == 0.2 and rule.mu == 1.0
+        assert net.layers["X"].traces_additive  # the paper's accumulating trace
+        w0 = net.connections[("X", "Ae")].pipeline[0].value.clone()
+        net.run(
+            inputs={"X": torch.bernoulli(0.5 * torch.ones(30, 1, 1, 4, 4)).byte()},
+            time=30,
+        )
+        w = net.connections[("X", "Ae")].pipeline[0].value
+        # (The model re-normalises each neuron's incoming weights to ``norm``
+        # after a run, so only the sign and the change are checked here.)
+        assert (w >= 0).all() and torch.isfinite(w).all() and not torch.equal(w, w0)
+        # Default is unchanged: pair STDP with saturating traces.
+        default = DiehlAndCook2015(n_inpt=16, n_neurons=4, inpt_shape=(1, 4, 4))
+        assert isinstance(
+            default.connections[("X", "Ae")].pipeline[0].learning_rule,
+            MCC_learning.PostPre,
+        )
+        assert not default.layers["X"].traces_additive

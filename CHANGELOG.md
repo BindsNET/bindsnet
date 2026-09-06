@@ -14,7 +14,22 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 - `CHANGELOG.md`.
 - `examples/breakout/README.md` documenting the `trained_shallow_ANN.pt` provenance.
 
+### Added
+- `bindsnet.learning.DiehlAndCook` and `bindsnet.learning.MCC_learning.DiehlAndCook`:
+  the post-spike-only STDP of Diehl & Cook (2015), Sect. 2.3,
+  `dw = eta (x_pre - x_tar)(w_max - w)^mu` (keyword arguments `x_tar`, `mu`).
+  `DiehlAndCook2015(learning_rule=..., learning_rule_kwargs=...)` selects it; the
+  model's default stays `PostPre` so published results are unchanged.
+- Multicompartment `Weight` features forward extra keyword arguments to their
+  learning rule.
+- `bindsnet/learning/README.md`: rules, source papers, equation numbers, tests and
+  pitfalls (moved from the top-level README).
+
 ### Changed
+- `MCC_learning.PostPre` no longer multiplies its update by the simulation step
+  `dt`; like the classic `PostPre` and Morrison et al. (2008) eqs. 13-14 it is a
+  per-spike increment. Identical at `dt = 1`; at other steps the effective learning
+  rate is now `nu` instead of `nu * dt`.
 - README Python requirement aligned to `>=3.11,<3.14`; added a reproducible-install note.
 - `pyproject.toml` version bumped to 0.3.4 to match the released tag.
 - Performance pass on the per-timestep hot paths (numerics unchanged; every item

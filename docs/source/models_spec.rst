@@ -203,6 +203,26 @@ weight from its bounds (``wmin``/``wmax``), yielding soft saturation at the limi
 Morrison et al. (2008) eqs. (13)-(14) with :math:`F_+ = \nu_\text{post}(w_\max - w)` and
 :math:`F_- = \nu_\text{pre}(w - w_\min)` (the multiplicative / soft-bound rule).
 
+Diehl & Cook STDP (``DiehlAndCook``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The post-spike-only rule of Diehl & Cook (2015), *Front. Comput. Neurosci.* 9:99,
+Sect. 2.3 "Learning": on every post-synaptic spike
+
+.. math::
+
+   \\Delta w = \\eta\\,(x_\\text{pre} - x_\\text{tar})\\,(w_\\max - w)^\\mu
+
+where the pre-synaptic trace :math:`x_\\text{pre}` is increased by 1 on each
+pre-synaptic spike and decays exponentially (``traces_additive=True``),
+:math:`x_\\text{tar}` is the target trace value ("the higher the target value, the lower
+the synaptic weight will be"), :math:`w_\\max` is ``wmax`` and :math:`\\mu` the weight
+dependence. Pre-synaptic spikes do not change the weight. Keyword arguments ``x_tar``
+(default 0) and ``mu`` (default 1); the paper gives no numeric values for them. Only
+the post-synaptic learning rate ``nu[1]`` is used. Available for ``Connection`` /
+``LocalConnection`` and as ``MCC_learning.DiehlAndCook`` for multicompartment
+connections; ``DiehlAndCook2015(learning_rule=MCC_learning.DiehlAndCook, ...)``
+switches the model to it. Validated in ``test/network/test_learning_rule_specs.py``.
+
 Reward-modulated STDP (``MSTDP``, ``MSTDPET``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Three-factor rules: a STDP-like eligibility signal is gated by a scalar **reward**.
@@ -243,13 +263,15 @@ spikes entered the same-step potentiation term but never the trace.)
 
 Known deviations from the papers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-These are documented rather than changed, because changing them alters results:
-
-* ``PostPre`` is not the Diehl & Cook (2015) rule (see the note above), although the
-  ``DiehlAndCook2015`` model uses it and reproduces the published accuracy with it.
-* ``bindsnet.learning.MCC_learning.PostPre`` (the multicompartment version) multiplies
-  each update by the simulation step ``dt``; the classic ``PostPre`` and Morrison et
-  al. (2008) eqs. (13)-(14) do not. The two agree only at ``dt = 1``.
+* ``PostPre`` is not the Diehl & Cook (2015) rule (see the note above). The
+  ``DiehlAndCook2015`` model keeps ``PostPre`` as its default because that is what the
+  published BindsNET replication used; the paper's rule is available as
+  ``DiehlAndCook`` and can be selected with the model's ``learning_rule`` argument.
+* Until September 2026 the multicompartment ``MCC_learning.PostPre`` multiplied each
+  update by the simulation step ``dt`` (the classic ``PostPre`` and Morrison et al.
+  (2008) eqs. (13)-(14) do not). The factor was removed; results at ``dt = 1`` are
+  unchanged, and at other steps the update is now a per-spike increment like the
+  classic rule.
 
 .. note::
 

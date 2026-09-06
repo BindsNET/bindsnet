@@ -7,6 +7,7 @@ from torch.nn.modules.utils import _pair
 from torch import device
 
 from bindsnet.learning import PostPre
+from bindsnet.learning.MCC_learning import DiehlAndCook as MMCDiehlAndCook
 from bindsnet.learning.MCC_learning import PostPre as MMCPostPre
 from bindsnet.network import Network
 from bindsnet.network.nodes import DiehlAndCookNodes, Input, LIFNodes
@@ -119,6 +120,8 @@ class DiehlAndCook2015(Network):
         inpt_shape: Optional[Iterable[int]] = None,
         inh_thresh: float = -40.0,
         exc_thresh: float = -52.0,
+        learning_rule: Optional[type] = None,
+        learning_rule_kwargs: Optional[dict] = None,
     ) -> None:
         # language=rst
         """
@@ -143,6 +146,14 @@ class DiehlAndCook2015(Network):
         :param tc_theta_decay: Time constant of ``DiehlAndCookNodes`` threshold
             potential decay.
         :param inpt_shape: The dimensionality of the input layer.
+        :param learning_rule: ``bindsnet.learning.MCC_learning`` rule for the input to
+            excitatory weights. Default ``PostPre`` (pair-based STDP, the rule the
+            published BindsNET replication used). Pass
+            ``bindsnet.learning.MCC_learning.DiehlAndCook`` for the paper's own
+            post-spike-only rule; that also switches the input traces to the paper's
+            accumulating form (``traces_additive=True``).
+        :param learning_rule_kwargs: Extra options for the rule, e.g.
+            ``{"x_tar": 0.4, "mu": 1.0}`` for ``DiehlAndCook``.
         """
         super().__init__(dt=dt)
 
@@ -153,9 +164,18 @@ class DiehlAndCook2015(Network):
         self.inh = inh
         self.dt = dt
 
+        if learning_rule is None:
+            learning_rule = MMCPostPre
+        learning_rule_kwargs = dict(learning_rule_kwargs or {})
+        paper_rule = learning_rule is MMCDiehlAndCook
+
         # Layers
         input_layer = Input(
-            n=self.n_inpt, shape=self.inpt_shape, traces=True, tc_trace=20.0
+            n=self.n_inpt,
+            shape=self.inpt_shape,
+            traces=True,
+            traces_additive=paper_rule,
+            tc_trace=20.0,
         )
         exc_layer = DiehlAndCookNodes(
             n=self.n_neurons,
@@ -195,9 +215,10 @@ class DiehlAndCook2015(Network):
                     norm=norm,
                     reduction=reduction,
                     nu=nu,
-                    learning_rule=MMCPostPre,
+                    learning_rule=learning_rule,
                     sparse=sparse,
                     batch_size=batch_size,
+                    **learning_rule_kwargs,
                 )
             ],
         )

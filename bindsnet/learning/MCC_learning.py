@@ -30,6 +30,18 @@ def _dense_outer_update_ok(rule, w: torch.Tensor) -> bool:
     )
 
 
+def _batch_outer(a: torch.Tensor, b: torch.Tensor, reduction) -> torch.Tensor:
+    # language=rst
+    """
+    ``reduction(bmm(a[:, :, None], b[:, None, :]), dim=0)``: the batch of outer
+    products of ``a`` (``[batch, n]``) and ``b`` (``[batch, m]``) reduced over the
+    batch. For the two default reductions this is the single matmul ``a^T b``.
+    """
+    if reduction in (torch.squeeze, torch.sum):
+        return a.t() @ b
+    return reduction(torch.bmm(a.unsqueeze(2), b.unsqueeze(1)), dim=0)
+
+
 class MCC_LearningRule(ABC):
     # language=rst
     """
@@ -168,7 +180,9 @@ class PostPre(MCC_LearningRule):
     # language=rst
     """
     Simple STDP rule involving both pre- and post-synaptic spiking activity. By default,
-    pre-synaptic update is negative and the post-synaptic update is positive.
+    pre-synaptic update is negative and the post-synaptic update is positive. Same
+    equations as ``bindsnet.learning.PostPre`` (Morrison et al. 2008, eqs. 13-14): the
+    update is a per-spike increment and does not depend on the simulation step ``dt``.
     """
 
     def __init__(
@@ -250,20 +264,19 @@ class PostPre(MCC_LearningRule):
 
         if self.average_update == 0 and _dense_outer_update_ok(self, w):
             # Fused path: ``w += alpha * s^T @ x`` folds the outer product, the
-            # batch reduction, the ``dt`` scaling and the in-place update into
-            # one ``addmm_`` call, so no ``[batch, source.n, target.n]``
-            # temporary is allocated. The learning rate is applied to the
-            # ``[batch, n]`` factor first (as in the un-fused formula) and spikes
-            # are exactly 0/1, so for batch size 1 the result is bit-identical.
-            dt = float(self.connection.dt)
+            # batch reduction and the in-place update into one ``addmm_`` call,
+            # so no ``[batch, source.n, target.n]`` temporary is allocated. The
+            # learning rate is applied to the ``[batch, n]`` factor first (as in
+            # the un-fused formula) and spikes are exactly 0/1, so for batch
+            # size 1 the result is bit-identical.
             if self.nu[0]:
                 source_s = self.source.s.view(batch_size, -1).float()
                 target_x = self.target.x.view(batch_size, -1) * self.nu[0]
-                w.addmm_(source_s.t(), target_x, alpha=-dt)
+                w.addmm_(source_s.t(), target_x, alpha=-1.0)
             if self.nu[1]:
                 target_s = self.target.s.view(batch_size, -1).float() * self.nu[1]
                 source_x = self.source.x.view(batch_size, -1)
-                w.addmm_(source_x.t(), target_s, alpha=dt)
+                w.addmm_(source_x.t(), target_s, alpha=1.0)
             super().update()
             return
 
@@ -282,22 +295,15 @@ class PostPre(MCC_LearningRule):
                 ) % self.average_update
 
                 if self.continues_update:
-                    self.feature_value -= (
-                        torch.mean(self.average_buffer_pre, dim=0) * self.connection.dt
-                    )
+                    self.feature_value -= torch.mean(self.average_buffer_pre, dim=0)
                 elif self.average_buffer_index_pre == 0:
-                    self.feature_value -= (
-                        torch.mean(self.average_buffer_pre, dim=0) * self.connection.dt
-                    )
+                    self.feature_value -= torch.mean(self.average_buffer_pre, dim=0)
             else:
                 if self.feature_value.is_sparse:
-                    self.feature_value -= (
-                        torch.bmm(source_s, target_x) * self.connection.dt
-                    ).to_sparse()
+                    self.feature_value -= (torch.bmm(source_s, target_x)).to_sparse()
                 else:
-                    self.feature_value -= (
-                        self.reduction(torch.bmm(source_s, target_x), dim=0)
-                        * self.connection.dt
+                    self.feature_value -= self.reduction(
+                        torch.bmm(source_s, target_x), dim=0
                     )
             del source_s, target_x
 
@@ -318,22 +324,15 @@ class PostPre(MCC_LearningRule):
                 ) % self.average_update
 
                 if self.continues_update:
-                    self.feature_value += (
-                        torch.mean(self.average_buffer_post, dim=0) * self.connection.dt
-                    )
+                    self.feature_value += torch.mean(self.average_buffer_post, dim=0)
                 elif self.average_buffer_index_post == 0:
-                    self.feature_value += (
-                        torch.mean(self.average_buffer_post, dim=0) * self.connection.dt
-                    )
+                    self.feature_value += torch.mean(self.average_buffer_post, dim=0)
             else:
                 if self.feature_value.is_sparse:
-                    self.feature_value += (
-                        torch.bmm(source_x, target_s) * self.connection.dt
-                    ).to_sparse()
+                    self.feature_value += (torch.bmm(source_x, target_s)).to_sparse()
                 else:
-                    self.feature_value += (
-                        self.reduction(torch.bmm(source_x, target_s), dim=0)
-                        * self.connection.dt
+                    self.feature_value += self.reduction(
+                        torch.bmm(source_x, target_s), dim=0
                     )
             del source_x, target_s
 
@@ -433,6 +432,105 @@ class Hebbian(MCC_LearningRule):
         if self.enforce_polarity:
             self.feature_value = self.feature_value * self.polarities
 
+        super().update()
+
+    def reset_state_variables(self):
+        return
+
+
+class DiehlAndCook(MCC_LearningRule):
+    # language=rst
+    """
+    Post-synaptic-spike-only STDP of `Diehl & Cook (2015)
+    <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_, Sect. 2.3:
+
+    .. math::
+
+        \\Delta w = \\eta\\,(x_\\text{pre} - x_\\text{tar})\\,(w_\\max - w)^\\mu
+
+    applied on every post-synaptic spike, with :math:`x_\\text{pre}` the source
+    spike trace (the paper's trace adds 1 per spike: use ``traces_additive=True``),
+    :math:`x_\\text{tar}` the target trace value, :math:`w_\\max` the upper end of
+    ``range``, and :math:`\\mu` the weight-dependence exponent. Pre-synaptic spikes do
+    not change the weight. Multicompartment twin of
+    ``bindsnet.learning.DiehlAndCook``.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractMulticompartmentConnection,
+        feature_value: Union[torch.Tensor, float, int],
+        range: Optional[Sequence[float]] = None,
+        nu: Optional[Union[float, Sequence[float]]] = None,
+        reduction: Optional[callable] = None,
+        decay: float = 0.0,
+        **kwargs,
+    ) -> None:
+        # language=rst
+        """
+        Constructor for the ``DiehlAndCook`` learning rule.
+
+        :param connection: A ``MulticompartmentConnection`` whose weight feature the
+            rule will modify.
+        :param feature_value: The weight tensor.
+        :param range: ``[w_min, w_max]``; ``w_max`` must be finite.
+        :param nu: Learning rate :math:`\\eta`. A pair is accepted for API symmetry;
+            only the second (post-synaptic) entry is used.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param decay: Coefficient controlling rate of decay of the weights each iteration.
+
+        Keyword arguments:
+
+        :param float x_tar: Target pre-synaptic trace :math:`x_\\text{tar}` (default 0).
+        :param float mu: Weight-dependence exponent :math:`\\mu` (default 1).
+        """
+        super().__init__(
+            connection=connection,
+            feature_value=feature_value,
+            range=[0.0, 1.0] if range is None else range,
+            nu=nu,
+            reduction=reduction,
+            decay=decay,
+            **kwargs,
+        )
+
+        assert self.source.traces, "Pre-synaptic nodes must record spike traces."
+        assert self.max is not None and np.isfinite(
+            self.max
+        ), "DiehlAndCook needs a finite upper weight bound (range[1] = w_max)."
+
+        if isinstance(connection, MulticompartmentConnection):
+            self.update = self._connection_update
+        else:
+            raise NotImplementedError(
+                "This learning rule is not supported for this Connection type."
+            )
+
+        self.x_tar = float(kwargs.get("x_tar", 0.0))
+        self.mu = float(kwargs.get("mu", 1.0))
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        ``w += eta * ((x_pre - x_tar) outer s_post) * (w_max - w) ** mu`` reduced
+        over the batch.
+        """
+        if not self.nu[1]:
+            super().update()
+            return
+        batch_size = self.source.batch_size
+        w = self.feature_value
+        source_x = self.source.x.view(batch_size, -1) - self.x_tar
+        target_s = self.target.s.view(batch_size, -1).float()
+        outer = _batch_outer(source_x, target_s, self.reduction)
+        factor = self.max - w
+        if self.mu != 1.0:
+            factor = factor.clamp(min=0.0) ** self.mu
+        if w.is_sparse:
+            w += (self.nu[1] * outer * factor.to_dense()).to_sparse()
+        else:
+            w += self.nu[1] * outer * factor
         super().update()
 
     def reset_state_variables(self):

@@ -205,9 +205,9 @@ class TestFusedOuterProductRules:
         rule = conn.pipeline[0].learning_rule
         w0 = conn.pipeline[0].value.detach().clone()
         pre, post = _reference_outer(conn.source, conn.target, 1, rule.reduction)
-        expected = (w0 - pre * rule.nu[0] * dt + post * rule.nu[1] * dt).clamp_(
-            0.0, 1.0
-        )
+        # Per-spike increments: no dependence on dt (Morrison et al. 2008
+        # eqs. 13-14; the former ``* dt`` factor was removed).
+        expected = (w0 - pre * rule.nu[0] + post * rule.nu[1]).clamp_(0.0, 1.0)
 
         conn.update(learning=True)
         assert torch.equal(conn.pipeline[0].value, expected)

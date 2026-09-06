@@ -34,6 +34,7 @@ Read these before touching any rule:
 | Rule | Paper and equations | Test |
 |---|---|---|
 | `PostPre`, `WeightDependentPostPre`, `Hebbian` | Morrison, Diesmann & Gerstner 2008, *Biol. Cybern.* 98:459, eqs. 11-14 (traces Sect. 2.3) | `test/network/test_learning_rule_specs.py` |
+| `DiehlAndCook` (classic and MCC) | Diehl & Cook 2015, *Front. Comput. Neurosci.* 9:99, Sect. 2.3: post-spike-only, dw = eta (x_pre - x_tar)(w_max - w)^mu | `test/network/test_learning_rule_specs.py` |
 | `MSTDP`, `MSTDPET` | Florian 2007, *Neural Comput.* 19:1468, eqs. 3.9-3.12, 2.7-2.8 | `test/network/test_mstdp_florian.py` |
 | `Rmax` | Vasilaki et al. 2009, *PLoS Comput. Biol.* 5:e1000586, eqs. 7, 8, 13 | `test/network/test_learning_rule_specs.py` |
 
@@ -44,9 +45,14 @@ Facts that were wrong in docstrings once and are now fixed (do not reintroduce):
 - `Rmax` `tc_c = 0` is strict policy gradient; `inf` is naive Hebbian.
 - `clamp` spikes enter the trace (applied in `Nodes.forward` before the trace update).
 
-Known, deliberately unchanged deviations (numerics would change; ask first):
-- `MCC_learning.PostPre` multiplies updates by `dt`; classic `PostPre` does not.
-- `PostPre` is not Diehl & Cook 2015's rule (no `x_tar`, has pre-spike depression).
+- Pair STDP rules carry no `dt` factor (the MCC `PostPre` used to; removed
+  2026-09-06). `MSTDPET` keeps the paper's `dt` (Florian eq. 2.7).
+- `PostPre` is not Diehl & Cook 2015's rule; the paper's rule is `DiehlAndCook`.
+  `DiehlAndCook2015` keeps `PostPre` as default (published replication); opt in
+  with `learning_rule=MCC_learning.DiehlAndCook`.
+
+User-facing summary of all this: `bindsnet/learning/README.md` (keep it in sync
+with `docs/source/models_spec.rst`).
 
 ## Performance changes: the rule
 
