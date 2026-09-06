@@ -40,6 +40,17 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
     round-trip per assignment per step.
   - `rank_order` encoding is vectorised.
 - Benchmark script for the above: `examples/benchmark/hot_path_bench.py`.
+- Learning rules validated against their source papers, with the equations cited in
+  `docs/source/models_spec.rst` and pinned by `test/network/test_learning_rule_specs.py`:
+  `PostPre` / `WeightDependentPostPre` / `Hebbian` against Morrison, Diesmann &
+  Gerstner (2008) eqs. (11)-(14); `MSTDP` / `MSTDPET` against Florian (2007)
+  eqs. (3.9)-(3.12) and (2.7)-(2.8) (equation numbers added to
+  `test_mstdp_florian.py`); `Rmax` against Vasilaki et al. (2009) eqs. (7), (8), (13).
+  The `MCC_learning` `PostPre` / `Hebbian` are checked to match the classic rules.
+- Docstrings corrected: `Rmax` `tc_c` limits were stated backwards (`0` is the strict
+  policy-gradient rule, `inf` the naive Hebbian rule, Vasilaki et al. eq. 8); the
+  `MSTDP` / `MSTDPET` `zero_lag` comments called the un-lagged variant "exact Florian",
+  whereas the default one-step lag is Florian's discrete-time eq. (3.9).
 
 ### Fixed
 - `network.to(device)` crashed on any `MulticompartmentConnection` (used by

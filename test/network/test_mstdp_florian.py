@@ -11,13 +11,18 @@ behaviour of the ``Connection``, ``LocalConnection`` and ``Conv`` paths for
 both rules against a from-scratch Florian reference (point eligibility, weight
 update, batch handling, STDP sign, and the ``zero_lag`` timing option).
 
-Reference (i = presynaptic/source, j = postsynaptic/target):
-    P+_i(t) = P+_i(t-dt) * exp(-dt/tc_plus)  + a_plus  * pre_i(t)
-    P-_j(t) = P-_j(t-dt) * exp(-dt/tc_minus) + a_minus * post_j(t)
-    zeta_ij(t) = P+_i(t) * post_j(t) + pre_i(t) * P-_j(t)
-    MSTDP:   dw_ij(t) = nu * r(t) * zeta_ij(t)
-    MSTDPET: e_ij(t)  = e_ij(t-dt)*exp(-dt/tc_e) + zeta_ij(t-dt)/tc_e
-             dw_ij(t) = nu * dt * r(t) * e_ij(t)
+Reference (i = presynaptic/source, j = postsynaptic/target), Florian (2007)
+discrete-time equations; the paper's eq. numbers are given on the right:
+    P+_i(t) = P+_i(t-dt) * exp(-dt/tc_plus)  + a_plus  * pre_i(t)    (3.11)
+    P-_j(t) = P-_j(t-dt) * exp(-dt/tc_minus) + a_minus * post_j(t)   (3.12)
+    zeta_ij(t) = P+_i(t) * post_j(t) + pre_i(t) * P-_j(t)            (3.10)
+    MSTDP:   w_ij(t+dt) = w_ij(t) + nu * r(t+dt) * zeta_ij(t)         (3.9)
+    MSTDPET: e_ij(t+dt) = e_ij(t)*exp(-dt/tc_e) + zeta_ij(t)/tc_e     (2.8)
+             w_ij(t+dt) = w_ij(t) + nu * dt * r(t+dt) * e_ij(t+dt)    (2.7)
+i.e. the reward passed at a simulation step multiplies the eligibility built
+from the previous step's spikes (``lag=True`` below, the library default).
+Defaults tc_plus = tc_minus = 20 ms, tc_e = 25 ms, a_plus = 1, a_minus = -1
+are the paper's Sect. 4.1 values.
 """
 
 import itertools

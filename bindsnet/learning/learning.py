@@ -1584,10 +1584,13 @@ class MSTDP(LearningRule):
 
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
-        # If True, the reward at step t modulates the eligibility that already
-        # includes the spikes at step t (exact Florian 2007 timing). If False
-        # (default, backward-compatible) the eligibility is applied with a
-        # one-timestep lag. Currently honoured by the ``Connection`` path.
+        # Timing of reward vs. eligibility. Default (False) is Florian (2007)
+        # eq. 3.9, w(t+dt) = w(t) + gamma r(t+dt) zeta(t): the reward supplied
+        # at a step multiplies the eligibility built from the previous step's
+        # spikes. ``zero_lag=True`` instead multiplies the reward by the
+        # eligibility that already includes this step's spikes (a direct
+        # discretisation of the continuous-time eq. 3.4). Currently honoured by
+        # the ``Connection`` path.
         self.zero_lag = kwargs.get("zero_lag", False)
 
     def _connection_update(self, **kwargs) -> None:
@@ -1657,7 +1660,8 @@ class MSTDP(LearningRule):
             ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
 
         # With zero_lag, fold in the current spikes before applying the update,
-        # so reward(t) multiplies eligibility(t) exactly as in Florian 2007.
+        # so reward(t) multiplies eligibility(t) (un-lagged variant; the default
+        # below is Florian 2007 eq. 3.9).
         if self.zero_lag:
             _update_traces_and_eligibility()
 
@@ -1667,8 +1671,8 @@ class MSTDP(LearningRule):
             update = update.to_sparse()
         self.connection.w += self.nu[0] * update
 
-        # Default (backward-compatible): the eligibility computed here is applied
-        # on the next timestep (one-step lag).
+        # Default: the eligibility computed here is applied on the next
+        # timestep, as in Florian (2007) eq. 3.9 / eqs. 2.7-2.8.
         if not self.zero_lag:
             _update_traces_and_eligibility()
 
@@ -2081,10 +2085,13 @@ class MSTDPET(LearningRule):
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
         self.tc_e_trace = torch.tensor(kwargs.get("tc_e_trace", 25.0))
-        # If True, the current spikes are folded into the eligibility before the
-        # eligibility trace is integrated (exact Florian 2007 timing). If False
-        # (default, backward-compatible) a one-timestep lag is kept. Currently
-        # honoured by the ``Connection`` path.
+        # Timing of eligibility vs. trace integration. Default (False) is
+        # Florian (2007) eqs. 2.7-2.8, z(t+dt) = beta z(t) + zeta(t)/tau_z and
+        # w(t+dt) = w(t) + gamma dt r(t+dt) z(t+dt): the trace integrated at a
+        # step uses the eligibility built from the previous step's spikes.
+        # ``zero_lag=True`` folds this step's spikes into the eligibility
+        # before integrating (continuous-time eqs. 3.1-3.2 discretised without
+        # the lag). Currently honoured by the ``Connection`` path.
         self.zero_lag = kwargs.get("zero_lag", False)
 
     def _connection_update(self, **kwargs) -> None:
@@ -2139,7 +2146,7 @@ class MSTDPET(LearningRule):
             ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
 
         # With zero_lag, fold in the current spikes before integrating the
-        # eligibility trace (exact Florian 2007 timing).
+        # eligibility trace (un-lagged variant; the default is eqs. 2.7-2.8).
         if self.zero_lag:
             _update_traces_and_eligibility()
 
@@ -2156,8 +2163,8 @@ class MSTDPET(LearningRule):
             update = update.to_sparse()
         self.connection.w += update
 
-        # Default (backward-compatible): the eligibility computed here is applied
-        # on the next timestep (one-step lag).
+        # Default: the eligibility computed here is applied on the next
+        # timestep, as in Florian (2007) eq. 3.9 / eqs. 2.7-2.8.
         if not self.zero_lag:
             _update_traces_and_eligibility()
 
@@ -2578,8 +2585,9 @@ class Rmax(LearningRule):
 
         Keyword arguments:
 
-        :param float tc_c: Time constant for balancing naive Hebbian and policy gradient
-            learning.
+        :param float tc_c: Time constant :math:`\\tau_c` balancing policy-gradient and
+            naive Hebbian learning (Vasilaki et al. 2009, eq. 8): ``0`` gives the
+            strict policy-gradient rule, ``inf`` the naive Hebbian rule. Default 5.
         :param float tc_e_trace: Time constant for the eligibility trace.
         """
         super().__init__(
@@ -2609,7 +2617,7 @@ class Rmax(LearningRule):
 
         self.tc_c = torch.tensor(
             kwargs.get("tc_c", 5.0)
-        )  # 0 for pure naive Hebbian, inf for pure policy gradient.
+        )  # 0 for strict policy gradient, inf for pure naive Hebbian (eq. 8).
         self.tc_e_trace = torch.tensor(kwargs.get("tc_e_trace", 25.0))
 
     def _connection_update(self, **kwargs) -> None:

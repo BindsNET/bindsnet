@@ -177,6 +177,20 @@ i.e. a pre-synaptic spike **depresses** the synapse in proportion to the post-sy
 trace, and a post-synaptic spike **potentiates** it in proportion to the pre-synaptic
 trace. Convolutional and locally-connected variants apply the same rule patch-wise.
 
+This is the additive pair-based trace STDP of Morrison, Diesmann & Gerstner (2008),
+*Biol. Cybern.* 98:459-478, eqs. (11)-(14), with :math:`F_+ = \nu_\text{post}`,
+:math:`F_- = \nu_\text{pre}`. Traces follow their Sect. 2.3: ``traces_additive=True``
+accumulates 1 per spike; ``traces_additive=False`` resets the trace to 1 on each spike.
+Validated in ``test/network/test_learning_rule_specs.py``.
+
+.. note::
+
+   ``PostPre`` is **not** the rule of Diehl & Cook (2015) even though it is the rule
+   used by the ``DiehlAndCook2015`` model. Diehl & Cook change weights only on
+   post-synaptic spikes, :math:`\Delta w = \eta (x_\text{pre} - x_\text{tar})(w_\max - w)^\mu`,
+   with a target trace :math:`x_\text{tar}`; ``PostPre`` has no target trace and adds a
+   depression term on pre-synaptic spikes instead.
+
 Hebbian (``Hebbian``)
 ~~~~~~~~~~~~~~~~~~~~~~
 Both pre- and post-synaptic events **increase** the weight (no depression term),
@@ -185,7 +199,9 @@ proportional to the opposite layer's trace.
 Weight-dependent post-pre (``WeightDependentPostPre``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``PostPre`` whose potentiation/depression magnitudes are scaled by the distance of the
-weight from its bounds (``wmin``/``wmax``), yielding soft saturation at the limits.
+weight from its bounds (``wmin``/``wmax``), yielding soft saturation at the limits:
+Morrison et al. (2008) eqs. (13)-(14) with :math:`F_+ = \nu_\text{post}(w_\max - w)` and
+:math:`F_- = \nu_\text{pre}(w - w_\min)` (the multiplicative / soft-bound rule).
 
 Reward-modulated STDP (``MSTDP``, ``MSTDPET``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -193,12 +209,27 @@ Three-factor rules: a STDP-like eligibility signal is gated by a scalar **reward
 ``MSTDP`` modulates the immediate pre/post correlation by reward; ``MSTDPET`` adds an
 **eligibility trace** that accumulates the correlation over time (time constant
 ``tc_e_trace``) before reward gating. Reward is supplied via the pipeline / an
-``AbstractReward`` (e.g. ``MovingAvgRPE``). See source for the exact eligibility update.
+``AbstractReward`` (e.g. ``MovingAvgRPE``).
+
+Both follow the discrete-time equations of Florian (2007), *Neural Comput.*
+19:1468-1502: traces (3.11)-(3.12), eligibility (3.10), ``MSTDP`` update (3.9)
+:math:`w(t+\delta t) = w(t) + \gamma\, r(t+\delta t)\, \zeta(t)`, and ``MSTDPET``
+(2.7)-(2.8). The reward passed to ``network.run`` at a step therefore multiplies the
+eligibility of the previous step (``zero_lag=False``, the default). Defaults
+``tc_plus = tc_minus = 20``, ``tc_e_trace = 25``, ``a_plus = 1``, ``a_minus = -1`` are
+the paper's. Validated in ``test/network/test_mstdp_florian.py``.
 
 Rmax (``Rmax``)
 ~~~~~~~~~~~~~~~
-Reward-maximizing rule intended for stochastic (SRM0) neurons; see source for its
-formulation.
+Reward-maximizing rule for stochastic ``SRM0Nodes``: Vasilaki, Fremaux, Urbanczik,
+Senn & Gerstner (2009), *PLoS Comput. Biol.* 5(12):e1000586, eqs. (7)-(8) with the
+escape rate of eq. (13). The eligibility trace decays with ``tc_e_trace`` and, on each
+step, adds :math:`[Y_i - p_i / (1 + (\tau_c/\delta t)\, p_i)]` times the additive
+pre-synaptic trace, where :math:`Y_i` is the post-synaptic spike and
+:math:`p_i = 1 - e^{-\rho_i \delta t}` its spike probability; ``tc_c`` is
+:math:`\tau_c` (``0`` = strict policy gradient, ``inf`` = naive Hebbian). The constant
+:math:`g'/g = 1/\Delta u` of eq. (8) is absorbed into ``nu``. Validated in
+``test/network/test_learning_rule_specs.py``.
 
 .. note::
 
