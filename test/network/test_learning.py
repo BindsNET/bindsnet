@@ -376,6 +376,15 @@ class TestLearningRuleReset:
         assert rule._prev_source_s is None
         assert rule._prev_target_s is None
 
+    @pytest.mark.parametrize("rule", [mcc.MSTDP, mcc.MSTDPET, mcc.PostPre])
+    def test_reset_before_first_run_does_not_raise(self, rule):
+        # Some of this state is built lazily on the first update, because only
+        # then are the batch size and device known. Resetting a network before
+        # running it must still work.
+        network, rule_obj = self._build(rule)
+        network.reset_state_variables()
+        assert rule_obj is not None
+
     def test_postpre_reset_clears_average_buffers(self):
         # PostPre's reset was a bare ``return``; both buffers survived.
         network, rule = self._build(

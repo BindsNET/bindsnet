@@ -471,10 +471,13 @@ class MSTDP(MCC_LearningRule):
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
 
-        # State the update path fills in lazily: the previous step's spikes,
-        # kept by the fast path for its rank-1 update, and the dense path's
-        # eligibility. None means "not built yet", which is also the state
-        # ``reset_state_variables`` restores.
+        # State the update path fills in lazily, because it needs the batch
+        # size and device that only the first update knows: P+/P-, the previous
+        # step's spikes kept by the fast path for its rank-1 update, and the
+        # dense path's eligibility. None means "not built yet", which is also
+        # the state ``reset_state_variables`` restores.
+        self.p_plus = None
+        self.p_minus = None
         self._prev_source_s = None
         self._prev_target_s = None
         self.eligibility = None
@@ -506,14 +509,14 @@ class MSTDP(MCC_LearningRule):
         batch_size = self.source.batch_size
 
         # Initialize eligibility, P^+, and P^-.
-        if not hasattr(self, "p_plus"):
+        if self.p_plus is None:
             self.p_plus = torch.zeros(
                 # batch_size, *self.source.shape, device=self.source.s.device
                 batch_size,
                 self.source.n,
                 device=self.source.s.device,
             )
-        if not hasattr(self, "p_minus"):
+        if self.p_minus is None:
             self.p_minus = torch.zeros(
                 # batch_size, *self.target.shape, device=self.target.s.device
                 batch_size,
@@ -636,10 +639,9 @@ class MSTDP(MCC_LearningRule):
         starts from the same state as a freshly-built rule.
         """
 
-        if self.eligibility is not None:
-            self.eligibility.zero_()
-        self.p_plus.zero_()
-        self.p_minus.zero_()
+        for state in (self.eligibility, self.p_plus, self.p_minus):
+            if state is not None:
+                state.zero_()
         if self.average_update > 0:
             self.average_buffer.zero_()
             self.average_buffer_index = 0
