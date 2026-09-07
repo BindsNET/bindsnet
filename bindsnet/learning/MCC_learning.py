@@ -547,8 +547,12 @@ class DiehlAndCook(MCC_LearningRule):
             w += self.nu[1] * outer * factor
         super().update()
 
-    def reset_state_variables(self):
-        return
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Nothing to reset: the rule holds no state between steps, deriving each
+        update from the source trace, the target spikes and the current weight.
+        """
 
 
 class MSTDP(MCC_LearningRule):
