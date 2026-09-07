@@ -2,12 +2,12 @@
 #sphinx==6.2.1
 #sphinx_rtd_theme==1.2.2
 #readthedocs-sphinx-search==0.1.1
-#imagecodecs == 2023.9.18
+#imagecodecs == 2026.3.6
 #Jinja2 == 3.1.6
 
 sphinx==9.0.4
 sphinx_rtd_theme==3.1.0
 readthedocs-sphinx-search==0.3.2
-imagecodecs == 2023.9.18
+imagecodecs == 2026.3.6
 Jinja2 == 3.1.6
 wheel == 0.48.0
