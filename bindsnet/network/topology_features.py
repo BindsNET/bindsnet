@@ -283,16 +283,6 @@ class AbstractFeature(ABC):
                 abs_sum[abs_sum == 0] = 1.0
                 self.value *= self.norm / abs_sum
 
-    def degrade(self) -> None:
-        # language=rst
-        """
-        Degrade the value of the propagated spikes according to the features value. A lambda function should be passed
-        into the constructor which takes a single argument (which represent the value), and returns a value which will
-        be *subtracted* from the propagated spikes.
-        """
-
-        return self.degrade(self.value)
-
     def link(self, parent_feature) -> None:
         # language=rst
         """
