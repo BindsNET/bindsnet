@@ -169,15 +169,17 @@ class AbstractFeature(ABC):
         else:
             return value
 
-    @abstractmethod
     def reset_state_variables(self) -> None:
         # language=rst
         """
-        Contains resetting logic for the feature.
+        Reset the feature between samples or episodes. Features that hold no
+        state of their own inherit this, which forwards the reset to the
+        feature's learning rule; a feature with its own state overrides it and
+        calls ``super()`` first.
         """
+
         if self.learning_rule:
             self.learning_rule.reset_state_variables()
-        pass
 
     @abstractmethod
     def compute(self, s) -> Union[torch.Tensor, float, int]:
@@ -286,16 +288,6 @@ class AbstractFeature(ABC):
                 abs_sum = self.value.sum(0).unsqueeze(0)
                 abs_sum[abs_sum == 0] = 1.0
                 self.value *= self.norm / abs_sum
-
-    def degrade(self) -> None:
-        # language=rst
-        """
-        Degrade the value of the propagated spikes according to the features value. A lambda function should be passed
-        into the constructor which takes a single argument (which represent the value), and returns a value which will
-        be *subtracted* from the propagated spikes.
-        """
-
-        return self.degrade(self.value)
 
     def link(self, parent_feature) -> None:
         # language=rst
@@ -453,9 +445,6 @@ class Probability(AbstractFeature):
             return self.sparse_bernoulli()
         return torch.bernoulli(self.value)
 
-    def reset_state_variables(self) -> None:
-        pass
-
     def prime_feature(self, connection, device, **kwargs) -> None:
         ## Initialize value ###
         if self.value is None:
@@ -532,9 +521,6 @@ class Mask(AbstractFeature):
     def compute(self, s) -> torch.Tensor:
         return self.value
 
-    def reset_state_variables(self) -> None:
-        pass
-
     def prime_feature(self, connection, device, **kwargs) -> None:
         # Check if feature is already primed
         if self.is_primed:
@@ -583,9 +569,6 @@ class MeanField(AbstractFeature):
         """
         Takes the mean of all outgoing signals, and outputs that mean across every synapse in the connection
         """
-        pass
-
-    def reset_state_variables(self) -> None:
         pass
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
@@ -666,9 +649,6 @@ class Weight(AbstractFeature):
             **kwargs,
         )
 
-    def reset_state_variables(self) -> None:
-        pass
-
     def compute(self, s) -> Union[torch.Tensor, float, int]:
         if self.enforce_polarity:
             pos_mask = ~torch.logical_xor(self.value > 0, self.positive_mask)
@@ -743,9 +723,6 @@ class Bias(AbstractFeature):
     # Bias is additive: folds as ``B <- B + value`` in the connection's pipeline.
     op = "add"
 
-    def reset_state_variables(self) -> None:
-        pass
-
     def compute(self, s) -> Union[torch.Tensor, float, int]:
         # Additive offset added to every synapse (independent of the spikes).
         return self.value
@@ -787,9 +764,6 @@ class Intensity(AbstractFeature):
             sparse=sparse,
             batch_size=batch_size,
         )
-
-    def reset_state_variables(self) -> None:
-        pass
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
         return self.value
@@ -847,9 +821,6 @@ class Degradation(AbstractFeature):
 
     # Degradation is subtractive: folded as ``B <- B - degrade_function(value)``.
     op = "sub"
-
-    def reset_state_variables(self) -> None:
-        pass
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
         # Subtractive offset (via degrade_function) applied to every synapse.
@@ -968,11 +939,11 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
     def reset_state_variables(
         self,
     ):
+        super().reset_state_variables()
         self.spike_buffer = torch.zeros_like(self.spike_buffer)
         self.counter = 0
         self.start_counter = False
         self.value = self.init_value.clone().detach()  # initial mask
-        pass
 
 
 class AdaptationBaseOtherSynaps(AbstractFeature):
@@ -1085,11 +1056,11 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
     def reset_state_variables(
         self,
     ):
+        super().reset_state_variables()
         self.spike_buffer = torch.zeros_like(self.spike_buffer)
         self.counter = 0
         self.start_counter = False
         self.value = self.init_value.clone().detach()  # initial mask
-        pass
 
 
 ### Sub Features ###
