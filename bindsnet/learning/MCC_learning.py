@@ -302,8 +302,18 @@ class PostPre(MCC_LearningRule):
 
         super().update()
 
-    def reset_state_variables(self):
-        return
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Clear the moving-average buffers so a new episode does not average over
+        updates accumulated during the previous one.
+        """
+
+        if self.average_update > 0:
+            self.average_buffer_pre.zero_()
+            self.average_buffer_post.zero_()
+            self.average_buffer_index_pre = 0
+            self.average_buffer_index_post = 0
 
 
 class Hebbian(MCC_LearningRule):
@@ -389,8 +399,12 @@ class Hebbian(MCC_LearningRule):
 
         super().update()
 
-    def reset_state_variables(self):
-        return
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Nothing to reset: the rule holds no state between steps, deriving each
+        update from the layers' current spikes and traces.
+        """
 
 
 class MSTDP(MCC_LearningRule):
@@ -456,6 +470,14 @@ class MSTDP(MCC_LearningRule):
 
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
+
+        # State the update path fills in lazily: the previous step's spikes,
+        # kept by the fast path for its rank-1 update, and the dense path's
+        # eligibility. None means "not built yet", which is also the state
+        # ``reset_state_variables`` restores.
+        self._prev_source_s = None
+        self._prev_target_s = None
+        self.eligibility = None
 
         # Initialize variables for average update and continues update
         self.average_update = kwargs.get("average_update", 0)
@@ -540,7 +562,7 @@ class MSTDP(MCC_LearningRule):
             and not self.feature_value.is_sparse
         )
         if fast:
-            if hasattr(self, "_prev_target_s"):
+            if self._prev_target_s is not None:
                 if isinstance(reward, torch.Tensor):
                     # Keep reward on-device (no host sync for tensor rewards).
                     update = (
@@ -560,7 +582,7 @@ class MSTDP(MCC_LearningRule):
         else:
             # Dense-eligibility path: averaging buffers, custom reductions, or
             # sparse weights.
-            if not hasattr(self, "eligibility"):
+            if self.eligibility is None:
                 self.eligibility = torch.zeros(
                     batch_size,
                     *self.feature_value.shape,
@@ -607,8 +629,25 @@ class MSTDP(MCC_LearningRule):
 
         super().update()
 
-    def reset_state_variables(self):
-        return
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Clear every variable that carries across time steps, so a new episode
+        starts from the same state as a freshly-built rule.
+        """
+
+        if self.eligibility is not None:
+            self.eligibility.zero_()
+        self.p_plus.zero_()
+        self.p_minus.zero_()
+        if self.average_update > 0:
+            self.average_buffer.zero_()
+            self.average_buffer_index = 0
+        # The fast path keeps the previous step's spikes to build the next
+        # rank-1 update. Drop them, or the first step of a new episode pairs
+        # with the last step of the old one.
+        self._prev_source_s = None
+        self._prev_target_s = None
 
 
 class MSTDPET(MCC_LearningRule):
@@ -803,6 +842,16 @@ class MSTDPET(MCC_LearningRule):
         super().update()
 
     def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Clear every variable that carries across time steps, so a new episode
+        starts from the same state as a freshly-built rule.
+        """
+
         self.eligibility.zero_()
         self.eligibility_trace.zero_()
-        return
+        self.p_plus.zero_()
+        self.p_minus.zero_()
+        if self.average_update > 0:
+            self.average_buffer.zero_()
+            self.average_buffer_index = 0
