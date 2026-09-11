@@ -2,6 +2,9 @@ name: Python package
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   build:
 
