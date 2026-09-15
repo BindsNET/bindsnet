@@ -9,18 +9,46 @@ from bindsnet.network.nodes import CSRMNodes, Nodes
 from bindsnet.network.topology import AbstractConnection
 
 
-def load(file_name: str, map_location: str = "cpu", learning: bool = None) -> "Network":
+def load(
+    file_name: str,
+    map_location: str = "cpu",
+    learning: bool = None,
+    weights_only: bool = False,
+) -> "Network":
     # language=rst
     """
     Loads serialized network object from disk.
+
+    .. warning::
+        **Only load network files you created yourself or otherwise trust.**
+
+        Network files are Python pickle files. Loading one runs code that is
+        stored inside it, so a file from an untrusted source (a download, a
+        model-sharing site, shared group storage, a file sent by someone else)
+        can run arbitrary commands on your machine as soon as you call this
+        function. There is no way to inspect a pickle file safely before
+        loading it.
+
+        This is the standard behaviour of :func:`torch.load` and applies to
+        saved models across the PyTorch ecosystem, not just to BindsNET.
+
+        ``weights_only=True`` asks PyTorch to refuse to execute code while
+        loading, but it **cannot** load networks written by
+        :py:meth:`Network.save`, because those store the whole network object
+        rather than a plain tensor state dictionary. It is offered here only
+        for files you know contain plain tensors.
 
     :param file_name: Path to serialized network object on disk.
     :param map_location: One of ``"cpu"`` or ``"cuda"``. Defaults to ``"cpu"``.
     :param learning: Whether to load with learning enabled. Default loads value from
         disk.
+    :param weights_only: Passed through to :func:`torch.load`. Defaults to
+        ``False``, which permits code execution and is required to load files
+        written by :py:meth:`Network.save`. Set to ``True`` to refuse code
+        execution, which only works for files holding plain tensors.
     """
     network = torch.load(
-        open(file_name, "rb"), map_location=map_location, weights_only=False
+        open(file_name, "rb"), map_location=map_location, weights_only=weights_only
     )
     if learning is not None and "learning" in vars(network):
         network.learning = learning
@@ -165,6 +193,12 @@ class Network(torch.nn.Module):
         """
         Serializes the network object to disk.
 
+        .. note::
+            The saved file is a Python pickle file holding the whole network
+            object. Anyone who loads it with :py:func:`bindsnet.network.load`
+            runs whatever code it contains, so treat a network file you share
+            the same way you would treat a script you ask someone to run.
+
         :param file_name: Path to store serialized network object on disk.
 
         **Example:**
@@ -193,7 +227,6 @@ class Network(torch.nn.Module):
             # Save the network to disk.
             network.save(str(Path.home()) + '/network.pt')
         """
-        torch.serialization.add_safe_globals([self])
         torch.save(self, open(file_name, "wb"))
 
     def clone(self) -> "Network":
@@ -206,7 +239,11 @@ class Network(torch.nn.Module):
         virtual_file = tempfile.SpooledTemporaryFile()
         torch.save(self, virtual_file)
         virtual_file.seek(0)
-        return torch.load(virtual_file)
+        # weights_only=False is required: this buffer holds the whole network
+        # object, written by torch.save just above, so it is trusted by
+        # construction. PyTorch 2.6 changed the default to True, which cannot
+        # read it.
+        return torch.load(virtual_file, weights_only=False)
 
     def _get_inputs(self, layers: Iterable = None) -> Dict[str, torch.Tensor]:
         # language=rst

@@ -88,6 +88,12 @@ def data_based_normalization(
     Use a dataset to rescale ANN weights and biases such that that the max ReLU
     activation is less than 1.
 
+    .. warning::
+        When ``ann`` is a path, the file is loaded with :func:`torch.load`
+        using ``weights_only=False``, which runs code stored in the file. Only
+        pass a path to a file you created yourself or otherwise trust. Pass an
+        already-loaded ``torch.nn.Module`` to avoid this.
+
     :param ann: Artificial neural network implemented in PyTorch. Accepts
         either ``torch.nn.Module`` or path to network saved using
         ``torch.save()``.
@@ -99,7 +105,9 @@ def data_based_normalization(
         according to activations on the dataset.
     """
     if isinstance(ann, str):
-        ann = torch.load(ann)
+        # weights_only=False is required to load a whole nn.Module. PyTorch 2.6
+        # changed the default to True, which cannot read these files.
+        ann = torch.load(ann, weights_only=False)
 
     assert isinstance(ann, nn.Module)
 
@@ -277,6 +285,12 @@ def ann_to_snn(
     Converts an artificial neural network (ANN) written as a
     ``torch.nn.Module`` into a near-equivalent spiking neural network.
 
+    .. warning::
+        When ``ann`` is a path, the file is loaded with :func:`torch.load`
+        using ``weights_only=False``, which runs code stored in the file. Only
+        pass a path to a file you created yourself or otherwise trust. Pass an
+        already-loaded ``torch.nn.Module`` to avoid this.
+
     :param ann: Artificial neural network implemented in PyTorch. Accepts
         either ``torch.nn.Module`` or path to network saved using
         ``torch.save()``.
@@ -290,7 +304,9 @@ def ann_to_snn(
     :return: Spiking neural network implemented in PyTorch.
     """
     if isinstance(ann, str):
-        ann = torch.load(ann)
+        # weights_only=False is required to load a whole nn.Module. PyTorch 2.6
+        # changed the default to True, which cannot read these files.
+        ann = torch.load(ann, weights_only=False)
     else:
         ann = deepcopy(ann)
 

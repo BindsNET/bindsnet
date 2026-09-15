@@ -115,7 +115,10 @@ class SpokenMNIST(torch.utils.data.Dataset):
             else:
                 # Load image data from disk if it has already been processed.
                 print("Loading training data from serialized object file.\n")
-                audio, labels = torch.load(open(path, "rb"))
+                # weights_only=True is safe here: this cache file holds only
+                # tensors, written by torch.save above, and refusing code
+                # execution costs nothing.
+                audio, labels = torch.load(open(path, "rb"), weights_only=True)
 
         labels = torch.Tensor(labels)
 
@@ -163,7 +166,10 @@ class SpokenMNIST(torch.utils.data.Dataset):
             else:
                 # Load image data from disk if it has already been processed.
                 print("Loading test data from serialized object file.\n")
-                audio, labels = torch.load(open(path, "rb"))
+                # weights_only=True is safe here: this cache file holds only
+                # tensors, written by torch.save above, and refusing code
+                # execution costs nothing.
+                audio, labels = torch.load(open(path, "rb"), weights_only=True)
 
         labels = torch.Tensor(labels)
 

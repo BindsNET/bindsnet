@@ -77,6 +77,38 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 - `network.to(device)` crashed on any `MulticompartmentConnection` (used by
   `DiehlAndCook2015`) with `_apply() takes 2 positional arguments but 3 were
   given`; `AbstractMulticompartmentConnection._apply` now accepts `recurse`.
+- `Network.clone()` was broken outright: it called `torch.load` without
+  `weights_only=False`, so it raised `UnpicklingError` under PyTorch 2.6+, which
+  changed that default to `True`. It had no test and no caller in the tree, so the
+  breakage went unnoticed. Pinned by `TestNetwork.test_clone`.
+- `Network.save()` called `torch.serialization.add_safe_globals([self])` with a
+  network instance where PyTorch expects a class. It did nothing useful and
+  corrupted PyTorch's safe-globals registry, so any later load in the same process
+  failed with `'Network' object has no attribute '__qualname__'`. Removed. Pinned by
+  `TestNetwork.test_clone_after_save`.
+- `bindsnet.conversion.ann_to_snn` and `data_based_normalization` were broken when
+  given a path instead of a `torch.nn.Module`, for the same PyTorch 2.6 reason as
+  `Network.clone()`. Only the in-memory form was tested. Pinned by
+  `test_conversion_from_path` and `test_data_based_normalization_from_path`.
+
+### Security
+- Documented that loading a saved network runs code. `bindsnet.network.load`,
+  `bindsnet.conversion.ann_to_snn` and `bindsnet.conversion.data_based_normalization`
+  read Python pickle files via `torch.load`, so a file from an untrusted source can
+  execute arbitrary code on load. This is the standard behaviour of `torch.load`
+  across the PyTorch ecosystem and is not a defect specific to BindsNET, but it was
+  undocumented. Added warnings to each function's docstring and a "Loading saved
+  networks and models" section to `SECURITY.md`.
+- `bindsnet.network.load` gained a `weights_only` parameter, passed through to
+  `torch.load`. It defaults to `False`, which is required to read files written by
+  `Network.save` (those store the whole network object, not a tensor state dict), so
+  behaviour is unchanged. `weights_only=True` refuses code execution and is usable
+  only for files holding plain tensors.
+- `SpokenMNIST` now reads its processed-data cache with `weights_only=True`. That
+  cache holds only tensors, so refusing code execution there costs nothing. Pinned by
+  `test/datasets/test_cache_serialization.py`.
+- Reported by Gavin Branaa <gbranaa4@gmail.com>, who also prompted the three
+  `torch.load` fixes listed under Fixed above. Thank you.
 
 ## [0.3.4] - 2026-06-15
 
