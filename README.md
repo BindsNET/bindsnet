@@ -1,4 +1,4 @@
-<p align="center"><img width="25%" src="docs/logo.png"/></p>
+<p align="center"><img width="25%" src="https://raw.githubusercontent.com/BindsNET/bindsnet/master/docs/logo.png"/></p>
 
 A Python package used for simulating spiking neural networks (SNNs) on CPUs or GPUs using [PyTorch](http://pytorch.org/) `Tensor` functionality.
 
@@ -9,6 +9,7 @@ This package is used as part of ongoing research on applying SNNs, machine learn
 
 Check out the [BindsNET examples](https://github.com/BindsNET/bindsnet/tree/master/examples) for a collection of experiments, functions for the analysis of results, plots of experiment outcomes, and more. Documentation for the package can be found [here](https://bindsnet-docs.readthedocs.io).
 
+[![PyPI](https://img.shields.io/pypi/v/bindsnet.svg)](https://pypi.org/project/bindsnet/)
 [![Build Status](https://github.com/BindsNET/bindsnet/actions/workflows/python-app.yml/badge.svg?branch=master)](https://github.com/BindsNET/bindsnet/actions/workflows/python-app.yml)
 [![CodeQL](https://github.com/BindsNET/bindsnet/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/BindsNET/bindsnet/actions/workflows/github-code-scanning/codeql)
 [![Documentation Status](https://readthedocs.org/projects/bindsnet-docs/badge/?version=latest)](https://bindsnet-docs.readthedocs.io/?badge=latest)
@@ -32,7 +33,13 @@ poetry install
 Alternatively, the provided `Dockerfile` builds the full pinned stack (see *Using Docker* below).
 
 ## Using Pip
-To install the most recent stable release from the GitHub repository
+To install the latest release from [PyPI](https://pypi.org/project/bindsnet/)
+
+```
+pip install bindsnet
+```
+
+To install the current development code from the GitHub repository
 
 ```
 pip install git+https://github.com/BindsNET/bindsnet.git
@@ -91,7 +98,7 @@ A number of other examples are available in the `examples` directory that are me
 Each weight-changing rule is validated against the equations of the paper it
 implements. The table of rules, papers, equation numbers and tests, plus the pitfalls
 (reward timing, traces, the Diehl & Cook rule versus `PostPre`), is in
-[`bindsnet/learning/README.md`](bindsnet/learning/README.md).
+[`bindsnet/learning/README.md`](https://github.com/BindsNET/bindsnet/blob/master/bindsnet/learning/README.md).
 
 ## Running the tests
 
@@ -108,11 +115,11 @@ Some tests will fail if Open AI `gym` is not installed on your machine.
 BindsNET ships no third-party datasets; its loaders fetch them from upstream sources.
 Every dataset and synthetic stimulus used by the examples, benchmarks, and dataset
 loaders — with source, retrieval method, license pointer, and spike-encoding
-preprocessing — is declared in [DATA.md](DATA.md).
+preprocessing — is declared in [DATA.md](https://github.com/BindsNET/bindsnet/blob/master/DATA.md).
 
 ## Reproducing results
 
-[REPRODUCING.md](REPRODUCING.md) maps each shipped model and published claim to its
+[REPRODUCING.md](https://github.com/BindsNET/bindsnet/blob/master/REPRODUCING.md) maps each shipped model and published claim to its
 model class, example script, exact command, seed, and expected output (e.g. the
 Diehl & Cook 2015 MNIST replication via `examples/mnist/eth_mnist.py`, and the
 Hazan et al. 2018 scaling benchmark).
@@ -169,8 +176,10 @@ The concept DOI below always resolves to the latest version:
 > BindsNET contributors. *BindsNET*. Zenodo. https://doi.org/10.5281/zenodo.20695115
 
 (For the exact release used, cite its version DOI; e.g. v0.3.4 is
-[10.5281/zenodo.20695116](https://doi.org/10.5281/zenodo.20695116).) A machine-readable
-citation is provided in [`CITATION.cff`](CITATION.cff).
+[10.5281/zenodo.20695116](https://doi.org/10.5281/zenodo.20695116). That archive is the
+GitHub tag `0.3.4`; the PyPI package `bindsnet==0.3.4` was built later and also
+contains the changes listed in `CHANGELOG.md` under 0.3.4 (PyPI).) A machine-readable
+citation is provided in [`CITATION.cff`](https://github.com/BindsNET/bindsnet/blob/master/CITATION.cff).
 
 ## Contributors
 

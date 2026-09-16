@@ -29,6 +29,17 @@ poetry run pytest
 Notable changes are recorded in [`CHANGELOG.md`](CHANGELOG.md); please add an entry to the
 `Unreleased` section in your pull request.
 
+## Releasing to PyPI
+
+1. Set `version` in `pyproject.toml` and `CITATION.cff`, and move the `Unreleased`
+   entries in `CHANGELOG.md` under the new version.
+2. Merge to `master`, then publish a GitHub Release whose tag equals that version.
+3. `.github/workflows/publish.yml` builds the package, checks that the tag matches the
+   `pyproject.toml` version, and uploads to PyPI through trusted publishing (no token).
+   It can also be started by hand from the Actions tab.
+
+A version number can be uploaded to PyPI only once, even after deletion.
+
 All development should take place on a branch separate from master. To create a branch, issue
 
 ```shell

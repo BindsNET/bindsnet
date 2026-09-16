@@ -6,6 +6,24 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 
 ## [Unreleased]
 
+## [0.3.4 (PyPI)] - 2026-09-16
+
+First PyPI upload since 0.2.7. It is built from the `master` branch on this date, not
+from the GitHub tag `0.3.4`, so `pip install bindsnet==0.3.4` contains everything in
+this section **in addition to** the tag. The Zenodo archive
+[10.5281/zenodo.20695116](https://doi.org/10.5281/zenodo.20695116) is the tag only.
+Results can differ between the two: see the `MCC_learning.PostPre` entry under Changed.
+
+### Packaging
+- Published to PyPI by `.github/workflows/publish.yml` (PyPI trusted publishing; runs
+  when a GitHub Release is published, or by hand).
+- Removed install requirements that no module in `bindsnet/` or `examples/` imports:
+  `Cython`, `scikit-build`, `foolbox`, `numba`.
+- `torch` is now `>=2.14,<3` and `torchvision` `>=0.29,<1` instead of exact pins;
+  `poetry.lock` still pins the tested versions (torch 2.14.0, torchvision 0.29.0).
+- README: `pip install bindsnet`, PyPI badge, and absolute links and logo URL so the
+  PyPI project page renders.
+
 ### Added
 - Reproducibility/transparency docs: `DATA.md` (dataset & stimulus declaration),
   `REPRODUCING.md` (model→script→command→seed map), and a
