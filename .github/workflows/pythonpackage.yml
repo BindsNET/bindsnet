@@ -22,7 +22,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Poetry
       env:
-        POETRY_VERSION: 2.1.2
+        POETRY_VERSION: 2.4.3
       run: |
         curl -sSL https://install.python-poetry.org | python - -y
     - name: Install dependencies

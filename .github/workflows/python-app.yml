@@ -25,7 +25,7 @@ jobs:
         python-version: 3.13
     - name: Install Poetry
       env:
-        POETRY_VERSION: 2.1.2
+        POETRY_VERSION: 2.4.3
       run: |
         curl -sSL https://install.python-poetry.org | python - -y &&\
             poetry config virtualenvs.create false

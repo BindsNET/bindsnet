@@ -23,6 +23,24 @@ Results can differ between the two: see the `MCC_learning.PostPre` entry under C
   `poetry.lock` still pins the tested versions (torch 2.14.0, torchvision 0.29.0).
 - README: `pip install bindsnet`, PyPI badge, and absolute links and logo URL so the
   PyPI project page renders.
+- `pyproject.toml` package metadata moved from `[tool.poetry]` to the standard
+  `[project]` table (Poetry 2 deprecates the old one); `[tool.poetry]` now only routes
+  torch/torchvision to the CUDA 13.0 wheel index. `poetry.lock` resolves to the same
+  packages and versions. Build backend `poetry-core>=2.0`; the unused `setup.py` is removed.
+- Poetry 2.4.3 in CI (was 2.1.2) and in `CONTRIBUTING.md` (said 1.1.8; `poetry shell`
+  replaced by `poetry env activate`, which Poetry 2 uses).
+- `Dockerfile` rewritten. The old one could not build: its CUDA 11.1 base image, the
+  `get-poetry.py` installer and the `.python-version` file it copied no longer exist.
+  The new one uses `python:3.13-slim`, Poetry 2.4.3 and `poetry.lock`. The README no
+  longer links the Docker Hub image `hqkhan/bindsnet` (last updated 2019-01-28).
+- Remaining links to the old `Hananel-Hazan/bindsnet` repository point to `BindsNET/bindsnet`.
+
+### Tests
+- `test_perf_equivalence.py`: the batch-1 checks of the fused `addmm_` STDP update
+  required bit-for-bit equality with the un-fused formula. That holds on some CPUs
+  and not on GitHub's CI runners, where 5 tests failed. They now accept float32
+  rounding (the tolerance already used for batch>1) and warn with the size of any
+  difference.
 
 ### Added
 - Reproducibility/transparency docs: `DATA.md` (dataset & stimulus declaration),

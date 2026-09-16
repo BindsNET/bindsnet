@@ -60,25 +60,21 @@ pip install -e .
 To install the packages necessary to interface with the [OpenAI gym RL environments library](https://github.com/openai/gym), follow their instructions for installing the packages needed to run the RL environments simulator (on Linux / MacOS).
 
 ### Using Docker
-[Link](https://hub.docker.com/r/hqkhan/bindsnet/) to Docker repository.
-
-We also provide a Dockerfile in which BindsNET and all of its dependencies come installed in. Issue
-
-```
-docker build .
-```
-at the top level directory of this project to create a docker image. 
-
-To change the name of the newly built image, issue
-```
-docker tag <IMAGE_ID> <NEW_IMAGE_ID>
-```
-
-To run a container and get a bash terminal inside it, issue
+The `Dockerfile` installs BindsNET with the dependency versions pinned in `poetry.lock`.
+From the top level directory of this project, issue
 
 ```
-docker run -it <NEW_IMAGE_ID> bash
+docker build -t bindsnet .
 ```
+
+(add `--build-arg DEPS=main` to leave out the development tools). To get a bash
+terminal inside a container, issue
+
+```
+docker run --rm -it --gpus all bindsnet bash
+```
+
+`--gpus all` needs the NVIDIA Container Toolkit; leave it out to run on CPU only.
 
 ## Getting started
 
@@ -144,7 +140,7 @@ We simulated a network with a population of n Poisson input neurons with firing 
 Several packages, including BRIAN and PyNEST, allow the setting of certain global preferences; e.g., the number of CPU threads, the number of OpenMP processes, etc. We chose these settings for our benchmark study in an attempt to maximize each library's speed, but note that BindsNET requires no setting of such options. Our approach, inheriting the computational model of PyTorch, appears to make the best use of the available hardware, and therefore makes it simple for practitioners to get the best performance from their system with the least effort.
 
 <p align="middle">
-<img src="https://github.com/Hananel-Hazan/bindsnet/blob/master/docs/BindsNET%20benchmark.png" alt="BindsNET%20Benchmark"  width="503" height="403">
+<img src="https://raw.githubusercontent.com/BindsNET/bindsnet/master/docs/BindsNET%20benchmark.png" alt="BindsNET%20Benchmark"  width="503" height="403">
 </p>
 
 All simulations run on Ubuntu 16.04 LTS with Intel(R) Xeon(R) CPU E5-2687W v3 @ 3.10GHz, 128Gb RAM @ 2133MHz, and two GeForce GTX TITAN X (GM200) GPUs. Python 3.6 is used in all cases. Clock time was recorded for each simulation run. 

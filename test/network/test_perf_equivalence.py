@@ -20,6 +20,8 @@ Covered:
 * ``rank_order`` encoding is vectorised.
 """
 
+import warnings
+
 import pytest
 import torch
 
@@ -102,6 +104,24 @@ def _reference_outer(source, target, batch_size, reduction):
     )
 
 
+def _assert_matches_fused(actual, expected):
+    """Compare the fused ``addmm_`` result with the un-fused reference formula.
+
+    Both sides call the BLAS library, whose kernel choice depends on the CPU. On
+    some CPUs the two agree bit for bit; on others (GitHub's CI runners, September
+    2026) they differ by float32 rounding. Accept that rounding (the same tolerance
+    as the batch>1 cases) and report the size of any difference as a warning.
+    """
+    if torch.equal(actual, expected):
+        return
+    diff = (actual - expected).abs().max().item()
+    warnings.warn(
+        f"fused addmm_ differs from the reference formula by rounding only: "
+        f"max abs diff {diff:.3e}"
+    )
+    assert torch.allclose(actual, expected, rtol=1e-6, atol=1e-7), diff
+
+
 class TestMulticompartmentDeviceMove:
     def test_to_cpu_works(self):
         net = DiehlAndCook2015(n_inpt=16, n_neurons=4, inpt_shape=(1, 4, 4))
@@ -132,7 +152,7 @@ class TestFusedOuterProductRules:
         conn.update(learning=True)
 
         if batch_size == 1:
-            assert torch.equal(conn.w, expected)
+            _assert_matches_fused(conn.w, expected)
         else:
             assert torch.allclose(conn.w, expected, rtol=1e-6, atol=1e-7)
 
@@ -150,7 +170,7 @@ class TestFusedOuterProductRules:
         conn.update(learning=True)
 
         if batch_size == 1:
-            assert torch.equal(conn.w, expected)
+            _assert_matches_fused(conn.w, expected)
         else:
             assert torch.allclose(conn.w, expected, rtol=1e-6, atol=1e-7)
 
@@ -210,7 +230,7 @@ class TestFusedOuterProductRules:
         expected = (w0 - pre * rule.nu[0] + post * rule.nu[1]).clamp_(0.0, 1.0)
 
         conn.update(learning=True)
-        assert torch.equal(conn.pipeline[0].value, expected)
+        _assert_matches_fused(conn.pipeline[0].value, expected)
 
     def test_mcc_hebbian_matches_reference(self):
         torch.manual_seed(0)
@@ -239,7 +259,7 @@ class TestFusedOuterProductRules:
         expected = (w0 + rule.nu[0] * pre + rule.nu[1] * post).clamp_(0.0, 1.0)
 
         conn.update(learning=True)
-        assert torch.equal(conn.pipeline[0].value, expected)
+        _assert_matches_fused(conn.pipeline[0].value, expected)
 
 
 class TestWeightDecay:
