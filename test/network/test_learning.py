@@ -376,7 +376,9 @@ class TestLearningRuleReset:
         assert rule._prev_source_s is None
         assert rule._prev_target_s is None
 
-    @pytest.mark.parametrize("rule", [mcc.MSTDP, mcc.MSTDPET, mcc.PostPre])
+    @pytest.mark.parametrize(
+        "rule", [mcc.MSTDP, mcc.MSTDPET, mcc.PostPre, mcc.Hebbian, mcc.DiehlAndCook]
+    )
     def test_reset_before_first_run_does_not_raise(self, rule):
         # Some of this state is built lazily on the first update, because only
         # then are the batch size and device known. Resetting a network before
@@ -399,7 +401,9 @@ class TestLearningRuleReset:
         assert rule.average_buffer_index_pre == 0
         assert rule.average_buffer_index_post == 0
 
-    @pytest.mark.parametrize("rule", [mcc.MSTDP, mcc.MSTDPET, mcc.PostPre])
+    @pytest.mark.parametrize(
+        "rule", [mcc.MSTDP, mcc.MSTDPET, mcc.PostPre, mcc.Hebbian, mcc.DiehlAndCook]
+    )
     def test_episodes_are_independent_after_reset(self, rule):
         # The symptom #777 reported: with a reset between them, two identical
         # episodes must produce identical weights. Before the fix the second

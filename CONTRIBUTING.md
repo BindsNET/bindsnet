@@ -3,12 +3,12 @@
 To clone this project locally, issue
 
 ```shell
-git clone https://github.com/Hananel-Hazan/bindsnet.git  # clones bindsnet repository
+git clone https://github.com/BindsNET/bindsnet.git  # clones bindsnet repository
 ```
 
 in the directory of your choice. This will place the repository's code in a directory titled `bindsnet`.
 
-Install the project with [Poetry](https://python-poetry.org/) (current supported version - 1.1.8)
+Install the project with [Poetry](https://python-poetry.org/) (version 2.4.3 is used in CI)
 
 ```shell
 poetry install
@@ -16,7 +16,7 @@ poetry run pre-commit install
 ```
 
 
-Now you can access the project environment with `poetry shell` or run commands with `poetry run <command>`. For example, `poetry run python examples/mnist/conv_mnist.py`.
+Now you can activate the project environment with `eval $(poetry env activate)` or run commands with `poetry run <command>`. For example, `poetry run python examples/mnist/conv_mnist.py`.
 
 Please make sure the `Poetry` environment is activated when you commit your files! The `git commit` command will invoke `pre-commit`, which is installed with Poetry too. IDEs like PyCharm have plugins for `Poetry` and will activate the environment automatically.
 
@@ -28,6 +28,17 @@ poetry run pytest
 
 Notable changes are recorded in [`CHANGELOG.md`](CHANGELOG.md); please add an entry to the
 `Unreleased` section in your pull request.
+
+## Releasing to PyPI
+
+1. Set `version` in `pyproject.toml` and `CITATION.cff`, and move the `Unreleased`
+   entries in `CHANGELOG.md` under the new version.
+2. Merge to `master`, then publish a GitHub Release whose tag equals that version.
+3. `.github/workflows/publish.yml` builds the package, checks that the tag matches the
+   `pyproject.toml` version, and uploads to PyPI through trusted publishing (no token).
+   It can also be started by hand from the Actions tab.
+
+A version number can be uploaded to PyPI only once, even after deletion.
 
 All development should take place on a branch separate from master. To create a branch, issue
 
@@ -102,6 +113,6 @@ where `[origin]` is the name of the remote repository, and `[branch-name]` is th
 
 __Note__: See [push.default](https://git-scm.com/docs/git-config#git-config-pushdefault) for more information.
 
-To merge your changes into the `master` branch (the definitive version of the project's code), open a pull request on the [webpage](https://github.com/Hananel-Hazan/bindsnet) of the project. You can select the `base` branch (typically `master`, to merge changes _into_ the definitive version of the code) and the `compare` branch (say, `dan`, if I added a new feature locally and want to add it to the project code). You may add an optional extended description of your pull request changes. If there are merge conflicts at this stage, you may fix these using GitHub's pull request review interface.
+To merge your changes into the `master` branch (the definitive version of the project's code), open a pull request on the [webpage](https://github.com/BindsNET/bindsnet) of the project. You can select the `base` branch (typically `master`, to merge changes _into_ the definitive version of the code) and the `compare` branch (say, `dan`, if I added a new feature locally and want to add it to the project code). You may add an optional extended description of your pull request changes. If there are merge conflicts at this stage, you may fix these using GitHub's pull request review interface.
 
 Assign reviewer(s) from the group of project contributors to perform a code review of your pull request. If the reviewer(s) are happy with your changes, you may then merge it in to the `master` branch. _Code review is crucial for the development of this project_, as the whole team should be held accountable for all changes.

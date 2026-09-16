@@ -261,7 +261,7 @@ class AbstractMulticompartmentConnection(ABC, Module):
         self.pipeline.remove(feature)
         del self.feature_index[feature.name]
 
-    def _apply(self, fn):
+    def _apply(self, fn, recurse=True):
         # language=rst
         """
         Relocate pipeline features (and their learning rules) along with the connection
@@ -274,7 +274,7 @@ class AbstractMulticompartmentConnection(ABC, Module):
         mismatch. The feature value is moved in place (via ``.data``) so it stays
         aliased to the learning rule's cached reference.
         """
-        super()._apply(fn)
+        super()._apply(fn, recurse)
         for feature in self.pipeline:
             value = getattr(feature, "value", None)
             if isinstance(value, torch.Tensor):

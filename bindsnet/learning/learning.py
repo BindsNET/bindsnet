@@ -51,6 +51,82 @@ def _conv_point_eligibility(connection, p_plus, p_minus, source_s, target_s, dim
     )
 
 
+def _dense_outer_update_ok(rule, w: torch.Tensor) -> bool:
+    # language=rst
+    """
+    Whether a rule's ``[batch, source.n] x [batch, target.n]`` outer-product
+    update can be applied with a single fused ``w.addmm_`` call.
+
+    This requires a dense float32 weight matrix, scalar learning rates (a
+    per-synapse ``nu`` tensor cannot be folded into ``alpha``), and one of the
+    two default batch reductions (``torch.squeeze`` for batch size 1,
+    ``torch.sum`` otherwise), both of which equal the matrix product's
+    contraction over the batch dimension.
+    """
+    return (
+        not w.is_sparse
+        and w.dtype == torch.float32
+        and rule.nu.dim() == 1
+        and rule.reduction in (torch.squeeze, torch.sum)
+    )
+
+
+def _row_scale(vec: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
+    # language=rst
+    """
+    ``torch.bmm(torch.diag_embed(vec), mat)`` without building the
+    ``[batch, n, n]`` diagonal matrix: scales row ``i`` of ``mat`` by
+    ``vec[:, i]``. Bit-identical for finite values (the dropped terms are exact
+    zeros).
+
+    :param vec: Tensor of shape ``[batch, n, 1]`` or ``[batch, n]``.
+    :param mat: Tensor of shape ``[batch, n, k]``.
+    """
+    if vec.dim() == 2:
+        vec = vec.unsqueeze(2)
+    return vec * mat
+
+
+def _cached_decay(rule, name: str) -> torch.Tensor:
+    # language=rst
+    """
+    ``exp(-dt / rule.<name>)`` computed once per ``(name, dt)`` and reused on
+    every timestep instead of re-evaluating the exponential each call.
+    """
+    dt = float(rule.connection.dt)
+    tc = getattr(rule, name)
+    cache = rule.__dict__.setdefault("_decay_cache", {})
+    # Keyed on the time constant's value too, so a later change to it is honoured.
+    key = (name, dt, float(tc))
+    if key not in cache:
+        cache[key] = torch.exp(-dt / tc)
+    return cache[key]
+
+
+def _reward_rates(rule, kwargs: dict, device: torch.device):
+    # language=rst
+    """
+    Return the ``(a_plus, a_minus)`` learning-rate tensors for the reward-modulated
+    rules. The defaults (``1.0`` / ``-1.0``) are allocated once on ``device`` and
+    reused, so a run that does not pass ``a_plus``/``a_minus`` no longer copies a
+    fresh scalar to the device on every timestep.
+    """
+    cache = rule.__dict__.setdefault("_rate_cache", {})
+    if cache.get("device") != device:
+        cache["device"] = device
+        cache["a_plus"] = torch.tensor(1.0, device=device)
+        cache["a_minus"] = torch.tensor(-1.0, device=device)
+    a_plus = kwargs.get("a_plus", None)
+    a_minus = kwargs.get("a_minus", None)
+    a_plus = (
+        cache["a_plus"] if a_plus is None else torch.as_tensor(a_plus, device=device)
+    )
+    a_minus = (
+        cache["a_minus"] if a_minus is None else torch.as_tensor(a_minus, device=device)
+    )
+    return a_plus, a_minus
+
+
 class LearningRule(ABC):
     # language=rst
     """
@@ -118,8 +194,9 @@ class LearningRule(ABC):
         """
         Abstract method for a learning rule update.
         """
-        # Implement weight decay.
-        if self.weight_decay:
+        # Implement weight decay (1.0 is the no-decay default; skip the
+        # full-matrix multiply in that case).
+        if self.weight_decay != 1.0:
             self.connection.w *= self.weight_decay
 
         # Bound weights.
@@ -249,9 +326,6 @@ class PostPre(LearningRule):
         height_out = self.connection.conv_size
 
         target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out).to(
-            self.connection.w.device
-        )
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-1, kernel_height, stride)
@@ -263,9 +337,6 @@ class PostPre(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out, 1
         )
-        target_s = target_s * torch.eye(out_channels * height_out).to(
-            self.connection.w.device
-        )
         source_x = (
             self.source.x.unfold(-1, kernel_height, stride)
             .reshape(batch_size, height_out, in_channels * kernel_height)
@@ -275,11 +346,11 @@ class PostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0].any():
-            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            pre = self.reduction(_row_scale(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
         if self.nu[1].any():
-            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            post = self.reduction(_row_scale(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -303,9 +374,6 @@ class PostPre(LearningRule):
         target_x = self.target.x.reshape(
             batch_size, out_channels * height_out * width_out, 1
         )
-        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(
-            self.connection.w.device
-        )
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-2, kernel_height, stride[0])
@@ -322,9 +390,6 @@ class PostPre(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out, 1
         )
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
-            self.connection.w.device
-        )
         source_x = (
             self.source.x.unfold(-2, kernel_height, stride[0])
             .unfold(-2, kernel_width, stride[1])
@@ -339,11 +404,11 @@ class PostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0].any():
-            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            pre = self.reduction(_row_scale(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
         if self.nu[1].any():
-            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            post = self.reduction(_row_scale(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -369,9 +434,6 @@ class PostPre(LearningRule):
         target_x = self.target.x.reshape(
             batch_size, out_channels * height_out * width_out * depth_out, 1
         )
-        target_x = target_x * torch.eye(
-            out_channels * height_out * width_out * depth_out
-        ).to(self.connection.w.device)
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-3, kernel_height, stride[0])
@@ -389,9 +451,6 @@ class PostPre(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out * depth_out, 1
         )
-        target_s = target_s * torch.eye(
-            out_channels * height_out * width_out * depth_out
-        ).to(self.connection.w.device)
         source_x = (
             self.source.x.unfold(-3, kernel_height, stride[0])
             .unfold(-3, kernel_width, stride[1])
@@ -407,11 +466,11 @@ class PostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0].any():
-            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            pre = self.reduction(_row_scale(target_x, source_s), dim=0)
             self.connection.w -= self.nu[0] * pre.view(self.connection.w.size())
         # Post-synaptic update.
         if self.nu[1].any():
-            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            post = self.reduction(_row_scale(target_s, source_x), dim=0)
             self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -423,6 +482,24 @@ class PostPre(LearningRule):
         class.
         """
         batch_size = self.source.batch_size
+        w = self.connection.w
+
+        if _dense_outer_update_ok(self, w):
+            # Fused path: ``w += alpha * s^T @ x`` folds the outer product, the
+            # batch reduction and the in-place update into one ``addmm_`` call,
+            # so no ``[batch, source.n, target.n]`` temporary is allocated.
+            # Spikes are exactly 0/1, so the products are bit-identical to the
+            # un-fused formula for batch size 1.
+            if self.nu[0].any():
+                source_s = self.source.s.view(batch_size, -1).float()
+                target_x = self.target.x.view(batch_size, -1) * self.nu[0]
+                w.addmm_(source_s.t(), target_x, alpha=-1.0)
+            if self.nu[1].any():
+                target_s = self.target.s.view(batch_size, -1).float() * self.nu[1]
+                source_x = self.source.x.view(batch_size, -1)
+                w.addmm_(source_x.t(), target_s, alpha=1.0)
+            super().update()
+            return
 
         # Pre-synaptic update.
         if self.nu[0].any():
@@ -696,9 +773,6 @@ class WeightDependentPostPre(LearningRule):
         height_out = self.connection.conv_size
 
         target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out).to(
-            self.connection.w.device
-        )
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-1, kernel_height, stride)
@@ -709,9 +783,6 @@ class WeightDependentPostPre(LearningRule):
 
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out, 1
-        )
-        target_s = target_s * torch.eye(out_channels * height_out).to(
-            self.connection.w.device
         )
         source_x = (
             self.source.x.unfold(-1, kernel_height, stride)
@@ -724,7 +795,7 @@ class WeightDependentPostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0].any():
-            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            pre = self.reduction(_row_scale(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
                 * pre.view(self.connection.w.size())
@@ -732,7 +803,7 @@ class WeightDependentPostPre(LearningRule):
             )
         # Post-synaptic update.
         if self.nu[1].any():
-            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            post = self.reduction(_row_scale(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
                 * post.view(self.connection.w.size())
@@ -762,9 +833,6 @@ class WeightDependentPostPre(LearningRule):
         target_x = self.target.x.reshape(
             batch_size, out_channels * height_out * width_out, 1
         )
-        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(
-            self.connection.w.device
-        )
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-2, kernel_height, stride[0])
@@ -780,9 +848,6 @@ class WeightDependentPostPre(LearningRule):
 
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out, 1
-        )
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
-            self.connection.w.device
         )
         source_x = (
             self.source.x.unfold(-2, kernel_height, stride[0])
@@ -800,7 +865,7 @@ class WeightDependentPostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0].any():
-            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            pre = self.reduction(_row_scale(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
                 * pre.view(self.connection.w.size())
@@ -808,7 +873,7 @@ class WeightDependentPostPre(LearningRule):
             )
         # Post-synaptic update.
         if self.nu[1].any():
-            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            post = self.reduction(_row_scale(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
                 * post.view(self.connection.w.size())
@@ -840,9 +905,6 @@ class WeightDependentPostPre(LearningRule):
         target_x = self.target.x.reshape(
             batch_size, out_channels * height_out * width_out * depth_out, 1
         )
-        target_x = target_x * torch.eye(
-            out_channels * height_out * width_out * depth_out
-        ).to(self.connection.w.device)
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-3, kernel_height, stride[0])
@@ -860,9 +922,6 @@ class WeightDependentPostPre(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out * depth_out, 1
         )
-        target_s = target_s * torch.eye(
-            out_channels * height_out * width_out * depth_out
-        ).to(self.connection.w.device)
         source_x = (
             self.source.x.unfold(-3, kernel_height, stride[0])
             .unfold(-3, kernel_width, stride[1])
@@ -880,7 +939,7 @@ class WeightDependentPostPre(LearningRule):
 
         # Pre-synaptic update.
         if self.nu[0].any():
-            pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+            pre = self.reduction(_row_scale(target_x, source_s), dim=0)
             update -= (
                 self.nu[0]
                 * pre.view(self.connection.w.size())
@@ -888,7 +947,7 @@ class WeightDependentPostPre(LearningRule):
             )
         # Post-synaptic update.
         if self.nu[1].any():
-            post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+            post = self.reduction(_row_scale(target_s, source_x), dim=0)
             update += (
                 self.nu[1]
                 * post.view(self.connection.w.size())
@@ -1143,6 +1202,20 @@ class Hebbian(LearningRule):
         class.
         """
         batch_size = self.source.batch_size
+        w = self.connection.w
+
+        if _dense_outer_update_ok(self, w):
+            # Fused path (see ``PostPre._connection_update``): the learning rate
+            # is applied to the [batch, n] factor first, so the per-synapse
+            # product matches the un-fused ``nu * (s * x)`` bit for bit.
+            source_s = self.source.s.view(batch_size, -1).float()
+            source_x = self.source.x.view(batch_size, -1)
+            target_s = self.target.s.view(batch_size, -1).float()
+            target_x = self.target.x.view(batch_size, -1)
+            w.addmm_(source_s.t(), target_x * self.nu[0], alpha=1.0)
+            w.addmm_(source_x.t(), target_s * self.nu[1], alpha=1.0)
+            super().update()
+            return
 
         source_s = self.source.s.view(batch_size, -1).unsqueeze(2).float()
         source_x = self.source.x.view(batch_size, -1).unsqueeze(2)
@@ -1178,9 +1251,6 @@ class Hebbian(LearningRule):
         height_out = self.connection.conv_size
 
         target_x = self.target.x.reshape(batch_size, out_channels * height_out, 1)
-        target_x = target_x * torch.eye(out_channels * height_out).to(
-            self.connection.w.device
-        )
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-1, kernel_height, stride)
@@ -1192,9 +1262,6 @@ class Hebbian(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out, 1
         )
-        target_s = target_s * torch.eye(out_channels * height_out).to(
-            self.connection.w.device
-        )
         source_x = (
             self.source.x.unfold(-1, kernel_height, stride)
             .reshape(batch_size, height_out, in_channels * kernel_height)
@@ -1203,11 +1270,11 @@ class Hebbian(LearningRule):
         )
 
         # Pre-synaptic update.
-        pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+        pre = self.reduction(_row_scale(target_x, source_s), dim=0)
         self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+        post = self.reduction(_row_scale(target_s, source_x), dim=0)
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -1231,9 +1298,6 @@ class Hebbian(LearningRule):
         target_x = self.target.x.reshape(
             batch_size, out_channels * height_out * width_out, 1
         )
-        target_x = target_x * torch.eye(out_channels * height_out * width_out).to(
-            self.connection.w.device
-        )
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-2, kernel_height, stride[0])
@@ -1250,9 +1314,6 @@ class Hebbian(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out, 1
         )
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
-            self.connection.w.device
-        )
         source_x = (
             self.source.x.unfold(-2, kernel_height, stride[0])
             .unfold(-2, kernel_width, stride[1])
@@ -1266,11 +1327,11 @@ class Hebbian(LearningRule):
         )
 
         # Pre-synaptic update.
-        pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+        pre = self.reduction(_row_scale(target_x, source_s), dim=0)
         self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+        post = self.reduction(_row_scale(target_s, source_x), dim=0)
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -1296,9 +1357,6 @@ class Hebbian(LearningRule):
         target_x = self.target.x.reshape(
             batch_size, out_channels * height_out * width_out * depth_out, 1
         )
-        target_x = target_x * torch.eye(
-            out_channels * height_out * width_out * depth_out
-        ).to(self.connection.w.device)
         source_s = (
             self.source.s.type(torch.float)
             .unfold(-3, kernel_height, stride[0])
@@ -1316,9 +1374,6 @@ class Hebbian(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out * depth_out, 1
         )
-        target_s = target_s * torch.eye(
-            out_channels * height_out * width_out * depth_out
-        ).to(self.connection.w.device)
         source_x = (
             self.source.x.unfold(-3, kernel_height, stride[0])
             .unfold(-3, kernel_width, stride[1])
@@ -1333,11 +1388,11 @@ class Hebbian(LearningRule):
         )
 
         # Pre-synaptic update.
-        pre = self.reduction(torch.bmm(target_x, source_s), dim=0)
+        pre = self.reduction(_row_scale(target_x, source_s), dim=0)
         self.connection.w += self.nu[0] * pre.view(self.connection.w.size())
 
         # Post-synaptic update.
-        post = self.reduction(torch.bmm(target_s, source_x), dim=0)
+        post = self.reduction(_row_scale(target_s, source_x), dim=0)
         self.connection.w += self.nu[1] * post.view(self.connection.w.size())
 
         super().update()
@@ -1467,6 +1522,103 @@ class Hebbian(LearningRule):
         super().update()
 
 
+class DiehlAndCook(LearningRule):
+    # language=rst
+    """
+    Post-synaptic-spike-only STDP of `Diehl & Cook (2015)
+    <https://www.frontiersin.org/articles/10.3389/fncom.2015.00099/full>`_, Sect. 2.3:
+
+    .. math::
+
+        \\Delta w = \\eta\\,(x_\\text{pre} - x_\\text{tar})\\,(w_\\max - w)^\\mu
+
+    applied on every post-synaptic spike. :math:`x_\\text{pre}` is the source layer's
+    spike trace (the paper's trace adds 1 per spike, i.e. ``traces_additive=True``);
+    :math:`x_\\text{tar}` is the target trace value ("the higher the target value, the
+    lower the synaptic weight will be"); :math:`w_\\max` is the connection's ``wmax``;
+    :math:`\\mu` sets the weight dependence. Pre-synaptic spikes do not change the
+    weight, unlike ``PostPre``. The paper gives no numeric values for
+    :math:`x_\\text{tar}` and :math:`\\mu`; the defaults here (0 and 1) are BindsNET's.
+    """
+
+    def __init__(
+        self,
+        connection: AbstractConnection,
+        nu: Optional[Union[float, Sequence[float], Sequence[torch.Tensor]]] = None,
+        reduction: Optional[callable] = None,
+        weight_decay: float = 0.0,
+        **kwargs,
+    ) -> None:
+        # language=rst
+        """
+        Constructor for the ``DiehlAndCook`` learning rule.
+
+        :param connection: A ``Connection`` or ``LocalConnection`` whose weights the
+            rule will modify. It must have a finite ``wmax``.
+        :param nu: Learning rate :math:`\\eta`. A pair is accepted for API symmetry
+            with the other rules; only the second (post-synaptic) entry is used.
+        :param reduction: Method for reducing parameter updates along the batch
+            dimension.
+        :param weight_decay: Coefficient controlling rate of decay of the weights each
+            iteration.
+
+        Keyword arguments:
+
+        :param float x_tar: Target pre-synaptic trace :math:`x_\\text{tar}` (default 0).
+        :param float mu: Weight-dependence exponent :math:`\\mu` (default 1).
+        """
+        super().__init__(
+            connection=connection,
+            nu=nu,
+            reduction=reduction,
+            weight_decay=weight_decay,
+            **kwargs,
+        )
+
+        assert self.source.traces, "Pre-synaptic nodes must record spike traces."
+        assert (
+            connection.wmax != np.inf
+        ).all(), "DiehlAndCook needs a finite wmax (the paper's w_max)."
+
+        if isinstance(connection, (Connection, LocalConnection)):
+            self.update = self._connection_update
+        else:
+            raise NotImplementedError(
+                "This learning rule is not supported for this Connection type."
+            )
+
+        self.x_tar = float(kwargs.get("x_tar", 0.0))
+        self.mu = float(kwargs.get("mu", 1.0))
+
+    def _connection_update(self, **kwargs) -> None:
+        # language=rst
+        """
+        ``w += eta * ((x_pre - x_tar) outer s_post) * (wmax - w) ** mu`` reduced
+        over the batch.
+        """
+        if not self.nu[1].any():
+            super().update()
+            return
+        batch_size = self.source.batch_size
+        w = self.connection.w
+        source_x = self.source.x.view(batch_size, -1) - self.x_tar
+        target_s = self.target.s.view(batch_size, -1).float()
+        if self.reduction in (torch.squeeze, torch.sum):
+            outer = source_x.t() @ target_s
+        else:
+            outer = self.reduction(
+                torch.bmm(source_x.unsqueeze(2), target_s.unsqueeze(1)), dim=0
+            )
+        factor = self.connection.wmax - w
+        if self.mu != 1.0:
+            factor = factor.clamp(min=0.0) ** self.mu
+        update = self.nu[1] * outer * factor
+        if w.is_sparse:
+            update = update.to_sparse()
+        self.connection.w += update
+        super().update()
+
+
 class MSTDP(LearningRule):
     # language=rst
     """
@@ -1529,10 +1681,13 @@ class MSTDP(LearningRule):
 
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
-        # If True, the reward at step t modulates the eligibility that already
-        # includes the spikes at step t (exact Florian 2007 timing). If False
-        # (default, backward-compatible) the eligibility is applied with a
-        # one-timestep lag. Currently honoured by the ``Connection`` path.
+        # Timing of reward vs. eligibility. Default (False) is Florian (2007)
+        # eq. 3.9, w(t+dt) = w(t) + gamma r(t+dt) zeta(t): the reward supplied
+        # at a step multiplies the eligibility built from the previous step's
+        # spikes. ``zero_lag=True`` instead multiplies the reward by the
+        # eligibility that already includes this step's spikes (a direct
+        # discretisation of the continuous-time eq. 3.4). Currently honoured by
+        # the ``Connection`` path.
         self.zero_lag = kwargs.get("zero_lag", False)
 
     def _connection_update(self, **kwargs) -> None:
@@ -1575,31 +1730,35 @@ class MSTDP(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = kwargs.get("a_plus", 1.0)
-        if isinstance(a_plus, dict):
-            for k, v in a_plus.items():
-                a_plus[k] = torch.tensor(v, device=self.connection.w.device)
+        a_plus = kwargs.get("a_plus", None)
+        a_minus = kwargs.get("a_minus", None)
+        if isinstance(a_plus, dict) or isinstance(a_minus, dict):
+            if isinstance(a_plus, dict):
+                for k, v in a_plus.items():
+                    a_plus[k] = torch.tensor(v, device=self.connection.w.device)
+            elif a_plus is None:
+                a_plus = 1.0
+            if isinstance(a_minus, dict):
+                for k, v in a_minus.items():
+                    a_minus[k] = torch.tensor(v, device=self.connection.w.device)
+            elif a_minus is None:
+                a_minus = -1.0
         else:
-            a_plus = torch.tensor(a_plus, device=self.connection.w.device)
-        a_minus = kwargs.get("a_minus", -1.0)
-        if isinstance(a_minus, dict):
-            for k, v in a_minus.items():
-                a_minus[k] = torch.tensor(v, device=self.connection.w.device)
-        else:
-            a_minus = torch.tensor(a_minus, device=self.connection.w.device)
+            a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         # Update P^+/P^- traces and the point eligibility for this timestep.
         def _update_traces_and_eligibility():
-            self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+            self.p_plus *= _cached_decay(self, "tc_plus")
             self.p_plus += a_plus * source_s
-            self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+            self.p_minus *= _cached_decay(self, "tc_minus")
             self.p_minus += a_minus * target_s
             self.eligibility = torch.bmm(
                 self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
             ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
 
         # With zero_lag, fold in the current spikes before applying the update,
-        # so reward(t) multiplies eligibility(t) exactly as in Florian 2007.
+        # so reward(t) multiplies eligibility(t) (un-lagged variant; the default
+        # below is Florian 2007 eq. 3.9).
         if self.zero_lag:
             _update_traces_and_eligibility()
 
@@ -1609,8 +1768,8 @@ class MSTDP(LearningRule):
             update = update.to_sparse()
         self.connection.w += self.nu[0] * update
 
-        # Default (backward-compatible): the eligibility computed here is applied
-        # on the next timestep (one-step lag).
+        # Default: the eligibility computed here is applied on the next
+        # timestep, as in Florian (2007) eq. 3.9 / eqs. 2.7-2.8.
         if not self.zero_lag:
             _update_traces_and_eligibility()
 
@@ -1639,12 +1798,7 @@ class MSTDP(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         # Compute weight update based on the eligibility value of the past timestep.
         update = reward * self.eligibility
@@ -1669,9 +1823,6 @@ class MSTDP(LearningRule):
             self.p_minus = self.p_minus.reshape(
                 batch_size, out_channels * height_out, 1
             )
-            self.p_minus = self.p_minus * torch.eye(out_channels * height_out).to(
-                self.connection.w.device
-            )
 
         # Reshaping spike occurrences.
         source_s = (
@@ -1685,18 +1836,15 @@ class MSTDP(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out, 1
         )
-        target_s = target_s * torch.eye(out_channels * height_out).to(
-            self.connection.w.device
-        )
 
         # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+        self.p_plus *= _cached_decay(self, "tc_plus")
         self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+        self.p_minus *= _cached_decay(self, "tc_minus")
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+        self.eligibility = _row_scale(target_s, self.p_plus) + _row_scale(
             self.p_minus, source_s
         )
 
@@ -1728,12 +1876,7 @@ class MSTDP(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         # Compute weight update based on the eligibility value of the past timestep.
         update = reward * self.eligibility
@@ -1764,9 +1907,6 @@ class MSTDP(LearningRule):
             self.p_minus = self.p_minus.reshape(
                 batch_size, out_channels * height_out * width_out, 1
             )
-            self.p_minus = self.p_minus * torch.eye(
-                out_channels * height_out * width_out
-            ).to(self.connection.w.device)
 
         # Reshaping spike occurrences.
         source_s = (
@@ -1785,18 +1925,15 @@ class MSTDP(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out, 1
         )
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
-            self.connection.w.device
-        )
 
         # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+        self.p_plus *= _cached_decay(self, "tc_plus")
         self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+        self.p_minus *= _cached_decay(self, "tc_minus")
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+        self.eligibility = _row_scale(target_s, self.p_plus) + _row_scale(
             self.p_minus, source_s
         )
 
@@ -1831,12 +1968,7 @@ class MSTDP(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         # Compute weight update based on the eligibility value of the past timestep.
         update = reward * self.eligibility
@@ -1867,9 +1999,6 @@ class MSTDP(LearningRule):
             self.p_minus = self.p_minus.reshape(
                 batch_size, out_channels * height_out * width_out * depth_out, 1
             )
-            self.p_minus = self.p_minus * torch.eye(
-                out_channels * height_out * width_out * depth_out
-            ).to(self.connection.w.device)
 
         # Reshaping spike occurrences.
         source_s = (
@@ -1889,18 +2018,15 @@ class MSTDP(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out * depth_out, 1
         )
-        target_s = target_s * torch.eye(
-            out_channels * height_out * width_out * depth_out
-        ).to(self.connection.w.device)
 
         # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+        self.p_plus *= _cached_decay(self, "tc_plus")
         self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+        self.p_minus *= _cached_decay(self, "tc_minus")
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+        self.eligibility = _row_scale(target_s, self.p_plus) + _row_scale(
             self.p_minus, source_s
         )
 
@@ -1967,20 +2093,15 @@ class MSTDP(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         source_s = self.source.s.float()
         target_s = self.target.s.float()
 
         def _update_traces_and_eligibility():
-            self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+            self.p_plus *= _cached_decay(self, "tc_plus")
             self.p_plus += a_plus * source_s
-            self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+            self.p_minus *= _cached_decay(self, "tc_minus")
             self.p_minus += a_minus * target_s
             self.eligibility = _conv_point_eligibility(
                 self.connection, self.p_plus, self.p_minus, source_s, target_s, dim
@@ -2061,10 +2182,13 @@ class MSTDPET(LearningRule):
         self.tc_plus = torch.tensor(kwargs.get("tc_plus", 20.0))
         self.tc_minus = torch.tensor(kwargs.get("tc_minus", 20.0))
         self.tc_e_trace = torch.tensor(kwargs.get("tc_e_trace", 25.0))
-        # If True, the current spikes are folded into the eligibility before the
-        # eligibility trace is integrated (exact Florian 2007 timing). If False
-        # (default, backward-compatible) a one-timestep lag is kept. Currently
-        # honoured by the ``Connection`` path.
+        # Timing of eligibility vs. trace integration. Default (False) is
+        # Florian (2007) eqs. 2.7-2.8, z(t+dt) = beta z(t) + zeta(t)/tau_z and
+        # w(t+dt) = w(t) + gamma dt r(t+dt) z(t+dt): the trace integrated at a
+        # step uses the eligibility built from the previous step's spikes.
+        # ``zero_lag=True`` folds this step's spikes into the eligibility
+        # before integrating (continuous-time eqs. 3.1-3.2 discretised without
+        # the lag). Currently honoured by the ``Connection`` path.
         self.zero_lag = kwargs.get("zero_lag", False)
 
     def _connection_update(self, **kwargs) -> None:
@@ -2106,31 +2230,26 @@ class MSTDPET(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         # Update P^+/P^- traces and the point eligibility for this timestep.
         def _update_traces_and_eligibility():
-            self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+            self.p_plus *= _cached_decay(self, "tc_plus")
             self.p_plus += a_plus * source_s
-            self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+            self.p_minus *= _cached_decay(self, "tc_minus")
             self.p_minus += a_minus * target_s
             self.eligibility = torch.bmm(
                 self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
             ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
 
         # With zero_lag, fold in the current spikes before integrating the
-        # eligibility trace (exact Florian 2007 timing).
+        # eligibility trace (un-lagged variant; the default is eqs. 2.7-2.8).
         if self.zero_lag:
             _update_traces_and_eligibility()
 
         # Calculate value of eligibility trace based on the value
         # of the point eligibility value of the past timestep.
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace *= _cached_decay(self, "tc_e_trace")
         self.eligibility_trace += self.eligibility / self.tc_e_trace
 
         # Compute weight update, reducing over the minibatch dimension.
@@ -2141,8 +2260,8 @@ class MSTDPET(LearningRule):
             update = update.to_sparse()
         self.connection.w += update
 
-        # Default (backward-compatible): the eligibility computed here is applied
-        # on the next timestep (one-step lag).
+        # Default: the eligibility computed here is applied on the next
+        # timestep, as in Florian (2007) eq. 3.9 / eqs. 2.7-2.8.
         if not self.zero_lag:
             _update_traces_and_eligibility()
 
@@ -2177,16 +2296,11 @@ class MSTDPET(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         # Integrate the eligibility trace from the point eligibility of the
         # previous timestep (decay then accumulate).
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace *= _cached_decay(self, "tc_e_trace")
         self.eligibility_trace += self.eligibility / self.tc_e_trace
 
         # Compute weight update, reducing over the minibatch dimension.
@@ -2212,9 +2326,6 @@ class MSTDPET(LearningRule):
             self.p_minus = self.p_minus.reshape(
                 batch_size, out_channels * height_out, 1
             )
-            self.p_minus = self.p_minus * torch.eye(out_channels * height_out).to(
-                self.connection.w.device
-            )
 
         # Reshaping spike occurrences.
         source_s = (
@@ -2229,18 +2340,15 @@ class MSTDPET(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out, 1
         )
-        target_s = target_s * torch.eye(out_channels * height_out).to(
-            self.connection.w.device
-        )
 
         # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+        self.p_plus *= _cached_decay(self, "tc_plus")
         self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+        self.p_minus *= _cached_decay(self, "tc_minus")
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+        self.eligibility = _row_scale(target_s, self.p_plus) + _row_scale(
             self.p_minus, source_s
         )
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
@@ -2277,16 +2385,11 @@ class MSTDPET(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         # Integrate the eligibility trace from the point eligibility of the
         # previous timestep (decay then accumulate).
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace *= _cached_decay(self, "tc_e_trace")
         self.eligibility_trace += self.eligibility / self.tc_e_trace
 
         # Compute weight update, reducing over the minibatch dimension.
@@ -2317,9 +2420,6 @@ class MSTDPET(LearningRule):
             self.p_minus = self.p_minus.reshape(
                 batch_size, out_channels * height_out * width_out, 1
             )
-            self.p_minus = self.p_minus * torch.eye(
-                out_channels * height_out * width_out
-            ).to(self.connection.w.device)
 
         # Reshaping spike occurrences.
         source_s = (
@@ -2339,18 +2439,15 @@ class MSTDPET(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out, 1
         )
-        target_s = target_s * torch.eye(out_channels * height_out * width_out).to(
-            self.connection.w.device
-        )
 
         # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+        self.p_plus *= _cached_decay(self, "tc_plus")
         self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+        self.p_minus *= _cached_decay(self, "tc_minus")
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+        self.eligibility = _row_scale(target_s, self.p_plus) + _row_scale(
             self.p_minus, source_s
         )
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
@@ -2389,16 +2486,11 @@ class MSTDPET(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         # Integrate the eligibility trace from the point eligibility of the
         # previous timestep (decay then accumulate).
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace *= _cached_decay(self, "tc_e_trace")
         self.eligibility_trace += self.eligibility / self.tc_e_trace
 
         # Compute weight update, reducing over the minibatch dimension.
@@ -2430,9 +2522,6 @@ class MSTDPET(LearningRule):
             self.p_minus = self.p_minus.reshape(
                 batch_size, out_channels * height_out * width_out * depth_out, 1
             )
-            self.p_minus = self.p_minus * torch.eye(
-                out_channels * height_out * width_out * depth_out
-            ).to(self.connection.w.device)
 
         # Reshaping spike occurrences.
         source_s = (
@@ -2453,18 +2542,15 @@ class MSTDPET(LearningRule):
         target_s = self.target.s.type(torch.float).reshape(
             batch_size, out_channels * height_out * width_out * depth_out, 1
         )
-        target_s = target_s * torch.eye(
-            out_channels * height_out * width_out * depth_out
-        ).to(self.connection.w.device)
 
         # Update P^+ and P^- values.
-        self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+        self.p_plus *= _cached_decay(self, "tc_plus")
         self.p_plus += a_plus * source_s
-        self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+        self.p_minus *= _cached_decay(self, "tc_minus")
         self.p_minus += a_minus * target_s
 
         # Calculate point eligibility value.
-        self.eligibility = torch.bmm(target_s, self.p_plus) + torch.bmm(
+        self.eligibility = _row_scale(target_s, self.p_plus) + _row_scale(
             self.p_minus, source_s
         )
         self.eligibility = self.eligibility.view(batch_size, *self.connection.w.shape)
@@ -2534,20 +2620,15 @@ class MSTDPET(LearningRule):
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
-        a_plus = torch.tensor(
-            kwargs.get("a_plus", 1.0), device=self.connection.w.device
-        )
-        a_minus = torch.tensor(
-            kwargs.get("a_minus", -1.0), device=self.connection.w.device
-        )
+        a_plus, a_minus = _reward_rates(self, kwargs, self.connection.w.device)
 
         source_s = self.source.s.float()
         target_s = self.target.s.float()
 
         def _update_traces_and_eligibility():
-            self.p_plus *= torch.exp(-self.connection.dt / self.tc_plus)
+            self.p_plus *= _cached_decay(self, "tc_plus")
             self.p_plus += a_plus * source_s
-            self.p_minus *= torch.exp(-self.connection.dt / self.tc_minus)
+            self.p_minus *= _cached_decay(self, "tc_minus")
             self.p_minus += a_minus * target_s
             self.eligibility = _conv_point_eligibility(
                 self.connection, self.p_plus, self.p_minus, source_s, target_s, dim
@@ -2558,7 +2639,7 @@ class MSTDPET(LearningRule):
             _update_traces_and_eligibility()
 
         # Integrate the eligibility trace and apply the weight update.
-        self.eligibility_trace *= torch.exp(-self.connection.dt / self.tc_e_trace)
+        self.eligibility_trace *= _cached_decay(self, "tc_e_trace")
         self.eligibility_trace += self.eligibility / self.tc_e_trace
         self.connection.w += (
             self.nu[0] * self.connection.dt * reward * self.eligibility_trace
@@ -2601,8 +2682,9 @@ class Rmax(LearningRule):
 
         Keyword arguments:
 
-        :param float tc_c: Time constant for balancing naive Hebbian and policy gradient
-            learning.
+        :param float tc_c: Time constant :math:`\\tau_c` balancing policy-gradient and
+            naive Hebbian learning (Vasilaki et al. 2009, eq. 8): ``0`` gives the
+            strict policy-gradient rule, ``inf`` the naive Hebbian rule. Default 5.
         :param float tc_e_trace: Time constant for the eligibility trace.
         """
         super().__init__(
@@ -2632,7 +2714,7 @@ class Rmax(LearningRule):
 
         self.tc_c = torch.tensor(
             kwargs.get("tc_c", 5.0)
-        )  # 0 for pure naive Hebbian, inf for pure policy gradient.
+        )  # 0 for strict policy gradient, inf for pure naive Hebbian (eq. 8).
         self.tc_e_trace = torch.tensor(kwargs.get("tc_e_trace", 25.0))
 
     def _connection_update(self, **kwargs) -> None:

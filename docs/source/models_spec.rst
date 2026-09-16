@@ -177,6 +177,20 @@ i.e. a pre-synaptic spike **depresses** the synapse in proportion to the post-sy
 trace, and a post-synaptic spike **potentiates** it in proportion to the pre-synaptic
 trace. Convolutional and locally-connected variants apply the same rule patch-wise.
 
+This is the additive pair-based trace STDP of Morrison, Diesmann & Gerstner (2008),
+*Biol. Cybern.* 98:459-478, eqs. (11)-(14), with :math:`F_+ = \nu_\text{post}`,
+:math:`F_- = \nu_\text{pre}`. Traces follow their Sect. 2.3: ``traces_additive=True``
+accumulates 1 per spike; ``traces_additive=False`` resets the trace to 1 on each spike.
+Validated in ``test/network/test_learning_rule_specs.py``.
+
+.. note::
+
+   ``PostPre`` is **not** the rule of Diehl & Cook (2015) even though it is the rule
+   used by the ``DiehlAndCook2015`` model. Diehl & Cook change weights only on
+   post-synaptic spikes, :math:`\Delta w = \eta (x_\text{pre} - x_\text{tar})(w_\max - w)^\mu`,
+   with a target trace :math:`x_\text{tar}`; ``PostPre`` has no target trace and adds a
+   depression term on pre-synaptic spikes instead.
+
 Hebbian (``Hebbian``)
 ~~~~~~~~~~~~~~~~~~~~~~
 Both pre- and post-synaptic events **increase** the weight (no depression term),
@@ -185,7 +199,29 @@ proportional to the opposite layer's trace.
 Weight-dependent post-pre (``WeightDependentPostPre``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``PostPre`` whose potentiation/depression magnitudes are scaled by the distance of the
-weight from its bounds (``wmin``/``wmax``), yielding soft saturation at the limits.
+weight from its bounds (``wmin``/``wmax``), yielding soft saturation at the limits:
+Morrison et al. (2008) eqs. (13)-(14) with :math:`F_+ = \nu_\text{post}(w_\max - w)` and
+:math:`F_- = \nu_\text{pre}(w - w_\min)` (the multiplicative / soft-bound rule).
+
+Diehl & Cook STDP (``DiehlAndCook``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The post-spike-only rule of Diehl & Cook (2015), *Front. Comput. Neurosci.* 9:99,
+Sect. 2.3 "Learning": on every post-synaptic spike
+
+.. math::
+
+   \\Delta w = \\eta\\,(x_\\text{pre} - x_\\text{tar})\\,(w_\\max - w)^\\mu
+
+where the pre-synaptic trace :math:`x_\\text{pre}` is increased by 1 on each
+pre-synaptic spike and decays exponentially (``traces_additive=True``),
+:math:`x_\\text{tar}` is the target trace value ("the higher the target value, the lower
+the synaptic weight will be"), :math:`w_\\max` is ``wmax`` and :math:`\\mu` the weight
+dependence. Pre-synaptic spikes do not change the weight. Keyword arguments ``x_tar``
+(default 0) and ``mu`` (default 1); the paper gives no numeric values for them. Only
+the post-synaptic learning rate ``nu[1]`` is used. Available for ``Connection`` /
+``LocalConnection`` and as ``MCC_learning.DiehlAndCook`` for multicompartment
+connections; ``DiehlAndCook2015(learning_rule=MCC_learning.DiehlAndCook, ...)``
+switches the model to it. Validated in ``test/network/test_learning_rule_specs.py``.
 
 Reward-modulated STDP (``MSTDP``, ``MSTDPET``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -193,16 +229,53 @@ Three-factor rules: a STDP-like eligibility signal is gated by a scalar **reward
 ``MSTDP`` modulates the immediate pre/post correlation by reward; ``MSTDPET`` adds an
 **eligibility trace** that accumulates the correlation over time (time constant
 ``tc_e_trace``) before reward gating. Reward is supplied via the pipeline / an
-``AbstractReward`` (e.g. ``MovingAvgRPE``). See source for the exact eligibility update.
+``AbstractReward`` (e.g. ``MovingAvgRPE``).
+
+Both follow the discrete-time equations of Florian (2007), *Neural Comput.*
+19:1468-1502: traces (3.11)-(3.12), eligibility (3.10), ``MSTDP`` update (3.9)
+:math:`w(t+\delta t) = w(t) + \gamma\, r(t+\delta t)\, \zeta(t)`, and ``MSTDPET``
+(2.7)-(2.8). The reward passed to ``network.run`` at a step therefore multiplies the
+eligibility of the previous step (``zero_lag=False``, the default). Defaults
+``tc_plus = tc_minus = 20``, ``tc_e_trace = 25``, ``a_plus = 1``, ``a_minus = -1`` are
+the paper's. Validated in ``test/network/test_mstdp_florian.py``.
 
 Rmax (``Rmax``)
 ~~~~~~~~~~~~~~~
-Reward-maximizing rule intended for stochastic (SRM0) neurons; see source for its
-formulation.
+Reward-maximizing rule for stochastic ``SRM0Nodes``: Vasilaki, Fremaux, Urbanczik,
+Senn & Gerstner (2009), *PLoS Comput. Biol.* 5(12):e1000586, eqs. (7)-(8) with the
+escape rate of eq. (13). The eligibility trace decays with ``tc_e_trace`` and, on each
+step, adds :math:`[Y_i - p_i / (1 + (\tau_c/\delta t)\, p_i)]` times the additive
+pre-synaptic trace, where :math:`Y_i` is the post-synaptic spike and
+:math:`p_i = 1 - e^{-\rho_i \delta t}` its spike probability; ``tc_c`` is
+:math:`\tau_c` (``0`` = strict policy gradient, ``inf`` = naive Hebbian). The constant
+:math:`g'/g = 1/\Delta u` of eq. (8) is absorbed into ``nu``. Validated in
+``test/network/test_learning_rule_specs.py``.
+
+Spike clamps and traces
+~~~~~~~~~~~~~~~~~~~~~~~
+``network.run(..., clamp={layer: mask}, unclamp={layer: mask})`` forces or suppresses
+spikes for a step. The clamp is applied inside ``Nodes.forward`` *before* the spike
+trace ``x`` is updated, so a forced spike leaves a trace and a suppressed spike does
+not; the learning rules therefore treat clamped spikes exactly like natural ones. A
+forced spike does not reset the neuron's voltage or start its refractory period.
+(Before September 2026 the clamp was applied after the trace update, so clamped
+spikes entered the same-step potentiation term but never the trace.)
+
+Known deviations from the papers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ``PostPre`` is not the Diehl & Cook (2015) rule (see the note above). The
+  ``DiehlAndCook2015`` model keeps ``PostPre`` as its default because that is what the
+  published BindsNET replication used; the paper's rule is available as
+  ``DiehlAndCook`` and can be selected with the model's ``learning_rule`` argument.
+* Until September 2026 the multicompartment ``MCC_learning.PostPre`` multiplied each
+  update by the simulation step ``dt`` (the classic ``PostPre`` and Morrison et al.
+  (2008) eqs. (13)-(14) do not). The factor was removed; results at ``dt = 1`` are
+  unchanged, and at other steps the update is now a per-spike increment like the
+  classic rule.
 
 .. note::
 
-   Where this page summarizes a rule "see source", the equations were not reproduced here
-   to avoid mis-stating constants; consult ``bindsnet/learning/learning.py`` for the
-   authoritative form. If an implementation deviates from a textbook model, the code is
-   the specification.
+   Where this page does not reproduce an equation, consult
+   ``bindsnet/learning/learning.py`` for the authoritative form. If an implementation
+   deviates from a textbook model, the code is the specification, and the deviation
+   is listed above.

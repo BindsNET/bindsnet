@@ -92,6 +92,7 @@ class AbstractFeature(ABC):
             NoOp,
             PostPre,
             Hebbian,
+            DiehlAndCook,
             MSTDP,
             MSTDPET,
         )
@@ -100,6 +101,7 @@ class AbstractFeature(ABC):
             NoOp,
             PostPre,
             Hebbian,
+            DiehlAndCook,
             MSTDP,
             MSTDPET,
         ]
@@ -246,6 +248,8 @@ class AbstractFeature(ABC):
         if self.learning_rule is None:
             self.learning_rule = NoOp
 
+        # Rule-specific options given to the feature (e.g. ``x_tar``, ``mu``,
+        # ``tc_plus``) are forwarded to the rule; connection-level kwargs win.
         self.learning_rule = self.learning_rule(
             connection=connection,
             feature_value=self.value,
@@ -253,7 +257,7 @@ class AbstractFeature(ABC):
             nu=self.nu,
             reduction=self.reduction,
             decay=self.decay,
-            **kwargs,
+            **{**self.kwargs, **kwargs},
         )
 
         #### Recycle unnecessary variables ####
@@ -595,6 +599,7 @@ class Weight(AbstractFeature):
         decay: float = 0.0,
         sparse: Optional[bool] = False,
         batch_size: int = 1,
+        **kwargs,
     ) -> None:
         # language=rst
         """
@@ -616,6 +621,9 @@ class Weight(AbstractFeature):
         :param decay: Constant multiple to decay weights by on each iteration
         :param sparse: Should :code:`value` parameter be sparse tensor or not
         :param batch_size: Mini-batch size.
+
+        Any further keyword arguments (e.g. ``x_tar``, ``mu``, ``tc_plus``) are
+        forwarded to the learning rule when it is instantiated.
         """
 
         self.norm_frequency = norm_frequency
@@ -638,6 +646,7 @@ class Weight(AbstractFeature):
             decay=decay,
             sparse=sparse,
             batch_size=batch_size,
+            **kwargs,
         )
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:

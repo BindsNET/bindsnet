@@ -1,6 +1,7 @@
 from bindsnet.learning.learning import (
     MSTDP,
     MSTDPET,
+    DiehlAndCook,
     Hebbian,
     LearningRule,
     NoOp,
@@ -15,6 +16,7 @@ __all__ = [
     "PostPre",
     "WeightDependentPostPre",
     "Hebbian",
+    "DiehlAndCook",
     "MSTDP",
     "MSTDPET",
     "Rmax",

@@ -9,6 +9,7 @@
          "type": "python",
          "request": "launch",
          "program": "${file}",
+         "python": "/home/hananel/miniconda3/envs/bindsNET/bin/python",
          "console": "integratedTerminal",
          "justMyCode": false
       }

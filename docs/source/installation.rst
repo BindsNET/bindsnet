@@ -5,7 +5,13 @@ Installation
 Pip install
 -----------
 
-Issue:
+To install the latest release from `PyPI <https://pypi.org/project/bindsnet/>`_, issue:
+
+.. code-block:: bash
+
+        pip install bindsnet
+
+To install the current development code from GitHub, issue:
 
 .. code-block:: bash
 
@@ -19,8 +25,8 @@ On \*nix systems, issue one of the following in a shell:
 
 .. code-block:: bash
 	
-	git clone https://github.com/Hananel-Hazan/bindsnet.git  # HTTPS
-	git clone git@github.com:Hananel-Hazan/bindsnet.git  # SSH
+	git clone https://github.com/BindsNET/bindsnet.git  # HTTPS
+	git clone git@github.com:BindsNET/bindsnet.git  # SSH
 
 Change directory into :code:`bindsnet` and issue one of the following:
 
