@@ -61,4 +61,7 @@ formula it replaced (`test/network/test_perf_equivalence.py`). Before claiming
 "no change in results", run the same seeded networks on the old code (a git
 worktree of the previous commit) and the new code and compare with
 `torch.equal`; only batch>1 summation-order differences (about 1e-7) are
-acceptable, and must be stated. Benchmark: `examples/benchmark/hot_path_bench.py`.
+acceptable, and must be stated. Exception: the batch-1 fused `addmm_` STDP update
+matches the un-fused formula bit for bit on some CPUs but not on GitHub's CI runners
+(max abs diff 1.5e-8 to 3.0e-8, CI run 35124573539, 2026-09-16), so those tests use
+the same tolerance and warn with the size. Benchmark: `examples/benchmark/hot_path_bench.py`.
