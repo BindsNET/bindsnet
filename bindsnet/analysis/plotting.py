@@ -11,8 +11,8 @@ from torch.nn.modules.utils import _pair
 
 from bindsnet.utils import (
     reshape_conv2d_weights,
-    reshape_locally_connected_weights,
     reshape_local_connection_2d_weights,
+    reshape_locally_connected_weights,
 )
 
 plt.ion()

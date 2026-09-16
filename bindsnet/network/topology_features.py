@@ -1,15 +1,16 @@
+import warnings
 from abc import ABC, abstractmethod
-from bindsnet.learning.learning import NoOp
-from typing import Union, Tuple, Optional, Sequence
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
-import warnings
+import torch.nn as nn
+import torch.nn.functional as F
 from torch import device
 from torch.nn import Parameter
-import torch.nn.functional as F
-import torch.nn as nn
+
 import bindsnet.learning
+from bindsnet.learning.learning import NoOp
 
 
 class AbstractFeature(ABC):
@@ -90,12 +91,12 @@ class AbstractFeature(ABC):
         self.is_primed = False
 
         from ..learning.MCC_learning import (
-            NoOp,
-            PostPre,
-            Hebbian,
-            DiehlAndCook,
             MSTDP,
             MSTDPET,
+            DiehlAndCook,
+            Hebbian,
+            NoOp,
+            PostPre,
         )
 
         supported_rules = [

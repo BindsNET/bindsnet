@@ -1,27 +1,21 @@
 ### Toy example to test LocalConnection3D (the dataset used is MNIST but with a dimension replicated
 ### for each image (each sample has size (28, 28, 28))
 
+import os
+from time import time as t
+
 import torch
 from torch.nn.modules.utils import _triple
-
-from tqdm import tqdm
-import os
-from bindsnet.network.monitors import Monitor
-
-import torch
 from torchvision import transforms
 from tqdm import tqdm
 
-from time import time as t
-from torchvision import transforms
-from bindsnet.learning import PostPre
-
-from bindsnet.network.nodes import AdaptiveLIFNodes
-from bindsnet.network.nodes import Input
-from bindsnet.network.network import Network
-from bindsnet.network.topology import Connection, LocalConnection3D
-from bindsnet.encoding import PoissonEncoder
 from bindsnet.datasets import MNIST
+from bindsnet.encoding import PoissonEncoder
+from bindsnet.learning import PostPre
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.network import Network
+from bindsnet.network.nodes import AdaptiveLIFNodes, Input
+from bindsnet.network.topology import Connection, LocalConnection3D
 
 # Hyperparameters
 in_channels = 1

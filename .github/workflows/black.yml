@@ -1,4 +1,4 @@
-# Formatting check. Branch protection on master requires the job named "lint"; keep that name.
+# Formatting and import-order check. Branch protection on master requires the job named "lint"; keep that name.
 name: Black Formater
 
 on:
@@ -22,8 +22,13 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      # Use the black version pinned in poetry.lock, so CI and local formatting agree.
+      # Use the black and isort versions pinned in poetry.lock, so CI and local
+      # formatting agree.
       - name: Check formatting with black
         run: |
           version=$(python -c "import tomllib; print(next(p['version'] for p in tomllib.load(open('poetry.lock','rb'))['package'] if p['name']=='black'))")
           pipx run "black==${version}" --check --diff .
+      - name: Check import order with isort
+        run: |
+          version=$(python -c "import tomllib; print(next(p['version'] for p in tomllib.load(open('poetry.lock','rb'))['package'] if p['name']=='isort'))")
+          pipx run "isort==${version}" --check-only --diff .

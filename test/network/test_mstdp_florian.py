@@ -34,12 +34,12 @@ from bindsnet.learning import MSTDP, MSTDPET
 from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.network.topology import (
     Connection,
+    Conv1dConnection,
+    Conv2dConnection,
     Conv3dConnection,
     LocalConnection1D,
     LocalConnection2D,
     LocalConnection3D,
-    Conv1dConnection,
-    Conv2dConnection,
 )
 
 TOL = 1e-5

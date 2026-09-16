@@ -1,5 +1,5 @@
-import re
 import os
+import re
 import subprocess
 from statistics import mean
 

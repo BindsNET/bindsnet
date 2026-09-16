@@ -26,8 +26,14 @@ import pytest
 import torch
 
 from bindsnet.encoding import rank_order
-from bindsnet.learning import MSTDP, MSTDPET, Hebbian, PostPre, WeightDependentPostPre
-from bindsnet.learning import MCC_learning
+from bindsnet.learning import (
+    MSTDP,
+    MSTDPET,
+    Hebbian,
+    MCC_learning,
+    PostPre,
+    WeightDependentPostPre,
+)
 from bindsnet.learning.learning import (
     _cached_decay,
     _dense_outer_update_ok,

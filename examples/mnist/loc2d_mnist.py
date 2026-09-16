@@ -1,26 +1,20 @@
-import torch
-from torch.nn.modules.utils import _pair
-
-from tqdm import tqdm
 import os
-from bindsnet.network.monitors import Monitor
+from time import time as t
+
 import matplotlib.pyplot as plt
 import torch
+from torch.nn.modules.utils import _pair
 from torchvision import transforms
 from tqdm import tqdm
 
 from bindsnet.analysis.plotting import plot_local_connection_2d_weights
-
-from time import time as t
-from torchvision import transforms
-from bindsnet.learning import PostPre
-
-from bindsnet.network.nodes import AdaptiveLIFNodes
-from bindsnet.network.nodes import Input
-from bindsnet.network.network import Network
-from bindsnet.network.topology import Connection, LocalConnection2D
-from bindsnet.encoding import PoissonEncoder
 from bindsnet.datasets import MNIST
+from bindsnet.encoding import PoissonEncoder
+from bindsnet.learning import PostPre
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.network import Network
+from bindsnet.network.nodes import AdaptiveLIFNodes, Input
+from bindsnet.network.topology import Connection, LocalConnection2D
 
 # Hyperparameters
 in_channels = 1

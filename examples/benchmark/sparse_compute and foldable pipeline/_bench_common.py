@@ -33,10 +33,10 @@ for _p in (_ROOT, _STRESS):
         sys.path.insert(0, _p)
 
 import torch
+from example_network import ExampleNetwork
 
 from bindsnet.network.topology import MulticompartmentConnection
 from bindsnet.network.topology_features import Degradation, Probability
-from example_network import ExampleNetwork
 
 # ExampleNetwork sizes per device: 20k excitatory neurons on GPU (where the fold
 # shines), a smaller net on CPU so the baseline finishes in reasonable time.

@@ -1,8 +1,13 @@
 # Installed by `poetry run pre-commit install` (see CONTRIBUTING.md).
-# Uses the black installed by Poetry, so the version always matches poetry.lock and CI.
+# Uses the isort and black installed by Poetry, so the version always matches poetry.lock and CI.
 repos:
   - repo: local
     hooks:
+      - id: isort
+        name: isort
+        entry: poetry run isort
+        language: system
+        types: [python]
       - id: black
         name: black
         entry: poetry run black

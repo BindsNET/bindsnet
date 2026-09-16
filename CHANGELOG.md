@@ -29,6 +29,11 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
   `black .` step reformatted instead of checking). `black.yml` checks with the black
   version from `poetry.lock` instead of the floating `psf/black@stable`.
 - Dependabot also updates the Dockerfile base image.
+- Imports sorted with isort (settings already in `pyproject.toml`, never applied; 20
+  files, import order only). `black.yml` and the pre-commit hook now also check isort.
+- Removed from git: 59 TensorBoard event files under `logs/` (test output; `logs/*`
+  was already in `.gitignore`), `.vscode/launch.json` (a local interpreter path) and
+  `docs/Makefile.old`, `docs/make.bat.old`.
 - Added `.pre-commit-config.yaml` (black from Poetry); `CONTRIBUTING.md` already told
   contributors to install pre-commit, but there was no configuration.
 - `[tool.black] target-version` is `py311`-`py313` (was `py38`); no file changes.

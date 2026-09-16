@@ -1,17 +1,16 @@
+import warnings
 from abc import ABC, abstractmethod
 from typing import Optional, Sequence, Tuple, Union
 
-import warnings
-
 import numpy as np
 import torch
-from torch import device
 import torch.nn.functional as F
-from bindsnet.utils import im2col_indices
+from torch import device
 from torch.nn import Module, Parameter
 from torch.nn.modules.utils import _pair, _triple
 
 from bindsnet.network.nodes import CSRMNodes, Nodes
+from bindsnet.utils import im2col_indices
 
 
 class AbstractConnection(ABC, Module):
