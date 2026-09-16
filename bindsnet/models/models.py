@@ -3,8 +3,8 @@ from typing import Iterable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import torch
 from scipy.spatial.distance import euclidean
-from torch.nn.modules.utils import _pair
 from torch import device
+from torch.nn.modules.utils import _pair
 
 from bindsnet.learning import PostPre
 from bindsnet.learning.MCC_learning import DiehlAndCook as MMCDiehlAndCook

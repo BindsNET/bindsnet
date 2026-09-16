@@ -1,17 +1,16 @@
+import warnings
 from abc import ABC, abstractmethod
 from typing import Optional, Sequence, Tuple, Union
 
-import warnings
-
 import numpy as np
 import torch
-from torch import device
 import torch.nn.functional as F
-from bindsnet.utils import im2col_indices
+from torch import device
 from torch.nn import Module, Parameter
 from torch.nn.modules.utils import _pair, _triple
 
 from bindsnet.network.nodes import CSRMNodes, Nodes
+from bindsnet.utils import im2col_indices
 
 
 class AbstractConnection(ABC, Module):
@@ -35,7 +34,7 @@ class AbstractConnection(ABC, Module):
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
@@ -246,6 +245,7 @@ class AbstractMulticompartmentConnection(ABC, Module):
         # language=rst
         """
         insert a feature into the pipeline
+
         :param index: Index for where to insert the feature
         """
         self.pipeline.insert(feature, index)
@@ -256,6 +256,7 @@ class AbstractMulticompartmentConnection(ABC, Module):
         # language=rst
         """
         remove a feature frome the pipeline
+
         :param feature: feature to be removed
         """
         self.pipeline.remove(feature)
@@ -314,7 +315,7 @@ class Connection(AbstractConnection):
 
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
@@ -671,7 +672,7 @@ class Conv1dConnection(AbstractConnection):
         :param stride: stride for convolution.
         :param padding: padding for convolution.
         :param dilation: dilation for convolution.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
@@ -817,7 +818,7 @@ class Conv2dConnection(AbstractConnection):
         :param stride: Horizontal and vertical stride for convolution.
         :param padding: Horizontal and vertical padding for convolution.
         :param dilation: Horizontal and vertical dilation for convolution.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
@@ -978,7 +979,7 @@ class Conv3dConnection(AbstractConnection):
         :param stride: Depth-wise, horizontal, and vertical stride for convolution.
         :param padding: Depth-wise, horizontal, and vertical  padding for convolution.
         :param dilation: Depth-wise, horizontal and vertical dilation for convolution.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
@@ -1439,7 +1440,7 @@ class LocalConnection(AbstractConnection):
         :param kernel_size: Horizontal and vertical size of convolutional kernels.
         :param stride: Horizontal and vertical stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch
@@ -1613,18 +1614,21 @@ class LocalConnection1D(AbstractConnection):
         if there are `n_conv` neurons in each post-synaptic patch, then the first
         `n_conv` neurons in the post-synaptic population correspond to the first
         receptive field, the second ``n_conv`` to the second receptive field, and so on.
+
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param kernel_size: size of convolutional kernels.
         :param stride: stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         :param w_dtype: Data type for :code:`w` tensor
+
         Keyword arguments:
+
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
@@ -1675,6 +1679,7 @@ class LocalConnection1D(AbstractConnection):
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         """
         Compute pre-activations given spikes using layer weights.
+
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
@@ -1749,18 +1754,21 @@ class LocalConnection2D(AbstractConnection):
         if there are `n_conv` neurons in each post-synaptic patch, then the first
         `n_conv` neurons in the post-synaptic population correspond to the first
         receptive field, the second ``n_conv`` to the second receptive field, and so on.
+
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param kernel_size: Horizontal and vertical size of convolutional kernels.
         :param stride: Horizontal and vertical stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         :param w_dtype: Data type for :code:`w` tensor
+
         Keyword arguments:
+
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
@@ -1821,6 +1829,7 @@ class LocalConnection2D(AbstractConnection):
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         """
         Compute pre-activations given spikes using layer weights.
+
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
@@ -1896,18 +1905,21 @@ class LocalConnection3D(AbstractConnection):
         if there are `n_conv` neurons in each post-synaptic patch, then the first
         `n_conv` neurons in the post-synaptic population correspond to the first
         receptive field, the second ``n_conv`` to the second receptive field, and so on.
+
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
         :param kernel_size: Horizontal, vertical, and depth-wise size of convolutional kernels.
         :param stride: Horizontal, vertical, and depth-wise stride for convolution.
         :param n_filters: Number of locally connected filters per pre-synaptic region.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param reduction: Method for reducing parameter updates along the minibatch dimension.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         :param w_dtype: Data type for :code:`w` tensor
+
         Keyword arguments:
+
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
@@ -1970,6 +1982,7 @@ class LocalConnection3D(AbstractConnection):
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         """
         Compute pre-activations given spikes using layer weights.
+
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
@@ -2041,14 +2054,17 @@ class MeanFieldConnection(AbstractConnection):
         # language=rst
         """
         Instantiates a :code:`MeanFieldConnection` object.
+
         :param source: A layer of nodes from which the connection originates.
         :param target: A layer of nodes to which the connection connects.
-         :param nu: Learning rate for both pre- and post-synaptic events. It also
+        :param nu: Learning rate for both pre- and post-synaptic events. It also
             accepts a pair of tensors to individualize learning rates of each neuron.
             In this case, their shape should be the same size as the connection weights.
         :param weight_decay: Constant multiple to decay weights by on each iteration.
         :param w_dtype: Data type for :code:`w` tensor
+
         Keyword arguments:
+
         :param LearningRule update_rule: Modifies connection parameters according to
             some rule.
         :param Union[float, torch.Tensor] w: Strengths of synapses. Can be single value or tensor of size ``target``
@@ -2077,6 +2093,7 @@ class MeanFieldConnection(AbstractConnection):
         # language=rst
         """
         Compute pre-activations given spikes using layer weights.
+
         :param s: Incoming spikes.
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).

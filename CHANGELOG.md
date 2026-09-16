@@ -6,6 +6,42 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 
 ## [Unreleased]
 
+### Fixed
+- API reference on Read the Docs was empty: the build never installed `bindsnet`, so
+  every `automodule` failed to import (`No module named 'matplotlib'`), and
+  `docs/pyproject.toml` downgraded Sphinx to 7.2.6. `.readthedocs.yaml` now installs a
+  CPU build of torch and the package (Python 3.13, Ubuntu 24.04);
+  `docs/pyproject.toml` removed.
+- The docs build has no warnings (was 48 on Read the Docs, 53 with the package
+  installed): docstring markup fixed in `topology.py`, `topology_features.py`,
+  `monitors.py`, `learning.py`, `nodes.py`, `encoders.py`, `plotting.py`,
+  `conversion.py`, `davis.py`, `preprocess.py`, `cue_reward.py`, `dot_simulator.py`;
+  broken links in `index.rst` and the guide; `conf.py` takes the version from the
+  installed package. Docstring text only; no code changed.
+- API reference now includes `learning.MCC_learning`, `network.topology_features`,
+  `environment.cue_reward`, `environment.dot_simulator` and
+  `analysis.dotTrace_plotter`, which were missing.
+
+### Changed
+- CI: one test workflow (`python-app.yml`: job `build` on Python 3.13 plus a 3.11/3.12
+  matrix, Poetry 2.4.3 with dependency caching, superseded runs cancelled);
+  `pythonpackage.yml` removed (it ran on every push to every branch and its
+  `black .` step reformatted instead of checking). `black.yml` checks with the black
+  version from `poetry.lock` instead of the floating `psf/black@stable`.
+- Dependabot also updates the Dockerfile base image.
+- Imports sorted with isort (settings already in `pyproject.toml`, never applied; 20
+  files, import order only). `black.yml` and the pre-commit hook now also check isort.
+- Removed from git: 59 TensorBoard event files under `logs/` (test output; `logs/*`
+  was already in `.gitignore`), `.vscode/launch.json` (a local interpreter path) and
+  `docs/Makefile.old`, `docs/make.bat.old`.
+- Added `.pre-commit-config.yaml` (black from Poetry); `CONTRIBUTING.md` already told
+  contributors to install pre-commit, but there was no configuration.
+- `[tool.black] target-version` is `py311`-`py313` (was `py38`); no file changes.
+- README: dead link to Markram et al. (1997) replaced with its DOI; RL example named
+  correctly (Breakout, not Space Invaders); OpenAI gym text replaced (Gymnasium and
+  ale-py install with BindsNET); benchmark marked as from the 2018 paper; PyPI badge
+  refreshes hourly.
+
 ## [0.3.4 (PyPI)] - 2026-09-16
 
 First PyPI upload since 0.2.7. It is built from the `master` branch on this date, not

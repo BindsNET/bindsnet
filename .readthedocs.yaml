@@ -1,39 +1,25 @@
-# .readthedocs.yaml
 # Read the Docs configuration file
-# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
-
-# Required
+# https://docs.readthedocs.io/en/stable/config-file/v2.html
 version: 2
 
-# Set the version of Python and other tools you might need
 build:
-  os: ubuntu-22.04
+  os: ubuntu-24.04
   tools:
-    python: "3.11"
+    python: "3.13"
 
-# Build documentation in the docs/ directory with Sphinx
 sphinx:
   builder: html
   configuration: docs/source/conf.py
-  
+
 formats:
   - epub
   - pdf
 
-# We recommend specifying your dependencies to enable reproducible builds:
-# https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
+# autodoc imports bindsnet, so the package and its dependencies must be installed.
+# docs/requirements.txt installs the CPU build of torch first (much smaller than the
+# CUDA build); installing the package then keeps that torch.
 python:
   install:
     - requirements: docs/requirements.txt
     - method: pip
-      path: docs/
-      # extra_requirements:
-        # - docs
-
-# python:
-  # version: 3.8
-  # install:
-    # - method: pip
-      # path: .
-    # - requirements: docs/requirements.txt
-  # system_packages: False
+      path: .

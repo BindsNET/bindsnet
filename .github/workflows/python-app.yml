@@ -1,6 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
+# Tests. Branch protection on master requires the job named "build"; keep that name.
 name: BindsNET build status
 
 on:
@@ -8,39 +6,53 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  POETRY_VERSION: "2.4.3"
+
 jobs:
   build:
-
+    name: build
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v7
-    - name: Set up Python 3.13
-      uses: actions/setup-python@v7
-      with:
-        python-version: 3.13
     - name: Install Poetry
-      env:
-        POETRY_VERSION: 2.4.3
-      run: |
-        curl -sSL https://install.python-poetry.org | python - -y &&\
-            poetry config virtualenvs.create false
+      run: pipx install "poetry==${POETRY_VERSION}"
+    - uses: actions/setup-python@v7
+      with:
+        python-version: "3.13"
+        cache: poetry
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest
-        # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        poetry install
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      run: poetry install
+    - name: Lint with flake8 (syntax errors and undefined names)
+      run: pipx run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Test with pytest
-      run: |
-        pytest
+      run: poetry run pytest
+
+  # The other supported Python versions (pyproject.toml: >=3.11,<3.14).
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install Poetry
+      run: pipx install "poetry==${POETRY_VERSION}"
+    - uses: actions/setup-python@v7
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: poetry
+    - name: Install dependencies
+      run: poetry install
+    - name: Test with pytest
+      run: poetry run pytest
