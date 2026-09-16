@@ -79,8 +79,8 @@ class Monitor(AbstractMonitor):
 
         :param var: State variable recording to return.
         :return: Tensor of shape ``[time, n_1, ..., n_k]``, where ``[n_1, ..., n_k]`` is the shape of the recorded state
-        variable.
-        Note, if time == `None`, get return the logs and empty the monitor variable
+            variable. If ``time`` is ``None``, the logs are returned and the monitor
+            is emptied.
 
         """
         if self.clean:
@@ -119,7 +119,7 @@ class Monitor(AbstractMonitor):
     def reset_state_variables(self) -> None:
         # language=rst
         """
-        Resets recordings to empty ``List``s.
+        Resets recordings to empty lists.
         """
         if self.time is None:
             self.recording = {v: [] for v in self.state_vars}

@@ -62,8 +62,8 @@ def subsample(image: np.ndarray, x: int, y: int) -> np.ndarray:
 
 class Rescale(object):
     """Rescale image and bounding box.
-    Args:
-        output_size (tuple or int): Desired output size. If int, square crop
+
+    :param output_size: Desired output size (tuple or int). If int, square crop
         is made.
     """
 

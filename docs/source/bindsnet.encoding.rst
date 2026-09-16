@@ -33,6 +33,7 @@ Module contents
 ---------------
 
 .. automodule:: bindsnet.encoding
+   :no-index:
    :members:
    :undoc-members:
    :show-inheritance:
