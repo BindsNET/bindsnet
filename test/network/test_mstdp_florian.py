@@ -245,7 +245,7 @@ class TestMSTDPFlorian:
             net.add_layer(src, name="in")
             net.add_layer(tgt, name="out")
             net.add_connection(conn, source="in", target="out")
-            inp = torch.bernoulli(torch.rand(5, 1, 1, 8, 8, 8)).byte()
+            inp = torch.bernoulli(torch.rand(5, 1, 1, 8, 8, 8)).bool()
             net.run(inputs={"in": inp}, time=5, reward=1.0)  # must not raise
 
 

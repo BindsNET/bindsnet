@@ -406,7 +406,7 @@ two-layer, input-output spiking neural network.
     network.add_monitor(monitor=target_monitor, name="B")
 
     # Create input spike data, where each spike is distributed according to Bernoulli(0.1).
-    input_data = torch.bernoulli(0.1 * torch.ones(time, source_layer.n)).byte()
+    input_data = torch.bernoulli(0.1 * torch.ones(time, source_layer.n)).bool()
     inputs = {"A": input_data}
 
     # Simulate network on input data.
@@ -417,7 +417,6 @@ two-layer, input-output spiking neural network.
         "A": source_monitor.get("s"), "B": target_monitor.get("s")
     }
     voltages = {"B": target_monitor.get("v")}
-
     plt.ioff()
     plot_spikes(spikes)
     plot_voltages(voltages, plot_type="line")
