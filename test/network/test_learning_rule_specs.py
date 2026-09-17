@@ -159,7 +159,7 @@ def _run_pair_rule(rule, dt, additive, wmin, wmax, seed=0, T=40, n_in=12, n_out=
     net.layers["out"].thresh.fill_(-60.0)
     w_hist, post_hist = [], []
     for t in range(T):
-        net.run(inputs={"in": pre[t : t + 1].byte()}, time=dt)
+        net.run(inputs={"in": pre[t : t + 1].bool()}, time=dt)
         post_hist.append(net.layers["out"].s.view(-1).float().clone())
         w_hist.append(conn.w.detach().clone())
     post = torch.stack(post_hist)
@@ -268,7 +268,7 @@ class TestPairSTDPMorrison2008:
                 for t in range(T):
                     if drive == "teacher":
                         net.run(
-                            inputs={"in": pre[t].byte(), "teacher": teach[t].byte()},
+                            inputs={"in": pre[t].bool(), "teacher": teach[t].bool()},
                             time=1,
                         )
                     else:
@@ -279,8 +279,8 @@ class TestPairSTDPMorrison2008:
                         )
                         net.run(
                             inputs={
-                                "in": pre[t].byte(),
-                                "teacher": torch.zeros(1, 1).byte(),
+                                "in": pre[t].bool(),
+                                "teacher": torch.zeros(1, 1).bool(),
                             },
                             time=1,
                             clamp={"out": force},
@@ -315,7 +315,7 @@ class TestPairSTDPMorrison2008:
         net.layers["out"].x.fill_(0.3)  # a lingering post-synaptic trace
         pre = torch.zeros(3, 1, 1)
         pre[1, 0, 0] = 1
-        net.run(inputs={"in": pre.byte()}, time=3)
+        net.run(inputs={"in": pre.bool()}, time=3)
         assert conn.w.item() < 0.5  # depressed by the pre spike alone
 
 
@@ -339,7 +339,7 @@ class TestMulticompartmentRulesMatchClassic:
         torch.manual_seed(0)
         w0 = 0.5 * torch.rand(12, 6)
         torch.manual_seed(1)
-        pre = torch.bernoulli(0.5 * torch.ones(40, 12)).byte()
+        pre = torch.bernoulli(0.5 * torch.ones(40, 12)).bool()
 
         def build(use_mcc):
             net = Network(dt=dt)
@@ -441,7 +441,7 @@ class TestRmaxVasilaki2009:
         layer = net.layers["out"]
         torch.manual_seed(3)
         net.run(
-            inputs={"in": torch.bernoulli(0.5 * torch.ones(5, 10)).byte()},
+            inputs={"in": torch.bernoulli(0.5 * torch.ones(5, 10)).bool()},
             time=2.5,
             reward=0.0,
         )
@@ -458,7 +458,7 @@ class TestRmaxVasilaki2009:
         e = torch.zeros_like(w_ref)
         torch.manual_seed(4)
         T = 30
-        pre = torch.bernoulli(0.5 * torch.ones(T, 10)).byte()
+        pre = torch.bernoulli(0.5 * torch.ones(T, 10)).bool()
         rewards = torch.randn(T)
         for t in range(T):
             net.run(inputs={"in": pre[t : t + 1]}, time=dt, reward=rewards[t].item())
@@ -516,11 +516,11 @@ class TestClampEntersTraces:
     def test_clamped_spike_sets_trace(self):
         net = self._layer_net()
         mask = torch.tensor([True, False, False])
-        net.run(inputs={"in": torch.zeros(1, 3).byte()}, time=1, clamp={"out": mask})
+        net.run(inputs={"in": torch.zeros(1, 3).bool()}, time=1, clamp={"out": mask})
         assert torch.equal(net.layers["out"].s.view(-1), mask)
         assert torch.equal(net.layers["out"].x.view(-1), mask.float())
         # And it decays afterwards like any other spike.
-        net.run(inputs={"in": torch.zeros(1, 3).byte()}, time=1)
+        net.run(inputs={"in": torch.zeros(1, 3).bool()}, time=1)
         assert torch.allclose(
             net.layers["out"].x.view(-1), mask.float() * math.exp(-1.0 / 20.0)
         )
@@ -529,7 +529,7 @@ class TestClampEntersTraces:
         net = self._layer_net()
         mask = torch.zeros(4, 3, dtype=torch.bool)
         mask[2, 1] = True
-        net.run(inputs={"in": torch.zeros(4, 3).byte()}, time=4, clamp={"out": mask})
+        net.run(inputs={"in": torch.zeros(4, 3).bool()}, time=4, clamp={"out": mask})
         x = net.layers["out"].x.view(-1)
         assert x[1].item() == pytest.approx(math.exp(-1.0 / 20.0))
         assert x[0].item() == 0.0 and x[2].item() == 0.0
@@ -538,7 +538,7 @@ class TestClampEntersTraces:
         net = self._layer_net()
         net.layers["out"].thresh.fill_(-64.0)
         net.run(
-            inputs={"in": torch.ones(1, 3).byte()},
+            inputs={"in": torch.ones(1, 3).bool()},
             time=1,
             injects_v={"out": 100.0 * torch.ones(3)},
             unclamp={"out": torch.tensor([False, False, True])},
@@ -593,7 +593,7 @@ class TestDiehlAndCook2015Rule:
         pre = torch.bernoulli(0.5 * torch.ones(40, 12))
         w_hist, post_hist = [], []
         for t in range(40):
-            net.run(inputs={"in": pre[t : t + 1].byte()}, time=dt)
+            net.run(inputs={"in": pre[t : t + 1].bool()}, time=dt)
             post_hist.append(net.layers["out"].s.view(-1).float().clone())
             w_hist.append(conn.w.detach().clone())
         post = torch.stack(post_hist)
@@ -619,7 +619,7 @@ class TestDiehlAndCook2015Rule:
         net.layers["out"].x.fill_(0.3)
         pre = torch.zeros(3, 1, 1)
         pre[1, 0, 0] = 1
-        net.run(inputs={"in": pre.byte()}, time=3)
+        net.run(inputs={"in": pre.bool()}, time=3)
         assert conn.w.item() == 0.5
 
     def test_x_tar_depresses_silent_inputs(self):
@@ -640,7 +640,7 @@ class TestDiehlAndCook2015Rule:
         )
         net.add_connection(conn, "in", "out")
         net.run(
-            inputs={"in": torch.zeros(1, 1, 1).byte()},
+            inputs={"in": torch.zeros(1, 1, 1).bool()},
             time=1,
             clamp={"out": torch.tensor([True])},
         )
@@ -670,7 +670,7 @@ class TestDiehlAndCook2015Rule:
         assert net.layers["X"].traces_additive  # the paper's accumulating trace
         w0 = net.connections[("X", "Ae")].pipeline[0].value.clone()
         net.run(
-            inputs={"X": torch.bernoulli(0.5 * torch.ones(30, 1, 1, 4, 4)).byte()},
+            inputs={"X": torch.bernoulli(0.5 * torch.ones(30, 1, 1, 4, 4)).bool()},
             time=30,
         )
         w = net.connections[("X", "Ae")].pipeline[0].value
