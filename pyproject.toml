@@ -26,13 +26,13 @@ dependencies = [
     "torchvision>=0.29,<1",
     "tensorboardX>=2.6.4,<3",
     "tqdm>=4,<5",
-    "matplotlib>=3,<4",
+    "matplotlib>=3.11.2,<4",
     "ale-py>=0,<1",
     "gymnasium[atari]>=1,<2",
     "scikit-image>=0,<1",
     "scikit-learn>=1,<2",
     "opencv-python>=4.14,<6",
-    "pandas>=3,<4",
+    "pandas>=3.0.6,<4",
 ]
 
 [project.urls]
