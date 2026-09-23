@@ -158,7 +158,7 @@ class TestConnection:
 
                     ### Run network ###
                     network.run(
-                        inputs={"input": torch.bernoulli(torch.rand(time, 100)).byte()},
+                        inputs={"input": torch.bernoulli(torch.rand(time, 100)).bool()},
                         time=time,
                         reward=1,
                     )

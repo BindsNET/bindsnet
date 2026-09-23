@@ -79,7 +79,7 @@ def _warm_up(net, steps=15, seed=1):
     torch.manual_seed(seed)
     b = net.batch_size
     n_in = net.layers["in"].n
-    inp = torch.bernoulli(0.4 * torch.rand(steps, b, n_in)).byte()
+    inp = torch.bernoulli(0.4 * torch.rand(steps, b, n_in)).bool()
     net.run(inputs={"in": inp}, time=steps * net.dt)
     # Make sure both sides have spikes and traces in the snapshot.
     net.layers["in"].s = torch.bernoulli(0.5 * torch.ones(b, n_in)).bool()
@@ -126,7 +126,7 @@ class TestMulticompartmentDeviceMove:
     def test_to_cpu_works(self):
         net = DiehlAndCook2015(n_inpt=16, n_neurons=4, inpt_shape=(1, 4, 4))
         net.to("cpu")  # crashed before: _apply() got an unexpected ``recurse``
-        net.run(inputs={"X": torch.zeros(5, 1, 1, 4, 4).byte()}, time=5)
+        net.run(inputs={"X": torch.zeros(5, 1, 1, 4, 4, dtype=torch.bool)}, time=5)
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
     def test_to_cuda_moves_features(self):
@@ -134,7 +134,7 @@ class TestMulticompartmentDeviceMove:
         net.to("cuda")
         for conn in net.connections.values():
             assert conn.pipeline[0].value.is_cuda
-        net.run(inputs={"X": torch.zeros(5, 1, 1, 4, 4).byte().cuda()}, time=5)
+        net.run(inputs={"X": torch.zeros(5, 1, 1, 4, 4, dtype=torch.bool).cuda()}, time=5)
 
 
 class TestFusedOuterProductRules:
@@ -306,7 +306,7 @@ class TestLocalConnectionRules:
         )
         net.add_connection(conn, "in", "out")
         torch.manual_seed(1)
-        inp = torch.bernoulli(0.4 * torch.rand(10, batch_size, 2, 8, 8)).byte()
+        inp = torch.bernoulli(0.4 * torch.rand(10, batch_size, 2, 8, 8)).bool()
         net.run(inputs={"in": inp}, time=10)
         net.layers["in"].s = torch.bernoulli(
             0.5 * torch.ones(batch_size, 2, 8, 8)
@@ -409,7 +409,7 @@ class TestLocalConnectionRules:
             wmax=1.0,
         )
         net.add_connection(conn, "in", "out")
-        inp = torch.bernoulli(0.4 * torch.rand(20, 2, *in_shape)).byte()
+        inp = torch.bernoulli(0.4 * torch.rand(20, 2, *in_shape)).bool()
         kw = {"reward": 0.5} if rule in (MSTDP, MSTDPET) else {}
         net.run(inputs={"in": inp}, time=20, **kw)
         assert torch.isfinite(conn.w).all()
@@ -471,7 +471,7 @@ class TestRewardRuleCaching:
         w_ref = conn.w.detach().clone()
         r = conn.update_rule
         tc_plus, tc_minus, tc_e = float(r.tc_plus), float(r.tc_minus), 25.0
-        inp = torch.bernoulli(0.4 * torch.rand(T, n_in)).byte()
+        inp = torch.bernoulli(0.4 * torch.rand(T, n_in)).bool()
         p_plus, p_minus = torch.zeros(n_in), torch.zeros(n_out)
         elig, e_trace = torch.zeros(n_in, n_out), torch.zeros(n_in, n_out)
         reward = 0.7
@@ -501,7 +501,7 @@ class TestNodesInPlace:
         net.add_layer(layer, "out")
         w = torch.diag(20.0 * torch.ones(n))
         net.add_connection(Connection(net.layers["in"], layer, w=w), "in", "out")
-        inp = torch.bernoulli(0.6 * torch.rand(T, n)).byte()
+        inp = torch.bernoulli(0.6 * torch.rand(T, n)).bool()
 
         v = layer.rest * torch.ones(1, n)
         refrac = torch.zeros(1, n)
@@ -536,7 +536,7 @@ class TestNodesInPlace:
         net.add_layer(layer, "out")
         w = torch.diag(15.0 * torch.ones(n))
         net.add_connection(Connection(net.layers["in"], layer, w=w), "in", "out")
-        inp = torch.bernoulli(0.7 * torch.rand(T, n)).byte()
+        inp = torch.bernoulli(0.7 * torch.rand(T, n)).bool()
 
         v = layer.rest * torch.ones(1, n)
         refrac = torch.zeros(1, n)
@@ -573,7 +573,7 @@ class TestNodesInPlace:
             Connection(net.layers["in"], layer, w=torch.rand(10, 6)), "in", "out"
         )
         v_before = layer.v
-        net.run(inputs={"in": torch.ones(5, 10).byte()}, time=5)
+        net.run(inputs={"in": torch.ones(5, 10, dtype=torch.bool)}, time=5)
         # In-place updates: same tensor object, still a registered buffer.
         assert layer.v is v_before
         assert "v" in dict(layer.named_buffers())
@@ -589,7 +589,7 @@ class TestNodesInPlace:
             Connection(net.layers["in"], layer, w=5.0 * torch.rand(10, 10)), "in", "out"
         )
         net.run(
-            inputs={"in": torch.bernoulli(0.5 * torch.rand(30, 10)).byte()}, time=30
+            inputs={"in": torch.bernoulli(0.5 * torch.rand(30, 10)).bool()}, time=30
         )
         assert torch.isfinite(layer.v).all() and torch.isfinite(layer.u).all()
 
@@ -609,9 +609,9 @@ class TestRankOrderEncoding:
         times[d != 0] = 1 / d[d != 0]
         times *= time / times.max()
         times = torch.ceil(times).long()
-        ref = torch.zeros(time, d.numel()).byte()
+        ref = torch.zeros(time, d.numel(), dtype=torch.bool)
         for i in range(d.numel()):
             if 0 < times[i] < time:
                 ref[times[i] - 1, i] = 1
         assert torch.equal(out, ref.reshape(time, 6, 9))
-        assert out.dtype == torch.uint8
+        assert out.dtype == torch.bool

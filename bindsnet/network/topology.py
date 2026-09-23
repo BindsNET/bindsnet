@@ -117,7 +117,7 @@ class AbstractConnection(ABC, Module):
         Keyword arguments:
 
         :param bool learning: Whether to allow connection updates.
-        :param ByteTensor mask: Boolean mask determining which weights to clamp to zero.
+        :param BoolTensor mask: Boolean mask determining which weights to clamp to zero.
         """
         learning = kwargs.get("learning", True)
 
