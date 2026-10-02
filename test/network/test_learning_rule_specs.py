@@ -85,11 +85,11 @@ import torch
 from bindsnet.learning import (
     DiehlAndCook,
     Hebbian,
+    MCC_learning,
     PostPre,
     Rmax,
     WeightDependentPostPre,
 )
-from bindsnet.learning import MCC_learning
 from bindsnet.models import DiehlAndCook2015
 from bindsnet.network import Network
 from bindsnet.network.nodes import Input, LIFNodes, SRM0Nodes

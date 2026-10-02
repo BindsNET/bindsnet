@@ -1,13 +1,8 @@
-# Defining the exact version will make sure things don't break
-#sphinx==6.2.1
-#sphinx_rtd_theme==1.2.2
-#readthedocs-sphinx-search==0.1.1
-#imagecodecs == 2026.3.6
-#Jinja2 == 3.1.6
+# Documentation build (Read the Docs; see .readthedocs.yaml).
+# CPU-only torch: autodoc only needs to import bindsnet, not run it on a GPU.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.0+cpu
+torchvision==0.29.0+cpu
 
 sphinx==9.0.4
 sphinx_rtd_theme==3.1.0
-readthedocs-sphinx-search==0.3.2
-imagecodecs == 2026.3.6
-Jinja2 == 3.1.6
-wheel == 0.48.0

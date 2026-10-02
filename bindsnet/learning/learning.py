@@ -9,6 +9,7 @@ import torch.nn.grad as conv_grad
 from torch.nn.modules.utils import _pair
 
 from bindsnet.utils import im2col_indices
+
 from ..network.nodes import SRM0Nodes
 from ..network.topology import (
     AbstractConnection,
@@ -2147,7 +2148,9 @@ class MSTDPET(LearningRule):
         :param reduction: Method for reducing parameter updates along the minibatch
             dimension.
         :param weight_decay: Coefficient controlling rate of decay of the weights each iteration.
+
         Keyword arguments:
+
         :param float tc_plus: Time constant for pre-synaptic firing trace.
         :param float tc_minus: Time constant for post-synaptic firing trace.
         :param float tc_e_trace: Time constant for the eligibility trace.

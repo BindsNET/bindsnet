@@ -66,8 +66,8 @@ class FeatureExtractor(nn.Module):
         """
         Forward pass of the feature extractor.
 
-        :param x: Input data for the ``submodule''.
-        :return: A dictionary mapping
+        :param x: Input data for the ``submodule``.
+        :return: A dictionary mapping the name of each layer to its output.
         """
         activations = {"input": x}
         for name, module in self.submodule._modules.items():

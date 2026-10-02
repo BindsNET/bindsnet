@@ -21,11 +21,10 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # torch and torchvision are pinned to exact versions served from the
-      # custom CUDA wheel index declared in pyproject.toml, and the two must
-      # move together. Routine version bumps here would break that pairing or
-      # silently pull the plain PyPI build instead, so they are upgraded by
-      # hand. These conditions cover version updates only; Dependabot security
+      # torch and torchvision are locked (poetry.lock) to builds from the CUDA
+      # wheel index declared in pyproject.toml, and docs/requirements.txt pins
+      # the matching CPU builds. The two must move together, and a routine bump
+      # could pull the plain PyPI build instead, so they are upgraded by hand. These conditions cover version updates only; Dependabot security
       # alerts for torch and torchvision still come through.
       - dependency-name: "torch"
         update-types:
@@ -53,3 +52,12 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  # Base image of the Dockerfile.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"

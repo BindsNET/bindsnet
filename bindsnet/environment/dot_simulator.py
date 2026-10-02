@@ -73,16 +73,15 @@ class DotSimulator:
     :param fpath: string: optional file path for saving grids to file
     :param diag: Bool: allow diagonal movement.
     :param bound_hand: str: bounds handling when a dot reaches the world's end.
-            'stay':   dots will simply be prevented from crossing the edges.
-            'bounce': dot positions and directions will be reflected.
-            'trans':  dot positions will be mirrored to the opposite edge.
-    :param fit_func: str: Fitness function.
-            'euc':  Single Euclidean (Pythagorean) distance value
-            'disp': Tuple of x,y displacement values
-            'rng' : Range rings--the closer the ring, the lower the number
-            'dir' : directional--+1 if moving in the right direction
-                                 -1 if moving in the wrong direction
-                                  0 if neither.
+        ``'stay'``: dots are prevented from crossing the edges.
+        ``'bounce'``: dot positions and directions are reflected.
+        ``'trans'``: dot positions are mirrored to the opposite edge.
+    :param fit_func: str: fitness function.
+        ``'euc'``: single Euclidean (Pythagorean) distance value.
+        ``'disp'``: tuple of x, y displacement values.
+        ``'rng'``: range rings; the closer the ring, the lower the number.
+        ``'dir'``: directional; +1 if moving in the right direction, -1 if moving
+        in the wrong direction, 0 if neither.
     :param ring_size: int: set range ring size for range ring fitness function.
     :param bullseye: int: set reward for successful intercept; default = 10.0
     :param teleport: Bool: teleport network dot after intercept; default = true

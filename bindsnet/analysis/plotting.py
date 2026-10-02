@@ -11,8 +11,8 @@ from torch.nn.modules.utils import _pair
 
 from bindsnet.utils import (
     reshape_conv2d_weights,
-    reshape_locally_connected_weights,
     reshape_local_connection_2d_weights,
+    reshape_locally_connected_weights,
 )
 
 plt.ion()
@@ -337,7 +337,7 @@ def plot_locally_connected_weights(
     # language=rst
     """
     Plot a connection weight matrix of a :code:`Connection` with `locally connected
-    structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
+    structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>`_.
 
     :param weights: Weight matrix of Conv2dConnection object.
     :param n_filters: No. of convolution kernels in use.
@@ -415,7 +415,7 @@ def plot_local_connection_2d_weights(
     # language=rst
     """
     Plot a connection weight matrix of a :code:`Connection` with `locally connected
-    structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>_.
+    structure <http://yann.lecun.com/exdb/publis/pdf/gregor-nips-11.pdf>`_.
     :param lc: An object of the class LocalConnection2D
     :param input_channel: The input channel to plot its corresponding weights, default is the first channel
     :param output_channel: If not None, will only plot the weights corresponding to this output channel (filter)

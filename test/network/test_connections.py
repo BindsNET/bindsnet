@@ -1,6 +1,9 @@
-import torch
 import math
 
+import torch
+
+import bindsnet.learning.MCC_learning as mcc
+import bindsnet.network.topology_features as tf
 from bindsnet.learning import (
     MSTDP,
     MSTDPET,
@@ -13,8 +16,6 @@ from bindsnet.learning import (
 from bindsnet.network import Network
 from bindsnet.network.nodes import Input, LIFNodes, SRM0Nodes
 from bindsnet.network.topology import *
-import bindsnet.learning.MCC_learning as mcc
-import bindsnet.network.topology_features as tf
 
 
 class TestConnection:

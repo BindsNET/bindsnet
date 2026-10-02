@@ -65,6 +65,7 @@ Module contents
 ---------------
 
 .. automodule:: bindsnet.datasets
+   :no-index:
    :members:
    :undoc-members:
    :show-inheritance:

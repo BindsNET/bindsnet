@@ -11,8 +11,8 @@ NUM_CUES = 4
 class CueRewardSimulator:
     """
     This simulator provides basic cues and rewards according to the
-    network's choice, as described in the Backpropamine paper:
-        https://openreview.net/pdf?id=r1lrAiA5Ym
+    network's choice, as described in the Backpropamine paper
+    (https://openreview.net/pdf?id=r1lrAiA5Ym).
 
     :param epdur: int: duration (timesteps) of an episode; default = 200
     :param cuebits: int: max number of bits to hold a cue (max value = 2^n for n bits)

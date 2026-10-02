@@ -37,10 +37,19 @@ bindsnet.network.topology module
    :show-inheritance:
 
 
+bindsnet.network.topology_features module
+-----------------------------------------
+
+.. automodule:: bindsnet.network.topology_features
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
 .. automodule:: bindsnet.network
+   :no-index:
    :members:
    :undoc-members:
    :show-inheritance:

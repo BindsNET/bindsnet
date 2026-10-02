@@ -1,6 +1,7 @@
-import torch
-import time
 import argparse
+import time
+
+import torch
 
 from bindsnet.evaluation import all_activity, assign_labels, proportion_weighting
 

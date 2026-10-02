@@ -3,6 +3,7 @@ import time
 from typing import Any, Dict, Tuple
 
 import torch
+
 from bindsnet.network import Network
 from bindsnet.network.monitors import Monitor
 

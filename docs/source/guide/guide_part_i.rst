@@ -28,11 +28,11 @@ supports dynamics minibatch size, this argument can safely be ignored. It is use
 and synaptic variables, and may provide a small speedup if specified beforehand.
 
 The :code:`learning` argument acts to enable or disable updates to adaptive parameters of network components; e.g.,
-synapse weights or adaptive voltage thresholds. See `Using Learning Rules`_ for more details.
+synapse weights or adaptive voltage thresholds. See :ref:`guide_part_ii` for more details.
 
 The :code:`reward_fn` argument takes in class that specifies how a scalar reward signal will be computed and fed to the
 network and its components. Typically, the output of this callable class will be used in certain "reward-modulated", or
-"three-factor" learning rules. See `Using Learning Rules`_ for more details.
+"three-factor" learning rules. See :ref:`guide_part_ii` for more details.
 
 Adding Network Components
 -------------------------

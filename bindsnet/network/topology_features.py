@@ -1,15 +1,16 @@
+import warnings
 from abc import ABC, abstractmethod
-from bindsnet.learning.learning import NoOp
-from typing import Union, Tuple, Optional, Sequence
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
-import warnings
+import torch.nn as nn
+import torch.nn.functional as F
 from torch import device
 from torch.nn import Parameter
-import torch.nn.functional as F
-import torch.nn as nn
+
 import bindsnet.learning
+from bindsnet.learning.learning import NoOp
 
 
 class AbstractFeature(ABC):
@@ -53,6 +54,7 @@ class AbstractFeature(ABC):
         # language=rst
         """
         Instantiates a :code:`Feature` object. Will assign all incoming arguments as class variables
+
         :param name: Name of the feature
         :param value: Core numeric object for the feature. This parameters function will vary depending on the feature
         :param value_dtype: Data type for :code:`value` tensor
@@ -89,12 +91,12 @@ class AbstractFeature(ABC):
         self.is_primed = False
 
         from ..learning.MCC_learning import (
-            NoOp,
-            PostPre,
-            Hebbian,
-            DiehlAndCook,
             MSTDP,
             MSTDPET,
+            DiehlAndCook,
+            Hebbian,
+            NoOp,
+            PostPre,
         )
 
         supported_rules = [
@@ -395,6 +397,7 @@ class Probability(AbstractFeature):
         # language=rst
         """
         Will run a bernoulli trial using :code:`value` to determine if a signal will successfully traverse the synapse
+
         :param name: Name of the feature
         :param value: Number(s) in [0, 1] which represent the probability of a signal traversing a synapse. Tensor values
             assume that probabilities will be matched to adjacent synapses in the connection. Scalars will be applied to
@@ -489,6 +492,7 @@ class Mask(AbstractFeature):
         # language=rst
         """
         Boolean mask which determines whether or not signals are allowed to traverse certain synapses.
+
         :param name: Name of the feature
         :param value: Boolean mask. :code:`True` means a signal can pass, :code:`False` means the synapse is impassable
         :param sparse: Should :code:`value` parameter be sparse tensor or not
@@ -604,6 +608,7 @@ class Weight(AbstractFeature):
         # language=rst
         """
         Multiplies signals by scalars
+
         :param name: Name of the feature
         :param value: Values to scale signals by
         :param value_dtype: Data type for :code:`value` tensor
@@ -611,8 +616,10 @@ class Weight(AbstractFeature):
         :param norm: Value which all values in :code:`value` will sum to. Normalization of values occurs after each sample
             and after the value has been updated by the learning rule (if there is one)
         :param norm_frequency: How often to normalize weights:
+
             * 'sample': weights normalized after each sample
             * 'time step': weights normalized after each time step
+
         :param learning_rule: Rule which will modify the :code:`value` after each sample
         :param nu: Learning rate for the learning rule
         :param reduction: Method for reducing parameter updates along the minibatch
@@ -700,6 +707,7 @@ class Bias(AbstractFeature):
         # language=rst
         """
         Adds scalars to signals
+
         :param name: Name of the feature
         :param value: Values to add to the signals
         :param value_dtype: Data type for :code:`value` tensor
@@ -750,6 +758,7 @@ class Intensity(AbstractFeature):
         # language=rst
         """
         Multiply all signals by a scalar
+
         :param name: Name of the feature
         :param value: Values to scale signals by
         :param value_dtype: Data type for :code:`value` tensor
@@ -797,11 +806,12 @@ class Degradation(AbstractFeature):
         """
         Degrades propagating spikes according to :code:`degrade_function`.
         Note: If :code:`parent_feature` is provided, it will override :code:`value`.
+
         :param name: Name of the feature
         :param value: Value used to degrade feature
         :param value_dtype: Data type for :code:`value` tensor
         :param degrade_function: Callable function which takes a single argument (:code:`value`) and returns a tensor or
-        constant to be *subtracted* from the propagating spikes.
+            constant to be *subtracted* from the propagating spikes.
         :param parent_feature: Parent feature with desired :code:`value` to inherit
         :param sparse: Should :code:`value` parameter be sparse tensor or not
         :param batch_size: Mini-batch size.
@@ -1086,6 +1096,7 @@ class AbstractSubFeature(ABC):
         # language=rst
         """
         Instantiates a :code:`Augment` object. Will assign all incoming arguments as class variables.
+
         :param name: Name of the augment
         :param parent_feature: Primary feature which the augment will modify
         """

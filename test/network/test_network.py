@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 from bindsnet.network import Network, load

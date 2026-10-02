@@ -34,7 +34,8 @@ class Davis(torch.utils.data.Dataset):
     ):
         # language=rst
         """
-        Class to read the DAVIS dataset
+        Class to read the DAVIS dataset.
+
         :param root: Path to the DAVIS folder that contains JPEGImages, Annotations,
             etc. folders.
         :param task: Task to load the annotations, choose between semi-supervised or

@@ -1,9 +1,9 @@
-from abc import ABC, abstractmethod
-from typing import Union, Optional, Sequence
 import warnings
+from abc import ABC, abstractmethod
+from typing import Optional, Sequence, Union
 
-import torch
 import numpy as np
+import torch
 
 from ..network.nodes import SRM0Nodes
 from ..network.topology import (

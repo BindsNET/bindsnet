@@ -29,10 +29,19 @@ bindsnet.analysis.visualization module
    :show-inheritance:
 
 
+bindsnet.analysis.dotTrace_plotter module
+-----------------------------------------
+
+.. automodule:: bindsnet.analysis.dotTrace_plotter
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
 .. automodule:: bindsnet.analysis
+   :no-index:
    :members:
    :undoc-members:
    :show-inheritance:

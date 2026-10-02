@@ -41,6 +41,7 @@ Module contents
 ---------------
 
 .. automodule:: bindsnet.pipeline
+   :no-index:
    :members:
    :undoc-members:
    :show-inheritance:

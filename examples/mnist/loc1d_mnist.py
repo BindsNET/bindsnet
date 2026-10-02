@@ -1,26 +1,20 @@
 ### Toy example to test LocanConnection1D (the dataset used is MNIST but each image is raveled (each sample has shape (784,)).
 
+import os
+from time import time as t
+
 import torch
 from torch.nn.modules.utils import _pair
-
-from tqdm import tqdm
-import os
-from bindsnet.network.monitors import Monitor
-
-import torch
 from torchvision import transforms
 from tqdm import tqdm
 
-from time import time as t
-from torchvision import transforms
-from bindsnet.learning import PostPre
-
-from bindsnet.network.nodes import AdaptiveLIFNodes
-from bindsnet.network.nodes import Input
-from bindsnet.network.network import Network
-from bindsnet.network.topology import Connection, LocalConnection1D
-from bindsnet.encoding import PoissonEncoder
 from bindsnet.datasets import MNIST
+from bindsnet.encoding import PoissonEncoder
+from bindsnet.learning import PostPre
+from bindsnet.network.monitors import Monitor
+from bindsnet.network.network import Network
+from bindsnet.network.nodes import AdaptiveLIFNodes, Input
+from bindsnet.network.topology import Connection, LocalConnection1D
 
 # Hyperparameters
 in_channels = 1

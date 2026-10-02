@@ -34,6 +34,7 @@ Module contents
 ---------------
 
 .. automodule:: bindsnet
+   :no-index:
    :members:
    :undoc-members:
    :show-inheritance:

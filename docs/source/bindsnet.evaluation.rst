@@ -17,6 +17,7 @@ Module contents
 ---------------
 
 .. automodule:: bindsnet.evaluation
+   :no-index:
    :members:
    :undoc-members:
    :show-inheritance:

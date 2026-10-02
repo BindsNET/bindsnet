@@ -90,7 +90,7 @@ class PoissonEncoder(Encoder):
         # language=rst
         """
         Creates a callable PoissonEncoder which encodes as defined in
-        ``bindsnet.encoding.poisson`
+        ``bindsnet.encoding.poisson``.
 
         :param time: Length of Poisson spike train per input variable.
         :param dt: Simulation time step.

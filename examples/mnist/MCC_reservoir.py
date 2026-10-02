@@ -1,10 +1,10 @@
+import argparse
 import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-import argparse
-import matplotlib.pyplot as plt
-
 from torchvision import transforms
 from tqdm import tqdm
 
@@ -17,13 +17,12 @@ from bindsnet.analysis.plotting import (
 from bindsnet.datasets import MNIST
 from bindsnet.encoding import PoissonEncoder
 from bindsnet.network import Network
-from bindsnet.network.nodes import Input
-from bindsnet.network.topology_features import Probability, Weight, Mask
 
 # Build a simple two-layer, input-output network.
 from bindsnet.network.monitors import Monitor
-from bindsnet.network.nodes import LIFNodes
+from bindsnet.network.nodes import Input, LIFNodes
 from bindsnet.network.topology import MulticompartmentConnection
+from bindsnet.network.topology_features import Mask, Probability, Weight
 from bindsnet.utils import get_square_weights
 
 parser = argparse.ArgumentParser()

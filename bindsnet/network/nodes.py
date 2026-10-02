@@ -1171,7 +1171,7 @@ class DiehlAndCookNodes(Nodes):
 class IzhikevichNodes(Nodes):
     # language=rst
     """
-    Layer of `Izhikevich neurons<https://www.izhikevich.org/publications/spikes.htm>`_.
+    Layer of `Izhikevich neurons <https://www.izhikevich.org/publications/spikes.htm>`_.
     """
 
     def __init__(

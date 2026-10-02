@@ -17,6 +17,7 @@ Module contents
 ---------------
 
 .. automodule:: bindsnet.models
+   :no-index:
    :members:
    :undoc-members:
    :show-inheritance:
