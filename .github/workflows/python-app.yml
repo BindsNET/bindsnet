@@ -35,6 +35,7 @@ jobs:
         pip install flake8 pytest
         # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         poetry install
+        .github/scripts/use_cpu_torch.sh python
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
