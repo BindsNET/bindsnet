@@ -28,6 +28,7 @@ jobs:
     - name: Install dependencies
       run: |
         poetry install
+        .github/scripts/use_cpu_torch.sh "poetry run python"
     - name: Format with black
       run: |
         poetry run black .
