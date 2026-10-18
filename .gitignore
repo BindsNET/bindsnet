@@ -26,3 +26,4 @@ data/*
 .claude/*
 .claude
 .vscode/*
+.venv/*

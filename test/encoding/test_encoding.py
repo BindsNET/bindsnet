@@ -2,7 +2,6 @@ import torch
 
 from bindsnet.encoding import *
 
-
 class TestEncodings:
     """
     Tests all stable encoding functions and generators.
@@ -16,6 +15,7 @@ class TestEncodings:
                     spikes = bernoulli(datum, time=t, max_prob=m)
 
                     assert spikes.size() == torch.Size((t, n))
+                    assert spikes.dtype == torch.bool
 
     def test_multidim_bernoulli(self):
         for shape in [[5, 5], [10, 10], [25, 25]]:  # shape of nodes in layer
@@ -25,6 +25,7 @@ class TestEncodings:
                     spikes = bernoulli(datum, time=t, max_prob=m)
 
                     assert spikes.size() == torch.Size((t, *shape))
+                    assert spikes.dtype == torch.bool
 
     def test_bernoulli_loader(self):
         for s in [1, 100]:  # number of data samples
@@ -67,6 +68,7 @@ class TestEncodings:
                 spikes = poisson(datum, time=t)  # Encode as spikes.
 
                 assert spikes.size() == torch.Size((t, n))
+                assert spikes.dtype == torch.bool
 
     def test_poisson_loader(self):
         for s in [1, 10]:  # number of data samples
@@ -77,3 +79,4 @@ class TestEncodings:
 
                     for i, spikes in enumerate(spike_loader):
                         assert spikes.size() == torch.Size((t, n))
+                        assert spikes.dtype == torch.bool

@@ -30,7 +30,7 @@ def single(
     quantile = torch.quantile(datum, 1 - sparsity)
     s = torch.zeros([time, *shape], device=device)
     s[0] = torch.where(datum > quantile, torch.ones(shape), torch.zeros(shape))
-    return torch.Tensor(s).byte()
+    return s.bool()
 
 
 def repeat(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.Tensor:
@@ -93,7 +93,7 @@ def bernoulli(
         spikes = torch.bernoulli(max_prob * datum.repeat([time, 1]))
         spikes = spikes.view(time, *shape)
 
-    return spikes.byte()
+    return spikes.bool()
 
 
 def poisson(
@@ -131,7 +131,7 @@ def poisson(
         x = torch.pow(x, (datum * 0.11 + 5) / 50)
         y = torch.tensor(x < 0.6, dtype=torch.bool, device=device)
 
-        return y.view(time, *shape).byte()
+        return y.view(time, *shape).bool()
     else:
         # Compute firing rates in seconds as function of data intensity,
         # accounting for simulation time step.
@@ -149,7 +149,7 @@ def poisson(
         times[times >= time + 1] = 0
 
         # Create tensor of spikes.
-        spikes = torch.zeros(time + 1, size, device=device).byte()
+        spikes = torch.zeros(time + 1, size, device=device, dtype=torch.bool)
         spikes[times, torch.arange(size)] = 1
         spikes = spikes[1:]
 
@@ -184,7 +184,7 @@ def rank_order(
 
     # Create spike times tensor (one spike per neuron whose time lies in
     # ``(0, time)``; vectorised form of the per-neuron loop).
-    spikes = torch.zeros(time, size, device=device).byte()
+    spikes = torch.zeros(time, size, device=device, dtype=torch.bool)
     fire = (times > 0) & (times < time)
     idx = fire.nonzero(as_tuple=False).squeeze(1)
     spikes[(times[fire] - 1).to(device), idx.to(device)] = 1

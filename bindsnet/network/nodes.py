@@ -68,7 +68,7 @@ class Nodes(torch.nn.Module):
         self.traces_additive = (
             traces_additive  # Whether to record spike traces additively.
         )
-        self.register_buffer("s", torch.ByteTensor())  # Spike occurrences.
+        self.register_buffer("s", torch.BoolTensor())  # Spike occurrences.
 
         self.sum_input = sum_input  # Whether to sum all inputs.
 
@@ -232,7 +232,7 @@ class Input(Nodes, AbstractInput):
         :param x: Inputs to the layer.
         """
         # Set spike occurrences to input values.
-        self.s = x
+        self.s = x.bool()
 
         super().forward(x)
 
@@ -1239,7 +1239,7 @@ class IzhikevichNodes(Nodes):
             self.c = -65.0 + 15 * (self.r**2)
             self.d = 8 - 6 * (self.r**2)
             self.S = 0.5 * torch.rand(n, n)
-            self.excitatory = torch.ones(n).byte()
+            self.excitatory = torch.ones(n, dtype=torch.bool)
 
         elif excitatory == 0:
             self.r = torch.rand(n)
@@ -1249,10 +1249,10 @@ class IzhikevichNodes(Nodes):
             self.d = 2 * torch.ones(n)
             self.S = -torch.rand(n, n)
 
-            self.excitatory = torch.zeros(n).byte()
+            self.excitatory = torch.zeros(n, dtype=torch.bool)
 
         else:
-            self.excitatory = torch.zeros(n).byte()
+            self.excitatory = torch.zeros(n, dtype=torch.bool)
 
             ex = int(n * excitatory)
             inh = n - ex
@@ -1430,9 +1430,7 @@ class CSRMNodes(Nodes):
         )  # Set in compute_decays.
 
         self.register_buffer("v", torch.FloatTensor())  # Neuron voltages.
-        self.register_buffer(
-            "last_spikes", torch.ByteTensor()
-        )  # Previous spikes occurrences in time window
+        self.register_buffer("last_spikes", torch.BoolTensor())
         self.register_buffer("theta", torch.zeros(*self.shape))  # Adaptive thresholds.
         self.lbound = lbound  # Lower bound of voltage.
 

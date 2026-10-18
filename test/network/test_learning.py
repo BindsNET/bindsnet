@@ -39,7 +39,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).bool()}, time=250
         )
 
         # Conv2dConnection test
@@ -60,7 +60,7 @@ class TestLearningRules:
         )
         # shape is [time, batch, channels, height, width]
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).bool()},
             time=250,
         )
 
@@ -80,7 +80,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).bool()}, time=250
         )
 
         network2 = Network(dt=1.0)
@@ -97,7 +97,7 @@ class TestLearningRules:
             target="output",
         )
         network2.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).bool()}, time=250
         )
 
         # Conv2dConnection test
@@ -117,7 +117,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).bool()},
             time=250,
         )
 
@@ -139,7 +139,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()}, time=250
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).bool()}, time=250
         )
 
         # Conv2dConnection test
@@ -161,7 +161,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).bool()},
             time=250,
         )
 
@@ -181,7 +181,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).bool()},
             time=250,
             reward=1.0,
         )
@@ -204,7 +204,7 @@ class TestLearningRules:
         )
 
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).bool()},
             time=250,
             reward=1.0,
         )
@@ -225,7 +225,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).bool()},
             time=250,
             reward=1.0,
         )
@@ -248,7 +248,7 @@ class TestLearningRules:
         )
 
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(250, 1, 1, 10, 10)).bool()},
             time=250,
             reward=1.0,
         )
@@ -269,7 +269,7 @@ class TestLearningRules:
             target="output",
         )
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(250, 100)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(250, 100)).bool()},
             time=250,
             reward=1.0,
         )
@@ -313,7 +313,7 @@ class TestLearningRuleReset:
     def _drive(network, n=8, time=100, seed=0):
         torch.manual_seed(seed)
         network.run(
-            inputs={"input": torch.bernoulli(torch.rand(time, n)).byte()},
+            inputs={"input": torch.bernoulli(torch.rand(time, n)).bool()},
             time=time,
             reward=1.0,
         )
