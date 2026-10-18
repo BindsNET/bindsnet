@@ -64,6 +64,14 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
   the Dockerfile, `pyproject.toml` or `poetry.lock` change.
 - `examples/benchmark/bindsnet_scaling.py`: the README scaling benchmark for BindsNET
   alone (no other simulator needed).
+- `examples/benchmark/benchmark.py` rewritten: every simulator (BindsNET CPU/GPU,
+  BRIAN2, brian2genn, PyNEST, ANNarchy CPU/GPU) now gets the network the README
+  describes, each in its own process, and a simulator that is not installed is skipped.
+  The old file could not run (it imported an `experiments` package that is not in the
+  repository) and gave each simulator different input: BindsNET 0-1 Hz with U(0, 1)
+  weights, BRIAN2 15 Hz with U(0, 0.01) weights and no effect on the membrane (no
+  `on_pre`), PyNEST 60 Hz connected one-to-one, ANNarchy 50 Hz with U(0, 1) weights.
+  `annarchy.py` and `gpu_annarchy.py` merged into it; `plot_benchmark.py` reads its CSV.
 - `test/environment/test_gym_environment.py`.
 
 ### Changed
