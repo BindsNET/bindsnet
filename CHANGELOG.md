@@ -7,6 +7,39 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 ## [Unreleased]
 
 ### Fixed
+- `--seed` did not make GPU runs repeatable in `eth_mnist.py`, `batch_eth_mnist.py`,
+  `supervised_mnist.py`, `conv_mnist.py`, `conv1d_MNIST.py`, `conv3d_MNIST.py`,
+  `SOM_LM-SNNs.py` and `breakout/random_network_baseline.py`: on the GPU path they
+  called only `torch.cuda.manual_seed_all`, so weight initialisation, Poisson encoding
+  and data shuffling (all on the CPU generator) were unseeded. Measured before the
+  fix: `batch_eth_mnist.py --seed 0 --n_train 640 --n_test 320` gave 0.37 and 0.47
+  test accuracy on two runs. They now call `torch.manual_seed(seed)` unconditionally
+  (it seeds the CPU and every GPU). `dot_tracing.py` accepted `--seed` and ignored it;
+  it now seeds torch and the dot simulator (default seed 1, since the simulator reads
+  0 as "seed from the clock").
+- `supervised_mnist.py` crashed on its first plotted sample
+  (`MulticompartmentConnection` has no `.w`).
+- `reservoir.py` scored its readout on training images (it reused the training
+  loader); it now uses the MNIST test set. Its accuracy line counted one sample more
+  than it reported.
+- `conv_mnist.py` trained but never tested, so it printed no accuracy. It now labels
+  output neurons from training spikes (`assign_labels`) and reports all-activity and
+  proportion-weighting test accuracy, like `eth_mnist.py`.
+- `--plot` could not be turned off in `eth_mnist.py`, `supervised_mnist.py`,
+  `conv_mnist.py`, `reservoir.py`, `conv1d_MNIST.py`, `conv3d_MNIST.py` and
+  `SOM_LM-SNNs.py` (`store_true` with a default of `True`); plotting is now off unless
+  `--plot` is given. `conv_mnist.py` paused 1 s per plotted sample.
+- Training and test loops in the MNIST examples ran one sample (or batch) more than
+  `--n_train` / `--n_test` (`>` instead of `>=`).
+- All Breakout examples failed with the locked `ale-py` 0.12.1, which no longer
+  registers `BreakoutDeterministic-v4`. `GymEnvironment` maps that id to what it meant
+  in ale-py 0.8.1: `Breakout-v4` with `frameskip=4`.
+- `play_breakout_from_ANN.py` could not load `trained_shallow_ANN.pt` under PyTorch
+  2.6+ (a pickled `Net` object). The file is now a `state_dict` with identical tensors,
+  loaded with `weights_only=True`.
+- Dockerfile is back on `python:3.13-slim`. Dependabot had moved it to 3.14 (#810),
+  outside `requires-python = ">=3.11,<3.14"`; Dependabot no longer proposes minor or
+  major Python bumps for the image.
 - API reference on Read the Docs was empty: the build never installed `bindsnet`, so
   every `automodule` failed to import (`No module named 'matplotlib'`), and
   `docs/pyproject.toml` downgraded Sphinx to 7.2.6. `.readthedocs.yaml` now installs a
@@ -21,6 +54,17 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 - API reference now includes `learning.MCC_learning`, `network.topology_features`,
   `environment.cue_reward`, `environment.dot_simulator` and
   `analysis.dotTrace_plotter`, which were missing.
+
+### Added
+- `test/repro/test_packaging_consistency.py`: fails if the Dockerfile's Python is outside
+  `requires-python`, if CI does not test every supported Python, if `CITATION.cff` and
+  `pyproject.toml` versions differ, or if an example with `--seed` seeds torch only
+  inside a branch.
+- `.github/workflows/docker.yml`: builds the image and runs `test/repro` inside it when
+  the Dockerfile, `pyproject.toml` or `poetry.lock` change.
+- `examples/benchmark/bindsnet_scaling.py`: the README scaling benchmark for BindsNET
+  alone (no other simulator needed).
+- `test/environment/test_gym_environment.py`.
 
 ### Changed
 - CI: one test workflow (`python-app.yml`: job `build` on Python 3.13 plus a 3.11/3.12

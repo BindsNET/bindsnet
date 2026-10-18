@@ -40,7 +40,7 @@ parser.add_argument("--update_inhibation_weights", type=int, default=500)
 parser.add_argument("--plot_interval", type=int, default=250)
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=True)
+parser.set_defaults(plot=False, gpu=True)
 
 args = parser.parse_args()
 
@@ -62,14 +62,13 @@ gpu = args.gpu
 update_inhibation_weights = args.update_inhibation_weights
 
 # Sets up Gpu use
+# Seeds the CPU generator (weight init, Poisson encoding, shuffling) and every GPU.
+torch.manual_seed(seed)
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if gpu and torch.cuda.is_available():
-    torch.cuda.manual_seed_all(seed)
-else:
-    torch.manual_seed(seed)
+if not (gpu and torch.cuda.is_available()):
     device = "cpu"
-    if gpu:
-        gpu = False
+    gpu = False
 
 torch.set_num_threads(os.cpu_count() - 1)
 print("Running on Device = ", device)

@@ -24,7 +24,9 @@ from bindsnet.network.topology import Connection
 # Handle arguments for dot tracing params.
 parser = argparse.ArgumentParser()
 parser.add_argument("--steps", type=int, default=100)
-parser.add_argument("--seed", type=int, default=0)
+parser.add_argument(
+    "--seed", type=int, default=1, help="0 seeds the dot movement from the clock"
+)
 parser.add_argument("--dim", type=int, default=28)
 parser.add_argument("--granularity", type=int, default=100)
 parser.add_argument("--neurons", type=int, default=100)
@@ -45,6 +47,10 @@ parser.add_argument("--fcycle", type=int, default=100)
 parser.add_argument("--gpu", type=bool, default=True)
 
 args = parser.parse_args()
+
+# Seeds torch (weights, Poisson encoding, random actions) on CPU and GPU; the dot
+# simulator gets the same seed below.
+torch.manual_seed(args.seed)
 
 steps = args.steps  # timesteps in which the dot is moving
 dim = args.dim  # 28x28 square
@@ -263,6 +269,7 @@ def main():
         allow_stay=allow_stay,
         pandas=pandas,
         fpath=OUT_FILE_PATH,
+        seed=args.seed,
     )
     environment.reset()
 

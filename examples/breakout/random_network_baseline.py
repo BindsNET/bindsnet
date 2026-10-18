@@ -34,11 +34,10 @@ render_interval = args.render_interval
 print_interval = args.print_interval
 gpu = args.gpu
 
+# Seeds the CPU generator and every GPU.
+torch.manual_seed(seed)
 if gpu:
     torch.set_default_tensor_type("torch.cuda.FloatTensor")
-    torch.cuda.manual_seed_all(seed)
-else:
-    torch.manual_seed(seed)
 
 # Build network.
 network = Network(dt=dt)
