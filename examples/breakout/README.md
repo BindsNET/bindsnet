@@ -17,7 +17,7 @@ see [../../DATA.md](../../DATA.md)).
 | Architecture | `nn.Linear(6400, 1000)` → `ReLU` → `nn.Linear(1000, 4)` (class `Net` in `play_breakout_from_ANN.py`) |
 | Input | 6400 features = a flattened 80×80 preprocessed Breakout frame |
 | Output | 4 units = the Breakout discrete action space |
-| Format | A `state_dict` (`fc1.weight`, `fc1.bias`, `fc2.weight`, `fc2.bias`), loaded with `weights_only=True`. Until 2026-10 the file held the pickled `Net` object, which PyTorch 2.6+ refuses to load by default; it was re-saved with identical tensors. |
+| Format | A `state_dict` (`fc1.weight`, `fc1.bias`, `fc2.weight`, `fc2.bias`), loaded with `weights_only=True`, PyTorch's safe default since 2.6 (it runs no pickled code). Re-saved in 2026-10 from the original pickled `Net` object, with identical tensors. |
 | Consumed by | `play_breakout_from_ANN.py` (`Net().load_state_dict(torch.load(..., weights_only=True))`) |
 | How it is used | Its `fc1`/`fc2` weights are transposed, scaled (`layer1scale=57.68`, `layer2scale=77.48`), and transplanted into a spiking network `Input(6400) → LIFNodes(1000) → LIFNodes(4)`, which is then run on Breakout through an `EnvironmentPipeline` with Poisson encoding — an ANN→SNN conversion demo. |
 

@@ -31,8 +31,9 @@ the library provides.
 
 ### Atari — Breakout (and Space Invaders)
 - **Loader:** `bindsnet.environment.GymEnvironment("BreakoutDeterministic-v4")`
-  (see `examples/breakout/*.py`). ale-py 0.9+ no longer registers that id;
-  `GymEnvironment` maps it to `Breakout-v4` with `frameskip=4`, which is what it meant.
+  (see `examples/breakout/*.py`). `GymEnvironment` maps this id to its definition,
+  `Breakout-v4` with `frameskip=4`, so it works with ale-py 0.9 and later, which
+  register Breakout under `Breakout-v4`.
 - **Upstream source:** Arcade Learning Environment via `gymnasium[atari]` + `ale-py`
   (declared in `pyproject.toml`). ROMs are provided through the ALE/AutoROM tooling.
 - **Obtained by:** the Gymnasium/ALE runtime; not stored in this repo.
@@ -58,9 +59,9 @@ Described in the README "Benchmarking" section and Hazan et al. 2018:
   **dt = 1.0 ms**.
 
 `examples/benchmark/benchmark.py` (every simulator) and
-`examples/benchmark/bindsnet_scaling.py` (BindsNET only) implement exactly this since
-2026-10. The earlier `benchmark.py` did not: it gave each simulator different input,
-and none of them this one (see [REPRODUCING.md](REPRODUCING.md#scaling-benchmark)).
+`examples/benchmark/bindsnet_scaling.py` (BindsNET only) implement exactly this, since
+2026-10; the 2018 script used its own input settings for each simulator (see
+[REPRODUCING.md](REPRODUCING.md#scaling-benchmark)).
 
 This stimulus is generated programmatically; there is no dataset to download.
 

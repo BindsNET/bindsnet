@@ -17,12 +17,10 @@ which is single-threaded (its C++ standalone mode with OpenMP is not used here).
 
 Each simulator is imported only when requested; one that is not installed is
 skipped with a message. BindsNET needs nothing extra
-(``bindsnet_scaling.py`` holds its timing code). Brian2, brian2genn, NEST and
-ANNarchy versions of this network were written in 2026 to match the README
-description and have not been run by the maintainers; the code that produced the
-2018 figure (``docs/BindsNET benchmark.png``) is not in this repository, and the
-earlier version of this file used different inputs for each simulator (see
-REPRODUCING.md).
+(``bindsnet_scaling.py`` holds its timing code). BindsNET, BRIAN2, NEST and ANNarchy
+(CPU) were run with this file in 2026-10 (``results_2026-10/``); the brian2genn and
+ANNarchy GPU paths are included and were not run. This file replaces the 2018
+script, which used its own input settings for each simulator (see REPRODUCING.md).
 """
 
 import argparse

@@ -118,11 +118,11 @@ model class, example script, exact command, seed, and measured output (e.g. the
 Diehl & Cook 2015 MNIST replication via `examples/mnist/eth_mnist.py`, and the
 Hazan et al. 2018 scaling benchmark).
 
-BindsNET is a research package: new features and fixes change results between
-releases, and so can different hardware. Results are not guaranteed to stay the same
-across releases. A published result is reproduced with the release it was run on, so
-state that release in the publication, ideally by its version DOI (see
-[Citing the software](#citing-the-software)).
+Each BindsNET release is an archived snapshot. BindsNET is a research package that
+keeps gaining features and fixes, and results can also depend on the hardware, so
+results may differ between releases. A published result is reproduced with the
+release it was produced on; please name that release in the publication, ideally by
+its version DOI (see [Citing the software](#citing-the-software)).
 
 ## Background
 
@@ -143,7 +143,7 @@ We simulated a network with a population of n Poisson input neurons with firing 
 
 Several packages, including BRIAN and PyNEST, allow the setting of certain global preferences; e.g., the number of CPU threads, the number of OpenMP processes, etc. We chose these settings for our benchmark study in an attempt to maximize each library's speed, but note that BindsNET requires no setting of such options. Our approach, inheriting the computational model of PyTorch, appears to make the best use of the available hardware, and therefore makes it simple for practitioners to get the best performance from their system with the least effort.
 
-The benchmark script written for the paper gave the simulators different input from the setup described above, so it cannot regenerate this figure. `examples/benchmark/benchmark.py` now runs the described setup for BindsNET, BRIAN2, PyNEST and ANNarchy (BindsNET alone: `examples/benchmark/bindsnet_scaling.py`); measured times are in [REPRODUCING.md](REPRODUCING.md#scaling-benchmark).
+The figure above is the 2018 result. `examples/benchmark/benchmark.py` runs exactly the setup described above for BindsNET, BRIAN2, PyNEST and ANNarchy in one command (BindsNET alone: `examples/benchmark/bindsnet_scaling.py`), and [REPRODUCING.md](REPRODUCING.md#scaling-benchmark) lists the times measured with it. It replaces the script written in 2018, which used its own input settings for each simulator.
 
 <p align="middle">
 <img src="https://raw.githubusercontent.com/BindsNET/bindsnet/master/docs/BindsNET%20benchmark.png" alt="BindsNET%20Benchmark"  width="503" height="403">
