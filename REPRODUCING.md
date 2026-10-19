@@ -11,6 +11,12 @@ the data it needs (declared in [DATA.md](DATA.md)).
 > so the accuracies are lower than published ones; they are reference points for
 > checking a reproduction, not claims about the models' best accuracy.
 
+> **Which release.** BindsNET is a research package: new features and fixes change
+> results between releases, and so can different hardware. Results are not guaranteed
+> to stay the same across releases. A published result is reproduced with the release
+> it was run on, which the publication should state (see "Citing the software" in the
+> README). The numbers below were measured at commit `f392a65`.
+
 ## Model → code → command map
 
 Run the MNIST commands from `examples/mnist/` (the scripts read and download MNIST at
@@ -65,22 +71,12 @@ machine may be faster.
 ### Scaling benchmark
 The README and the 2018 paper describe: n Poisson inputs with rates from U(0, 100) Hz,
 all-to-all to n LIF neurons, weights from N(0, 1), 1,000 ms at dt = 1.0 ms, n from 250
-to 10,000. The code that produced the published figure (`docs/BindsNET benchmark.png`)
-is not in this repository.
-
-**The earlier `examples/benchmark/benchmark.py` did not implement that setup** and
-could not run (it imported an `experiments` package that is not in the repository).
-It gave each simulator different input:
-
-| Simulator | Input rate | Connection | Weights |
-|-----------|-----------|------------|---------|
-| BindsNET | U(0, 1) Hz | all-to-all | U(0, 1) (`Connection` default) |
-| BRIAN2, brian2genn | 15 Hz | all-to-all | U(0, 0.01), with no effect on the membrane (no `on_pre`) |
-| PyNEST | 60 Hz | one-to-one | 1.0 (NEST default) |
-| ANNarchy | 50 Hz | all-to-all | U(0, 1) |
-
-It was rewritten in 2026-10 so every simulator gets the described network, with the LIF
-parameters of BindsNET's `LIFNodes` (rest and reset -65 mV, threshold -52 mV, membrane
+to 10,000. The benchmark script written for the paper (`examples/benchmark/benchmark.py`,
+commit `6a1168d`, 2018-11-13, first in release 0.2.2) gave the simulators different input
+from that description and imported a package that is not in the repository, so it
+cannot regenerate the published figure (`docs/BindsNET benchmark.png`); details in
+`CHANGELOG.md`. It was rewritten in 2026-10 so every simulator gets the described
+network, with the LIF parameters of BindsNET's `LIFNodes` (rest and reset -65 mV, threshold -52 mV, membrane
 time constant 100 ms, refractory 5 ms; input spikes add the weight in mV to the
 membrane potential). `examples/benchmark/bindsnet_scaling.py` runs BindsNET alone.
 
