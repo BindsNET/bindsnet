@@ -10,6 +10,11 @@ reset -65 mV, threshold -52 mV, membrane time constant 100 ms, refractory 5 ms.
     python examples/benchmark/benchmark.py --simulators bindsnet_cpu bindsnet_gpu brian2 nest
     python examples/benchmark/plot_benchmark.py benchmark.csv
 
+Threads (not tuned): NEST uses every core; BindsNET uses PyTorch's default (one
+thread per physical core); ANNarchy uses its default of one thread (on a 64-thread
+Threadripper 2990WX, all 64 made it slower); BRIAN2 runs in its default runtime mode,
+which is single-threaded (its C++ standalone mode with OpenMP is not used here).
+
 Each simulator is imported only when requested; one that is not installed is
 skipped with a message. BindsNET needs nothing extra
 (``bindsnet_scaling.py`` holds its timing code). Brian2, brian2genn, NEST and
