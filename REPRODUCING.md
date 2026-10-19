@@ -126,7 +126,11 @@ recorded spikes per image went from 36.3 to 20.4 and the neurons that fired at a
 from 400 to 353. In `DiehlAndCookNodes.forward` (`bindsnet/network/nodes.py`) every
 neuron that crosses threshold is reset and raises `theta` before `one_spike` keeps a
 single spike per time step, so neurons whose spike is not kept also raise their
-threshold. A fix that charges only the neuron that fires is being measured.
+threshold. Charging only the neuron that fires was measured with seeds 0, 1 and 2
+(20,000 training images, 10,000 test images, all-activity accuracy). `conv_mnist`
+averaged 0.17 against 0.15 with the current order, and `eth_mnist` averaged 0.74
+against 0.77, lower on every seed. This release keeps the current order; the
+`conv_mnist` threshold growth remains open.
 
 ### Data
 All datasets and synthetic stimuli these scripts use are declared in
