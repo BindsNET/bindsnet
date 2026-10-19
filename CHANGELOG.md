@@ -37,6 +37,9 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 - `play_breakout_from_ANN.py` could not load `trained_shallow_ANN.pt` under PyTorch
   2.6+ (a pickled `Net` object). The file is now a `state_dict` with identical tensors,
   loaded with `weights_only=True`.
+- `publish.yml` read the version from `[tool.poetry]`, which has had no `version` since
+  0.3.4 (it moved to `[project]`), so publishing a GitHub release would have failed its
+  tag check; the last PyPI upload was started by hand, which skips that check.
 - Dockerfile is back on `python:3.13-slim`. Dependabot had moved it to 3.14 (#810),
   outside `requires-python = ">=3.11,<3.14"`; Dependabot no longer proposes minor or
   major Python bumps for the image.

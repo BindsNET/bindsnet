@@ -24,7 +24,7 @@ jobs:
     - name: Check release tag matches pyproject version
       if: github.event_name == 'release'
       run: |
-        version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['poetry']['version'])")
+        version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
         tag="${GITHUB_REF_NAME#v}"
         if [ "$version" != "$tag" ]; then
           echo "Release tag $GITHUB_REF_NAME does not match pyproject version $version"

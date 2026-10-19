@@ -82,3 +82,11 @@ def test_examples_seed_cpu_generator_unconditionally():
         if not _seeds_unconditionally(ast.parse(source)):
             missing.append(str(path.relative_to(ROOT)))
     assert not missing, f"--seed does not seed torch unconditionally in: {missing}"
+
+
+def test_publish_workflow_reads_project_version():
+    # The version lives in [project]; [tool.poetry] has none since 0.3.4, so a
+    # release's tag check that reads tool.poetry.version fails with KeyError.
+    workflow = (ROOT / ".github" / "workflows" / "publish.yml").read_text()
+    assert "['project']['version']" in workflow
+    assert "['tool']['poetry']['version']" not in workflow
