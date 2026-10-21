@@ -22,6 +22,9 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
   `environment.cue_reward`, `environment.dot_simulator` and
   `analysis.dotTrace_plotter`, which were missing.
 
+- Normalizing an all-zero kernel in 1D/2D/3D convolutional and locally connected
+  connections keeps it zero instead of introducing NaNs.
+
 ### Changed
 - CI: one test workflow (`python-app.yml`: job `build` on Python 3.13 plus a 3.11/3.12
   matrix, Poetry 2.4.3 with dependency caching, superseded runs cancelled);

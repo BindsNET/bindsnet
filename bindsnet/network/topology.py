@@ -771,14 +771,15 @@ class Conv1dConnection(AbstractConnection):
         # language=rst
         """
         Normalize weights along the first axis according to total weight per target
-        neuron.
+        neuron. All-zero kernels remain zero.
         """
         if self.norm is not None:
             # get a view and modify in place
             w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
             for fltr in range(w.shape[0]):
-                w[fltr] *= self.norm / w[fltr].sum(0)
+                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
+                w[fltr] *= self.norm / total
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -930,7 +931,7 @@ class Conv2dConnection(AbstractConnection):
         # language=rst
         """
         Normalize weights along the first axis according to total weight per target
-        neuron.
+        neuron. All-zero kernels remain zero.
         """
         if self.norm is not None:
             # get a view and modify in place
@@ -939,7 +940,8 @@ class Conv2dConnection(AbstractConnection):
             )
 
             for fltr in range(w.shape[0]):
-                w[fltr] *= self.norm / w[fltr].sum(0)
+                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
+                w[fltr] *= self.norm / total
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -1110,7 +1112,7 @@ class Conv3dConnection(AbstractConnection):
         # language=rst
         """
         Normalize weights along the first axis according to total weight per target
-        neuron.
+        neuron. All-zero kernels remain zero.
         """
         if self.norm is not None:
             # get a view and modify in place
@@ -1120,7 +1122,8 @@ class Conv3dConnection(AbstractConnection):
             )
 
             for fltr in range(w.shape[0]):
-                w[fltr] *= self.norm / w[fltr].sum(0)
+                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
+                w[fltr] *= self.norm / total
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -1710,7 +1713,7 @@ class LocalConnection1D(AbstractConnection):
     def normalize(self) -> None:
         """
         Normalize weights so each target neuron has sum of connection weights equal to
-        ``self.norm``.
+        ``self.norm``. All-zero kernels remain zero.
         """
         if self.norm is not None:
             # get a view and modify in-place
@@ -1718,7 +1721,8 @@ class LocalConnection1D(AbstractConnection):
             w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
             for fltr in range(w.shape[0]):
-                w[fltr, :] *= self.norm / w[fltr, :].sum(0)
+                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
+                w[fltr] *= self.norm / total
 
     def reset_state_variables(self) -> None:
         """
@@ -1861,7 +1865,7 @@ class LocalConnection2D(AbstractConnection):
     def normalize(self) -> None:
         """
         Normalize weights so each target neuron has sum of connection weights equal to
-        ``self.norm``.
+        ``self.norm``. All-zero kernels remain zero.
         """
         if self.norm is not None:
             # get a view and modify in-place
@@ -1869,7 +1873,8 @@ class LocalConnection2D(AbstractConnection):
             w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
             for fltr in range(w.shape[0]):
-                w[fltr, :] *= self.norm / w[fltr, :].sum(0)
+                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
+                w[fltr] *= self.norm / total
 
     def reset_state_variables(self) -> None:
         """
@@ -2015,7 +2020,7 @@ class LocalConnection3D(AbstractConnection):
     def normalize(self) -> None:
         """
         Normalize weights so each target neuron has sum of connection weights equal to
-        ``self.norm``.
+        ``self.norm``. All-zero kernels remain zero.
         """
         if self.norm is not None:
             # get a view and modify in-place
@@ -2023,7 +2028,8 @@ class LocalConnection3D(AbstractConnection):
             w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
             for fltr in range(w.shape[0]):
-                w[fltr, :] *= self.norm / w[fltr, :].sum(0)
+                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
+                w[fltr] *= self.norm / total
 
     def reset_state_variables(self) -> None:
         """
