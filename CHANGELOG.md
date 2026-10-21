@@ -42,6 +42,8 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 - Dockerfile on `python:3.13-slim`, inside `requires-python = ">=3.11,<3.14"` (#810 had
   moved it to 3.14); Dependabot no longer proposes minor or major Python bumps for the
   image.
+- Mean-field connection normalization preserves the registered weight parameter and
+  accepts both shared scalar and per-target tensor weights.
 - API reference on Read the Docs was empty: the build never installed `bindsnet`, so
   every `automodule` failed to import (`No module named 'matplotlib'`), and
   `docs/pyproject.toml` downgraded Sphinx to 7.2.6. `.readthedocs.yaml` now installs a

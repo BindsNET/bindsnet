@@ -2126,13 +2126,11 @@ class MeanFieldConnection(AbstractConnection):
     def normalize(self) -> None:
         # language=rst
         """
-        Normalize weights so each target neuron has sum of connection weights equal to
-        ``self.norm``.
+        Normalize stored weights to sum to ``self.norm``, preserving their scalar or
+        per-target tensor shape.
         """
         if self.norm is not None:
-            self.w = self.w.view(1, self.target.n)
             self.w *= self.norm / self.w.sum()
-            self.w = self.w.view(1, *self.target.shape)
 
     def reset_state_variables(self) -> None:
         # language=rst
