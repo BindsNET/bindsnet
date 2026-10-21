@@ -2127,10 +2127,11 @@ class MeanFieldConnection(AbstractConnection):
         # language=rst
         """
         Normalize stored weights to sum to ``self.norm``, preserving their scalar or
-        per-target tensor shape.
+        per-target tensor shape. All-zero stored weights remain zero.
         """
         if self.norm is not None:
-            self.w *= self.norm / self.w.sum()
+            total = self.w.sum().masked_fill(self.w.abs().sum() == 0, 1)
+            self.w *= self.norm / total
 
     def reset_state_variables(self) -> None:
         # language=rst
