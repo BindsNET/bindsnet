@@ -2089,7 +2089,7 @@ class MeanFieldConnection(AbstractConnection):
             tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
-        super().__init__(source, target, nu, weight_decay, **kwargs)
+        super().__init__(source, target, nu=nu, weight_decay=weight_decay, **kwargs)
 
         w = kwargs.get("w", None)
         if w is None:

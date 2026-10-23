@@ -7,6 +7,8 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 ## [Unreleased]
 
 ### Fixed
+- Forward mean-field `weight_decay` to the learning rule instead of treating it as
+  the update reduction; explicit `reduction` arguments are now accepted as well.
 - `--seed` now makes GPU runs repeatable in `eth_mnist.py`, `batch_eth_mnist.py`,
   `supervised_mnist.py`, `conv_mnist.py`, `conv1d_MNIST.py`, `conv3d_MNIST.py`,
   `SOM_LM-SNNs.py` and `breakout/random_network_baseline.py`: they call
