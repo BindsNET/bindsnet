@@ -428,6 +428,8 @@ class Connection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
+        if isinstance(self.target, CSRMNodes):
+            self.s_w = None
 
 
 class MulticompartmentConnection(AbstractMulticompartmentConnection):

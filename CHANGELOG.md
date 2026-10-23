@@ -7,6 +7,8 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 ## [Unreleased]
 
 ### Fixed
+- Reset the spike-history window of dense connections into `CSRMNodes` when
+  resetting network state, so spikes from a previous trial do not drive the next one.
 - `--seed` now makes GPU runs repeatable in `eth_mnist.py`, `batch_eth_mnist.py`,
   `supervised_mnist.py`, `conv_mnist.py`, `conv1d_MNIST.py`, `conv3d_MNIST.py`,
   `SOM_LM-SNNs.py` and `breakout/random_network_baseline.py`: they call
