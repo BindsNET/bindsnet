@@ -25,4 +25,6 @@ logs/*
 data/*
 .claude/*
 .claude
+# Notes for Claude Code stay off GitHub; they are kept in the maintainer's private backup.
+CLAUDE.md
 .vscode/*
