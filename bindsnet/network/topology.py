@@ -771,15 +771,16 @@ class Conv1dConnection(AbstractConnection):
         # language=rst
         """
         Normalize weights along the first axis according to total weight per target
-        neuron. All-zero kernels remain zero.
+        neuron. Kernels whose weights sum to zero are left unchanged.
         """
         if self.norm is not None:
             # get a view and modify in place
             w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
-            for fltr in range(w.shape[0]):
-                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
-                w[fltr] *= self.norm / total
+            w_sum = w.sum(1, keepdim=True)
+            scale = self.norm / w_sum
+            scale.masked_fill_(w_sum == 0, 1.0)
+            w *= scale
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -931,7 +932,7 @@ class Conv2dConnection(AbstractConnection):
         # language=rst
         """
         Normalize weights along the first axis according to total weight per target
-        neuron. All-zero kernels remain zero.
+        neuron. Kernels whose weights sum to zero are left unchanged.
         """
         if self.norm is not None:
             # get a view and modify in place
@@ -939,9 +940,10 @@ class Conv2dConnection(AbstractConnection):
                 self.w.shape[0] * self.w.shape[1], self.w.shape[2] * self.w.shape[3]
             )
 
-            for fltr in range(w.shape[0]):
-                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
-                w[fltr] *= self.norm / total
+            w_sum = w.sum(1, keepdim=True)
+            scale = self.norm / w_sum
+            scale.masked_fill_(w_sum == 0, 1.0)
+            w *= scale
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -1112,7 +1114,7 @@ class Conv3dConnection(AbstractConnection):
         # language=rst
         """
         Normalize weights along the first axis according to total weight per target
-        neuron. All-zero kernels remain zero.
+        neuron. Kernels whose weights sum to zero are left unchanged.
         """
         if self.norm is not None:
             # get a view and modify in place
@@ -1121,9 +1123,10 @@ class Conv3dConnection(AbstractConnection):
                 self.w.shape[2] * self.w.shape[3] * self.w.shape[4],
             )
 
-            for fltr in range(w.shape[0]):
-                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
-                w[fltr] *= self.norm / total
+            w_sum = w.sum(1, keepdim=True)
+            scale = self.norm / w_sum
+            scale.masked_fill_(w_sum == 0, 1.0)
+            w *= scale
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -1582,7 +1585,10 @@ class LocalConnection(AbstractConnection):
         """
         if self.norm is not None:
             w = self.w.view(self.source.n, self.target.n)
-            w *= self.norm / self.w.sum(0).view(1, -1)
+            w_sum = w.sum(0, keepdim=True)
+            scale = self.norm / w_sum
+            scale.masked_fill_(w_sum == 0, 1.0)
+            w *= scale
 
     def reset_state_variables(self) -> None:
         # language=rst
@@ -1713,16 +1719,17 @@ class LocalConnection1D(AbstractConnection):
     def normalize(self) -> None:
         """
         Normalize weights so each target neuron has sum of connection weights equal to
-        ``self.norm``. All-zero kernels remain zero.
+        ``self.norm``. Kernels whose weights sum to zero are left unchanged.
         """
         if self.norm is not None:
             # get a view and modify in-place
             # w: ch_in, ch_out * h_out, k
             w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
-            for fltr in range(w.shape[0]):
-                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
-                w[fltr] *= self.norm / total
+            w_sum = w.sum(1, keepdim=True)
+            scale = self.norm / w_sum
+            scale.masked_fill_(w_sum == 0, 1.0)
+            w *= scale
 
     def reset_state_variables(self) -> None:
         """
@@ -1865,16 +1872,17 @@ class LocalConnection2D(AbstractConnection):
     def normalize(self) -> None:
         """
         Normalize weights so each target neuron has sum of connection weights equal to
-        ``self.norm``. All-zero kernels remain zero.
+        ``self.norm``. Kernels whose weights sum to zero are left unchanged.
         """
         if self.norm is not None:
             # get a view and modify in-place
             # w: ch_in, ch_out * w_out * h_out, k1 * k2
             w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
-            for fltr in range(w.shape[0]):
-                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
-                w[fltr] *= self.norm / total
+            w_sum = w.sum(1, keepdim=True)
+            scale = self.norm / w_sum
+            scale.masked_fill_(w_sum == 0, 1.0)
+            w *= scale
 
     def reset_state_variables(self) -> None:
         """
@@ -2020,16 +2028,17 @@ class LocalConnection3D(AbstractConnection):
     def normalize(self) -> None:
         """
         Normalize weights so each target neuron has sum of connection weights equal to
-        ``self.norm``. All-zero kernels remain zero.
+        ``self.norm``. Kernels whose weights sum to zero are left unchanged.
         """
         if self.norm is not None:
             # get a view and modify in-place
             # w: ch_in, ch_out * w_out * h_out * d_out, k1*k2*k3
             w = self.w.view(self.w.shape[0] * self.w.shape[1], self.w.shape[2])
 
-            for fltr in range(w.shape[0]):
-                total = w[fltr].sum(0).masked_fill(w[fltr].abs().sum(0) == 0, 1)
-                w[fltr] *= self.norm / total
+            w_sum = w.sum(1, keepdim=True)
+            scale = self.norm / w_sum
+            scale.masked_fill_(w_sum == 0, 1.0)
+            w *= scale
 
     def reset_state_variables(self) -> None:
         """

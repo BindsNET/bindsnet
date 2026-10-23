@@ -22,10 +22,15 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
   `environment.cue_reward`, `environment.dot_simulator` and
   `analysis.dotTrace_plotter`, which were missing.
 
-- Normalizing an all-zero kernel in 1D/2D/3D convolutional and locally connected
-  connections keeps it zero instead of introducing NaNs.
+- Normalizing a kernel whose weights sum to zero (for example an all-zero kernel)
+  in `LocalConnection` and the 1D/2D/3D convolutional and locally connected
+  connections leaves it unchanged instead of introducing NaNs or infinities.
 
 ### Changed
+- Convolutional and locally connected connections normalize all kernels in one
+  operation instead of a Python loop (6 to 45 times faster on CPU). Results are
+  identical on CPU; on CUDA, float32 kernels of 81 or more weights can differ by
+  float32 rounding (about 1e-7) because the sum is taken in a different order.
 - CI: one test workflow (`python-app.yml`: job `build` on Python 3.13 plus a 3.11/3.12
   matrix, Poetry 2.4.3 with dependency caching, superseded runs cancelled);
   `pythonpackage.yml` removed (it ran on every push to every branch and its

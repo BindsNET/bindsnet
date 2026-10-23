@@ -6,6 +6,7 @@ from bindsnet.network.topology import (
     Conv1dConnection,
     Conv2dConnection,
     Conv3dConnection,
+    LocalConnection,
     LocalConnection1D,
     LocalConnection2D,
     LocalConnection3D,
@@ -59,13 +60,37 @@ def test_zero_kernel_normalization(connection_type, dimensions, dtype, norm):
 
 
 @pytest.mark.parametrize(("connection_type", "dimensions"), CONNECTIONS)
-def test_nonzero_signed_cancellation_is_not_a_zero_kernel(connection_type, dimensions):
+def test_zero_sum_signed_kernel_is_left_unchanged(connection_type, dimensions):
     connection = _connection(connection_type, dimensions, torch.float32, 2.0)
     with torch.no_grad():
         weights = connection.w.reshape(-1, 2**dimensions)
         weights[0].zero_()
         weights[0, 0], weights[0, 1] = 1.0, -1.0
+    before = connection.w.clone()
     connection.normalize()
     actual = connection.w.reshape(-1, 2**dimensions)
-    assert torch.isposinf(actual[0, 0])
-    assert torch.isneginf(actual[0, 1])
+    assert torch.equal(actual[0], before.reshape(-1, 2**dimensions)[0])
+    assert torch.isfinite(connection.w).all()
+
+
+@pytest.mark.parametrize("norm", [0.0, 2.0])
+def test_local_connection_zero_target_column(norm):
+    connection = LocalConnection(
+        Input(shape=(1, 4, 4)),
+        LIFNodes(shape=(2, 3, 3)),
+        kernel_size=2,
+        stride=1,
+        n_filters=2,
+        norm=norm,
+    )
+    with torch.no_grad():
+        connection.w.copy_(
+            torch.rand_like(connection.w) * connection.mask.logical_not()
+        )
+        connection.w[:, 0] = 0.0
+    expected = connection.w.clone()
+    expected[:, 1:] *= connection.norm / expected[:, 1:].sum(0)
+    for _ in range(2):
+        connection.normalize()
+        assert torch.isfinite(connection.w).all()
+        torch.testing.assert_close(connection.w, expected)

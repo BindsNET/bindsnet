@@ -18,6 +18,8 @@ Covered:
 * Neuron models update their state buffers in place (same operations, same
   order) instead of re-assigning module attributes every step.
 * ``rank_order`` encoding is vectorised.
+* Convolutional and local connections normalize every kernel in one operation
+  instead of a Python loop over kernels.
 """
 
 import warnings
@@ -53,6 +55,10 @@ from bindsnet.network.nodes import (
 )
 from bindsnet.network.topology import (
     Connection,
+    Conv1dConnection,
+    Conv2dConnection,
+    Conv3dConnection,
+    LocalConnection,
     LocalConnection1D,
     LocalConnection2D,
     LocalConnection3D,
@@ -621,3 +627,77 @@ class TestRankOrderEncoding:
                 ref[times[i] - 1, i] = 1
         assert torch.equal(out, ref.reshape(time, 6, 9))
         assert out.dtype == torch.uint8
+
+
+KERNEL_CONNECTIONS = [
+    (Conv1dConnection, 1),
+    (Conv2dConnection, 2),
+    (Conv3dConnection, 3),
+    (LocalConnection1D, 1),
+    (LocalConnection2D, 2),
+    (LocalConnection3D, 3),
+]
+
+
+class TestKernelNormalize:
+    """One vectorised normalize per connection replaced a loop over kernels."""
+
+    @staticmethod
+    def _devices():
+        return ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
+
+    @staticmethod
+    def _assert_matches_loop(actual, expected):
+        # CPU agrees bit for bit. CUDA float32 sums one row and many rows in a
+        # different order, so it may differ by rounding; report the size.
+        if torch.equal(actual, expected):
+            return
+        assert actual.is_cuda, "CPU result must match the loop bit for bit"
+        diff = (actual - expected).abs().max().item()
+        warnings.warn(
+            f"vectorised normalize differs from the loop by rounding only: "
+            f"max abs diff {diff:.3e}"
+        )
+        assert torch.allclose(actual, expected, rtol=1e-6, atol=1e-7), diff
+
+    @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+    @pytest.mark.parametrize(("connection_type", "dimensions"), KERNEL_CONNECTIONS)
+    def test_matches_loop_reference(self, connection_type, dimensions, dtype):
+        for device in self._devices():
+            torch.manual_seed(0)
+            connection = connection_type(
+                Input(shape=(2, *((6,) * dimensions))),
+                LIFNodes(shape=(3, *((4,) * dimensions))),
+                kernel_size=3,
+                stride=1,
+                n_filters=3,
+                norm=0.4,
+                w_dtype=dtype,
+            ).to(device)
+            with torch.no_grad():
+                connection.w.copy_(torch.rand_like(connection.w) - 0.2)
+            # Previous loop over kernels.
+            ref = connection.w.clone()
+            ref_view = ref.view(ref.shape[0] * ref.shape[1], -1)
+            for fltr in range(ref_view.shape[0]):
+                ref_view[fltr] *= 0.4 / ref_view[fltr].sum(0)
+            parameter = connection.w
+            connection.normalize()
+            assert connection.w is parameter
+            self._assert_matches_loop(connection.w, ref)
+
+    def test_local_connection_matches_reference(self):
+        for device in self._devices():
+            torch.manual_seed(0)
+            connection = LocalConnection(
+                Input(shape=(1, 6, 6)),
+                LIFNodes(shape=(3, 4, 4)),
+                kernel_size=3,
+                stride=1,
+                n_filters=3,
+                norm=0.4,
+            ).to(device)
+            ref = connection.w.clone()
+            ref *= connection.norm / ref.sum(0).view(1, -1)
+            connection.normalize()
+            assert torch.equal(connection.w, ref)
