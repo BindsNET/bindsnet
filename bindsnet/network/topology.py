@@ -2087,7 +2087,8 @@ class MeanFieldConnection(AbstractConnection):
             tensor of same size as w
         :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
-        :param float norm: Total weight per target neuron normalization constant.
+        :param float norm: Total absolute weight across target neurons. A shared scalar
+            weight is counted once per target neuron.
         """
         super().__init__(source, target, nu, weight_decay, **kwargs)
 
@@ -2126,12 +2127,13 @@ class MeanFieldConnection(AbstractConnection):
     def normalize(self) -> None:
         # language=rst
         """
-        Normalize stored weights to sum to ``self.norm``, preserving their scalar or
-        per-target tensor shape. All-zero stored weights remain zero.
+        Normalize absolute weights across target neurons to ``self.norm``, preserving
+        signs and scalar or per-target tensor shape. A shared scalar is counted once
+        per target neuron. All-zero stored weights remain zero.
         """
         if self.norm is not None:
-            total = self.w.sum().masked_fill(self.w.abs().sum() == 0, 1)
-            self.w *= self.norm / total
+            total = self.w.abs().sum() * (self.target.n / self.w.numel())
+            self.w *= self.norm / total.masked_fill(total == 0, 1)
 
     def reset_state_variables(self) -> None:
         # language=rst
