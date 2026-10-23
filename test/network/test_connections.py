@@ -75,6 +75,18 @@ class TestConnection:
         torch.testing.assert_close(target.v, reference.v)
         torch.testing.assert_close(target.s, reference.s)
 
+    @pytest.mark.parametrize("previous_batch,new_batch", [(1, 2), (2, 1)])
+    def test_csrm_window_resizes_with_batch(self, previous_batch, new_batch):
+        reused, target, _ = self._make_csrm_network(3)
+        fresh, reference, _ = self._make_csrm_network(3)
+        reused.run({"X": torch.ones(2, previous_batch, 2)}, time=2)
+        # Network.run resizes neuron state when a new input batch size arrives.
+        for _ in range(3):
+            reused.run({"X": torch.zeros(1, new_batch, 2)}, time=1)
+            fresh.run({"X": torch.zeros(1, new_batch, 2)}, time=1)
+            torch.testing.assert_close(target.v, reference.v)
+            torch.testing.assert_close(target.s, reference.s)
+
     def test_transfer(self):
         if not torch.cuda.is_available():
             return
