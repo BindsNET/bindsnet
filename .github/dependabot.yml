@@ -61,3 +61,12 @@ updates:
       day: "monday"
     labels:
       - "dependencies"
+    ignore:
+      # The image's Python must be one pyproject.toml supports (requires-python);
+      # a minor bump such as 3.13 -> 3.14 broke that once (#810). Move it by hand
+      # together with requires-python and the CI matrix.
+      # test/repro/test_packaging_consistency.py checks the three agree.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"

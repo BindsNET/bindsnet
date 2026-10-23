@@ -31,7 +31,9 @@ the library provides.
 
 ### Atari — Breakout (and Space Invaders)
 - **Loader:** `bindsnet.environment.GymEnvironment("BreakoutDeterministic-v4")`
-  (see `examples/breakout/*.py`).
+  (see `examples/breakout/*.py`). `GymEnvironment` maps this id to its definition,
+  `Breakout-v4` with `frameskip=4`, so it works with ale-py 0.9 and later, which
+  register Breakout under `Breakout-v4`.
 - **Upstream source:** Arcade Learning Environment via `gymnasium[atari]` + `ale-py`
   (declared in `pyproject.toml`). ROMs are provided through the ALE/AutoROM tooling.
 - **Obtained by:** the Gymnasium/ALE runtime; not stored in this repo.
@@ -49,13 +51,17 @@ the library provides.
 ## 2. Synthetic stimuli (no external dataset)
 
 ### Scaling-benchmark Poisson drive
-Used by `examples/benchmark/benchmark.py` and reported in the README "Benchmarking"
-section and Hazan et al. 2018:
+Described in the README "Benchmarking" section and Hazan et al. 2018:
 - Population of **n** Poisson input neurons, firing rates drawn from **U(0, 100) Hz**.
 - Connected all-to-all to an equally sized population of LIF neurons; connection
   weights sampled from **N(0, 1)**.
 - **n** varied 250 → 10,000 in steps of 250; each run simulated **1,000 ms** at
   **dt = 1.0 ms**.
+
+`examples/benchmark/benchmark.py` (every simulator) and
+`examples/benchmark/bindsnet_scaling.py` (BindsNET only) implement exactly this, since
+2026-10; the 2018 script used its own input settings for each simulator (see
+[REPRODUCING.md](REPRODUCING.md#scaling-benchmark)).
 
 This stimulus is generated programmatically; there is no dataset to download.
 

@@ -9,6 +9,10 @@ import torch
 from bindsnet.datasets.preprocess import binary_image, crop, gray_scale, subsample
 from bindsnet.encoding import Encoder, NullEncoder
 
+# Gym ids that ale-py 0.9 removed, mapped to the id and settings they stood for
+# (ale-py 0.8.1, ale_py/gym.py: "Deterministic" = the base id with frameskip 4).
+REMOVED_GYM_IDS = {"BreakoutDeterministic-v4": ("Breakout-v4", {"frameskip": 4})}
+
 
 class Environment(ABC):
     # language=rst
@@ -89,7 +93,8 @@ class GymEnvironment(Environment):
             2D inputs.
         """
         self.name = name
-        self.env = gym.make(id=name, render_mode=render_mode)
+        gym_id, gym_kwargs = REMOVED_GYM_IDS.get(name, (name, {}))
+        self.env = gym.make(id=gym_id, render_mode=render_mode, **gym_kwargs)
         self.action_space = self.env.action_space
 
         self.encoder = encoder

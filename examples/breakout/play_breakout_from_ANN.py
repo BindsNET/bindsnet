@@ -51,8 +51,11 @@ class Net(nn.Module):
         return x
 
 
-# load ANN
-dqn_network = torch.load("trained_shallow_ANN.pt", map_location=device)
+# load ANN (a plain state dict, so weights_only loading runs no pickled code)
+dqn_network = Net()
+dqn_network.load_state_dict(
+    torch.load("trained_shallow_ANN.pt", map_location=device, weights_only=True)
+)
 
 # Build Spiking network.
 network = Network(dt=dt).to(device)

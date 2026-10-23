@@ -78,16 +78,14 @@ sparse = args.sparse
 update_steps = int(n_train / batch_size / n_updates)
 update_interval = update_steps * batch_size
 
-device = "cpu"
+# Seeds the CPU generator (weight init, Poisson encoding, shuffling) and every GPU.
+torch.manual_seed(seed)
+
 # Sets up Gpu use
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if gpu and torch.cuda.is_available():
-    torch.cuda.manual_seed_all(seed)
-else:
-    torch.manual_seed(seed)
+if not (gpu and torch.cuda.is_available()):
     device = "cpu"
-    if gpu:
-        gpu = False
+    gpu = False
 
 torch.set_num_threads(os.cpu_count() - 1)
 print("Running on Device = ", device)
@@ -204,7 +202,7 @@ for epoch in range(n_epochs):
 
     pbar_training = tqdm(total=n_train)
     for step, batch in enumerate(train_dataloader):
-        if step * batch_size > n_train:
+        if step * batch_size >= n_train:
             break
 
         # Assign labels to excitatory neurons.
@@ -357,7 +355,7 @@ pbar = tqdm(total=n_test)
 pbar.set_description_str("Test progress: ")
 
 for step, batch in enumerate(test_dataloader):
-    if step * batch_size > n_test:
+    if step * batch_size >= n_test:
         break
     # Get next input sample.
     inputs = {"X": batch["encoded_image"]}

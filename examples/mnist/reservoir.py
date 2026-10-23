@@ -37,7 +37,7 @@ parser.add_argument("--progress_interval", type=int, default=10)
 parser.add_argument("--update_interval", type=int, default=250)
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=False, train=True)
+parser.set_defaults(plot=False, gpu=False, train=True)
 
 args = parser.parse_args()
 
@@ -55,19 +55,15 @@ train = args.train
 plot = args.plot
 gpu = args.gpu
 
+# Seeds numpy (thresholds), the CPU generator and every GPU.
 np.random.seed(seed)
-torch.cuda.manual_seed_all(seed)
 torch.manual_seed(seed)
 
 # Sets up Gpu use
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if gpu and torch.cuda.is_available():
-    torch.cuda.manual_seed_all(seed)
-else:
-    torch.manual_seed(seed)
+if not (gpu and torch.cuda.is_available()):
     device = "cpu"
-    if gpu:
-        gpu = False
+    gpu = False
 torch.set_num_threads(os.cpu_count() - 1)
 print("Running on Device = ", device)
 
@@ -128,7 +124,7 @@ n_iters = examples
 training_pairs = []
 pbar = tqdm(enumerate(dataloader))
 for i, dataPoint in pbar:
-    if i > n_iters:
+    if i >= n_iters:
         break
 
     # Extract & resize the MNIST samples image data for training
@@ -228,13 +224,27 @@ for epoch, _ in pbar:
         % (epoch + 1, n_epochs, avg_loss / len(training_pairs))
     )
 
-# Run same simulation on reservoir with testing data instead of training data
+# Run same simulation on reservoir with the held-out MNIST test set
 # (see training section for intuition)
+test_dataset = MNIST(
+    PoissonEncoder(time=time, dt=dt),
+    None,
+    root=os.path.join("..", "..", "data", "MNIST"),
+    download=True,
+    train=False,
+    transform=transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x * intensity)]
+    ),
+)
+test_dataloader = torch.utils.data.DataLoader(
+    test_dataset, batch_size=1, shuffle=True, num_workers=0, pin_memory=gpu
+)
+
 n_iters = examples
 test_pairs = []
-pbar = tqdm(enumerate(dataloader))
+pbar = tqdm(enumerate(test_dataloader))
 for i, dataPoint in pbar:
-    if i > n_iters:
+    if i >= n_iters:
         break
     datum = dataPoint["encoded_image"].view(int(time / dt), 1, 1, 28, 28).to(device)
     label = dataPoint["label"]
@@ -279,5 +289,5 @@ for s, label in test_pairs:
 
 print(
     "\n Accuracy of the model on %d test images: %.2f %%"
-    % (n_iters, 100 * correct / total)
+    % (total, 100 * correct / total)
 )

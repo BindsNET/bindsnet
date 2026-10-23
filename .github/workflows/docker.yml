@@ -1,0 +1,37 @@
+# Builds the Dockerfile and runs the reproducibility tests inside the image, so
+# the container is checked, not only described. Runs when the image's inputs change.
+name: Docker image
+
+on:
+  push:
+    branches: [ master ]
+    paths: [ "Dockerfile", "pyproject.toml", "poetry.lock", ".github/workflows/docker.yml" ]
+  pull_request:
+    branches: [ master ]
+    paths: [ "Dockerfile", "pyproject.toml", "poetry.lock", ".github/workflows/docker.yml" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # The image is about 7 GB (torch bundles its CUDA libraries); make room.
+      - name: Free runner disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+      - name: Build image
+        run: docker build -t bindsnet .
+      # Runners have no GPU, and the image's CUDA torch build can segfault there while
+      # preloading CUDA (see .github/scripts/use_cpu_torch.sh), so the test container
+      # swaps in the CPU build of the same version; everything else is the image as built.
+      - name: Run reproducibility tests in the image
+        run: >-
+          docker run --rm bindsnet bash -c
+          ".github/scripts/use_cpu_torch.sh python && python -m pytest -q test/repro"
