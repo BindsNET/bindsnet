@@ -95,3 +95,7 @@ exclude = '''
   | logs
   )/
 '''
+
+[tool.pytest.ini_options]
+# Only the test suite; ignored folders such as logs/ can hold git worktrees.
+testpaths = ["test"]

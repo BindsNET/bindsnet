@@ -17,7 +17,8 @@ see [../../DATA.md](../../DATA.md)).
 | Architecture | `nn.Linear(6400, 1000)` → `ReLU` → `nn.Linear(1000, 4)` (class `Net` in `play_breakout_from_ANN.py`) |
 | Input | 6400 features = a flattened 80×80 preprocessed Breakout frame |
 | Output | 4 units = the Breakout discrete action space |
-| Consumed by | `play_breakout_from_ANN.py:55` (`torch.load("trained_shallow_ANN.pt")`) |
+| Format | A `state_dict` (`fc1.weight`, `fc1.bias`, `fc2.weight`, `fc2.bias`), loaded with `weights_only=True`, PyTorch's safe default since 2.6 (it runs no pickled code). Re-saved in 2026-10 from the original pickled `Net` object, with identical tensors. |
+| Consumed by | `play_breakout_from_ANN.py` (`Net().load_state_dict(torch.load(..., weights_only=True))`) |
 | How it is used | Its `fc1`/`fc2` weights are transposed, scaled (`layer1scale=57.68`, `layer2scale=77.48`), and transplanted into a spiking network `Input(6400) → LIFNodes(1000) → LIFNodes(4)`, which is then run on Breakout through an `EnvironmentPipeline` with Poisson encoding — an ANN→SNN conversion demo. |
 
 ### Regeneration
@@ -25,5 +26,5 @@ see [../../DATA.md](../../DATA.md)).
 **The training script that produced `trained_shallow_ANN.pt` is not included in this
 repository.** The file is shipped as a pretrained weight blob. To regenerate it you would
 need to train a network with the `Net` architecture above (input 6400, hidden 1000,
-output 4) as a Breakout Q-network and save it with `torch.save`. If you reproduce or
+output 4) as a Breakout Q-network and save its `state_dict()` with `torch.save`. If you reproduce or
 replace this artifact, please document the training data, hyperparameters, and seed here.

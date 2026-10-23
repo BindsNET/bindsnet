@@ -4,7 +4,7 @@
 #   docker run --rm -it --gpus all bindsnet bash    # --gpus needs the NVIDIA container toolkit
 # The torch wheels from the cu130 index bundle their CUDA libraries, so no CUDA base
 # image is needed; the host only needs an NVIDIA driver.
-FROM python:3.14-slim
+FROM python:3.13-slim
 
 ARG DEPS=dev
 ARG POETRY_VERSION=2.4.3

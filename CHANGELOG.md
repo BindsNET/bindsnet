@@ -7,6 +7,41 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 ## [Unreleased]
 
 ### Fixed
+- `--seed` now makes GPU runs repeatable in `eth_mnist.py`, `batch_eth_mnist.py`,
+  `supervised_mnist.py`, `conv_mnist.py`, `conv1d_MNIST.py`, `conv3d_MNIST.py`,
+  `SOM_LM-SNNs.py` and `breakout/random_network_baseline.py`: they call
+  `torch.manual_seed(seed)` unconditionally, which seeds the CPU generator (weight
+  initialisation, Poisson encoding, data shuffling) and every GPU. Before, the GPU path
+  called only `torch.cuda.manual_seed_all`; two runs of
+  `batch_eth_mnist.py --seed 0 --n_train 640 --n_test 320` gave 0.37 and 0.47.
+  `dot_tracing.py` now uses its `--seed` for torch and the dot simulator (default
+  seed 1, since the simulator reads 0 as "seed from the clock").
+- `supervised_mnist.py` plots input-to-excitatory weights through
+  `feature_index["weight"]` (`MulticompartmentConnection` has no `.w`), so it runs to
+  the end.
+- `reservoir.py` scores its readout on the MNIST test set (it reused the training
+  loader before) and reports the number of images it actually scored.
+- `conv_mnist.py` now tests the network: it labels output neurons from training spikes
+  (`assign_labels`) and reports all-activity and proportion-weighting test accuracy,
+  like `eth_mnist.py`.
+- `--plot` works as a switch in `eth_mnist.py`, `supervised_mnist.py`, `conv_mnist.py`,
+  `reservoir.py`, `conv1d_MNIST.py`, `conv3d_MNIST.py` and `SOM_LM-SNNs.py`: plotting is
+  off unless `--plot` is given (it was `store_true` with a default of `True`).
+  `conv_mnist.py` no longer pauses 1 s per sample.
+- Training and test loops in the MNIST examples run exactly `--n_train` / `--n_test`
+  samples (`>=` instead of `>`, which ran one more).
+- The Breakout examples run with the locked `ale-py` 0.12.1: `GymEnvironment` maps
+  `BreakoutDeterministic-v4` to its ale-py 0.8.1 definition, `Breakout-v4` with
+  `frameskip=4` (newer ale-py no longer register that id).
+- `play_breakout_from_ANN.py` loads `trained_shallow_ANN.pt` under PyTorch 2.6+: the
+  file is now a `state_dict` with identical tensors, loaded with `weights_only=True`
+  (it was a pickled `Net` object).
+- `publish.yml` reads the version from `[project]`, where it has lived since 0.3.4, so
+  a published GitHub release passes its tag check (it read `[tool.poetry]`; the last
+  PyPI upload was started by hand, which skips the check).
+- Dockerfile on `python:3.13-slim`, inside `requires-python = ">=3.11,<3.14"` (#810 had
+  moved it to 3.14); Dependabot no longer proposes minor or major Python bumps for the
+  image.
 - API reference on Read the Docs was empty: the build never installed `bindsnet`, so
   every `automodule` failed to import (`No module named 'matplotlib'`), and
   `docs/pyproject.toml` downgraded Sphinx to 7.2.6. `.readthedocs.yaml` now installs a
@@ -21,10 +56,29 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 - API reference now includes `learning.MCC_learning`, `network.topology_features`,
   `environment.cue_reward`, `environment.dot_simulator` and
   `analysis.dotTrace_plotter`, which were missing.
-
 - Normalizing a kernel whose weights sum to zero (for example an all-zero kernel)
   in `LocalConnection` and the 1D/2D/3D convolutional and locally connected
   connections leaves it unchanged instead of introducing NaNs or infinities.
+
+### Added
+- `test/repro/test_packaging_consistency.py`: checks that the Dockerfile's Python is in
+  `requires-python`, that CI tests every supported Python, that `CITATION.cff` and
+  `pyproject.toml` carry the same version, that `publish.yml` reads that version, and
+  that every example with `--seed` seeds torch unconditionally.
+- `.github/workflows/docker.yml`: builds the image and runs `test/repro` inside it when
+  the Dockerfile, `pyproject.toml` or `poetry.lock` change.
+- `examples/benchmark/bindsnet_scaling.py`: the README scaling benchmark for BindsNET
+  alone (no other simulator needed).
+- `examples/benchmark/benchmark.py` rewritten: every simulator (BindsNET CPU/GPU,
+  BRIAN2, brian2genn, PyNEST, ANNarchy CPU/GPU) gets the network the README describes,
+  each in its own process, and a simulator that is not installed is skipped. It
+  replaces the 2018 script, which imported an `experiments` helper package that was not
+  released and used its own input settings per simulator: BindsNET 0-1 Hz with U(0, 1)
+  weights, BRIAN2 15 Hz with U(0, 0.01) weights and no `on_pre` (so its synapses did not
+  drive the membrane), PyNEST 60 Hz connected one-to-one, ANNarchy 50 Hz with U(0, 1)
+  weights. `annarchy.py` and `gpu_annarchy.py` merged into it; `plot_benchmark.py` reads
+  its CSV.
+- `test/environment/test_gym_environment.py`.
 
 ### Changed
 - Convolutional and locally connected connections normalize all kernels in one
