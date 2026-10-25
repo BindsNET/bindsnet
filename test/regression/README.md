@@ -22,6 +22,18 @@ dataset, no network access and no GPU, and they run on every pull request.
   weights untouched. A batch of identical samples equals one sample. Pair STDP has no
   time-step factor and the reward-modulated rule MSTDPET does.
 - `regen.py`: rewrites the golden files.
+- `test_op_counts.py`: counts how many tensor operations (PyTorch kernel calls) one
+  call makes: one `update()` of every learning rule at batch 1 and 4, one simulation
+  step of a 784-input, 100-neuron `DiehlAndCook2015` network at batch 1 and 16, and one
+  `LIFNodes.forward` at batch 1 and 4. The count does not depend on the computer or on
+  the clock, so it is exact everywhere. The test fails when a count grows (the code
+  does more work per step); a smaller count passes with a warning.
+- `op_counts.json`: the stored counts, per operation name, with the torch version,
+  date, commit and reason. Workloads that cannot run on `master` are listed under
+  `excluded` with the reason.
+- `regen_op_counts.py`: rewrites `op_counts.json`. It also refuses to run without
+  `--reason`, and measures every workload twice, writing nothing if the two differ.
+  `--check` compares with the file and writes nothing.
 - `conftest.py`: one thread and deterministic algorithms for every test here.
 
 ## When a golden test fails
@@ -38,6 +50,22 @@ python test/regression/regen.py --reason "why the results changed"
 The script refuses to run without a reason and stores it in every file. Results-changing
 fixes are released in version 0.4.0, not in a 0.3.x patch release, so the pull request
 will wait for that release. See `CONTRIBUTING.md`, "Tests that guard results".
+
+## When an operation-count test fails
+
+Your change makes a hot path call more tensor operations than before, which usually
+means it is slower. Either find a way without the extra operations, or, if the extra
+work is needed (for example a correctness fix), regenerate the counts in the same pull
+request and say why:
+
+```shell
+python test/regression/regen_op_counts.py --reason "why the hot path does more work"
+```
+
+The failure message lists which operations changed. Speed itself is measured
+separately by the informational workflow `.github/workflows/bench.yml`, which times
+the base and head of every pull request and writes the result to the job summary;
+it never blocks a merge.
 
 ## Expected failures
 

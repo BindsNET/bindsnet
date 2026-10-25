@@ -1,0 +1,56 @@
+# Speed comparison of a pull request against its base. Informational only:
+# this is NOT a required check, and it always exits 0. The verdict (SLOWER or
+# not) is in the job summary and in the uploaded "bench-ab" artifact; a
+# maintainer decides. It does not post PR comments, because pull requests from
+# forks get a read-only token. Script and statistics: .github/scripts/bench_ab.py.
+name: Speed comparison (informational)
+
+on:
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  POETRY_VERSION: "2.4.3"
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0  # the base commit must be present for git worktree
+    - name: Install Poetry
+      run: pipx install "poetry==${POETRY_VERSION}"
+    - uses: actions/setup-python@v7
+      with:
+        python-version: "3.13"
+        cache: poetry
+    - name: Install dependencies
+      run: |
+        poetry install
+        .github/scripts/use_cpu_torch.sh "poetry run python"
+    # Head is github.sha, the test merge of the pull request into master, so the
+    # difference from the base commit is exactly the pull request's change.
+    - name: Compare base and head (alternating rounds)
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.sha }}
+      run: >
+        poetry run python .github/scripts/bench_ab.py
+        --base "$BASE_SHA" --head "$HEAD_SHA"
+        --out bench-out --summary "$GITHUB_STEP_SUMMARY"
+    - uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: bench-ab
+        path: |
+          bench-out/bench_ab.md
+          bench-out/bench_ab.json
