@@ -65,6 +65,7 @@ jupyterlab = "^4"
 isort = "^9"
 black = "^26"
 autoflake = "^2"
+pytest-cov = "^7"
 
 [build-system]
 requires = ["poetry-core>=2.0"]
