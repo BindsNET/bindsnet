@@ -41,7 +41,11 @@ jobs:
     - name: Lint with flake8 (syntax errors and undefined names)
       run: pipx run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Test with pytest (with coverage)
-      run: poetry run pytest --cov=bindsnet --cov-report=term --cov-report=xml
+      # -c and --cov-config pin the settings to pyproject.toml, so an added
+      # pytest.ini, setup.cfg, tox.ini or .coveragerc cannot change what runs.
+      run: >
+        poetry run pytest -c pyproject.toml --cov-config=pyproject.toml
+        --cov=bindsnet --cov-report=term --cov-report=xml
     # A floor, not a target: fails only when coverage of the core packages drops
     # below the value recorded in the script (see its docstring).
     - name: Check coverage floor
@@ -75,4 +79,4 @@ jobs:
         grep -m1 "model name" /proc/cpuinfo
         if grep -qw avx512f /proc/cpuinfo; then echo "AVX-512 yes"; else echo "AVX-512 no"; fi
     - name: Test with pytest
-      run: poetry run pytest
+      run: poetry run pytest -c pyproject.toml

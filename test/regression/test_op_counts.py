@@ -23,6 +23,7 @@ differently), so the tests skip when torch's major.minor differs from the file.
 import importlib
 import inspect
 import json
+import os
 import warnings
 from collections import Counter
 from pathlib import Path
@@ -187,7 +188,8 @@ def _major_minor(version):
 def stored():
     data = load_counts()
     if _major_minor(data["meta"]["torch"]) != _major_minor(torch.__version__):
-        pytest.skip(
+        # On CI a torch upgrade must regenerate the counts in the same PR.
+        (pytest.fail if os.environ.get("CI") else pytest.skip)(
             f"op counts were made with torch {data['meta']['torch']}; regenerate "
             "with test/regression/regen_op_counts.py --reason"
         )

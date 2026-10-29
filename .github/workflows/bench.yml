@@ -1,9 +1,11 @@
-# Speed comparison of a pull request against its base. Informational only:
-# this is NOT a required check, and it always exits 0. The verdict (SLOWER or
-# not) is in the job summary and in the uploaded "bench-ab" artifact; a
-# maintainer decides. It does not post PR comments, because pull requests from
-# forks get a read-only token. Script and statistics: .github/scripts/bench_ab.py.
-name: Speed comparison (informational)
+# Speed comparison of a pull request against its base, required on master: it
+# fails only on a large, clear slowdown (a workload more than 2x slower than the
+# base, --fail-above 2), which the operation-count tests cannot see (for
+# example slow pure-Python code). Smaller changes are flagged SLOWER in the job
+# summary and the "bench-ab" artifact for a maintainer. It does not post PR
+# comments, because pull requests from forks get a read-only token. Script and
+# statistics: .github/scripts/bench_ab.py.
+name: Speed comparison
 
 on:
   pull_request:
@@ -41,11 +43,11 @@ jobs:
     # difference from the base commit is exactly the pull request's change.
     - name: Compare base and head (alternating rounds)
       env:
-        BASE_SHA: ${{ github.event.pull_request.base.sha }}
         HEAD_SHA: ${{ github.sha }}
+      # HEAD^1 of the test merge is the master tip it merges into.
       run: >
         poetry run python .github/scripts/bench_ab.py
-        --base "$BASE_SHA" --head "$HEAD_SHA"
+        --base "$(git rev-parse HEAD^1)" --head "$HEAD_SHA" --fail-above 2
         --out bench-out --summary "$GITHUB_STEP_SUMMARY"
     - uses: actions/upload-artifact@v7
       if: always()

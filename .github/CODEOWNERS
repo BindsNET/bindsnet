@@ -1,13 +1,14 @@
 # Pull requests that touch these files need a maintainer's approval (branch
 # protection: "Require review from Code Owners"). They hold recorded results,
-# the tests that pin formulas to their papers, and the CI that runs them; a
-# pull request must not edit them to make itself pass.
-/test/regression/                         @Hananel-Hazan
-/test/api_surface.json                    @Hananel-Hazan
-/test/regen_api_surface.py                @Hananel-Hazan
-/test/test_api_surface.py                 @Hananel-Hazan
-/test/network/test_all_classes.py         @Hananel-Hazan
-/test/network/test_learning_rule_specs.py @Hananel-Hazan
-/test/network/test_mstdp_florian.py       @Hananel-Hazan
-/test/network/test_perf_equivalence.py    @Hananel-Hazan
-/.github/                                 @Hananel-Hazan
+# the tests and the settings that decide which tests run, and the CI that runs
+# them; a pull request must not edit them to make itself pass.
+/test/            @Hananel-Hazan
+/.github/         @Hananel-Hazan
+/pyproject.toml   @Hananel-Hazan
+/poetry.lock      @Hananel-Hazan
+/pytest.ini       @Hananel-Hazan
+/.pytest.ini      @Hananel-Hazan
+/tox.ini          @Hananel-Hazan
+/setup.cfg        @Hananel-Hazan
+/.coveragerc      @Hananel-Hazan
+/conftest.py      @Hananel-Hazan

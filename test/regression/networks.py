@@ -18,6 +18,7 @@ multiplies by one and is invisible.
 
 import io
 import lzma
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple
@@ -78,7 +79,7 @@ def dc2015_b16(dt):
     return _dc2015(16, dt)
 
 
-def _dense_postpre(batch, dt):
+def _dense_postpre(batch, dt, **rule_kwargs):
     from bindsnet.learning import PostPre
     from bindsnet.network import Network
     from bindsnet.network.nodes import Input, LIFNodes
@@ -96,6 +97,7 @@ def _dense_postpre(batch, dt):
             wmin=0.0,
             wmax=1.0,
             norm=20.0,
+            **rule_kwargs,
         ),
         "in",
         "out",
@@ -116,6 +118,15 @@ def conn_postpre_b8(dt):
 @network("conn_postpre_dt05", trials=[(1, 80, 1), (1, 60, 2)], norm=True, dt=0.5)
 def conn_postpre_dt05(dt):
     return _dense_postpre(1, dt)
+
+
+@network("conn_postpre_mean", trials=[(4, 60, 1), (4, 40, 2)], norm=True, dt=0.5)
+def conn_postpre_mean(dt):
+    # A custom reduction takes PostPre's general (bmm) path instead of the fused
+    # addmm_ one; dt = 0.5 makes a stray dt factor visible there.
+    import torch
+
+    return _dense_postpre(4, dt, reduction=torch.mean)
 
 
 @network("local2d_postpre", trials=[(1, 60, 1), (1, 40, 2)])
@@ -389,7 +400,17 @@ PREFIX = "_reg_"
 
 def deterministic():
     """CPU determinism settings required for exact comparisons (see
-    ``cpu_pins.py``). Fails when the capability pin was applied too late."""
+    ``cpu_pins.py``). Fails when a pin is missing or was applied too late."""
+    import cpu_pins
+
+    unpinned = {
+        k: os.environ.get(k) for k, v in cpu_pins.PINS.items() if os.environ.get(k) != v
+    }
+    if unpinned:
+        raise RuntimeError(
+            f"CPU maths libraries not pinned ({unpinned}): run through pytest "
+            "(test/conftest.py) or regen.py, which apply cpu_pins.PINS"
+        )
     capability = torch.backends.cpu.get_cpu_capability()
     if capability != "AVX2":
         raise RuntimeError(
