@@ -38,12 +38,6 @@ def _params(known):
 # Known failures on master db7d193 (2026-10-24); see the decision log in
 # logs/test_hardening_2026-10/PLAN.md. A fix makes the strict xfail fail, which
 # is the signal to remove the entry.
-MEANFIELD_NORM = (
-    "MeanFieldConnection.normalize assigns a plain tensor to the parameter w "
-    "(TypeError; open PR #813)",
-    TypeError,
-    True,
-)
 CSRM_WINDOW = (
     "Connection.s_w (CSRM spike window) is neither reset by "
     "reset_state_variables nor kept in the state_dict (open PR #815)",
@@ -145,7 +139,7 @@ def _reset_path(name, learning):
     return N.collect(net), net
 
 
-RESET_XFAIL = {"csrm_window": CSRM_WINDOW, "meanfield_norm": MEANFIELD_NORM}
+RESET_XFAIL = {}
 
 
 @pytest.mark.parametrize("name", _params(RESET_XFAIL))
@@ -165,8 +159,6 @@ def test_reset_equals_fresh_learning_off(name):
 RESET_LEARN_XFAIL = {
     "dc2015_b1": MCC_WEIGHTS,
     "dc2015_b16": MCC_WEIGHTS,
-    "csrm_window": CSRM_WINDOW,
-    "meanfield_norm": MEANFIELD_NORM,
 }
 
 
@@ -196,7 +188,6 @@ ROUND_TRIP_XFAIL = {
     "dc2015_b1": MCC_WEIGHTS,
     "dc2015_b16": MCC_WEIGHTS,
     "csrm_window": CSRM_WINDOW,
-    "meanfield_norm": MEANFIELD_NORM,
 }
 
 
@@ -263,9 +254,7 @@ def test_learning_off_keeps_weights(name):
 # --------------------------------------------------------------------------- #
 
 BATCH_N = 3
-BATCH_XFAIL = {
-    "meanfield_norm": MEANFIELD_NORM,
-}
+BATCH_XFAIL = {}
 # Floats are compared with a relative tolerance as well as the absolute one:
 # batched kernels sum in a different order, which moves a float32 value by a
 # couple of units in the last place (measured: CSRMNodes v off by 7.6e-6 at
