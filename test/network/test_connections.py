@@ -867,3 +867,38 @@ if __name__ == "__main__":
     args = [[[1, 28, 28], [1, 26, 26], (1, 26), 3, 1]]
     for conn_type, arg in zip(conn_types, args):
         tester.check_weights(conn_type, decay=1, update_rule=NoOp, *arg)
+
+
+def test_multicompartment_into_csrm_matches_connection():
+    """With static weights a MulticompartmentConnection (window of outputs) drives
+    CSRMNodes exactly like a Connection (window of input spikes), at batch 2.
+
+    Caught: MulticompartmentConnection.compute_window on master (no s_w, then
+    self.w), which raised AttributeError.
+    """
+    from bindsnet.network.monitors import Monitor
+    from bindsnet.network.nodes import CSRMNodes, Input
+    from bindsnet.network.topology import Connection, MulticompartmentConnection
+    from bindsnet.network.topology_features import Weight
+
+    w = torch.rand(6, 4, generator=torch.Generator().manual_seed(0)) * 30
+    x = torch.rand(40, 2, 6, generator=torch.Generator().manual_seed(1)) < 0.4
+    recorded = []
+    for mcc in (False, True):
+        net = Network(dt=1.0, batch_size=2)
+        net.add_layer(Input(n=6), "in")
+        net.add_layer(CSRMNodes(n=4), "out")
+        if mcc:
+            pipeline = [Weight("w", w.clone())]
+            conn = MulticompartmentConnection(
+                net.layers["in"], net.layers["out"], device="cpu", pipeline=pipeline
+            )
+        else:
+            conn = Connection(net.layers["in"], net.layers["out"], w=w.clone())
+        net.add_connection(conn, "in", "out")
+        net.add_monitor(Monitor(net.layers["out"], ["s", "v"], time=40), "m")
+        net.run(inputs={"in": x}, time=40)
+        recorded.append([net.monitors["m"].get(v) for v in ("s", "v")])
+    assert recorded[0][0].sum() > 0
+    assert torch.equal(recorded[0][0], recorded[1][0])
+    assert torch.equal(recorded[0][1], recorded[1][1])

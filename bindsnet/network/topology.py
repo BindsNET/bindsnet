@@ -9,8 +9,26 @@ from torch import device
 from torch.nn import Module, Parameter
 from torch.nn.modules.utils import _pair, _triple
 
-from bindsnet.network.nodes import CSRMNodes, Nodes
+from bindsnet.network.nodes import Nodes
 from bindsnet.utils import im2col_indices
+
+
+def _load_window(module, state_dict, prefix, name):
+    # language=rst
+    """
+    Match ``module``'s spike-window buffer ``name`` (created on the first step) to
+    a state dict about to be loaded: adopt a saved window, or drop one the saved
+    state did not have, so ``load_state_dict`` restores the window exactly.
+    """
+    key = prefix + name
+    if key in state_dict:
+        if (
+            getattr(module, name) is None
+            or getattr(module, name).shape != state_dict[key].shape
+        ):
+            setattr(module, name, torch.empty_like(state_dict[key]))
+    else:
+        setattr(module, name, None)
 
 
 class AbstractConnection(ABC, Module):
@@ -361,8 +379,12 @@ class Connection(AbstractConnection):
         else:
             self.b = None
 
-        if isinstance(self.target, CSRMNodes):
-            self.s_w = None
+        # Window of recent input spikes for CSRM targets (see compute_window).
+        self.register_buffer("s_w", None)
+
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        _load_window(self, state_dict, prefix, "s_w")
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -432,8 +454,7 @@ class Connection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
-        if isinstance(self.target, CSRMNodes):
-            self.s_w = None
+        self.s_w = None
 
 
 class MulticompartmentConnection(AbstractMulticompartmentConnection):
@@ -483,6 +504,13 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         # (see AbstractFeature.is_static). Invalidated whenever a feature can
         # change: learning updates, normalize, reset, device/dtype moves.
         self._fold_cache = None
+
+        # Window of recent outputs for CSRM targets (see compute_window).
+        self.register_buffer("out_w", None)
+
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        _load_window(self, state_dict, prefix, "out_w")
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
     def _apply(self, fn, recurse=True):
         self._fold_cache = None
@@ -594,31 +622,25 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
-        """"""
+        """
+        Post-synaptic input for CSRM targets: the last ``target.res_window_size``
+        outputs of :meth:`compute`, newest last, shape
+        ``[batch, window, *target.shape]``. The pipeline runs once per step, on that
+        step's spikes, so features with state advance once per step.
 
-        if self.s_w == None:
-            # Construct a matrix of shape batch size * window size * dimension of layer
-            self.s_w = torch.zeros(
-                self.target.batch_size, self.target.res_window_size, *self.source.shape
+        :param s: Incoming spikes, shape ``[batch, *source.shape]``.
+        """
+        out = self.compute(s)
+        if self.out_w is None or self.out_w.size(0) != s.size(0):
+            self.out_w = torch.zeros(
+                s.size(0),
+                self.target.res_window_size,
+                *self.target.shape,
+                device=out.device,
+                dtype=out.dtype,
             )
-
-        # Add the spike vector into the first in first out matrix of windowed (res) spike trains
-        self.s_w = torch.cat((self.s_w[:, 1:, :], s[:, None, :]), 1)
-
-        # Compute multiplication of spike activations by weights and add bias.
-        if self.b is None:
-            post = (
-                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
-            )
-        else:
-            post = (
-                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
-                + self.b
-            )
-
-        return post.view(
-            self.s_w.size(0), self.target.res_window_size, *self.target.shape
-        )
+        self.out_w = torch.cat((self.out_w[:, 1:], out[:, None]), 1)
+        return self.out_w
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -650,6 +672,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         super().reset_state_variables()
 
         self._fold_cache = None
+        self.out_w = None
         for f in self.pipeline:
             f.reset_state_variables()
 

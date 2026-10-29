@@ -38,12 +38,6 @@ def _params(known):
 # Known failures on master db7d193 (2026-10-24); see the decision log in
 # logs/test_hardening_2026-10/PLAN.md. A fix makes the strict xfail fail, which
 # is the signal to remove the entry.
-CSRM_WINDOW = (
-    "Connection.s_w (CSRM spike window) is neither reset by "
-    "reset_state_variables nor kept in the state_dict (open PR #815)",
-    None,
-    True,
-)
 MCC_WEIGHTS = (
     "MulticompartmentConnection keeps its Weight feature outside the state_dict, "
     "so DiehlAndCook2015's weights are not saved or loaded by state_dict",
@@ -187,7 +181,6 @@ def test_reset_equals_fresh_learning_on(name):
 ROUND_TRIP_XFAIL = {
     "dc2015_b1": MCC_WEIGHTS,
     "dc2015_b16": MCC_WEIGHTS,
-    "csrm_window": CSRM_WINDOW,
 }
 
 
