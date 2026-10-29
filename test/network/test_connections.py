@@ -902,3 +902,35 @@ def test_multicompartment_into_csrm_matches_connection():
     assert recorded[0][0].sum() > 0
     assert torch.equal(recorded[0][0], recorded[1][0])
     assert torch.equal(recorded[0][1], recorded[1][1])
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+def test_windows_and_maxpool_state_stay_on_gpu():
+    """The CSRM input window and MaxPool firing rates are created on the spikes'
+    device, also after a reset.
+
+    Caught: torch.zeros without device= in Connection.compute_window and in
+    MaxPool2dConnection.reset_state_variables (device mismatch on CUDA).
+    """
+    from bindsnet.network.nodes import CSRMNodes, Input
+    from bindsnet.network.topology import Connection, MaxPool2dConnection
+
+    net = Network(dt=1.0)
+    net.add_layer(Input(n=6), "in")
+    net.add_layer(CSRMNodes(n=4), "out")
+    net.add_connection(Connection(net.layers["in"], net.layers["out"]), "in", "out")
+    net.add_layer(Input(shape=(1, 4, 4)), "img")
+    net.add_layer(Input(shape=(1, 2, 2)), "pool")
+    pool = MaxPool2dConnection(
+        net.layers["img"], net.layers["pool"], kernel_size=2, stride=2, decay=0.5
+    )
+    net.add_connection(pool, "img", "pool")
+    net.to("cuda")
+    inputs = {
+        "in": (torch.rand(5, 1, 6) < 0.5).cuda(),
+        "img": (torch.rand(5, 1, 1, 4, 4) < 0.5).cuda(),
+    }
+    for _ in range(2):
+        net.run(inputs=inputs, time=5)
+        net.reset_state_variables()
+    assert pool.firing_rates.is_cuda

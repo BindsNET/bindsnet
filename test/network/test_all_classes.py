@@ -900,21 +900,37 @@ def test_fixed_bug_stays_fixed(bug_id):
     FIXED_BUGS[bug_id][3]()
 
 
-def test_sparse_dc2015_learns_like_dense():
-    """With one sample there is one weight copy, so sparse and dense weights learn
-    identically (no normalisation; with it, sparse sums in another order).
+@pytest.mark.parametrize("batch", [1, 2])
+@pytest.mark.parametrize("rule", ["default", "DiehlAndCook"])
+def test_sparse_dc2015_learns_like_dense(rule, batch):
+    """Sparse weights hold one copy per sample, and every copy gets the batch's
+    shared update, so sparse and dense DiehlAndCook2015 learn the same weights (no
+    normalisation; with it, sparse sums in another order).
 
     Caught: dropping the in-place copy_ in MCC_LearningRule.update (the sparse
-    clamp) leaves the sparse weights at their initial values.
+    clamp) leaves the sparse weights at their initial values; per-sample sparse
+    updates (no batch reduction) make batch 2 differ from dense.
     """
-    kwargs = {"n_inpt": 16, "n_neurons": 8, "batch_size": 1}
+    kwargs = {"n_inpt": 16, "n_neurons": 8, "batch_size": batch}
     kwargs.update(exc_thresh=-62.0, norm=None)
+    if rule == "DiehlAndCook":
+        kwargs.update(
+            learning_rule=mcc_learning.DiehlAndCook, learning_rule_kwargs={"x_tar": 0.4}
+        )
     learned = []
     for sparse in (False, True):
-        net = _run_model("DiehlAndCook2015", {**kwargs, "sparse": sparse}, 1)
+        net = _run_model("DiehlAndCook2015", {**kwargs, "sparse": sparse}, batch)
         w = _weights(net.connections[("X", "Ae")])
-        learned.append((w.to_dense() if w.is_sparse else w).reshape(16, 8))
-    assert torch.equal(learned[0], learned[1])
+        w = w.to_dense() if w.is_sparse else w
+        learned.append(w.reshape(-1, 16, 8))
+    dense, copies = learned[0][0], learned[1]
+    assert copies.shape[0] == batch
+    for copy in copies:
+        assert torch.allclose(
+            copy, dense, rtol=1e-6, atol=1e-7
+        )  # batch summation order
+    if batch == 1:
+        assert torch.equal(copies[0], dense)
 
 
 def test_mean_field_feature_keeps_samples_apart():

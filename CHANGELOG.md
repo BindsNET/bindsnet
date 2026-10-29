@@ -27,6 +27,20 @@ golden-output tests in `test/regression/`).
 - `MeanFieldConnection` and the `MeanField` feature use each sample's own mean
   firing rate. Before, the mean was taken over the whole batch, so samples mixed
   (batch size 1 is unchanged).
+- Sparse `MulticompartmentConnection` weights hold one copy per sample; every
+  learning rule (`PostPre`, `DiehlAndCook`, `MSTDP`, `MSTDPET`) now gives every copy
+  the batch's shared update, so sparse weights learn as dense ones do (batch size > 1
+  crashed before, so no earlier results exist).
+- `Rmax.eligibility_trace` and `MCC_learning.MSTDPET`'s state tensors now have a
+  leading batch dimension (`[batch, source, target]`); code that reads them directly
+  sees the new shape.
+- An `Updating` sub-feature now drives its parent's learning: the connection's own
+  update skips that parent, so it learns once per step (it crashed before).
+- Checkpoints: `state_dict()` of a network with a `MulticompartmentConnection` now
+  holds `feature.<name>` entries (and CSRM windows), so a checkpoint saved by an
+  earlier version fails `load_state_dict(..., strict=True)` with missing keys. Load
+  it with `strict=False`; the feature values then keep their constructed values,
+  as before. Feature names in one pipeline must be unique to save.
 - The published results in `REPRODUCING.md` use code paths whose golden outputs are
   bit-identical before and after (dense `DiehlAndCook2015`, `Connection` with
   `PostPre`, convolutional and Izhikevich layers); the full experiments were not rerun.

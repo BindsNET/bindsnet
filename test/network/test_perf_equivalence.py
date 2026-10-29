@@ -836,3 +836,44 @@ def test_rmax_batch_sum_equals_sum_of_single_samples():
     alone = run([0]) + run([1])
     assert both.abs().max() > 0
     assert torch.allclose(both, alone, rtol=1e-6, atol=1e-7)
+
+
+def test_mcc_mstdpet_sparse_copies_learn_like_dense():
+    """A sparse MCC weight keeps one copy per sample; MSTDPET gives every copy the
+    batch's shared update, equal to the dense weights (to summation order).
+
+    Caught: per-sample sparse updates (each copy learned only from its sample).
+    """
+    T = TestMccMstdpetBatched
+    steps, batch = 30, 3
+    pre, post = T._spikes(steps, batch, 12, 7), T._spikes(steps, batch, 7, 8)
+    results = []
+    for sparse in (False, True):
+        net = Network(dt=1.0, batch_size=batch)
+        net.add_layer(Input(n=12), "in")
+        net.add_layer(LIFNodes(n=7), "out")
+        w = torch.zeros(12, 7) + 0.5
+        conn = MulticompartmentConnection(
+            net.layers["in"],
+            net.layers["out"],
+            device="cpu",
+            pipeline=[
+                Weight(
+                    "w",
+                    w.unsqueeze(0).repeat(batch, 1, 1) if sparse else w,
+                    range=[-100.0, 100.0],
+                    nu=(1e-2, 1e-2),
+                    reduction=torch.sum,
+                    learning_rule=MCC_learning.MSTDPET,
+                    sparse=sparse,
+                    batch_size=batch,
+                )
+            ],
+        )
+        net.add_connection(conn, "in", "out")
+        value = T()._run(conn, pre, post, [0.5] * steps)
+        results.append(value.to_dense() if value.is_sparse else value)
+    dense, copies = results
+    assert not torch.equal(dense, torch.full_like(dense, 0.5))
+    for copy in copies:
+        assert torch.allclose(copy, dense, rtol=1e-6, atol=1e-7)

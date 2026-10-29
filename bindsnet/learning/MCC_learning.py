@@ -30,6 +30,28 @@ def _dense_outer_update_ok(rule, w: torch.Tensor) -> bool:
     )
 
 
+def _reduce_batch(reduction, x: torch.Tensor) -> torch.Tensor:
+    # language=rst
+    """
+    Reduce per-sample updates ``x`` (``[batch, ...]``) over the batch. The default
+    ``torch.squeeze`` (chosen for batch size 1) means a sum over a larger batch, as
+    in the fused dense path; for one sample both are exact.
+    """
+    return x.sum(0) if reduction is torch.squeeze else reduction(x, dim=0)
+
+
+def _add_to_feature(value: torch.Tensor, update: torch.Tensor) -> None:
+    # language=rst
+    """
+    ``value += update`` for a batch-reduced ``update``. A sparse value holds one
+    weight copy per sample (``[batch, src, tgt]``); every copy gets the same update,
+    so sparse weights learn as the dense (shared) weights do.
+    """
+    if value.is_sparse:
+        update = update.expand(value.shape).to_sparse()
+    value += update
+
+
 def _batch_outer(a: torch.Tensor, b: torch.Tensor, reduction) -> torch.Tensor:
     # language=rst
     """
@@ -301,7 +323,10 @@ class PostPre(MCC_LearningRule):
                     self.feature_value -= torch.mean(self.average_buffer_pre, dim=0)
             else:
                 if self.feature_value.is_sparse:
-                    self.feature_value -= (torch.bmm(source_s, target_x)).to_sparse()
+                    _add_to_feature(
+                        self.feature_value,
+                        -_reduce_batch(self.reduction, torch.bmm(source_s, target_x)),
+                    )
                 else:
                     self.feature_value -= self.reduction(
                         torch.bmm(source_s, target_x), dim=0
@@ -330,7 +355,10 @@ class PostPre(MCC_LearningRule):
                     self.feature_value += torch.mean(self.average_buffer_post, dim=0)
             else:
                 if self.feature_value.is_sparse:
-                    self.feature_value += (torch.bmm(source_x, target_s)).to_sparse()
+                    _add_to_feature(
+                        self.feature_value,
+                        _reduce_batch(self.reduction, torch.bmm(source_x, target_s)),
+                    )
                 else:
                     self.feature_value += self.reduction(
                         torch.bmm(source_x, target_s), dim=0
@@ -539,11 +567,11 @@ class DiehlAndCook(MCC_LearningRule):
         source_x = self.source.x.view(batch_size, -1) - self.x_tar
         target_s = self.target.s.view(batch_size, -1).float()
         outer = _batch_outer(source_x, target_s, self.reduction)
-        factor = self.max - w
+        factor = self.max - (w.to_dense() if w.is_sparse else w)
         if self.mu != 1.0:
             factor = factor.clamp(min=0.0) ** self.mu
         if w.is_sparse:
-            w += (self.nu[1] * outer * factor.to_dense()).to_sparse()
+            _add_to_feature(w, self.nu[1] * outer * factor)
         else:
             w += self.nu[1] * outer * factor
         super().update()
@@ -652,6 +680,7 @@ class MSTDP(MCC_LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
         learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -900,6 +929,7 @@ class MSTDPET(MCC_LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -952,11 +982,10 @@ class MSTDPET(MCC_LearningRule):
 
         # Compute weight update.
 
-        # Dense weights are shared across the batch: reduce the per-sample
-        # updates. Sparse weights keep one copy per sample ([batch, src, tgt]).
+        # Weights are shared across the batch: reduce the per-sample updates (a
+        # sparse value's per-sample copies all get the same update).
         update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
-        if not self.feature_value.is_sparse:
-            update = self.reduction(update, dim=0)
+        update = _reduce_batch(self.reduction, update)
 
         if self.average_update > 0:
             self.average_buffer[self.average_buffer_index] = update
@@ -965,14 +994,11 @@ class MSTDPET(MCC_LearningRule):
             ) % self.average_update
 
             if self.continues_update or self.average_buffer_index == 0:
-                update = torch.mean(self.average_buffer, dim=0)
-                if self.feature_value.is_sparse:
-                    update = update.to_sparse()
-                self.feature_value += update
+                _add_to_feature(
+                    self.feature_value, torch.mean(self.average_buffer, dim=0)
+                )
         else:
-            if self.feature_value.is_sparse:
-                update = update.to_sparse()
-            self.feature_value += update
+            _add_to_feature(self.feature_value, update)
 
         # Update P^+ and P^- values.
         self.p_plus *= self._decay_plus  # Decay

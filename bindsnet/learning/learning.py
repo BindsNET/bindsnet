@@ -198,7 +198,10 @@ class LearningRule(ABC):
         """
         Forget the state carried across time steps. The tensors in
         ``_step_state`` are deleted, so the next update re-creates them as zeros
-        for the current batch size, as in a freshly built rule.
+        for the current batch size, as in a freshly built rule. The default batch
+        reduction is still the one chosen when the rule was built (``squeeze`` for
+        batch size 1, ``sum`` otherwise), so a rule built for batch size 1 does not
+        run a larger batch; pass ``reduction=torch.sum`` to allow both.
         """
         for name in self._step_state:
             self.__dict__.pop(name, None)
@@ -1727,6 +1730,7 @@ class MSTDP(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -2101,6 +2105,7 @@ class MSTDP(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -2233,6 +2238,7 @@ class MSTDPET(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -2628,6 +2634,7 @@ class MSTDPET(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -2760,6 +2767,7 @@ class Rmax(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         """
         batch_size = self.source.batch_size
 

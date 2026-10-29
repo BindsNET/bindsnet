@@ -847,7 +847,30 @@ class Degradation(AbstractFeature):
         return self.value
 
 
-class AdaptationBaseSynapsHistory(AbstractFeature):
+class _AdaptationState:
+    # The adaptation features' state besides ``value``, saved in the state_dict by
+    # MulticompartmentConnection (``feature.<name>.<key>``).
+    def extra_state_tensors(self) -> dict:
+        return {
+            "mask": self.mask,
+            "spike_buffer": self.spike_buffer,
+            "counter": torch.tensor(self.counter),
+            "start_counter": torch.tensor(self.start_counter),
+        }
+
+    def load_extra_state_tensors(self, tensors: dict) -> None:
+        for name in ("mask", "spike_buffer"):
+            if name in tensors:
+                setattr(
+                    self, name, tensors[name].clone().to(getattr(self, name).device)
+                )
+        if "counter" in tensors:
+            self.counter = int(tensors["counter"])
+        if "start_counter" in tensors:
+            self.start_counter = bool(tensors["start_counter"])
+
+
+class AdaptationBaseSynapsHistory(_AdaptationState, AbstractFeature):
     # Value evolves with the spike history every step; never cacheable.
     is_static = False
 
@@ -968,7 +991,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         self.value = self.init_value.clone().detach()  # initial mask
 
 
-class AdaptationBaseOtherSynaps(AbstractFeature):
+class AdaptationBaseOtherSynaps(_AdaptationState, AbstractFeature):
     # Value evolves with the spike history every step; never cacheable.
     is_static = False
 
@@ -1167,8 +1190,12 @@ class Normalization(AbstractSubFeature):
 class Updating(AbstractSubFeature):
     # language=rst
     """
-    Update parent features values using the assigned update rule.
+    Update parent features values using the assigned update rule, at this entry's
+    place in the pipeline. The connection's own update then skips the parent, so it
+    learns once per step.
     """
+
+    drives_update = True
 
     def __init__(
         self,
