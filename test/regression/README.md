@@ -36,6 +36,12 @@ dataset, no network access and no GPU, and they run on every pull request.
   `--check` compares with the file and writes nothing.
 - `conftest.py`: one thread and deterministic algorithms for every test here.
 
+Float values are compared to within 1e-6, which only holds if every CPU takes the
+same code path through the maths libraries. `cpu_pins.py` pins them (PyTorch kernels
+at AVX2, MKL in its `COMPATIBLE` mode, oneDNN off); `test/conftest.py` and `regen.py`
+apply the pins before torch starts. A golden test that fails only on some machines
+points at a library path that is not pinned yet, not at a tolerance to widen.
+
 ## When a golden test fails
 
 Your change altered a result. Either that is the point of the change, or it is a bug.

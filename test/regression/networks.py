@@ -388,9 +388,17 @@ PREFIX = "_reg_"
 
 
 def deterministic():
-    """CPU determinism settings required for exact comparisons."""
+    """CPU determinism settings required for exact comparisons (see
+    ``cpu_pins.py``). Fails when the capability pin was applied too late."""
+    capability = torch.backends.cpu.get_cpu_capability()
+    if capability != "AVX2":
+        raise RuntimeError(
+            f"PyTorch CPU capability is {capability}, not AVX2: run through pytest "
+            "(test/conftest.py) or regen.py, which pin it before torch starts"
+        )
     torch.set_num_threads(1)
     torch.use_deterministic_algorithms(True)
+    torch.backends.mkldnn.enabled = False
 
 
 def run_kwargs(spec):
