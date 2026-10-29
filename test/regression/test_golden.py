@@ -15,6 +15,8 @@ Spikes and other non-float tensors must be identical; floats must agree within
 ``python test/regression/regen.py --reason "<why>"`` and commit the new files.
 """
 
+import os
+
 import networks as N
 import pytest
 import torch
@@ -33,7 +35,9 @@ def test_golden(name):
     golden = N.load_golden(name)
     made_with = golden["meta"]["torch"]
     if _torch_minor(made_with) != _torch_minor(torch.__version__):
-        pytest.skip(
+        # On CI a torch upgrade must regenerate the goldens in the same PR,
+        # instead of silently skipping every golden test after it merges.
+        (pytest.fail if os.environ.get("CI") else pytest.skip)(
             f"golden files were made with torch {made_with}; "
             "regenerate with regen --reason"
         )

@@ -31,17 +31,24 @@ jobs:
   weakened-tests:
     name: weakened-tests
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v7
       with:
         fetch-depth: 2  # HEAD is the test merge; HEAD^1 is master it merges into
+    - name: Install Poetry
+      run: pipx install "poetry==${POETRY_VERSION}"
     - uses: actions/setup-python@v7
       with:
         python-version: "3.13"
+        cache: poetry
+    - name: Install dependencies (to collect tests on both commits)
+      run: |
+        poetry install
+        .github/scripts/use_cpu_torch.sh "poetry run python"
     - name: Compare tests with the base
       run: >
-        python .github/scripts/weakened_tests.py
+        poetry run python .github/scripts/weakened_tests.py --collect
         --base "$(git rev-parse HEAD^1)" --head "$(git rev-parse HEAD)"
         --labels "$LABELS" --summary "$GITHUB_STEP_SUMMARY"
 

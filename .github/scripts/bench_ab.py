@@ -30,8 +30,12 @@ same way below 1/threshold; otherwise "no clear change".
 
 The report (Markdown) is written to DIR/bench_ab.md, appended to --summary if
 given (GitHub's $GITHUB_STEP_SUMMARY), and the raw numbers to DIR/bench_ab.json.
-The exit status is always 0: this is a non-required check and a human decides;
-the verdict, or a TOOL ERROR line, is in the report.
+Without --fail-above the exit status is always 0 and a human decides; the
+verdict, or a TOOL ERROR line, is in the report. With --fail-above X the exit
+status is 1 when any workload's median ratio is above X and its interval's lower
+end is above 1.5 (a large, clear slowdown, far outside the no-change spread of
+0.90 to 1.12 per round measured on GitHub runners), or when the tool failed; CI
+uses X = 2.
 """
 
 from __future__ import annotations
@@ -318,6 +322,12 @@ def main() -> int:
     ap.add_argument("--time", type=int, default=100, help="time steps per run")
     ap.add_argument("--threads", type=int, default=2)
     ap.add_argument("--threshold", type=float, default=1.25)
+    ap.add_argument(
+        "--fail-above",
+        type=float,
+        default=None,
+        help="exit 1 when a median ratio is above this and the interval's lower end above 1.5",
+    )
     ap.add_argument("--min-seconds", type=float, default=1.0)
     ap.add_argument("--only", default=",".join(WORKLOADS))
     ap.add_argument("--timeout", type=int, default=900, help="seconds per process")
@@ -383,10 +393,25 @@ def main() -> int:
             indent=1,
         )
     )
+    failing = []
+    if args.fail_above is not None:
+        failing = [
+            r["workload"]
+            for r in rows
+            if r["ratio_median"] > args.fail_above and r["ratio_ci95"][0] > 1.5
+        ]
+        if error:
+            failing.append("tool error")
+        report += (
+            f"\n**Failed:** {', '.join(failing)} (median above {args.fail_above}x "
+            "the base, or the tool failed).\n"
+            if failing
+            else f"\nRequired limit: no workload above {args.fail_above}x the base.\n"
+        )
     if args.summary:
         with open(args.summary, "a") as f:
             f.write(report)
-    return 0
+    return 1 if failing else 0
 
 
 if __name__ == "__main__":

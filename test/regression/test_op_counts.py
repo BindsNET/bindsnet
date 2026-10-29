@@ -23,6 +23,7 @@ differently), so the tests skip when torch's major.minor differs from the file.
 import importlib
 import inspect
 import json
+import os
 import warnings
 from collections import Counter
 from pathlib import Path
@@ -147,6 +148,37 @@ def _lif_workload(batch):
     return lambda: layer.forward(step)
 
 
+def _node_classes():
+    """Every concrete Nodes class in bindsnet.network.nodes except LIFNodes (which
+    has its own workload, warmed up through Network.run)."""
+    import bindsnet.network.nodes as nodes_module
+
+    return {
+        name: cls
+        for name, cls in inspect.getmembers(nodes_module, inspect.isclass)
+        if issubclass(cls, nodes_module.Nodes)
+        and not inspect.isabstract(cls)
+        and cls.__module__ == nodes_module.__name__
+        and cls is not LIFNodes
+    }
+
+
+def _node_workload(cls, batch):
+    """One forward() of ``cls`` after a seeded warm-up of forward() calls."""
+    torch.manual_seed(0)
+    gen = torch.Generator().manual_seed(1)
+    net = Network(dt=1.0, batch_size=batch)
+    layer = cls(n=LIF_N, traces=True)
+    net.add_layer(layer, name="layer")
+    # CSRMNodes takes a window of inputs, [batch, window, n].
+    window = (int(layer.res_window_size),) if hasattr(layer, "res_window_size") else ()
+    x = torch.rand(WARMUP + 1, batch, *window, LIF_N, generator=gen) * 20.0
+    for t in range(WARMUP):
+        layer.forward(x[t].clone())
+    step = x[WARMUP]
+    return lambda: layer.forward(step.clone())
+
+
 def workloads():
     """Workload name -> function that builds it and returns the call to count."""
     out = {}
@@ -160,6 +192,8 @@ def workloads():
         out[f"run.DiehlAndCook2015_784x100.b{b}"] = lambda b=b: _dc2015_workload(b)
     for b in LIF_BATCHES:
         out[f"nodes.LIFNodes_forward.b{b}"] = lambda b=b: _lif_workload(b)
+        for name, cls in sorted(_node_classes().items()):
+            out[f"nodes.{name}_forward.b{b}"] = lambda c=cls, b=b: _node_workload(c, b)
     return out
 
 
@@ -187,7 +221,8 @@ def _major_minor(version):
 def stored():
     data = load_counts()
     if _major_minor(data["meta"]["torch"]) != _major_minor(torch.__version__):
-        pytest.skip(
+        # On CI a torch upgrade must regenerate the counts in the same PR.
+        (pytest.fail if os.environ.get("CI") else pytest.skip)(
             f"op counts were made with torch {data['meta']['torch']}; regenerate "
             "with test/regression/regen_op_counts.py --reason"
         )

@@ -9,8 +9,13 @@ test files the pull request adds or changes twice:
 - on the head commit as checked out.
 
 It passes when at least one test fails (or cannot be collected) on the base and
-passes on the head. A test file that cannot be imported on the base (for
-example, it imports a function the pull request adds) counts as failing there.
+passes on the head. Only a test that ran on the base and failed there counts
+(any exception in its body, including an assertion or "DID NOT RAISE"). A test
+that cannot be imported or set up on the base (for example, it imports a
+function the pull request adds) shows no bug and does not count; a pull request
+that adds a feature needs the maintainer label. The summary shows each counted
+test's failure on the base, because a test can also fail for reasons unrelated
+to the bug, and a maintainer must read it.
 
 It also passes, with a note, when the pull request does not touch any
 ``bindsnet/*.py`` file (documentation, dependencies, workflows), or when the
@@ -53,8 +58,11 @@ def changed(base, head, path, filters="ACMR"):
 def run_pytest(tree, files, xml):
     """Run pytest on ``files`` inside ``tree`` with ``tree`` first on the path.
 
-    Returns {test id: "pass" | "fail"} and {module: "error"} for files that
-    could not be collected. Skipped and xfailed tests are left out.
+    Returns {test id: ("pass" | "fail" | "error", message)} and the modules that
+    could not be collected. "fail" means the test ran and failed (any exception
+    in its body); "error" means set-up or collection failed. Skipped and xfailed
+    tests are left out. The settings come from the tree's pyproject.toml only, so
+    an added pytest.ini or setup.cfg cannot change what runs.
     """
     env = dict(os.environ, PYTHONPATH=str(tree))
     where = subprocess.run(
@@ -69,7 +77,8 @@ def run_pytest(tree, files, xml):
         raise RuntimeError(f"bindsnet imported from {where}, not from {tree}")
     subprocess.run(
         [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"]
-        + ["--continue-on-collection-errors", f"--junitxml={xml}", *files],
+        + ["-c", "pyproject.toml", "--continue-on-collection-errors"]
+        + [f"--junitxml={xml}", *files],
         cwd=tree,
         env=env,
     )
@@ -82,7 +91,12 @@ def run_pytest(tree, files, xml):
         test_id = f"{case.get('classname')}::{case.get('name')}"
         if "skipped" in tags:
             continue
-        results[test_id] = "fail" if tags & {"failure", "error"} else "pass"
+        for kind, tag in (("fail", "failure"), ("error", "error"), ("pass", None)):
+            child = case.find(tag) if tag else None
+            if tag is None or child is not None:
+                message = (child.get("message") or "") if child is not None else ""
+                results[test_id] = (kind, message.splitlines()[0][:200] if message else "")
+                break
     return results, broken
 
 
@@ -105,6 +119,10 @@ def main():
             with open(args.summary, "a") as f:
                 f.write(text)
         return code
+
+    # Commit ids, so "master" or "HEAD" mean the same inside the base worktree.
+    args.base = git("rev-parse", args.base).strip()
+    args.head = git("rev-parse", args.head).strip()
 
     labels = {label.strip() for label in args.labels.split(",") if label.strip()}
     if args.skip_label in labels:
@@ -137,26 +155,42 @@ def main():
         subprocess.run(["git", "worktree", "remove", "--force", str(base_tree)])
         shutil.rmtree(work, ignore_errors=True)
 
-    def failed_on_base(test_id):
+    def collection_broken(test_id):
         module = test_id.split("::")[0]
-        if any(module == m or module.startswith(m + ".") for m in broken):
-            return True
-        return on_base.get(test_id) == "fail"
+        return any(module == m or module.startswith(m + ".") for m in broken)
 
-    shown = [t for t, r in on_head.items() if r == "pass" and failed_on_base(t)]
+    passing = [t for t, (kind, _) in on_head.items() if kind == "pass"]
+    # Evidence: the test ran on the base and failed there. A test that could not
+    # be imported or set up on the base (for example, it imports a name the PR
+    # adds) shows nothing about a bug; it is listed for the maintainer instead.
+    shown = [t for t in passing if on_base.get(t, ("", ""))[0] == "fail"]
+    unshown = [
+        t
+        for t in passing
+        if t not in shown and (collection_broken(t) or on_base.get(t, ("",))[0] == "error")
+    ]
+    if unshown:
+        lines.append(
+            "Not counted (could not be collected or set up on the base, so they "
+            "show no bug): " + ", ".join(f"`{t}`" for t in sorted(unshown)[:20])
+        )
+        lines.append("")
     if shown:
-        lines.append("Tests that fail on the base and pass with this change:")
-        lines += [f"- `{t}`" for t in sorted(shown)[:50]]
+        lines.append(
+            "Tests that fail on the base and pass with this change, with the "
+            "base failure (a maintainer checks that it is the bug):"
+        )
+        lines += [f"- `{t}`: {on_base[t][1]}" for t in sorted(shown)[:50]]
         if len(shown) > 50:
             lines.append(f"- ... and {len(shown) - 50} more")
         return finish(0, "\n**Passed.**")
     return finish(
         1,
-        "**Failed:** every test in the changed test files gives the same result "
-        "with and without the library change, so none of them shows the bug "
-        "this pull request fixes. Add a test that fails on `master` and passes "
-        "with this change. If this is not a bug fix (a refactor or a speed-up), "
-        f"a maintainer can add the label `{args.skip_label}`.",
+        "**Failed:** no test in the changed test files ran and failed on the "
+        "base while passing with this change, so none of them shows the bug this "
+        "pull request fixes. Add a test that fails on `master` and passes with "
+        "this change. If this is not a bug fix (a refactor, a speed-up, or a new "
+        f"feature), a maintainer can add the label `{args.skip_label}`.",
     )
 
 
