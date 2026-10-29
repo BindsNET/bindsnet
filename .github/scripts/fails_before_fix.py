@@ -186,11 +186,11 @@ def main():
         return finish(0, "\n**Passed.**")
     return finish(
         1,
-        "**Failed:** every test in the changed test files gives the same result "
-        "with and without the library change, so none of them shows the bug "
-        "this pull request fixes. Add a test that fails on `master` and passes "
-        "with this change. If this is not a bug fix (a refactor or a speed-up), "
-        f"a maintainer can add the label `{args.skip_label}`.",
+        "**Failed:** no test in the changed test files ran and failed on the "
+        "base while passing with this change, so none of them shows the bug this "
+        "pull request fixes. Add a test that fails on `master` and passes with "
+        "this change. If this is not a bug fix (a refactor, a speed-up, or a new "
+        f"feature), a maintainer can add the label `{args.skip_label}`.",
     )
 
 

@@ -35,20 +35,29 @@ If your pull request changes any file under `bindsnet/`, it must add or change a
 test that **fails on `master` and passes with your change**. The `bug-test` check
 (`.github/scripts/fails_before_fix.py`) runs the test files you added or changed
 twice, once on `master`'s code and once on yours, and fails if none of them goes
-from failing to passing. This shows the bug is real and that your change is what
-fixes it. You can run the same check locally:
+from failing to passing. Only a test that runs on `master` and fails there counts;
+a test that cannot even be imported on `master` (because it imports something your
+change adds) shows no bug. The job summary shows how each counted test failed on
+`master`, and a maintainer checks that it is the bug. You can run the same check
+locally:
 
 ```shell
 poetry run python .github/scripts/fails_before_fix.py --base master --head HEAD
 ```
 
-A change that is not a bug fix (a refactor or a speed-up) has no such test; a
-maintainer then adds the label `no-bug-test`, and every existing test must still pass.
+A change that is not a bug fix (a refactor, a speed-up, or a new feature) has no
+such test; a maintainer then adds the label `no-bug-test`, and every existing test
+must still pass.
 
 The `weakened-tests` check (`.github/scripts/weakened_tests.py`) lists every
-place where a pull request may make tests pass by changing the tests: a removed
-test, fewer checks in a test, a new skip or xfail, a wider tolerance, or changed
-recorded results (golden files, operation counts, API snapshot, coverage floor).
+place where a pull request may make tests pass by changing the tests: a removed or
+no longer collected test, fewer checks or exact comparisons, a check that cannot
+fail, a new skip or xfail, a new or wider tolerance, changed recorded results
+(golden files, operation counts, API snapshot, coverage floor), or a changed file
+that decides which tests run (`conftest.py`, `pyproject.toml`, `pytest.ini`,
+`setup.cfg`, `tox.ini`, `.coveragerc`, the torch version in `poetry.lock`). CI runs
+pytest with `-c pyproject.toml`, so other configuration files are ignored there.
+The `bench` check fails when a workload runs more than twice as slow as on `master`.
 Some of these are right, for example regenerating goldens after a real fix. Explain
 each one in the pull request; a maintainer reviews them and adds the label
 `tests-changed-ok`. Files listed in `.github/CODEOWNERS` also need a maintainer's
