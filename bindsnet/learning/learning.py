@@ -218,10 +218,16 @@ class LearningRule(ABC):
             (self.connection.wmin != -np.inf).any()
             or (self.connection.wmax != np.inf).any()
         ) and not isinstance(self, NoOp):
-            if self.connection.w.is_sparse:
-                raise Exception("SparseConnection isn't supported for wmin\\wmax")
+            w = self.connection.w
+            if w.is_sparse:
+                # In place, so the connection keeps the same Parameter.
+                w.copy_(
+                    w.to_dense()
+                    .clamp_(self.connection.wmin, self.connection.wmax)
+                    .to_sparse()
+                )
             else:
-                self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
+                w.clamp_(self.connection.wmin, self.connection.wmax)
 
 
 class NoOp(LearningRule):
@@ -757,17 +763,23 @@ class WeightDependentPostPre(LearningRule):
         target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
 
         update = 0
+        # Dense view of w for the weight-dependent factors (sparse w: torch has
+        # no sparse-dense subtraction).
+        w = self.connection.w
+        w = w.to_dense() if w.is_sparse else w
 
         # Pre-synaptic update.
         if self.nu[0].any():
             outer_product = self.reduction(torch.bmm(source_s, target_x), dim=0)
-            update -= self.nu[0] * outer_product * (self.connection.w - self.wmin)
+            update -= self.nu[0] * outer_product * (w - self.wmin)
 
         # Post-synaptic update.
         if self.nu[1].any():
             outer_product = self.reduction(torch.bmm(source_x, target_s), dim=0)
-            update += self.nu[1] * outer_product * (self.wmax - self.connection.w)
+            update += self.nu[1] * outer_product * (self.wmax - w)
 
+        if self.connection.w.is_sparse and isinstance(update, torch.Tensor):
+            update = update.to_sparse()
         self.connection.w += update
 
         super().update()
@@ -1623,7 +1635,7 @@ class DiehlAndCook(LearningRule):
             outer = self.reduction(
                 torch.bmm(source_x.unsqueeze(2), target_s.unsqueeze(1)), dim=0
             )
-        factor = self.connection.wmax - w
+        factor = self.connection.wmax - (w.to_dense() if w.is_sparse else w)
         if self.mu != 1.0:
             factor = factor.clamp(min=0.0) ** self.mu
         update = self.nu[1] * outer * factor

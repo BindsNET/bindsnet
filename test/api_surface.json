@@ -1,8 +1,8 @@
 {
  "meta": {
-  "reason": "LearningRule.reset_state_variables added (clears per-step rule state on reset)",
+  "reason": "Sub-features get no-op prime_feature/update/normalize/reset_state_variables (they broke MulticompartmentConnection); MeanField gets an optional name (it had none) and initialize_value",
   "date": "2026-10-28",
-  "commit": "926e60d",
+  "commit": "c5ee6e9",
   "python": "3.11.9",
   "torch": "2.14.1+cu130"
  },
@@ -16,6 +16,11 @@
    "date": "2026-10-28",
    "commit": "926e60d",
    "reason": "LearningRule.reset_state_variables added (clears per-step rule state on reset)"
+  },
+  {
+   "date": "2026-10-28",
+   "commit": "c5ee6e9",
+   "reason": "Sub-features get no-op prime_feature/update/normalize/reset_state_variables (they broke MulticompartmentConnection); MeanField gets an optional name (it had none) and initialize_value"
   }
  ],
  "surface": {
@@ -392,6 +397,10 @@
   "bindsnet.network.topology_features.AbstractFeature.update": "(self, **kwargs)",
   "bindsnet.network.topology_features.AbstractSubFeature": "(name, parent_feature)",
   "bindsnet.network.topology_features.AbstractSubFeature.compute": "(self, s)",
+  "bindsnet.network.topology_features.AbstractSubFeature.normalize": "(self)",
+  "bindsnet.network.topology_features.AbstractSubFeature.prime_feature": "(self, connection, device, **kwargs)",
+  "bindsnet.network.topology_features.AbstractSubFeature.reset_state_variables": "(self)",
+  "bindsnet.network.topology_features.AbstractSubFeature.update": "(self, **kwargs)",
   "bindsnet.network.topology_features.AdaptationBaseOtherSynaps": "(name, value=None, value_dtype=torch.float32, ann_values=None, const_update_rate=0.1, const_decay=0.01, sparse=False, batch_size=1)",
   "bindsnet.network.topology_features.AdaptationBaseOtherSynaps.compute": "(self, s)",
   "bindsnet.network.topology_features.AdaptationBaseOtherSynaps.reset_state_variables": "(self)",
@@ -409,8 +418,9 @@
   "bindsnet.network.topology_features.Mask": "(name, value=None, sparse=False, batch_size=1)",
   "bindsnet.network.topology_features.Mask.compute": "(self, s)",
   "bindsnet.network.topology_features.Mask.prime_feature": "(self, connection, device, **kwargs)",
-  "bindsnet.network.topology_features.MeanField": "()",
+  "bindsnet.network.topology_features.MeanField": "(name='mean_field')",
   "bindsnet.network.topology_features.MeanField.compute": "(self, s)",
+  "bindsnet.network.topology_features.MeanField.initialize_value": "(self)",
   "bindsnet.network.topology_features.MeanField.prime_feature": "(self, connection, device, **kwargs)",
   "bindsnet.network.topology_features.Normalization": "(name, parent_feature)",
   "bindsnet.network.topology_features.Probability": "(name, value=None, value_dtype=torch.float32, range=None, norm=None, learning_rule=None, nu=None, reduction=None, decay=0.0, parent_feature=None, sparse=False, batch_size=1)",

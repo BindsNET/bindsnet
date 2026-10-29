@@ -368,7 +368,9 @@ class Connection(AbstractConnection):
             w = w.to(dtype=w_dtype)
         else:
             if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
-                w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
+                w = torch.as_tensor(w)
+                w = w.to_dense() if w.is_sparse else w  # no sparse clamp in torch
+                w = torch.clamp(w, self.wmin, self.wmax)
             w = self.cast_dtype_if_needed(w, w_dtype)
 
         self.w = Parameter(w, requires_grad=False)

@@ -170,8 +170,6 @@ CONNECTION_SPECS = {
 DEFAULT_SPEC = ((20,), (10,), {})
 # Extra arguments that are not optional in practice (see KNOWN_BUGS).
 MAXPOOL = {"MaxPool1dConnection", "MaxPool2dConnection", "MaxPoo3dConnection"}
-# Connection classes whose compute() only works for batch size 1 (see KNOWN_BUGS).
-CONNECTION_BATCH1_ONLY = {"LocalConnection"}
 
 
 def _build(conn_name, rule=None, batch=BATCH, spec=None, **extra):
@@ -192,16 +190,12 @@ def _build(conn_name, rule=None, batch=BATCH, spec=None, **extra):
     net.add_layer(src, name="in")
     net.add_layer(tgt, name="out")
     if cls is topology.MulticompartmentConnection:
-        if not isinstance(tgt.shape, list):  # tuple shapes crash (KNOWN_BUGS)
-            tgt.shape = list(tgt.shape)
         w = torch.rand(src.n, tgt.n)
         weight = tf.Weight(name="w", value=w, range=(0.0, 1.0), **kwargs)
         conn = cls(source=src, target=tgt, device="cpu", pipeline=[weight])
     else:
         if rule is not None:
-            kwargs.update(update_rule=rule, nu=(1e-2, 1e-2))
-            if conn_name != "SparseConnection":  # sparse w rejects wmin/wmax
-                kwargs.update(wmin=0.0, wmax=1.0)
+            kwargs.update(update_rule=rule, nu=(1e-2, 1e-2), wmin=0.0, wmax=1.0)
         conn = cls(src, tgt, **kwargs)
     net.add_connection(conn, source="in", target="out")
     return net, conn, src_shape
@@ -213,7 +207,7 @@ def test_connection_construct_and_run(name):
 
     Caught: ``.view_as(indices)`` changed to ``.view(-1)`` in ``MaxPool1dConnection.compute``.
     """
-    batch = 1 if name in CONNECTION_BATCH1_ONLY else BATCH
+    batch = BATCH
     extra = {"decay": 0.5} if name in MAXPOOL else {}
     net, conn, src_shape = _build(name, batch=batch, **extra)
     net.run(inputs={"in": _spikes(src_shape, batch)}, time=STEPS)
@@ -260,19 +254,13 @@ DENSE_LIKE = {"Connection", "SparseConnection", "LocalConnection"}
 SUPPORTED = {
     "NoOp": set(LEARNABLE),
     "PostPre": set(LEARNABLE),
-    "WeightDependentPostPre": set(LEARNABLE) - {"SparseConnection"},
+    "WeightDependentPostPre": set(LEARNABLE),
     "Hebbian": set(LEARNABLE),
     "MSTDP": set(LEARNABLE),
     "MSTDPET": set(LEARNABLE),
-    "DiehlAndCook": DENSE_LIKE - {"SparseConnection"},
+    "DiehlAndCook": DENSE_LIKE,
     "Rmax": DENSE_LIKE,
 }
-# Pairs that pass the construction check but crash when run (see KNOWN_BUGS).
-BROKEN_PAIRS = {
-    ("WeightDependentPostPre", "SparseConnection"),
-    ("DiehlAndCook", "SparseConnection"),
-}
-RULE_BATCH1_ONLY = {"Rmax"}
 
 
 @pytest.mark.parametrize("conn_name", LEARNABLE)
@@ -284,15 +272,11 @@ def test_rule_on_connection(rule_name, conn_name):
     """
     assert rule_name in SUPPORTED, f"add {rule_name} to SUPPORTED"
     rule = RULE_CLASSES[rule_name]
-    if (rule_name, conn_name) in BROKEN_PAIRS:
-        pytest.skip("crashes on master; pinned in KNOWN_BUGS")
     if conn_name not in SUPPORTED[rule_name]:
         with pytest.raises(NotImplementedError):
             _build(conn_name, rule=rule)
         return
     batch = BATCH
-    if rule_name in RULE_BATCH1_ONLY or conn_name in CONNECTION_BATCH1_ONLY:
-        batch = 1
     net, conn, src_shape = _build(conn_name, rule=rule, batch=batch)
     w0 = _weights(conn).clone()
     net.run(inputs={"in": _spikes(src_shape, batch)}, time=STEPS, reward=1.0)
@@ -306,9 +290,6 @@ def test_rule_on_connection(rule_name, conn_name):
         assert not torch.equal(w1, w0), "weights did not change"
 
 
-MCC_RULE_BATCH1_ONLY = {"MSTDPET"}
-
-
 @pytest.mark.parametrize("rule_name", sorted(MCC_RULE_CLASSES))
 def test_mcc_rule_on_multicompartment_connection(rule_name):
     """Each MCC rule runs on a MulticompartmentConnection Weight and moves it.
@@ -316,7 +297,7 @@ def test_mcc_rule_on_multicompartment_connection(rule_name):
     Caught: both ``addmm_`` updates removed from ``MCC_learning.Hebbian._connection_update``.
     """
     rule = MCC_RULE_CLASSES[rule_name]
-    batch = 1 if rule_name in MCC_RULE_BATCH1_ONLY else BATCH
+    batch = BATCH
     net, conn, src_shape = _build(
         "MulticompartmentConnection", batch=batch, learning_rule=rule, nu=(1e-2, 1e-2)
     )
@@ -444,7 +425,7 @@ FEATURE_PIPELINES = {
         w,
         tf.Degradation("d", _rand(SRC_N, TGT_N), degrade_function=lambda v: v / 2),
     ],
-    "MeanField": None,  # cannot be built into a pipeline (KNOWN_BUGS)
+    "MeanField": lambda w: [tf.MeanField(), w],
     "AdaptationBaseSynapsHistory": lambda w: [
         w,
         tf.AdaptationBaseSynapsHistory("a", _rand(SRC_N, TGT_N), ann_values=_ann()),
@@ -469,8 +450,6 @@ def test_feature_in_pipeline(name):
     Caught: ``return self.value`` changed to ``return self.value * float("nan")`` in ``Bias.compute``.
     """
     assert name in FEATURE_PIPELINES, f"add a pipeline for {name} to FEATURE_PIPELINES"
-    if FEATURE_PIPELINES[name] is None:
-        pytest.skip(KNOWN_BUGS[f"{name}-feature"][0])
     torch.manual_seed(0)
     weight = tf.Weight("w", _rand(SRC_N, TGT_N) * 4, norm=8.0)
     pipeline = FEATURE_PIPELINES[name](weight)
@@ -942,6 +921,18 @@ FIXED = [
     "Rmax-batch2",
     "MCC_learning.MSTDPET-batch2",
     "MeanFieldConnection-batch-mixing",
+    "MeanField-feature",
+    "WeightDependentPostPre-SparseConnection",
+    "DiehlAndCook-SparseConnection",
+    *(
+        f"{c}-{case}"
+        for c in ("Normalization", "Updating")
+        for case in ("in-constructor", "network-run")
+    ),
+    *(
+        f"{c}-batch2"
+        for c in ("AdaptationBaseSynapsHistory", "AdaptationBaseOtherSynaps")
+    ),
 ]
 FIXED_BUGS = {bug_id: KNOWN_BUGS.pop(bug_id) for bug_id in FIXED}
 
@@ -970,6 +961,59 @@ def test_sparse_dc2015_learns_like_dense():
         net = _run_model("DiehlAndCook2015", {**kwargs, "sparse": sparse}, 1)
         w = _weights(net.connections[("X", "Ae")])
         learned.append((w.to_dense() if w.is_sparse else w).reshape(16, 8))
+    assert torch.equal(learned[0], learned[1])
+
+
+def test_mean_field_feature_keeps_samples_apart():
+    """A MeanField feature uses each sample's own mean: the batch-2 output equals
+    each sample computed alone.
+
+    Caught: MeanField.compute taking s.float().mean() over the whole batch.
+    """
+    src, tgt = nodes.Input(n=SRC_N), nodes.LIFNodes(n=TGT_N)
+    weight = tf.Weight("w", _rand(SRC_N, TGT_N))
+    conn = topology.MulticompartmentConnection(
+        source=src, target=tgt, device="cpu", pipeline=[tf.MeanField(), weight]
+    )
+    s = torch.tensor([[1.0] * SRC_N, [1.0] + [0.0] * (SRC_N - 1)])
+    both = conn.compute(s)
+    alone = torch.cat([conn.compute(s[i : i + 1]) for i in range(2)])
+    assert not torch.equal(both[0], both[1])
+    assert torch.equal(both, alone)
+
+
+@pytest.mark.parametrize(
+    "rule_name", ["PostPre", "WeightDependentPostPre", "DiehlAndCook"]
+)
+def test_sparse_connection_learns_like_dense(rule_name):
+    """Rules on a bounded SparseConnection give the dense result: weight-dependent
+    factors use a dense view of w and the bounds are applied in place.
+
+    Caught: the sparse branch of LearningRule.update leaving w unbounded (PostPre
+    fails; the weight-dependent rules never reach the bounds).
+    """
+    w0 = torch.rand(SRC_N, TGT_N, generator=torch.Generator().manual_seed(3))
+    inputs = {"in": _spikes((SRC_N,), 1)}
+    learned = []
+    for cls, w in (
+        (topology.Connection, w0),
+        (topology.SparseConnection, w0.to_sparse()),
+    ):
+        torch.manual_seed(0)
+        src = nodes.Input(n=SRC_N, traces=True)
+        tgt = nodes.LIFNodes(n=TGT_N, traces=True, thresh=-60.0)
+        net = Network(dt=1.0, batch_size=1)
+        net.add_layer(src, name="in")
+        net.add_layer(tgt, name="out")
+        rule = RULE_CLASSES[rule_name]
+        conn = cls(
+            src, tgt, w=w.clone(), update_rule=rule, nu=(0.5, 0.5), wmin=0.0, wmax=1.0
+        )
+        net.add_connection(conn, source="in", target="out")
+        net.run(inputs=inputs, time=STEPS)
+        learned.append(conn.w.to_dense() if conn.w.is_sparse else conn.w)
+    assert not torch.equal(learned[0], w0)
+    assert learned[0].min() >= 0.0 and learned[0].max() <= 1.0
     assert torch.equal(learned[0], learned[1])
 
 

@@ -569,17 +569,24 @@ class MeanField(AbstractFeature):
     # Depends on the incoming spikes; never cacheable.
     is_static = False
 
-    def __init__(self) -> None:
+    def __init__(self, name: str = "mean_field") -> None:
         # language=rst
         """
-        Takes the mean of all outgoing signals, and outputs that mean across every synapse in the connection
+        Takes the mean of each sample's incoming spikes, and outputs that mean across
+        every synapse in the connection.
+
+        :param name: Name of the feature.
         """
-        pass
+        super().__init__(name=name)
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
-        return s.float().mean() * torch.ones(
-            self.source_n, self.target_n, device=s.device
-        )
+        # One [source.n, target.n] factor per sample: samples do not mix.
+        mean = s.float().flatten(1).mean(1)
+        return mean.view(-1, 1, 1).expand(-1, self.source_n, self.target_n)
+
+    def initialize_value(self):
+        # The output depends only on the spikes; the value is a placeholder.
+        return torch.ones(1)
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         self.source_n = connection.source.n
@@ -913,9 +920,13 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         )
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
-        # This feature needs the per-synapse spikes, so build them from s
-        conn_spikes = s.view(s.size(0), -1, 1).expand(
-            s.size(0), s.size(1), self.value.size(-1)
+        # This feature needs the per-synapse spikes, so build them from s. The
+        # mask is connectivity, shared by the batch: a synapse is active when its
+        # pre-synaptic neuron spiked in any sample.
+        conn_spikes = (
+            s.view(s.size(0), -1, 1)
+            .expand(s.size(0), s.size(1), self.value.size(-1))
+            .any(0)
         )
 
         # Update the spike buffer
@@ -1030,9 +1041,13 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         )
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
-        # This feature needs the per-synapse spikes, so build them from s
-        conn_spikes = s.view(s.size(0), -1, 1).expand(
-            s.size(0), s.size(1), self.value.size(-1)
+        # This feature needs the per-synapse spikes, so build them from s. The
+        # mask is connectivity, shared by the batch: a synapse is active when its
+        # pre-synaptic neuron spiked in any sample.
+        conn_spikes = (
+            s.view(s.size(0), -1, 1)
+            .expand(s.size(0), s.size(1), self.value.size(-1))
+            .any(0)
         )
 
         # Update the spike buffer
@@ -1116,6 +1131,21 @@ class AbstractSubFeature(ABC):
         # sub_feature should be defined in the non-abstract constructor
         self.sub_feature()
         return None
+
+    # The connection calls these on every pipeline entry. A sub-feature has no
+    # value of its own: its work runs in compute(), and its parent feature is
+    # primed, updated, normalized and reset as a pipeline entry itself.
+    def prime_feature(self, connection, device, **kwargs) -> None:
+        pass
+
+    def update(self, **kwargs) -> None:
+        pass
+
+    def normalize(self) -> None:
+        pass
+
+    def reset_state_variables(self) -> None:
+        pass
 
 
 class Normalization(AbstractSubFeature):
