@@ -36,8 +36,16 @@ jobs:
         .github/scripts/use_cpu_torch.sh "poetry run python"
     - name: Lint with flake8 (syntax errors and undefined names)
       run: pipx run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-    - name: Test with pytest
-      run: poetry run pytest
+    - name: Test with pytest (with coverage)
+      run: poetry run pytest --cov=bindsnet --cov-report=term --cov-report=xml
+    # A floor, not a target: fails only when coverage of the core packages drops
+    # below the value recorded in the script (see its docstring).
+    - name: Check coverage floor
+      run: python .github/scripts/coverage_floor.py coverage.xml
+    - uses: actions/upload-artifact@v7
+      with:
+        name: coverage-xml
+        path: coverage.xml
 
   # The other supported Python versions (pyproject.toml: >=3.11,<3.14).
   test:

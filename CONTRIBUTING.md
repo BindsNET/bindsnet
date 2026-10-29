@@ -29,6 +29,84 @@ poetry run pytest
 Notable changes are recorded in [`CHANGELOG.md`](CHANGELOG.md); please add an entry to the
 `Unreleased` section in your pull request.
 
+## A bug fix needs a test that fails without it
+
+If your pull request changes any file under `bindsnet/`, it must add or change a
+test that **fails on `master` and passes with your change**. The `bug-test` check
+(`.github/scripts/fails_before_fix.py`) runs the test files you added or changed
+twice, once on `master`'s code and once on yours, and fails if none of them goes
+from failing to passing. This shows the bug is real and that your change is what
+fixes it. You can run the same check locally:
+
+```shell
+poetry run python .github/scripts/fails_before_fix.py --base master --head HEAD
+```
+
+A change that is not a bug fix (a refactor or a speed-up) has no such test; a
+maintainer then adds the label `no-bug-test`, and every existing test must still pass.
+
+The `weakened-tests` check (`.github/scripts/weakened_tests.py`) lists every
+place where a pull request may make tests pass by changing the tests: a removed
+test, fewer checks in a test, a new skip or xfail, a wider tolerance, or changed
+recorded results (golden files, operation counts, API snapshot, coverage floor).
+Some of these are right, for example regenerating goldens after a real fix. Explain
+each one in the pull request; a maintainer reviews them and adds the label
+`tests-changed-ok`. Files listed in `.github/CODEOWNERS` also need a maintainer's
+approval.
+
+## Tests that guard results
+
+Some tests do not check one behaviour; they check that nothing changed. They fail
+when a change alters simulated results or the public API, even if the change looks
+harmless. Please do not edit them by hand to make them pass.
+
+- **Golden-output tests (`test/regression/`).** Small seeded networks are run and their
+  spikes, voltages, traces and weights are compared with stored reference files under
+  `test/regression/`. Spikes must match exactly; other values must match to within
+  1e-6. If your change alters these on purpose (for example, you fixed a formula), the
+  reference files must be regenerated with the script in `test/regression/`, which
+  refuses to run without `--reason "<why the results changed>"` and writes that reason
+  into the files. Say in the pull request which files changed and why.
+- **Public API snapshot (`test/api_surface.json`).** `test/test_api_surface.py` records
+  the parameters and defaults of every public class, method and function in
+  `bindsnet`. If you add, remove, rename or reorder a parameter, or change a default,
+  regenerate it in the same pull request:
+
+  ```shell
+  poetry run python test/regen_api_surface.py --reason "<why the API changed>"
+  ```
+
+  The reason is required and is stored in the file. Removing or renaming a parameter
+  can break other people's code, so expect to be asked why.
+- **Every-class smoke tests (`test/network/test_all_classes.py`).** Every node,
+  connection, learning rule, feature, monitor and model class is found automatically
+  and run for a few steps. A new connection class needs an entry in `CONNECTION_SPECS`
+  (its source and target shapes), a new model needs one in `MODEL_SPECS`, and a new
+  learning rule needs one in `SUPPORTED`. Known bugs on `master` are listed in
+  `KNOWN_BUGS` with their exact error; if your change fixes one, its test fails with
+  "DID NOT RAISE", and you should remove the entry in the same pull request.
+- **Operation counts (`test/regression/op_counts.json`).** `test/regression/test_op_counts.py`
+  counts the tensor operations of one learning-rule update, one simulation step and one
+  neuron update on small fixed networks. It fails when a count grows, because more
+  operations per time step usually means slower code. If the extra work is needed,
+  regenerate in the same pull request:
+
+  ```shell
+  poetry run python test/regression/regen_op_counts.py --reason "<why the hot path does more work>"
+  ```
+
+- **Speed comparison (informational).** The workflow `Speed comparison (informational)`
+  (`.github/workflows/bench.yml`) times the benchmark workloads on the base and the head
+  of your pull request, alternating ten rounds, and writes a table to the job summary
+  (also downloadable as the `bench-ab` artifact). A workload is flagged SLOWER when the
+  head takes more than 1.25 times as long (median over the rounds) and the lower end of
+  the 95% bootstrap interval of that ratio is above 1. It is not a required check; shared CI machines are noisy, and a maintainer decides.
+
+**Fixes that change results are released in 0.4.0, not in 0.3.x.** A correct fix that
+changes what a simulation produces still changes published numbers for people using
+0.3.x, so it waits for the next minor release. State in the pull request whether your
+change alters results, and add a `CHANGELOG.md` entry that says so.
+
 ## Releasing to PyPI
 
 1. Set `version` in `pyproject.toml` and `CITATION.cff`, and move the `Unreleased`
