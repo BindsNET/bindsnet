@@ -931,6 +931,24 @@ KNOWN_BUGS = {
 }
 
 
+# Fixed for 0.3.5. Each reproducer must now run without error, so the fix stays.
+FIXED = [
+    "LocalConnection-batch2",
+    *(f"{name}-{case}" for name in MAXPOOL for case in ("no-decay", "one-channel")),
+]
+FIXED_BUGS = {bug_id: KNOWN_BUGS.pop(bug_id) for bug_id in FIXED}
+
+
+@pytest.mark.parametrize("bug_id", sorted(FIXED_BUGS))
+def test_fixed_bug_stays_fixed(bug_id):
+    """Each former KNOWN_BUGS reproducer runs cleanly.
+
+    Caught: restoring ``s.float().squeeze()`` in MaxPool2dConnection.compute fails
+    MaxPool2dConnection-one-channel.
+    """
+    FIXED_BUGS[bug_id][3]()
+
+
 @pytest.mark.parametrize("bug_id", sorted(KNOWN_BUGS))
 def test_known_bug_still_fails(bug_id):
     """Pins each known crash, with its error, so a fix is noticed.

@@ -1193,8 +1193,11 @@ class MaxPool1dConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        self.firing_rates -= self.decay * self.firing_rates
-        self.firing_rates += s.float().squeeze()
+        if self.firing_rates.shape != s.shape:  # batch size changed
+            self.firing_rates = torch.zeros_like(s, dtype=torch.float)
+        if self.decay is not None:  # no decay given: plain spike counts
+            self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
 
         _, indices = F.max_pool1d(
             self.firing_rates,
@@ -1283,8 +1286,11 @@ class MaxPool2dConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        self.firing_rates -= self.decay * self.firing_rates
-        self.firing_rates += s.float().squeeze()
+        if self.firing_rates.shape != s.shape:  # batch size changed
+            self.firing_rates = torch.zeros_like(s, dtype=torch.float)
+        if self.decay is not None:  # no decay given: plain spike counts
+            self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
 
         _, indices = F.max_pool2d(
             self.firing_rates,
@@ -1373,8 +1379,11 @@ class MaxPoo3dConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        self.firing_rates -= self.decay * self.firing_rates
-        self.firing_rates += s.float().squeeze()
+        if self.firing_rates.shape != s.shape:  # batch size changed
+            self.firing_rates = torch.zeros_like(s, dtype=torch.float)
+        if self.decay is not None:  # no decay given: plain spike counts
+            self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
 
         _, indices = F.max_pool3d(
             self.firing_rates,
@@ -1561,7 +1570,7 @@ class LocalConnection(AbstractConnection):
             s.float().view(s.size(0), -1) @ self.w.view(self.source.n, self.target.n)
             + self.b
         )
-        return a_post.view(*self.target.shape)
+        return a_post.view(s.size(0), *self.target.shape)
 
     def update(self, **kwargs) -> None:
         # language=rst
