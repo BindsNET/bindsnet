@@ -133,7 +133,8 @@ class MCC_LearningRule(ABC):
             self, NoOp
         ):
             if self.feature_value.is_sparse:
-                self.feature_value = (
+                # In place: the feature (and compute()) holds this same tensor.
+                self.feature_value.copy_(
                     self.feature_value.to_dense().clamp_(self.min, self.max).to_sparse()
                 )
             else:

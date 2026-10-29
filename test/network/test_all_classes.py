@@ -935,6 +935,10 @@ KNOWN_BUGS = {
 FIXED = [
     "LocalConnection-batch2",
     *(f"{name}-{case}" for name in MAXPOOL for case in ("no-decay", "one-channel")),
+    "NetworkMonitor-reset-with-time",
+    "MulticompartmentConnection-tuple-shape",
+    "DiehlAndCook2015-sparse-no-learning",
+    "DiehlAndCook2015-sparse-batch2",
 ]
 FIXED_BUGS = {bug_id: KNOWN_BUGS.pop(bug_id) for bug_id in FIXED}
 
@@ -947,6 +951,23 @@ def test_fixed_bug_stays_fixed(bug_id):
     MaxPool2dConnection-one-channel.
     """
     FIXED_BUGS[bug_id][3]()
+
+
+def test_sparse_dc2015_learns_like_dense():
+    """With one sample there is one weight copy, so sparse and dense weights learn
+    identically (no normalisation; with it, sparse sums in another order).
+
+    Caught: dropping the in-place copy_ in MCC_LearningRule.update (the sparse
+    clamp) leaves the sparse weights at their initial values.
+    """
+    kwargs = {"n_inpt": 16, "n_neurons": 8, "batch_size": 1}
+    kwargs.update(exc_thresh=-62.0, norm=None)
+    learned = []
+    for sparse in (False, True):
+        net = _run_model("DiehlAndCook2015", {**kwargs, "sparse": sparse}, 1)
+        w = _weights(net.connections[("X", "Ae")])
+        learned.append((w.to_dense() if w.is_sparse else w).reshape(16, 8))
+    assert torch.equal(learned[0], learned[1])
 
 
 @pytest.mark.parametrize("bug_id", sorted(KNOWN_BUGS))

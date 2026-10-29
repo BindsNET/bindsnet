@@ -522,9 +522,13 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
                     # Side-effect-only pipeline entries (sub-features) fold as identity.
                     continue
                 if isinstance(factor, torch.Tensor) and factor.is_sparse:
-                    # Sparse feature values carry a leading batch dim ([1, src, tgt])
-                    # from prime_feature; densify to the fold's [src, tgt] shape.
-                    factor = factor.to_dense().view(self.source.n, self.target.n)
+                    # Sparse feature values carry a leading batch dim ([batch, src,
+                    # tgt], one weight copy per sample) from prime_feature. One copy
+                    # densifies to the fold's [src, tgt] shape; several stay
+                    # [batch, src, tgt] and are applied per sample below.
+                    factor = factor.to_dense()
+                    if factor.size(0) == 1:
+                        factor = factor.view(self.source.n, self.target.n)
                 op = getattr(f, "op", "mul")
                 if op == "mul":
                     a_eff = factor if a_eff is None else a_eff * factor
@@ -543,7 +547,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
             # Additive terms apply to every synapse regardless of spikes, so
             # their contribution is the source-sum, a constant [target.n] row.
-            b_sum = b_eff.sum(dim=0) if b_eff is not None else None
+            b_sum = b_eff.sum(dim=-2) if b_eff is not None else None
 
             if all(getattr(f, "is_static", True) for f in self.pipeline):
                 self._fold_cache = (a_eff, b_sum)
@@ -554,7 +558,9 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         use_gather = self.sparse_compute and (
             not a_eff.is_cuda or self.source.n * self.target.n >= 4_000_000
         )
-        if use_gather:
+        if a_eff.dim() == 3:  # one weight copy per sample (sparse, batch > 1)
+            out = torch.bmm(s.unsqueeze(1).to(a_eff.dtype), a_eff).squeeze(1)
+        elif use_gather:
             # Read only the rows of A for source neurons that spiked this step
             # (numerically identical; faster only when few are active).
             active = s.any(dim=0).nonzero(as_tuple=False).squeeze(1)
@@ -576,7 +582,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         if self.traces:
             self.activity = out
-        if out.size() != torch.Size([s.size(0)] + self.target.shape):
+        if out.size() != torch.Size([s.size(0), *self.target.shape]):
             return out.view(s.size(0), *self.target.shape)
         return out
 

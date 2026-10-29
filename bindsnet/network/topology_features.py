@@ -285,7 +285,8 @@ class AbstractFeature(ABC):
                 abs_sum = self.value.sum(1).to_dense()
                 abs_sum[abs_sum == 0] = 1.0
                 abs_sum = abs_sum.unsqueeze(1).expand(-1, *self.value.shape[1:])
-                self.value = self.value * (self.norm / abs_sum)
+                # In place: the learning rule holds this same tensor.
+                self.value.copy_(self.value * (self.norm / abs_sum))
             else:
                 abs_sum = self.value.sum(0).unsqueeze(0)
                 abs_sum[abs_sum == 0] = 1.0
