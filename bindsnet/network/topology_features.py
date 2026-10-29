@@ -285,7 +285,8 @@ class AbstractFeature(ABC):
                 abs_sum = self.value.sum(1).to_dense()
                 abs_sum[abs_sum == 0] = 1.0
                 abs_sum = abs_sum.unsqueeze(1).expand(-1, *self.value.shape[1:])
-                self.value = self.value * (self.norm / abs_sum)
+                # In place: the learning rule holds this same tensor.
+                self.value.copy_(self.value * (self.norm / abs_sum))
             else:
                 abs_sum = self.value.sum(0).unsqueeze(0)
                 abs_sum[abs_sum == 0] = 1.0
@@ -568,17 +569,24 @@ class MeanField(AbstractFeature):
     # Depends on the incoming spikes; never cacheable.
     is_static = False
 
-    def __init__(self) -> None:
+    def __init__(self, name: str = "mean_field") -> None:
         # language=rst
         """
-        Takes the mean of all outgoing signals, and outputs that mean across every synapse in the connection
+        Takes the mean of each sample's incoming spikes, and outputs that mean across
+        every synapse in the connection.
+
+        :param name: Name of the feature.
         """
-        pass
+        super().__init__(name=name)
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
-        return s.float().mean() * torch.ones(
-            self.source_n, self.target_n, device=s.device
-        )
+        # One [source.n, target.n] factor per sample: samples do not mix.
+        mean = s.float().flatten(1).mean(1)
+        return mean.view(-1, 1, 1).expand(-1, self.source_n, self.target_n)
+
+    def initialize_value(self):
+        # The output depends only on the spikes; the value is a placeholder.
+        return torch.ones(1)
 
     def prime_feature(self, connection, device, **kwargs) -> None:
         self.source_n = connection.source.n
@@ -839,7 +847,30 @@ class Degradation(AbstractFeature):
         return self.value
 
 
-class AdaptationBaseSynapsHistory(AbstractFeature):
+class _AdaptationState:
+    # The adaptation features' state besides ``value``, saved in the state_dict by
+    # MulticompartmentConnection (``feature.<name>.<key>``).
+    def extra_state_tensors(self) -> dict:
+        return {
+            "mask": self.mask,
+            "spike_buffer": self.spike_buffer,
+            "counter": torch.tensor(self.counter),
+            "start_counter": torch.tensor(self.start_counter),
+        }
+
+    def load_extra_state_tensors(self, tensors: dict) -> None:
+        for name in ("mask", "spike_buffer"):
+            if name in tensors:
+                setattr(
+                    self, name, tensors[name].clone().to(getattr(self, name).device)
+                )
+        if "counter" in tensors:
+            self.counter = int(tensors["counter"])
+        if "start_counter" in tensors:
+            self.start_counter = bool(tensors["start_counter"])
+
+
+class AdaptationBaseSynapsHistory(_AdaptationState, AbstractFeature):
     # Value evolves with the spike history every step; never cacheable.
     is_static = False
 
@@ -912,9 +943,13 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         )
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
-        # This feature needs the per-synapse spikes, so build them from s
-        conn_spikes = s.view(s.size(0), -1, 1).expand(
-            s.size(0), s.size(1), self.value.size(-1)
+        # This feature needs the per-synapse spikes, so build them from s. The
+        # mask is connectivity, shared by the batch: a synapse is active when its
+        # pre-synaptic neuron spiked in any sample.
+        conn_spikes = (
+            s.view(s.size(0), -1, 1)
+            .expand(s.size(0), s.size(1), self.value.size(-1))
+            .any(0)
         )
 
         # Update the spike buffer
@@ -956,7 +991,7 @@ class AdaptationBaseSynapsHistory(AbstractFeature):
         self.value = self.init_value.clone().detach()  # initial mask
 
 
-class AdaptationBaseOtherSynaps(AbstractFeature):
+class AdaptationBaseOtherSynaps(_AdaptationState, AbstractFeature):
     # Value evolves with the spike history every step; never cacheable.
     is_static = False
 
@@ -1029,9 +1064,13 @@ class AdaptationBaseOtherSynaps(AbstractFeature):
         )
 
     def compute(self, s) -> Union[torch.Tensor, float, int]:
-        # This feature needs the per-synapse spikes, so build them from s
-        conn_spikes = s.view(s.size(0), -1, 1).expand(
-            s.size(0), s.size(1), self.value.size(-1)
+        # This feature needs the per-synapse spikes, so build them from s. The
+        # mask is connectivity, shared by the batch: a synapse is active when its
+        # pre-synaptic neuron spiked in any sample.
+        conn_spikes = (
+            s.view(s.size(0), -1, 1)
+            .expand(s.size(0), s.size(1), self.value.size(-1))
+            .any(0)
         )
 
         # Update the spike buffer
@@ -1116,6 +1155,21 @@ class AbstractSubFeature(ABC):
         self.sub_feature()
         return None
 
+    # The connection calls these on every pipeline entry. A sub-feature has no
+    # value of its own: its work runs in compute(), and its parent feature is
+    # primed, updated, normalized and reset as a pipeline entry itself.
+    def prime_feature(self, connection, device, **kwargs) -> None:
+        pass
+
+    def update(self, **kwargs) -> None:
+        pass
+
+    def normalize(self) -> None:
+        pass
+
+    def reset_state_variables(self) -> None:
+        pass
+
 
 class Normalization(AbstractSubFeature):
     # language=rst
@@ -1136,8 +1190,12 @@ class Normalization(AbstractSubFeature):
 class Updating(AbstractSubFeature):
     # language=rst
     """
-    Update parent features values using the assigned update rule.
+    Update parent features values using the assigned update rule, at this entry's
+    place in the pipeline. The connection's own update then skips the parent, so it
+    learns once per step.
     """
+
+    drives_update = True
 
     def __init__(
         self,

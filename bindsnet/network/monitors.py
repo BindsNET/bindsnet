@@ -327,5 +327,5 @@ class NetworkMonitor(AbstractMonitor):
                 for c in self.connections:
                     if hasattr(self.network.connections[c], v):
                         self.recording[c][v] = torch.zeros(
-                            self.time, *getattr(self.network.layers[c], v).size()
+                            self.time, *getattr(self.network.connections[c], v).size()
                         )

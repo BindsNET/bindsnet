@@ -1233,37 +1233,37 @@ class IzhikevichNodes(Nodes):
             excitatory = 0
 
         if excitatory == 1:
-            self.r = torch.rand(n)
-            self.a = 0.02 * torch.ones(n)
-            self.b = 0.2 * torch.ones(n)
+            self.r = torch.rand(self.n)
+            self.a = 0.02 * torch.ones(self.n)
+            self.b = 0.2 * torch.ones(self.n)
             self.c = -65.0 + 15 * (self.r**2)
             self.d = 8 - 6 * (self.r**2)
-            self.S = 0.5 * torch.rand(n, n)
-            self.excitatory = torch.ones(n).byte()
+            self.S = 0.5 * torch.rand(self.n, self.n)
+            self.excitatory = torch.ones(self.n).byte()
 
         elif excitatory == 0:
-            self.r = torch.rand(n)
+            self.r = torch.rand(self.n)
             self.a = 0.02 + 0.08 * self.r
             self.b = 0.25 - 0.05 * self.r
-            self.c = -65.0 * torch.ones(n)
-            self.d = 2 * torch.ones(n)
-            self.S = -torch.rand(n, n)
+            self.c = -65.0 * torch.ones(self.n)
+            self.d = 2 * torch.ones(self.n)
+            self.S = -torch.rand(self.n, self.n)
 
-            self.excitatory = torch.zeros(n).byte()
+            self.excitatory = torch.zeros(self.n).byte()
 
         else:
-            self.excitatory = torch.zeros(n).byte()
+            self.excitatory = torch.zeros(self.n).byte()
 
-            ex = int(n * excitatory)
-            inh = n - ex
+            ex = int(self.n * excitatory)
+            inh = self.n - ex
 
             # init
-            self.r = torch.zeros(n)
-            self.a = torch.zeros(n)
-            self.b = torch.zeros(n)
-            self.c = torch.zeros(n)
-            self.d = torch.zeros(n)
-            self.S = torch.zeros(n, n)
+            self.r = torch.zeros(self.n)
+            self.a = torch.zeros(self.n)
+            self.b = torch.zeros(self.n)
+            self.c = torch.zeros(self.n)
+            self.d = torch.zeros(self.n)
+            self.S = torch.zeros(self.n, self.n)
 
             # excitatory
             self.r[:ex] = torch.rand(ex)
@@ -1271,7 +1271,7 @@ class IzhikevichNodes(Nodes):
             self.b[:ex] = 0.2 * torch.ones(ex)
             self.c[:ex] = -65.0 + 15 * self.r[:ex] ** 2
             self.d[:ex] = 8 - 6 * self.r[:ex] ** 2
-            self.S[:, :ex] = 0.5 * torch.rand(n, ex)
+            self.S[:, :ex] = 0.5 * torch.rand(self.n, ex)
             self.excitatory[:ex] = 1
 
             # inhibitory
@@ -1280,10 +1280,15 @@ class IzhikevichNodes(Nodes):
             self.b[ex:] = 0.25 - 0.05 * self.r[ex:]
             self.c[ex:] = -65.0 * torch.ones(inh)
             self.d[ex:] = 2 * torch.ones(inh)
-            self.S[:, ex:] = -torch.rand(n, inh)
+            self.S[:, ex:] = -torch.rand(self.n, inh)
             self.excitatory[ex:] = 0
 
-        self.register_buffer("v", self.rest * torch.ones(n))  # Neuron voltages.
+        # Per-neuron parameters take the layer's shape; S stays [n, n] over the
+        # flattened neurons.
+        for name in ("r", "a", "b", "c", "d", "excitatory"):
+            setattr(self, name, getattr(self, name).view(*self.shape))
+
+        self.register_buffer("v", self.rest * torch.ones(*self.shape))  # Voltages.
         self.register_buffer("u", self.b * self.v)  # Neuron recovery.
 
     def forward(self, x: torch.Tensor) -> None:
@@ -1300,10 +1305,11 @@ class IzhikevichNodes(Nodes):
 
         # Add inter-columnar input.
         if self.s.any():
+            s = self.s.view(self.s.size(0), -1)
             x += torch.cat(
-                [self.S[:, self.s[i]].sum(dim=1)[None] for i in range(self.s.shape[0])],
+                [self.S[:, s[i]].sum(dim=1)[None] for i in range(s.size(0))],
                 dim=0,
-            )
+            ).view_as(x)
 
         # Apply v and u updates.
         self.v.add_(self.dt * 0.5 * (0.04 * self.v**2 + 5 * self.v + 140 - self.u + x))
@@ -1463,10 +1469,10 @@ class CSRMNodes(Nodes):
 
         # Integrate inputs.
         v = torch.einsum(
-            "i,kij->kj", self.resKernel, x
+            "i,ki...->k...", self.resKernel, x
         )  # Response due to incoming current
         v += torch.einsum(
-            "i,kij->kj", self.refKernel, self.last_spikes
+            "i,ki...->k...", self.refKernel, self.last_spikes
         )  # Refractoriness due to previous spikes
         self.v.add_(v.view(x.size(0), *self.shape))
 
@@ -1494,6 +1500,7 @@ class CSRMNodes(Nodes):
         """
         super().reset_state_variables()
         self.v.fill_(self.rest)  # Neuron voltages.
+        self.last_spikes.zero_()  # Spikes in the refractory window.
 
     def compute_decays(self, dt) -> None:
         # language=rst

@@ -1,5 +1,6 @@
 import math
 
+import pytest
 import torch
 
 import bindsnet.learning.MCC_learning as mcc
@@ -14,7 +15,7 @@ from bindsnet.learning import (
     WeightDependentPostPre,
 )
 from bindsnet.network import Network
-from bindsnet.network.nodes import Input, LIFNodes, SRM0Nodes
+from bindsnet.network.nodes import CSRMNodes, Input, LIFNodes, SRM0Nodes
 from bindsnet.network.topology import *
 
 
@@ -24,6 +25,67 @@ class TestConnection:
     """
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    @staticmethod
+    def _make_csrm_network(window, bias=None):
+        network = Network(learning=False)
+        source = Input(n=2)
+        target = CSRMNodes(
+            n=2,
+            res_window_size=window,
+            ref_window_size=2,
+            rest=0.0,
+            thresh=100.0,
+        )
+        network.add_layer(source, "X")
+        network.add_layer(target, "Y")
+        connection = Connection(
+            source, target, w=torch.tensor([[1.0, 0.5], [0.25, 1.0]]), b=bias
+        )
+        network.add_connection(connection, "X", "Y")
+        return network, target, connection
+
+    @pytest.mark.parametrize("window", [3, 5])
+    @pytest.mark.parametrize("bias", [None, torch.tensor([0.2, 0.1])])
+    def test_csrm_reset_discards_previous_trial(self, window, bias):
+        reused, target, connection = self._make_csrm_network(window, bias)
+        fresh, reference, _ = self._make_csrm_network(window, bias)
+        # A short first trial leaves both occupied and empty slots in the window.
+        reused.run({"X": torch.ones(2, 2)}, time=2)
+        weights = connection.w
+        before = weights.clone()
+        reused.reset_state_variables()
+        # No input spikes in the next independent trial: old spikes must not drive it.
+        for _ in range(window):
+            reused.run({"X": torch.zeros(1, 2)}, time=1)
+            fresh.run({"X": torch.zeros(1, 2)}, time=1)
+            torch.testing.assert_close(target.v, reference.v)
+            torch.testing.assert_close(target.s, reference.s)
+        assert connection.w is weights
+        torch.testing.assert_close(connection.w, before)
+
+    def test_csrm_window_survives_run_boundary(self):
+        split, target, _ = self._make_csrm_network(3)
+        continuous, reference, _ = self._make_csrm_network(3)
+        spikes = torch.tensor([[1.0, 0.0], [0.0, 1.0], [0.0, 0.0], [0.0, 0.0]])
+        continuous.run({"X": spikes}, time=4)
+        split.run({"X": spikes[:2]}, time=2)
+        split.run({"X": spikes[2:]}, time=2)
+        assert target.v.abs().sum() > 0
+        torch.testing.assert_close(target.v, reference.v)
+        torch.testing.assert_close(target.s, reference.s)
+
+    @pytest.mark.parametrize("previous_batch,new_batch", [(1, 2), (2, 1)])
+    def test_csrm_window_resizes_with_batch(self, previous_batch, new_batch):
+        reused, target, _ = self._make_csrm_network(3)
+        fresh, reference, _ = self._make_csrm_network(3)
+        reused.run({"X": torch.ones(2, previous_batch, 2)}, time=2)
+        # Network.run resizes neuron state when a new input batch size arrives.
+        for _ in range(3):
+            reused.run({"X": torch.zeros(1, new_batch, 2)}, time=1)
+            fresh.run({"X": torch.zeros(1, new_batch, 2)}, time=1)
+            torch.testing.assert_close(target.v, reference.v)
+            torch.testing.assert_close(target.s, reference.s)
 
     def test_transfer(self):
         if not torch.cuda.is_available():
@@ -805,3 +867,70 @@ if __name__ == "__main__":
     args = [[[1, 28, 28], [1, 26, 26], (1, 26), 3, 1]]
     for conn_type, arg in zip(conn_types, args):
         tester.check_weights(conn_type, decay=1, update_rule=NoOp, *arg)
+
+
+def test_multicompartment_into_csrm_matches_connection():
+    """With static weights a MulticompartmentConnection (window of outputs) drives
+    CSRMNodes exactly like a Connection (window of input spikes), at batch 2.
+
+    Caught: MulticompartmentConnection.compute_window on master (no s_w, then
+    self.w), which raised AttributeError.
+    """
+    from bindsnet.network.monitors import Monitor
+    from bindsnet.network.nodes import CSRMNodes, Input
+    from bindsnet.network.topology import Connection, MulticompartmentConnection
+    from bindsnet.network.topology_features import Weight
+
+    w = torch.rand(6, 4, generator=torch.Generator().manual_seed(0)) * 30
+    x = torch.rand(40, 2, 6, generator=torch.Generator().manual_seed(1)) < 0.4
+    recorded = []
+    for mcc in (False, True):
+        net = Network(dt=1.0, batch_size=2)
+        net.add_layer(Input(n=6), "in")
+        net.add_layer(CSRMNodes(n=4), "out")
+        if mcc:
+            pipeline = [Weight("w", w.clone())]
+            conn = MulticompartmentConnection(
+                net.layers["in"], net.layers["out"], device="cpu", pipeline=pipeline
+            )
+        else:
+            conn = Connection(net.layers["in"], net.layers["out"], w=w.clone())
+        net.add_connection(conn, "in", "out")
+        net.add_monitor(Monitor(net.layers["out"], ["s", "v"], time=40), "m")
+        net.run(inputs={"in": x}, time=40)
+        recorded.append([net.monitors["m"].get(v) for v in ("s", "v")])
+    assert recorded[0][0].sum() > 0
+    assert torch.equal(recorded[0][0], recorded[1][0])
+    assert torch.equal(recorded[0][1], recorded[1][1])
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+def test_windows_and_maxpool_state_stay_on_gpu():
+    """The CSRM input window and MaxPool firing rates are created on the spikes'
+    device, also after a reset.
+
+    Caught: torch.zeros without device= in Connection.compute_window and in
+    MaxPool2dConnection.reset_state_variables (device mismatch on CUDA).
+    """
+    from bindsnet.network.nodes import CSRMNodes, Input
+    from bindsnet.network.topology import Connection, MaxPool2dConnection
+
+    net = Network(dt=1.0)
+    net.add_layer(Input(n=6), "in")
+    net.add_layer(CSRMNodes(n=4), "out")
+    net.add_connection(Connection(net.layers["in"], net.layers["out"]), "in", "out")
+    net.add_layer(Input(shape=(1, 4, 4)), "img")
+    net.add_layer(Input(shape=(1, 2, 2)), "pool")
+    pool = MaxPool2dConnection(
+        net.layers["img"], net.layers["pool"], kernel_size=2, stride=2, decay=0.5
+    )
+    net.add_connection(pool, "img", "pool")
+    net.to("cuda")
+    inputs = {
+        "in": (torch.rand(5, 1, 6) < 0.5).cuda(),
+        "img": (torch.rand(5, 1, 1, 4, 4) < 0.5).cuda(),
+    }
+    for _ in range(2):
+        net.run(inputs=inputs, time=5)
+        net.reset_state_variables()
+    assert pool.firing_rates.is_cuda

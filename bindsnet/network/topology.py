@@ -9,8 +9,26 @@ from torch import device
 from torch.nn import Module, Parameter
 from torch.nn.modules.utils import _pair, _triple
 
-from bindsnet.network.nodes import CSRMNodes, Nodes
+from bindsnet.network.nodes import Nodes
 from bindsnet.utils import im2col_indices
+
+
+def _load_window(module, state_dict, prefix, name):
+    # language=rst
+    """
+    Match ``module``'s spike-window buffer ``name`` (created on the first step) to
+    a state dict about to be loaded: adopt a saved window, or drop one the saved
+    state did not have, so ``load_state_dict`` restores the window exactly.
+    """
+    key = prefix + name
+    if key in state_dict:
+        if (
+            getattr(module, name) is None
+            or getattr(module, name).shape != state_dict[key].shape
+        ):
+            setattr(module, name, torch.empty_like(state_dict[key]))
+    else:
+        setattr(module, name, None)
 
 
 class AbstractConnection(ABC, Module):
@@ -141,8 +159,12 @@ class AbstractConnection(ABC, Module):
     def reset_state_variables(self) -> None:
         # language=rst
         """
-        Contains resetting logic for the connection.
+        Contains resetting logic for the connection. Subclasses call this, which
+        resets the learning rule's state carried across time steps.
         """
+        reset = getattr(self.update_rule, "reset_state_variables", None)
+        if reset is not None:
+            reset()
 
     @staticmethod
     def cast_dtype_if_needed(w, w_dtype):
@@ -193,14 +215,28 @@ class AbstractMulticompartmentConnection(ABC, Module):
             [] if pipeline is None else pipeline
         )  # <- *Ordered* executables for features
 
-        # TODO: Make it so there can't be repeated names!!!
         # Initialize feature index & prime
         self.feature_index = (
             {}
         )  # <- *Unordered* and named set of references for features
-        for feature in pipeline:
+        for feature in self.pipeline:
             self.feature_index[feature.name] = feature
             feature.prime_feature(connection=self, device=self.device, **kwargs)
+        self._check_sub_features()
+
+    def _check_sub_features(self) -> None:
+        # language=rst
+        """
+        A sub-feature (``Normalization``, ``Updating``) runs a method of its parent
+        feature, which must be primed as an entry of the same pipeline.
+        """
+        for f in self.pipeline:
+            parent = getattr(f, "parent", None)
+            if parent is not None and not any(parent is g for g in self.pipeline):
+                raise ValueError(
+                    f"sub-feature {f.name!r}: its parent feature {parent.name!r} "
+                    "must be in the same pipeline"
+                )
 
     @abstractmethod
     def compute(self, s: torch.Tensor) -> None:
@@ -240,6 +276,7 @@ class AbstractMulticompartmentConnection(ABC, Module):
         self.pipeline.append(feature)
         feature.prime_feature(connection=self, device=self.device)
         self.feature_index[feature.name] = feature
+        self._check_sub_features()
 
     def insert_pipeline(self, feature, index) -> None:
         # language=rst
@@ -248,9 +285,10 @@ class AbstractMulticompartmentConnection(ABC, Module):
 
         :param index: Index for where to insert the feature
         """
-        self.pipeline.insert(feature, index)
+        self.pipeline.insert(index, feature)
         feature.prime_feature(connection=self, device=self.device)
         self.feature_index[feature.name] = feature
+        self._check_sub_features()
 
     def remove_pipeline(self, feature) -> None:
         # language=rst
@@ -346,7 +384,9 @@ class Connection(AbstractConnection):
             w = w.to(dtype=w_dtype)
         else:
             if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
-                w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
+                w = torch.as_tensor(w)
+                w = w.to_dense() if w.is_sparse else w  # no sparse clamp in torch
+                w = torch.clamp(w, self.wmin, self.wmax)
             w = self.cast_dtype_if_needed(w, w_dtype)
 
         self.w = Parameter(w, requires_grad=False)
@@ -357,8 +397,12 @@ class Connection(AbstractConnection):
         else:
             self.b = None
 
-        if isinstance(self.target, CSRMNodes):
-            self.s_w = None
+        # Window of recent input spikes for CSRM targets (see compute_window).
+        self.register_buffer("s_w", None)
+
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        _load_window(self, state_dict, prefix, "s_w")
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
     def compute(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
@@ -378,12 +422,22 @@ class Connection(AbstractConnection):
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
-        """ """
+        """
+        Post-synaptic input for CSRM targets: the last ``target.res_window_size``
+        input spike vectors, each multiplied by the *current* weights, shape
+        ``[batch, window, *target.shape]``. (``MulticompartmentConnection`` keeps its
+        past outputs instead, so the two differ once the weights learn.)
 
-        if self.s_w == None:
+        :param s: Incoming spikes, shape ``[batch, *source.shape]``.
+        """
+
+        if self.s_w is None or self.s_w.size(0) != s.size(0):
             # Construct a matrix of shape batch size * window size * dimension of layer
             self.s_w = torch.zeros(
-                self.target.batch_size, self.target.res_window_size, *self.source.shape
+                self.target.batch_size,
+                self.target.res_window_size,
+                *self.source.shape,
+                device=s.device,
             )
 
         # Add the spike vector into the first in first out matrix of windowed (res) spike trains
@@ -428,6 +482,7 @@ class Connection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
+        self.s_w = None
 
 
 class MulticompartmentConnection(AbstractMulticompartmentConnection):
@@ -478,6 +533,79 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         # change: learning updates, normalize, reset, device/dtype moves.
         self._fold_cache = None
 
+        # Window of recent outputs for CSRM targets (see compute_window).
+        self.register_buffer("out_w", None)
+
+    # Pipeline features are not submodules, so their values are saved and
+    # loaded here, under "<prefix>feature.<feature name>".
+    def _feature_values(self):
+        # (key, tensor, feature, extra-state name or None) for every saved tensor.
+        for f in self.pipeline:
+            value = getattr(f, "value", None)  # sub-features have no value
+            if isinstance(value, torch.Tensor):
+                yield f"feature.{f.name}", value, f, None
+                extra = getattr(f, "extra_state_tensors", None)
+                for name, t in (extra() if extra else {}).items():
+                    yield f"feature.{f.name}.{name}", t, f, name
+
+    def _save_to_state_dict(self, destination, prefix, keep_vars):
+        super()._save_to_state_dict(destination, prefix, keep_vars)
+        names = [f.name for f in self.pipeline]
+        repeated = sorted({n for n in names if names.count(n) > 1})
+        if repeated:
+            raise ValueError(
+                f"pipeline feature names must be unique to save the state: {repeated}"
+            )
+        for key, value, _, _ in self._feature_values():
+            destination[prefix + key] = value if keep_vars else value.detach()
+
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ):
+        _load_window(self, state_dict, prefix, "out_w")
+        loaded, extras = set(), {}
+        for key, value, feature, extra in list(self._feature_values()):
+            key = prefix + key
+            if key not in state_dict:
+                if strict:
+                    missing_keys.append(key)
+                continue
+            saved = state_dict[key]
+            loaded.add(key)
+            if saved.shape != value.shape or saved.is_sparse != value.is_sparse:
+                error_msgs.append(
+                    f"size mismatch for {key}: copying a "
+                    f"{'sparse' if saved.is_sparse else 'dense'} tensor of shape "
+                    f"{tuple(saved.shape)} from checkpoint, the current one is "
+                    f"{'sparse' if value.is_sparse else 'dense'} with shape "
+                    f"{tuple(value.shape)}."
+                )
+            elif extra is None:
+                with torch.no_grad():  # in place: rules hold the same tensor
+                    value.copy_(saved)
+            else:
+                extras.setdefault(feature, {})[extra] = saved
+        for feature, tensors in extras.items():
+            feature.load_extra_state_tensors(tensors)
+        self._fold_cache = None
+        super()._load_from_state_dict(
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
+        )
+        unexpected_keys[:] = [k for k in unexpected_keys if k not in loaded]
+
     def _apply(self, fn, recurse=True):
         self._fold_cache = None
         return super()._apply(fn, recurse)
@@ -522,9 +650,13 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
                     # Side-effect-only pipeline entries (sub-features) fold as identity.
                     continue
                 if isinstance(factor, torch.Tensor) and factor.is_sparse:
-                    # Sparse feature values carry a leading batch dim ([1, src, tgt])
-                    # from prime_feature; densify to the fold's [src, tgt] shape.
-                    factor = factor.to_dense().view(self.source.n, self.target.n)
+                    # Sparse feature values carry a leading batch dim ([batch, src,
+                    # tgt], one weight copy per sample) from prime_feature. One copy
+                    # densifies to the fold's [src, tgt] shape; several stay
+                    # [batch, src, tgt] and are applied per sample below.
+                    factor = factor.to_dense()
+                    if factor.size(0) == 1:
+                        factor = factor.view(self.source.n, self.target.n)
                 op = getattr(f, "op", "mul")
                 if op == "mul":
                     a_eff = factor if a_eff is None else a_eff * factor
@@ -543,7 +675,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
             # Additive terms apply to every synapse regardless of spikes, so
             # their contribution is the source-sum, a constant [target.n] row.
-            b_sum = b_eff.sum(dim=0) if b_eff is not None else None
+            b_sum = b_eff.sum(dim=-2) if b_eff is not None else None
 
             if all(getattr(f, "is_static", True) for f in self.pipeline):
                 self._fold_cache = (a_eff, b_sum)
@@ -554,7 +686,9 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         use_gather = self.sparse_compute and (
             not a_eff.is_cuda or self.source.n * self.target.n >= 4_000_000
         )
-        if use_gather:
+        if a_eff.dim() == 3:  # one weight copy per sample (sparse, batch > 1)
+            out = torch.bmm(s.unsqueeze(1).to(a_eff.dtype), a_eff).squeeze(1)
+        elif use_gather:
             # Read only the rows of A for source neurons that spiked this step
             # (numerically identical; faster only when few are active).
             active = s.any(dim=0).nonzero(as_tuple=False).squeeze(1)
@@ -576,37 +710,34 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
 
         if self.traces:
             self.activity = out
-        if out.size() != torch.Size([s.size(0)] + self.target.shape):
+        if out.size() != torch.Size([s.size(0), *self.target.shape]):
             return out.view(s.size(0), *self.target.shape)
         return out
 
     def compute_window(self, s: torch.Tensor) -> torch.Tensor:
         # language=rst
-        """"""
+        """
+        Post-synaptic input for CSRM targets: the last ``target.res_window_size``
+        outputs of :meth:`compute`, newest last, shape
+        ``[batch, window, *target.shape]``. The pipeline runs once per step, on that
+        step's spikes, so features with state advance once per step. Each past
+        output keeps the weights of its own step (``Connection.compute_window``
+        applies the current weights to past spikes instead; with static weights the
+        two agree).
 
-        if self.s_w == None:
-            # Construct a matrix of shape batch size * window size * dimension of layer
-            self.s_w = torch.zeros(
-                self.target.batch_size, self.target.res_window_size, *self.source.shape
+        :param s: Incoming spikes, shape ``[batch, *source.shape]``.
+        """
+        out = self.compute(s)
+        if self.out_w is None or self.out_w.size(0) != s.size(0):
+            self.out_w = torch.zeros(
+                s.size(0),
+                self.target.res_window_size,
+                *self.target.shape,
+                device=out.device,
+                dtype=out.dtype,
             )
-
-        # Add the spike vector into the first in first out matrix of windowed (res) spike trains
-        self.s_w = torch.cat((self.s_w[:, 1:, :], s[:, None, :]), 1)
-
-        # Compute multiplication of spike activations by weights and add bias.
-        if self.b is None:
-            post = (
-                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
-            )
-        else:
-            post = (
-                self.s_w.view(self.s_w.size(0), self.s_w.size(1), -1).float() @ self.w
-                + self.b
-            )
-
-        return post.view(
-            self.s_w.size(0), self.target.res_window_size, *self.target.shape
-        )
+        self.out_w = torch.cat((self.out_w[:, 1:], out[:, None]), 1)
+        return self.out_w
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -615,10 +746,15 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         """
         learning = kwargs.get("learning", False)
         if learning and not self.manual_update:
-            # Pipeline learning
+            # Pipeline learning. A feature driven by an ``Updating`` sub-feature
+            # learns when that entry runs, so it is not updated a second time here.
             self._fold_cache = None
+            driven = [
+                f.parent for f in self.pipeline if getattr(f, "drives_update", False)
+            ]
             for f in self.pipeline:
-                f.update(**kwargs)
+                if not any(f is d for d in driven):
+                    f.update(**kwargs)
 
     def normalize(self) -> None:
         # language=rst
@@ -638,6 +774,7 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         super().reset_state_variables()
 
         self._fold_cache = None
+        self.out_w = None
         for f in self.pipeline:
             f.reset_state_variables()
 
@@ -1193,8 +1330,11 @@ class MaxPool1dConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        self.firing_rates -= self.decay * self.firing_rates
-        self.firing_rates += s.float().squeeze()
+        if self.firing_rates.shape != s.shape:  # batch size changed
+            self.firing_rates = torch.zeros_like(s, dtype=torch.float)
+        if self.decay is not None:  # no decay given: plain spike counts
+            self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
 
         _, indices = F.max_pool1d(
             self.firing_rates,
@@ -1228,7 +1368,9 @@ class MaxPool1dConnection(AbstractConnection):
         super().reset_state_variables()
 
         self.firing_rates = torch.zeros(
-            self.source.batch_size, *(self.source.s.shape[1:])
+            self.source.batch_size,
+            *(self.source.s.shape[1:]),
+            device=self.firing_rates.device,
         )
 
 
@@ -1283,8 +1425,11 @@ class MaxPool2dConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        self.firing_rates -= self.decay * self.firing_rates
-        self.firing_rates += s.float().squeeze()
+        if self.firing_rates.shape != s.shape:  # batch size changed
+            self.firing_rates = torch.zeros_like(s, dtype=torch.float)
+        if self.decay is not None:  # no decay given: plain spike counts
+            self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
 
         _, indices = F.max_pool2d(
             self.firing_rates,
@@ -1318,7 +1463,9 @@ class MaxPool2dConnection(AbstractConnection):
         super().reset_state_variables()
 
         self.firing_rates = torch.zeros(
-            self.source.batch_size, *(self.source.s.shape[1:])
+            self.source.batch_size,
+            *(self.source.s.shape[1:]),
+            device=self.firing_rates.device,
         )
 
 
@@ -1373,8 +1520,11 @@ class MaxPoo3dConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        self.firing_rates -= self.decay * self.firing_rates
-        self.firing_rates += s.float().squeeze()
+        if self.firing_rates.shape != s.shape:  # batch size changed
+            self.firing_rates = torch.zeros_like(s, dtype=torch.float)
+        if self.decay is not None:  # no decay given: plain spike counts
+            self.firing_rates -= self.decay * self.firing_rates
+        self.firing_rates += s.float()
 
         _, indices = F.max_pool3d(
             self.firing_rates,
@@ -1408,7 +1558,9 @@ class MaxPoo3dConnection(AbstractConnection):
         super().reset_state_variables()
 
         self.firing_rates = torch.zeros(
-            self.source.batch_size, *(self.source.s.shape[1:])
+            self.source.batch_size,
+            *(self.source.s.shape[1:]),
+            device=self.firing_rates.device,
         )
 
 
@@ -1561,7 +1713,7 @@ class LocalConnection(AbstractConnection):
             s.float().view(s.size(0), -1) @ self.w.view(self.source.n, self.target.n)
             + self.b
         )
-        return a_post.view(*self.target.shape)
+        return a_post.view(s.size(0), *self.target.shape)
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -2087,9 +2239,10 @@ class MeanFieldConnection(AbstractConnection):
             tensor of same size as w
         :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
             tensor of same size as w
-        :param float norm: Total weight per target neuron normalization constant.
+        :param float norm: Total absolute weight across target neurons. A shared scalar
+            weight is counted once per target neuron.
         """
-        super().__init__(source, target, nu, weight_decay, **kwargs)
+        super().__init__(source, target, nu, weight_decay=weight_decay, **kwargs)
 
         w = kwargs.get("w", None)
         if w is None:
@@ -2113,8 +2266,9 @@ class MeanFieldConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        # Compute multiplication of mean-field pre-activation by connection weights.
-        return s.float().mean() * self.w
+        # Mean-field pre-activation of each sample, times the connection weights.
+        mean = s.float().flatten(1).mean(1)
+        return mean.view(-1, *[1] * len(self.target.shape)) * self.w
 
     def update(self, **kwargs) -> None:
         # language=rst
@@ -2126,13 +2280,13 @@ class MeanFieldConnection(AbstractConnection):
     def normalize(self) -> None:
         # language=rst
         """
-        Normalize weights so each target neuron has sum of connection weights equal to
-        ``self.norm``.
+        Normalize absolute weights across target neurons to ``self.norm``, preserving
+        signs and scalar or per-target tensor shape. A shared scalar is counted once
+        per target neuron. All-zero stored weights remain zero.
         """
         if self.norm is not None:
-            self.w = self.w.view(1, self.target.n)
-            self.w *= self.norm / self.w.sum()
-            self.w = self.w.view(1, *self.target.shape)
+            total = self.w.abs().sum() * (self.target.n / self.w.numel())
+            self.w *= self.norm / total.masked_fill(total == 0, 1)
 
     def reset_state_variables(self) -> None:
         # language=rst

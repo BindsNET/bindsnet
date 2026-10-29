@@ -190,6 +190,22 @@ class LearningRule(ABC):
         # Weight decay.
         self.weight_decay = 1.0 - weight_decay if weight_decay else 1.0
 
+    # Tensors a rule creates on its first update and carries across time steps.
+    _step_state = ()
+
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Forget the state carried across time steps. The tensors in
+        ``_step_state`` are deleted, so the next update re-creates them as zeros
+        for the current batch size, as in a freshly built rule. The default batch
+        reduction is still the one chosen when the rule was built (``squeeze`` for
+        batch size 1, ``sum`` otherwise), so a rule built for batch size 1 does not
+        run a larger batch; pass ``reduction=torch.sum`` to allow both.
+        """
+        for name in self._step_state:
+            self.__dict__.pop(name, None)
+
     def update(self) -> None:
         # language=rst
         """
@@ -205,10 +221,16 @@ class LearningRule(ABC):
             (self.connection.wmin != -np.inf).any()
             or (self.connection.wmax != np.inf).any()
         ) and not isinstance(self, NoOp):
-            if self.connection.w.is_sparse:
-                raise Exception("SparseConnection isn't supported for wmin\\wmax")
+            w = self.connection.w
+            if w.is_sparse:
+                # In place, so the connection keeps the same Parameter.
+                w.copy_(
+                    w.to_dense()
+                    .clamp_(self.connection.wmin, self.connection.wmax)
+                    .to_sparse()
+                )
             else:
-                self.connection.w.clamp_(self.connection.wmin, self.connection.wmax)
+                w.clamp_(self.connection.wmin, self.connection.wmax)
 
 
 class NoOp(LearningRule):
@@ -744,17 +766,23 @@ class WeightDependentPostPre(LearningRule):
         target_x = self.target.x.view(batch_size, -1).unsqueeze(1)
 
         update = 0
+        # Dense view of w for the weight-dependent factors (sparse w: torch has
+        # no sparse-dense subtraction).
+        w = self.connection.w
+        w = w.to_dense() if w.is_sparse else w
 
         # Pre-synaptic update.
         if self.nu[0].any():
             outer_product = self.reduction(torch.bmm(source_s, target_x), dim=0)
-            update -= self.nu[0] * outer_product * (self.connection.w - self.wmin)
+            update -= self.nu[0] * outer_product * (w - self.wmin)
 
         # Post-synaptic update.
         if self.nu[1].any():
             outer_product = self.reduction(torch.bmm(source_x, target_s), dim=0)
-            update += self.nu[1] * outer_product * (self.wmax - self.connection.w)
+            update += self.nu[1] * outer_product * (self.wmax - w)
 
+        if self.connection.w.is_sparse and isinstance(update, torch.Tensor):
+            update = update.to_sparse()
         self.connection.w += update
 
         super().update()
@@ -1610,7 +1638,7 @@ class DiehlAndCook(LearningRule):
             outer = self.reduction(
                 torch.bmm(source_x.unsqueeze(2), target_s.unsqueeze(1)), dim=0
             )
-        factor = self.connection.wmax - w
+        factor = self.connection.wmax - (w.to_dense() if w.is_sparse else w)
         if self.mu != 1.0:
             factor = factor.clamp(min=0.0) ** self.mu
         update = self.nu[1] * outer * factor
@@ -1626,6 +1654,8 @@ class MSTDP(LearningRule):
     Reward-modulated STDP. Adapted from `(Florian 2007)
     <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
+
+    _step_state = ("p_plus", "p_minus", "eligibility")
 
     def __init__(
         self,
@@ -1700,6 +1730,7 @@ class MSTDP(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -2074,6 +2105,7 @@ class MSTDP(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -2127,6 +2159,8 @@ class MSTDPET(LearningRule):
     Reward-modulated STDP with eligibility trace. Adapted from
     `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
+
+    _step_state = ("p_plus", "p_minus", "eligibility", "eligibility_trace")
 
     def __init__(
         self,
@@ -2204,6 +2238,7 @@ class MSTDPET(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -2599,6 +2634,7 @@ class MSTDPET(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -2661,6 +2697,8 @@ class Rmax(LearningRule):
     from `(Vasilaki et al., 2009)
     <https://intranet.physio.unibe.ch/Publikationen/Dokumente/Vasilaki2009PloSComputBio_1.pdf>`_.
     """
+
+    _step_state = ("eligibility_trace",)
 
     def __init__(
         self,
@@ -2729,17 +2767,20 @@ class Rmax(LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         """
-        # Initialize eligibility trace.
+        batch_size = self.source.batch_size
+
+        # Initialize eligibility trace (one per sample).
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
             )
 
         # Reshape variables.
-        target_s = self.target.s.view(-1).float()
-        target_s_prob = self.target.s_prob.view(-1)
-        source_x = self.source.x.view(-1)
+        target_s = self.target.s.view(batch_size, -1).float()
+        target_s_prob = self.target.s_prob.view(batch_size, -1)
+        source_x = self.source.x.view(batch_size, -1)
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
@@ -2749,10 +2790,10 @@ class Rmax(LearningRule):
         self.eligibility_trace += (
             target_s
             - (target_s_prob / (1.0 + self.tc_c / self.connection.dt * target_s_prob))
-        ) * source_x[:, None]
+        )[:, None, :] * source_x[:, :, None]
 
-        # Compute weight update.
-        update = self.nu[0] * reward * self.eligibility_trace
+        # Compute weight update, reduced over the batch.
+        update = self.reduction(self.nu[0] * reward * self.eligibility_trace, dim=0)
         if self.connection.w.is_sparse:
             update = update.to_sparse()
         self.connection.w += update

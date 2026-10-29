@@ -30,6 +30,28 @@ def _dense_outer_update_ok(rule, w: torch.Tensor) -> bool:
     )
 
 
+def _reduce_batch(reduction, x: torch.Tensor) -> torch.Tensor:
+    # language=rst
+    """
+    Reduce per-sample updates ``x`` (``[batch, ...]``) over the batch. The default
+    ``torch.squeeze`` (chosen for batch size 1) means a sum over a larger batch, as
+    in the fused dense path; for one sample both are exact.
+    """
+    return x.sum(0) if reduction is torch.squeeze else reduction(x, dim=0)
+
+
+def _add_to_feature(value: torch.Tensor, update: torch.Tensor) -> None:
+    # language=rst
+    """
+    ``value += update`` for a batch-reduced ``update``. A sparse value holds one
+    weight copy per sample (``[batch, src, tgt]``); every copy gets the same update,
+    so sparse weights learn as the dense (shared) weights do.
+    """
+    if value.is_sparse:
+        update = update.expand(value.shape).to_sparse()
+    value += update
+
+
 def _batch_outer(a: torch.Tensor, b: torch.Tensor, reduction) -> torch.Tensor:
     # language=rst
     """
@@ -133,7 +155,8 @@ class MCC_LearningRule(ABC):
             self, NoOp
         ):
             if self.feature_value.is_sparse:
-                self.feature_value = (
+                # In place: the feature (and compute()) holds this same tensor.
+                self.feature_value.copy_(
                     self.feature_value.to_dense().clamp_(self.min, self.max).to_sparse()
                 )
             else:
@@ -300,7 +323,10 @@ class PostPre(MCC_LearningRule):
                     self.feature_value -= torch.mean(self.average_buffer_pre, dim=0)
             else:
                 if self.feature_value.is_sparse:
-                    self.feature_value -= (torch.bmm(source_s, target_x)).to_sparse()
+                    _add_to_feature(
+                        self.feature_value,
+                        -_reduce_batch(self.reduction, torch.bmm(source_s, target_x)),
+                    )
                 else:
                     self.feature_value -= self.reduction(
                         torch.bmm(source_s, target_x), dim=0
@@ -329,7 +355,10 @@ class PostPre(MCC_LearningRule):
                     self.feature_value += torch.mean(self.average_buffer_post, dim=0)
             else:
                 if self.feature_value.is_sparse:
-                    self.feature_value += (torch.bmm(source_x, target_s)).to_sparse()
+                    _add_to_feature(
+                        self.feature_value,
+                        _reduce_batch(self.reduction, torch.bmm(source_x, target_s)),
+                    )
                 else:
                     self.feature_value += self.reduction(
                         torch.bmm(source_x, target_s), dim=0
@@ -538,11 +567,11 @@ class DiehlAndCook(MCC_LearningRule):
         source_x = self.source.x.view(batch_size, -1) - self.x_tar
         target_s = self.target.s.view(batch_size, -1).float()
         outer = _batch_outer(source_x, target_s, self.reduction)
-        factor = self.max - w
+        factor = self.max - (w.to_dense() if w.is_sparse else w)
         if self.mu != 1.0:
             factor = factor.clamp(min=0.0) ** self.mu
         if w.is_sparse:
-            w += (self.nu[1] * outer * factor.to_dense()).to_sparse()
+            _add_to_feature(w, self.nu[1] * outer * factor)
         else:
             w += self.nu[1] * outer * factor
         super().update()
@@ -651,6 +680,7 @@ class MSTDP(MCC_LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
         learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
@@ -871,20 +901,11 @@ class MSTDPET(MCC_LearningRule):
         self.tc_e_trace = torch.tensor(
             kwargs.get("tc_e_trace", 25.0)
         )  # How long trace effects weights
-        self.eligibility = torch.zeros(
-            *self.feature_value.shape, device=self.feature_value.device
-        )
-        self.eligibility_trace = torch.zeros(
-            *self.feature_value.shape, device=self.feature_value.device
-        )
-
-        # Initialize eligibility, eligibility trace, P^+, and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros((self.source.n), device=self.feature_value.device)
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                (self.target.n), device=self.feature_value.device
-            )
+        # Per-sample state ([batch, ...]), created on the first update.
+        self.p_plus = None
+        self.p_minus = None
+        self.eligibility = None
+        self.eligibility_trace = None
 
         # Initialize variables for average update and continues update
         self.average_update = kwargs.get("average_update", 0)
@@ -908,19 +929,28 @@ class MSTDPET(MCC_LearningRule):
 
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
+            A per-sample reward has shape ``[batch, 1, 1]``.
         :param float a_plus: Learning rate (post-synaptic).
         :param float a_minus: Learning rate (pre-synaptic).
         """
         # Reshape pre- and post-synaptic spikes.
-        source_s = self.source.s.view(-1).float()
-        target_s = self.target.s.view(-1).float()
+        batch_size = self.source.batch_size
+        source_s = self.source.s.view(batch_size, -1).float()
+        target_s = self.target.s.view(batch_size, -1).float()
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
 
+        dev = self.feature_value.device
+        if self.p_plus is None or self.p_plus.size(0) != batch_size:
+            n_pre, n_post = self.source.n, self.target.n
+            self.p_plus = torch.zeros(batch_size, n_pre, device=dev)
+            self.p_minus = torch.zeros(batch_size, n_post, device=dev)
+            self.eligibility = torch.zeros(batch_size, n_pre, n_post, device=dev)
+            self.eligibility_trace = torch.zeros(batch_size, n_pre, n_post, device=dev)
+
         # Build learning-rate and decay tensors, cached on (dt, device) so a
         # change to either (network.dt edits, .to(device) moves) recomputes them.
-        dev = self.feature_value.device
         dt = float(self.connection.dt)
         if getattr(self, "_decay_key", None) != (dt, dev):
             self._decay_key = (dt, dev)
@@ -952,24 +982,23 @@ class MSTDPET(MCC_LearningRule):
 
         # Compute weight update.
 
+        # Weights are shared across the batch: reduce the per-sample updates (a
+        # sparse value's per-sample copies all get the same update).
+        update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
+        update = _reduce_batch(self.reduction, update)
+
         if self.average_update > 0:
-            self.average_buffer[self.average_buffer_index] = (
-                self.nu[0] * self.connection.dt * reward * self.eligibility_trace
-            )
+            self.average_buffer[self.average_buffer_index] = update
             self.average_buffer_index = (
                 self.average_buffer_index + 1
             ) % self.average_update
 
             if self.continues_update or self.average_buffer_index == 0:
-                update = torch.mean(self.average_buffer, dim=0)
-                if self.feature_value.is_sparse:
-                    update = update.to_sparse()
-                self.feature_value += update
+                _add_to_feature(
+                    self.feature_value, torch.mean(self.average_buffer, dim=0)
+                )
         else:
-            update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
-            if self.feature_value.is_sparse:
-                update = update.to_sparse()
-            self.feature_value += update
+            _add_to_feature(self.feature_value, update)
 
         # Update P^+ and P^- values.
         self.p_plus *= self._decay_plus  # Decay
@@ -984,10 +1013,10 @@ class MSTDPET(MCC_LearningRule):
         # p_plus -> +a_plus every spike, with decay
         # p_minus -> +a_minus every spike, with decay
 
-        # Calculate point eligibility value.
-        self.eligibility = torch.outer(self.p_plus, target_s) + torch.outer(
-            source_s, self.p_minus
-        )
+        # Calculate point eligibility value (per sample).
+        self.eligibility = torch.bmm(
+            self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
+        ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
 
         super().update()
 
@@ -998,10 +1027,14 @@ class MSTDPET(MCC_LearningRule):
         starts from the same state as a freshly-built rule.
         """
 
-        self.eligibility.zero_()
-        self.eligibility_trace.zero_()
-        self.p_plus.zero_()
-        self.p_minus.zero_()
+        for state in (
+            self.eligibility,
+            self.eligibility_trace,
+            self.p_plus,
+            self.p_minus,
+        ):
+            if state is not None:
+                state.zero_()
         if self.average_update > 0:
             self.average_buffer.zero_()
             self.average_buffer_index = 0

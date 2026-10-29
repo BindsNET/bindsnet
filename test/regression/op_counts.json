@@ -2,14 +2,11 @@
  "meta": {
   "torch": "2.14.1+cu130",
   "python": "3.11.9",
-  "date": "2026-10-24",
-  "commit": "db7d19303af15e38dc5598cd728065930bee3eef",
-  "reason": "initial operation counts (Phase 5 of the test hardening plan)"
+  "date": "2026-10-28",
+  "commit": "926e60dcbe593715424780b403878a9d45d18729+uncommitted bindsnet code changes",
+  "reason": "MCC_learning.MSTDPET and Rmax keep per-sample state ([batch, ...]) so batch > 1 works: bmm instead of outer and a reduction over the batch; at batch 1 mcc.MSTDPET 24 -> 27 and rule.Rmax 24 -> 26 operations; mcc.MSTDPET.b4 and rule.Rmax.b4 counted again"
  },
- "excluded": {
-  "rule.Rmax.b4": "Rmax crashes at batch > 1 on master (view(-1) over the batch, learning.py); pinned in test/network/test_all_classes.py KNOWN_BUGS",
-  "mcc.MSTDPET.b4": "MCC_learning.MSTDPET crashes at batch > 1 on master (MCC_learning.py); pinned in test/network/test_all_classes.py KNOWN_BUGS"
- },
+ "excluded": {},
  "totals": {
   "mcc.DiehlAndCook.b1": 14,
   "mcc.DiehlAndCook.b4": 14,
@@ -17,7 +14,8 @@
   "mcc.Hebbian.b4": 15,
   "mcc.MSTDP.b1": 19,
   "mcc.MSTDP.b4": 19,
-  "mcc.MSTDPET.b1": 24,
+  "mcc.MSTDPET.b1": 27,
+  "mcc.MSTDPET.b4": 27,
   "mcc.NoOp.b1": 0,
   "mcc.NoOp.b4": 0,
   "mcc.PostPre.b1": 19,
@@ -36,7 +34,8 @@
   "rule.NoOp.b4": 3,
   "rule.PostPre.b1": 24,
   "rule.PostPre.b4": 24,
-  "rule.Rmax.b1": 24,
+  "rule.Rmax.b1": 26,
+  "rule.Rmax.b4": 26,
   "rule.WeightDependentPostPre.b1": 35,
   "rule.WeightDependentPostPre.b4": 35,
   "run.DiehlAndCook2015_784x100.b1": 75,
@@ -117,12 +116,29 @@
    "aten::_to_copy": 2,
    "aten::add.Tensor": 1,
    "aten::add_.Tensor": 4,
+   "aten::bmm": 2,
    "aten::clamp_": 1,
    "aten::div.Tensor": 1,
-   "aten::mul.Tensor": 7,
+   "aten::mul.Tensor": 5,
    "aten::mul_.Tensor": 3,
    "aten::select.int": 1,
-   "aten::view": 4
+   "aten::sum.dim_IntList": 1,
+   "aten::unsqueeze": 4,
+   "aten::view": 2
+  },
+  "mcc.MSTDPET.b4": {
+   "aten::_to_copy": 2,
+   "aten::add.Tensor": 1,
+   "aten::add_.Tensor": 4,
+   "aten::bmm": 2,
+   "aten::clamp_": 1,
+   "aten::div.Tensor": 1,
+   "aten::mul.Tensor": 5,
+   "aten::mul_.Tensor": 3,
+   "aten::select.int": 1,
+   "aten::sum.dim_IntList": 1,
+   "aten::unsqueeze": 4,
+   "aten::view": 2
   },
   "mcc.NoOp.b1": {},
   "mcc.NoOp.b4": {},
@@ -331,7 +347,27 @@
    "aten::rsub.Scalar": 1,
    "aten::select.int": 1,
    "aten::sub.Tensor": 1,
-   "aten::unsqueeze": 1,
+   "aten::sum.dim_IntList": 1,
+   "aten::unsqueeze": 2,
+   "aten::view": 3
+  },
+  "rule.Rmax.b4": {
+   "aten::_local_scalar_dense": 1,
+   "aten::_to_copy": 1,
+   "aten::add.Tensor": 1,
+   "aten::add_.Tensor": 2,
+   "aten::any": 1,
+   "aten::clamp_.Tensor": 1,
+   "aten::div.Tensor": 2,
+   "aten::mul.Tensor": 5,
+   "aten::mul_.Tensor": 1,
+   "aten::ne.Scalar": 1,
+   "aten::reciprocal": 1,
+   "aten::rsub.Scalar": 1,
+   "aten::select.int": 1,
+   "aten::sub.Tensor": 1,
+   "aten::sum.dim_IntList": 1,
+   "aten::unsqueeze": 2,
    "aten::view": 3
   },
   "rule.WeightDependentPostPre.b1": {
@@ -430,6 +466,13 @@
    "date": "2026-10-24",
    "commit": "db7d19303af15e38dc5598cd728065930bee3eef",
    "reason": "initial operation counts (Phase 5 of the test hardening plan)"
+  },
+  {
+   "torch": "2.14.1+cu130",
+   "python": "3.11.9",
+   "date": "2026-10-28",
+   "commit": "926e60dcbe593715424780b403878a9d45d18729+uncommitted bindsnet code changes",
+   "reason": "MCC_learning.MSTDPET and Rmax keep per-sample state ([batch, ...]) so batch > 1 works: bmm instead of outer and a reduction over the batch; at batch 1 mcc.MSTDPET 24 -> 27 and rule.Rmax 24 -> 26 operations; mcc.MSTDPET.b4 and rule.Rmax.b4 counted again"
   }
  ]
 }

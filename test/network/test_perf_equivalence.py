@@ -34,6 +34,7 @@ from bindsnet.learning import (
     Hebbian,
     MCC_learning,
     PostPre,
+    Rmax,
     WeightDependentPostPre,
 )
 from bindsnet.learning.learning import (
@@ -701,3 +702,178 @@ class TestKernelNormalize:
             ref *= connection.norm / ref.sum(0).view(1, -1)
             connection.normalize()
             assert torch.equal(connection.w, ref)
+
+
+class TestMccMstdpetBatched:
+    """MCC_learning.MSTDPET keeps per-sample state ([batch, ...]) since 0.3.5."""
+
+    @staticmethod
+    def _rule(batch_size, reduction=None, n_in=12, n_out=7, dt=1.0):
+        net = Network(dt=dt, batch_size=batch_size)
+        net.add_layer(Input(n=n_in), "in")
+        net.add_layer(LIFNodes(n=n_out), "out")
+        conn = MulticompartmentConnection(
+            net.layers["in"],
+            net.layers["out"],
+            device="cpu",
+            pipeline=[
+                Weight(
+                    "w",
+                    torch.zeros(n_in, n_out),
+                    range=[-100.0, 100.0],
+                    nu=(1e-2, 1e-2),
+                    reduction=reduction,
+                    learning_rule=MCC_learning.MSTDPET,
+                )
+            ],
+        )
+        net.add_connection(conn, "in", "out")
+        return conn
+
+    @staticmethod
+    def _spikes(steps, batch_size, n, seed):
+        g = torch.Generator().manual_seed(seed)
+        return torch.rand(steps, batch_size, n, generator=g) < 0.3
+
+    def _run(self, conn, pre, post, rewards):
+        for t in range(pre.size(0)):
+            conn.source.s = pre[t]
+            conn.target.s = post[t]
+            conn.update(learning=True, reward=rewards[t])
+        return conn.pipeline[0].value.detach().clone()
+
+    @pytest.mark.parametrize("dt", [1.0, 0.5])
+    def test_batch1_matches_unbatched_formula(self, dt):
+        """Batch 1 is bit-identical to the former one-dimensional code
+        (Florian 2007 eqs. 2.7-2.8 with ``torch.outer``).
+
+        Caught: dropping ``self.connection.dt`` from the weight update.
+        """
+        steps, n_in, n_out = 30, 12, 7
+        conn = self._rule(1, dt=dt)
+        rule = conn.pipeline[0].learning_rule
+        pre = self._spikes(steps, 1, n_in, 1)
+        post = self._spikes(steps, 1, n_out, 2)
+        rewards = torch.linspace(-1.0, 1.0, steps).tolist()
+        w = self._run(conn, pre, post, rewards)
+
+        decay_plus = torch.exp(-dt / torch.tensor(20.0))
+        decay_minus = torch.exp(-dt / torch.tensor(20.0))
+        decay_e = torch.exp(-dt / torch.tensor(25.0))
+        p_plus, p_minus = torch.zeros(n_in), torch.zeros(n_out)
+        elig, trace = torch.zeros(n_in, n_out), torch.zeros(n_in, n_out)
+        ref = torch.zeros(n_in, n_out)
+        for t in range(steps):
+            s_pre, s_post = pre[t].view(-1).float(), post[t].view(-1).float()
+            trace *= decay_e
+            trace += elig / torch.tensor(25.0)
+            ref += rule.nu[0] * dt * rewards[t] * trace
+            ref.clamp_(-100.0, 100.0)
+            p_plus *= decay_plus
+            p_plus += torch.tensor(1.0) * s_pre
+            p_minus *= decay_minus
+            p_minus += torch.tensor(-1.0) * s_post
+            elig = torch.outer(p_plus, s_post) + torch.outer(s_pre, p_minus)
+        assert torch.equal(w, ref)
+
+    def test_batch_sum_equals_sum_of_single_samples(self):
+        """Traces depend only on spikes, so with reduction=sum the batch-2 weight
+        change is the sum of each sample's change alone. Floats agree to batch
+        summation order (rtol 1e-6, atol 1e-7; CLAUDE.md performance rule).
+
+        Caught: using only the first sample's update instead of the reduction.
+        """
+        steps, n_in, n_out = 30, 12, 7
+        pre = self._spikes(steps, 2, n_in, 3)
+        post = self._spikes(steps, 2, n_out, 4)
+        rewards = [0.5] * steps
+        both = self._run(self._rule(2, torch.sum), pre, post, rewards)
+        alone = sum(
+            self._run(
+                self._rule(1, torch.sum), pre[:, i : i + 1], post[:, i : i + 1], rewards
+            )
+            for i in range(2)
+        )
+        assert both.abs().max() > 0
+        assert torch.allclose(both, alone, rtol=1e-6, atol=1e-7)
+
+
+def test_rmax_batch_sum_equals_sum_of_single_samples():
+    """Rmax traces depend only on spikes, spike probabilities and input traces,
+    so with reduction=sum the batch-2 weight change is the sum of each sample's
+    change alone (Vasilaki et al. 2009 eq. 13 per sample). Floats agree to batch
+    summation order (rtol 1e-6, atol 1e-7; CLAUDE.md performance rule).
+
+    Caught: using only the first sample's update instead of the reduction.
+    """
+    steps, n_in, n_out = 30, 12, 7
+    g = torch.Generator().manual_seed(5)
+    x = torch.rand(steps, 2, n_in, generator=g)
+    prob = torch.rand(steps, 2, n_out, generator=g) * 0.5
+    spikes = torch.rand(steps, 2, n_out, generator=g) < prob
+
+    def run(batch):
+        net = Network(dt=1.0, batch_size=len(batch))
+        net.add_layer(Input(n=n_in, traces=True, traces_additive=True), "in")
+        net.add_layer(SRM0Nodes(n=n_out), "out")
+        conn = Connection(
+            net.layers["in"],
+            net.layers["out"],
+            w=torch.zeros(n_in, n_out),
+            update_rule=Rmax,
+            nu=1e-2,
+            reduction=torch.sum,
+        )
+        net.add_connection(conn, "in", "out")
+        for t in range(steps):
+            conn.source.x = x[t, batch]
+            conn.target.s_prob = prob[t, batch]
+            conn.target.s = spikes[t, batch]
+            conn.update(learning=True, reward=0.5)
+        return conn.w.detach().clone()
+
+    both = run([0, 1])
+    alone = run([0]) + run([1])
+    assert both.abs().max() > 0
+    assert torch.allclose(both, alone, rtol=1e-6, atol=1e-7)
+
+
+def test_mcc_mstdpet_sparse_copies_learn_like_dense():
+    """A sparse MCC weight keeps one copy per sample; MSTDPET gives every copy the
+    batch's shared update, equal to the dense weights (to summation order).
+
+    Caught: per-sample sparse updates (each copy learned only from its sample).
+    """
+    T = TestMccMstdpetBatched
+    steps, batch = 30, 3
+    pre, post = T._spikes(steps, batch, 12, 7), T._spikes(steps, batch, 7, 8)
+    results = []
+    for sparse in (False, True):
+        net = Network(dt=1.0, batch_size=batch)
+        net.add_layer(Input(n=12), "in")
+        net.add_layer(LIFNodes(n=7), "out")
+        w = torch.zeros(12, 7) + 0.5
+        conn = MulticompartmentConnection(
+            net.layers["in"],
+            net.layers["out"],
+            device="cpu",
+            pipeline=[
+                Weight(
+                    "w",
+                    w.unsqueeze(0).repeat(batch, 1, 1) if sparse else w,
+                    range=[-100.0, 100.0],
+                    nu=(1e-2, 1e-2),
+                    reduction=torch.sum,
+                    learning_rule=MCC_learning.MSTDPET,
+                    sparse=sparse,
+                    batch_size=batch,
+                )
+            ],
+        )
+        net.add_connection(conn, "in", "out")
+        value = T()._run(conn, pre, post, [0.5] * steps)
+        results.append(value.to_dense() if value.is_sparse else value)
+    dense, copies = results
+    assert not torch.equal(dense, torch.full_like(dense, 0.5))
+    for copy in copies:
+        assert torch.allclose(copy, dense, rtol=1e-6, atol=1e-7)

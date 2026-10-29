@@ -39,18 +39,15 @@ step against a from-scratch transcription of the paper.
   weight by the same amount at any simulation step. (`MSTDPET` does carry the
   paper's `dt` factor, eq. 2.7.)
 
-- **Reward-rule state survives `reset_state_variables()` and is not saved.**
-  `MSTDP` (`p_plus`, `p_minus`, `eligibility`), `MSTDPET` (the same plus
-  `eligibility_trace`) and `Rmax` (`eligibility_trace`) keep these tensors on the
-  rule object, outside the network's `state_dict()`. A reset does not clear them,
-  and `load_state_dict` does not restore them, so a second trial after a reset
-  does not equal a fresh network, and a reloaded network does not continue
-  exactly. The same holds for the CSRM spike window `Connection.s_w`. Measured
-  2026-10-24 by `test/regression/test_invariants.py` (strict expected failures);
-  a fix changes results and is scheduled for 0.4.0.
-- **`MulticompartmentConnection` weights are not in `state_dict()`.** A
-  `DiehlAndCook2015` network saved with `state_dict()` and loaded back loses its
-  trained weights. Same test file, same release plan.
+- **Reward-rule traces are cleared by a reset but not saved.** Since 0.3.5,
+  `reset_state_variables()` clears the state `MSTDP` (`p_plus`, `p_minus`,
+  `eligibility`), `MSTDPET` (the same plus `eligibility_trace`) and `Rmax`
+  (`eligibility_trace`) carry across time steps, so a trial after a reset equals a
+  fresh network (`test/regression/test_invariants.py`). These tensors are still not
+  in `state_dict()`: a network reloaded in the middle of a trial restarts them from
+  zero. The CSRM spike windows (`Connection.s_w`, `MulticompartmentConnection.out_w`)
+  and `MulticompartmentConnection` feature values (for example `DiehlAndCook2015`'s
+  weights) are saved since 0.3.5.
 
 ## Using the Diehl & Cook (2015) rule
 

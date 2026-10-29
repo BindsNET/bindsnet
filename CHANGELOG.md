@@ -6,7 +6,70 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 
 ## [Unreleased]
 
+### Results changes (read this before upgrading)
+These fixes change numbers that code produced before. Everything else in this
+release either was a crash before or gives bit-identical results (checked by the
+golden-output tests in `test/regression/`).
+- `reset_state_variables()` now clears the state that `MSTDP`, `MSTDPET` and `Rmax`
+  carry across time steps (`p_plus`, `p_minus`, `eligibility`, `eligibility_trace`).
+  Before, the next trial continued the previous trial's traces. Affects any run that
+  learns with these rules and resets between trials, for example
+  `examples/breakout/breakout_stdp.py` and `examples/dotTracing/dot_tracing.py`.
+- `CSRMNodes.reset_state_variables()` clears the neuron's refractory spike window
+  (`last_spikes`), and the connection's input window is cleared too (#815). Affects
+  CSRM runs with more than one trial.
+- `DiehlAndCook2015(sparse=True)` now learns. Its input weights never changed before,
+  because bounding the sparse weights made a new tensor that the connection did not
+  read. With one sample it now learns the same weights as the dense model (bit for bit
+  without weight normalisation; with it, sums differ in order by at most 6e-8).
+- `MeanFieldConnection` applies `weight_decay`. It was passed by position into the
+  `reduction` slot and ignored.
+- `MeanFieldConnection` and the `MeanField` feature use each sample's own mean
+  firing rate. Before, the mean was taken over the whole batch, so samples mixed
+  (batch size 1 is unchanged).
+- Sparse `MulticompartmentConnection` weights hold one copy per sample; every
+  learning rule (`PostPre`, `DiehlAndCook`, `MSTDP`, `MSTDPET`) now gives every copy
+  the batch's shared update, so sparse weights learn as dense ones do (batch size > 1
+  crashed before, so no earlier results exist).
+- `Rmax.eligibility_trace` and `MCC_learning.MSTDPET`'s state tensors now have a
+  leading batch dimension (`[batch, source, target]`); code that reads them directly
+  sees the new shape.
+- An `Updating` sub-feature now drives its parent's learning: the connection's own
+  update skips that parent, so it learns once per step (it crashed before).
+- Checkpoints: `state_dict()` of a network with a `MulticompartmentConnection` now
+  holds `feature.<name>` entries (and CSRM windows), so a checkpoint saved by an
+  earlier version fails `load_state_dict(..., strict=True)` with missing keys. Load
+  it with `strict=False`; the feature values then keep their constructed values,
+  as before. Feature names in one pipeline must be unique to save.
+- The published results in `REPRODUCING.md` use code paths whose golden outputs are
+  bit-identical before and after (dense `DiehlAndCook2015`, `Connection` with
+  `PostPre`, convolutional and Izhikevich layers); the full experiments were not rerun.
+
 ### Fixed
+- Crashes, all with a reproducer kept in `test/network/test_all_classes.py`
+  (`FIXED_BUGS`): `IzhikevichNodes` and `CSRMNodes` with a multi-dimensional shape;
+  `LocalConnection` with batch size > 1; `MaxPool1d/2d/3dConnection` without a
+  `decay` (now plain spike counts) or with one channel at batch size > 1;
+  `NetworkMonitor.reset_state_variables()` with `time` set (looked connections up
+  among layers); `MulticompartmentConnection` with a tuple target shape;
+  `DiehlAndCook2015(sparse=True)` with batch size > 1; `Rmax` and
+  `MCC_learning.MSTDPET` with batch size > 1 (both now keep one state per sample and
+  reduce the update over the batch, as `MSTDP` does); `WeightDependentPostPre`,
+  `DiehlAndCook` and `PostPre` with `wmin`/`wmax` on a `SparseConnection` (now the
+  same weights as a dense `Connection`); the `MeanField` feature (no name);
+  `Normalization` and `Updating` sub-features in a pipeline;
+  `AdaptationBaseSynapsHistory` and `AdaptationBaseOtherSynaps` with batch size > 1
+  (a synapse counts as active when it spiked in any sample).
+- `MulticompartmentConnection` into `CSRMNodes` always raised; it now keeps a window
+  of its own outputs and matches a `Connection` with the same static weights bit for
+  bit.
+- `state_dict()` now saves `MulticompartmentConnection` feature values (so a
+  `DiehlAndCook2015` network can be saved and restored) and the CSRM spike windows.
+- `LearningRule.reset_state_variables()` added; connections forward their reset to
+  their learning rule.
+- Reset the spike-history window of dense connections into `CSRMNodes` when
+  resetting network state, so spikes from a previous trial do not drive the next one.
+  Recreate the window when the input batch size changes, matching the neuron state.
 - `--seed` now makes GPU runs repeatable in `eth_mnist.py`, `batch_eth_mnist.py`,
   `supervised_mnist.py`, `conv_mnist.py`, `conv1d_MNIST.py`, `conv3d_MNIST.py`,
   `SOM_LM-SNNs.py` and `breakout/random_network_baseline.py`: they call
@@ -42,6 +105,9 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 - Dockerfile on `python:3.13-slim`, inside `requires-python = ">=3.11,<3.14"` (#810 had
   moved it to 3.14); Dependabot no longer proposes minor or major Python bumps for the
   image.
+- Mean-field connection normalization preserves the registered weight parameter and
+  signs, keeps zero weights finite, and counts a shared scalar once per target neuron
+  when normalizing the total absolute weight. Scalar and per-target forms agree.
 - API reference on Read the Docs was empty: the build never installed `bindsnet`, so
   every `automodule` failed to import (`No module named 'matplotlib'`), and
   `docs/pyproject.toml` downgraded Sphinx to 7.2.6. `.readthedocs.yaml` now installs a
