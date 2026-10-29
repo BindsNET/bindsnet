@@ -9,6 +9,7 @@ when they were set (see the comment on each). They are floors, not targets: rais
 when coverage has clearly moved up, never lower one to make a pull request pass.
 Prints one line per directory and exits 1 if any is below its floor.
 """
+
 import sys
 import xml.etree.ElementTree as ET
 

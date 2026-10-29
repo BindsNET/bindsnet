@@ -29,6 +29,31 @@ poetry run pytest
 Notable changes are recorded in [`CHANGELOG.md`](CHANGELOG.md); please add an entry to the
 `Unreleased` section in your pull request.
 
+## A bug fix needs a test that fails without it
+
+If your pull request changes any file under `bindsnet/`, it must add or change a
+test that **fails on `master` and passes with your change**. The `bug-test` check
+(`.github/scripts/fails_before_fix.py`) runs the test files you added or changed
+twice, once on `master`'s code and once on yours, and fails if none of them goes
+from failing to passing. This shows the bug is real and that your change is what
+fixes it. You can run the same check locally:
+
+```shell
+poetry run python .github/scripts/fails_before_fix.py --base master --head HEAD
+```
+
+A change that is not a bug fix (a refactor or a speed-up) has no such test; a
+maintainer then adds the label `no-bug-test`, and every existing test must still pass.
+
+The `weakened-tests` check (`.github/scripts/weakened_tests.py`) lists every
+place where a pull request may make tests pass by changing the tests: a removed
+test, fewer checks in a test, a new skip or xfail, a wider tolerance, or changed
+recorded results (golden files, operation counts, API snapshot, coverage floor).
+Some of these are right, for example regenerating goldens after a real fix. Explain
+each one in the pull request; a maintainer reviews them and adds the label
+`tests-changed-ok`. Files listed in `.github/CODEOWNERS` also need a maintainer's
+approval.
+
 ## Tests that guard results
 
 Some tests do not check one behaviour; they check that nothing changed. They fail

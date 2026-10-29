@@ -5,6 +5,11 @@
 ## Checklist
 
 - [ ] I ran `poetry run pytest` locally and it passed.
+- [ ] If I fixed a bug, this test fails on `master` and passes with my change
+      (checked by the `bug-test` check): `test/...::test_...`
+- [ ] I did not remove tests, remove checks, add skips or xfails, or widen
+      tolerances. If I did, I explain each one below (the `weakened-tests`
+      check lists them).
 - [ ] If I changed a formula (a neuron update, a learning rule, a connection's
       compute), this test pins the new formula: `test/...::test_...`
 - [ ] Does this change simulated results (spikes, voltages, traces, weights)?

@@ -5,12 +5,14 @@ This script compares the base and head commits and lists every place where
 that may have happened:
 
 - a test file or a test function was removed;
-- a test function has fewer checks (``assert`` statements and calls whose name
-  contains ``assert``, ``allclose``, ``equal`` or ``raises``);
+- a function in a test file (helpers included) has fewer checks (``assert``
+  statements and calls whose name contains ``assert``, ``allclose``,
+  ``equal`` or ``raises``);
 - a test file has more skip or xfail markers (``skip``, ``skipif``, ``xfail``,
   ``importorskip``);
-- a tolerance keyword (``atol``, ``rtol``, ``abs``, ``rel``, ``tol``,
-  ``delta``) in a test function now allows a larger value than before;
+- a tolerance in a test file now allows a larger value than before: a keyword
+  argument ``atol``, ``rtol``, ``abs``, ``rel``, ``tol`` or ``delta``, or an
+  assigned name containing ``tol``;
 - a recorded-result file changed: golden outputs, operation counts, the API
   snapshot, or the coverage floor;
 - a ``conftest.py`` or the pytest settings in ``pyproject.toml`` changed (they
@@ -75,36 +77,54 @@ def number(node):
     return value if isinstance(value, (int, float)) else None
 
 
+def tolerances_in(nodes):
+    """Largest value of each tolerance keyword argument, and of each assigned
+    name containing "tol" (``ATOL = 1e-6``), among ``nodes``."""
+    found = {}
+    for node in nodes:
+        pairs = []
+        if isinstance(node, ast.Call):
+            pairs = [
+                (k.arg, k.value) for k in node.keywords if k.arg in TOLERANCE_KEYWORDS
+            ]
+        elif isinstance(node, ast.Assign):
+            pairs = [
+                (t.id, node.value)
+                for t in node.targets
+                if isinstance(t, ast.Name) and "tol" in t.id.lower()
+            ]
+        for key, value_node in pairs:
+            value = number(value_node)
+            if value is not None:
+                found[key] = max(found.get(key, value), value)
+    return found
+
+
 def describe(source):
-    """Per test function: number of checks and the largest value of each
-    tolerance keyword. Plus the file's count of skip and xfail markers."""
+    """Per function (helpers included, so a check moved into a helper still
+    counts): number of checks and the largest value of each tolerance. The
+    module level is the entry "<module>". Plus the file's count of skip and
+    xfail markers."""
     tree = ast.parse(source)
-    functions, skips = {}, 0
+    skips = 0
     for node in ast.walk(tree):
         if isinstance(node, (ast.Name, ast.Attribute)):
             name = node.id if isinstance(node, ast.Name) else node.attr
             skips += name in SKIP_WORDS
+    functions = {"<module>": (0, tolerances_in(tree.body))}
     stack = [(node, "") for node in tree.body]
     while stack:
         node, prefix = stack.pop()
         if isinstance(node, ast.ClassDef):
             stack += [(child, f"{prefix}{node.name}.") for child in node.body]
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if not node.name.startswith("test"):
-                continue
-            checks, tolerances = 0, {}
-            for inner in ast.walk(node):
-                if isinstance(inner, ast.Assert):
-                    checks += 1
-                elif isinstance(inner, ast.Call):
-                    name = call_name(inner).lower()
-                    checks += any(word in name for word in CHECK_WORDS)
-                    for keyword in inner.keywords:
-                        value = number(keyword.value)
-                        if keyword.arg in TOLERANCE_KEYWORDS and value is not None:
-                            old = tolerances.get(keyword.arg, value)
-                            tolerances[keyword.arg] = max(old, value)
-            functions[prefix + node.name] = (checks, tolerances)
+            inner = list(ast.walk(node))
+            checks = sum(isinstance(n, ast.Assert) for n in inner) + sum(
+                any(word in call_name(n).lower() for word in CHECK_WORDS)
+                for n in inner
+                if isinstance(n, ast.Call)
+            )
+            functions[prefix + node.name] = (checks, tolerances_in(inner))
     return functions, skips
 
 
@@ -118,7 +138,8 @@ def compare_test_file(path, before, after):
     found = []
     for name, (old_checks, old_tols) in old_functions.items():
         if name not in new_functions:
-            found.append(f"`{path}::{name}`: test removed")
+            if name.rsplit(".", 1)[-1].startswith("test"):
+                found.append(f"`{path}::{name}`: test removed")
             continue
         new_checks, new_tols = new_functions[name]
         if new_checks < old_checks:
@@ -132,7 +153,9 @@ def compare_test_file(path, before, after):
                     f"{old_tols[keyword]:g} to {value:g}"
                 )
     if new_skips > old_skips:
-        found.append(f"`{path}`: skip/xfail markers went from {old_skips} to {new_skips}")
+        found.append(
+            f"`{path}`: skip/xfail markers went from {old_skips} to {new_skips}"
+        )
     return found
 
 
@@ -159,7 +182,11 @@ def main():
             section = "[tool.pytest"
             if before.partition(section)[2] != after.partition(section)[2]:
                 found.append("`pyproject.toml`: pytest settings changed")
-        elif path.startswith("test/") and name.startswith("test_") and name.endswith(".py"):
+        elif (
+            path.startswith("test/")
+            and name.startswith("test_")
+            and name.endswith(".py")
+        ):
             found += compare_test_file(
                 path, source_at(args.base, path), source_at(args.head, path)
             )
