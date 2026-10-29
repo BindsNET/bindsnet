@@ -23,6 +23,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import cpu_pins  # noqa: E402
+
+cpu_pins.apply()  # before torch is imported
+
 import networks as N  # noqa: E402
 import torch  # noqa: E402
 

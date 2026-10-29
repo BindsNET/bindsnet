@@ -34,6 +34,8 @@ jobs:
       run: |
         poetry install
         .github/scripts/use_cpu_torch.sh "poetry run python"
+    - name: Show CPU (golden files depend on pinned maths paths; test/regression/cpu_pins.py)
+      run: grep -m1 "model name" /proc/cpuinfo; grep -qw avx512f /proc/cpuinfo && echo "AVX-512: yes" || echo "AVX-512: no"
     - name: Lint with flake8 (syntax errors and undefined names)
       run: pipx run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Test with pytest (with coverage)
@@ -66,5 +68,7 @@ jobs:
       run: |
         poetry install
         .github/scripts/use_cpu_torch.sh "poetry run python"
+    - name: Show CPU (golden files depend on pinned maths paths; test/regression/cpu_pins.py)
+      run: grep -m1 "model name" /proc/cpuinfo; grep -qw avx512f /proc/cpuinfo && echo "AVX-512: yes" || echo "AVX-512: no"
     - name: Test with pytest
       run: poetry run pytest
