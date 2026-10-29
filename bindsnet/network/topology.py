@@ -2134,7 +2134,7 @@ class MeanFieldConnection(AbstractConnection):
         :param float norm: Total absolute weight across target neurons. A shared scalar
             weight is counted once per target neuron.
         """
-        super().__init__(source, target, nu, weight_decay, **kwargs)
+        super().__init__(source, target, nu, weight_decay=weight_decay, **kwargs)
 
         w = kwargs.get("w", None)
         if w is None:
@@ -2158,8 +2158,9 @@ class MeanFieldConnection(AbstractConnection):
         :return: Incoming spikes multiplied by synaptic weights (with or without
             decaying spike activation).
         """
-        # Compute multiplication of mean-field pre-activation by connection weights.
-        return s.float().mean() * self.w
+        # Mean-field pre-activation of each sample, times the connection weights.
+        mean = s.float().flatten(1).mean(1)
+        return mean.view(-1, *[1] * len(self.target.shape)) * self.w
 
     def update(self, **kwargs) -> None:
         # language=rst

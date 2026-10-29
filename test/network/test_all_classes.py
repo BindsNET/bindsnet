@@ -941,6 +941,7 @@ FIXED = [
     "DiehlAndCook2015-sparse-batch2",
     "Rmax-batch2",
     "MCC_learning.MSTDPET-batch2",
+    "MeanFieldConnection-batch-mixing",
 ]
 FIXED_BUGS = {bug_id: KNOWN_BUGS.pop(bug_id) for bug_id in FIXED}
 

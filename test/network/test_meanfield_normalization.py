@@ -40,7 +40,9 @@ def test_meanfield_normalization_preserves_parameter(weight_shape, dtype, norm):
     assert set(connection.state_dict()) == state_keys
     torch.testing.assert_close(connection.w, expected)
     spikes = torch.tensor([[0.0, 1.0], [1.0, 1.0]])
-    torch.testing.assert_close(connection.compute(spikes), 0.75 * expected)
+    # Each sample's own mean (0.5 and 1.0); samples do not mix.
+    means = torch.tensor([0.5, 1.0], dtype=dtype).view(-1, *[1] * len(target_shape))
+    torch.testing.assert_close(connection.compute(spikes).to(dtype), means * expected)
     connection.normalize()
     torch.testing.assert_close(connection.w, expected)
 
@@ -93,5 +95,18 @@ def test_meanfield_shared_and_per_target_weights_agree(value, target_shape):
         torch.testing.assert_close(shared.w.expand(target_shape), expected)
         torch.testing.assert_close(per_target.w, expected)
         torch.testing.assert_close(
-            shared.compute(spikes).expand(target_shape), per_target.compute(spikes)
+            shared.compute(spikes).expand(2, *target_shape), per_target.compute(spikes)
         )
+
+
+def test_meanfield_weight_decay_is_applied():
+    """weight_decay reaches AbstractConnection as weight_decay (it was passed by
+    position into the reduction slot and ignored).
+
+    Caught: passing weight_decay by position again.
+    """
+    connection = MeanFieldConnection(
+        Input(n=2), LIFNodes(n=3), w=torch.tensor(1.0), weight_decay=0.1
+    )
+    assert connection.reduction is None
+    assert connection.weight_decay == 0.1
