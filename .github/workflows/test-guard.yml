@@ -1,0 +1,70 @@
+# Guards against fixes that pass by weakening the tests. Two checks, both
+# required on master by branch protection; keep the job names.
+#   bug-test:       a pull request that changes bindsnet/ must add or change a test
+#                   that fails on the base and passes with the change
+#                   (.github/scripts/fails_before_fix.py). Maintainer override
+#                   label: no-bug-test (refactors, speed-ups).
+#   weakened-tests: lists removed tests, fewer checks, more skips, wider
+#                   tolerances and changed recorded results
+#                   (.github/scripts/weakened_tests.py). Maintainer override
+#                   label: tests-changed-ok, after reviewing each item.
+# Only maintainers can add labels; adding or removing one re-runs the checks.
+name: Test guard
+
+on:
+  pull_request:
+    branches: [ master ]
+    types: [ opened, synchronize, reopened, labeled, unlabeled ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  POETRY_VERSION: "2.4.3"
+  LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+
+jobs:
+  weakened-tests:
+    name: weakened-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 2  # HEAD is the test merge; HEAD^1 is master it merges into
+    - uses: actions/setup-python@v7
+      with:
+        python-version: "3.13"
+    - name: Compare tests with the base
+      run: >
+        python .github/scripts/weakened_tests.py
+        --base "$(git rev-parse HEAD^1)" --head "$(git rev-parse HEAD)"
+        --labels "$LABELS" --summary "$GITHUB_STEP_SUMMARY"
+
+  bug-test:
+    name: bug-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 2
+    - name: Install Poetry
+      run: pipx install "poetry==${POETRY_VERSION}"
+    - uses: actions/setup-python@v7
+      with:
+        python-version: "3.13"
+        cache: poetry
+    - name: Install dependencies
+      run: |
+        poetry install
+        .github/scripts/use_cpu_torch.sh "poetry run python"
+    - name: Run changed tests on base and head
+      run: >
+        poetry run python .github/scripts/fails_before_fix.py
+        --base "$(git rev-parse HEAD^1)" --head "$(git rev-parse HEAD)"
+        --labels "$LABELS" --summary "$GITHUB_STEP_SUMMARY"
