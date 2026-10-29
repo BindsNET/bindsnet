@@ -14,11 +14,11 @@ import sys
 import xml.etree.ElementTree as ET
 
 # Measured on CI? No: measured locally on 2026-10-24 with torch 2.14.1 CPU after
-# Phase 3 of logs/test_hardening_2026-10/PLAN.md (git-ignored). Re-measure from the
-# first CI run that includes this script and replace these numbers (plan, Phase 4).
+# Measured on GitHub CI (build job, Python 3.13, CPU torch), run 40798879593,
+# 2026-10-28.
 FLOORS = {
-    "network": 90.0,  # 91.0% measured locally 2026-10-24
-    "learning": 94.0,  # 95.2% measured locally 2026-10-24
+    "network": 89.6,  # 90.6% measured
+    "learning": 94.2,  # 95.2% measured
 }
 # Cobertura filenames are relative to the <source> element, which pytest-cov sets to
 # the bindsnet package directory, so "network/nodes.py", not "bindsnet/network/...".
