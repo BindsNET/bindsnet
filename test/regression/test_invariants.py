@@ -56,18 +56,6 @@ MCC_WEIGHTS = (
     None,
     True,
 )
-MSTDP_STATE = (
-    "MSTDP and MSTDPET keep p_plus, p_minus, eligibility (and eligibility_trace) "
-    "outside the state_dict and reset_state_variables does not clear them",
-    None,
-    True,
-)
-RMAX_STATE = (
-    "Rmax keeps eligibility_trace outside the state_dict and "
-    "reset_state_variables does not clear it",
-    None,
-    True,
-)
 
 
 def _first_trial(name):
@@ -177,12 +165,8 @@ def test_reset_equals_fresh_learning_off(name):
 RESET_LEARN_XFAIL = {
     "dc2015_b1": MCC_WEIGHTS,
     "dc2015_b16": MCC_WEIGHTS,
-    "mstdp_mstdpet": MSTDP_STATE,
-    "mstdp_mstdpet_dt05": MSTDP_STATE,
     "csrm_window": CSRM_WINDOW,
     "meanfield_norm": MEANFIELD_NORM,
-    "rules_mix": RMAX_STATE,
-    "rules_mix_dt05": RMAX_STATE,
 }
 
 

@@ -190,6 +190,19 @@ class LearningRule(ABC):
         # Weight decay.
         self.weight_decay = 1.0 - weight_decay if weight_decay else 1.0
 
+    # Tensors a rule creates on its first update and carries across time steps.
+    _step_state = ()
+
+    def reset_state_variables(self) -> None:
+        # language=rst
+        """
+        Forget the state carried across time steps. The tensors in
+        ``_step_state`` are deleted, so the next update re-creates them as zeros
+        for the current batch size, as in a freshly built rule.
+        """
+        for name in self._step_state:
+            self.__dict__.pop(name, None)
+
     def update(self) -> None:
         # language=rst
         """
@@ -1627,6 +1640,8 @@ class MSTDP(LearningRule):
     <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
 
+    _step_state = ("p_plus", "p_minus", "eligibility")
+
     def __init__(
         self,
         connection: AbstractConnection,
@@ -2127,6 +2142,8 @@ class MSTDPET(LearningRule):
     Reward-modulated STDP with eligibility trace. Adapted from
     `(Florian 2007) <https://florian.io/papers/2007_Florian_Modulated_STDP.pdf>`_.
     """
+
+    _step_state = ("p_plus", "p_minus", "eligibility", "eligibility_trace")
 
     def __init__(
         self,
@@ -2662,6 +2679,8 @@ class Rmax(LearningRule):
     <https://intranet.physio.unibe.ch/Publikationen/Dokumente/Vasilaki2009PloSComputBio_1.pdf>`_.
     """
 
+    _step_state = ("eligibility_trace",)
+
     def __init__(
         self,
         connection: AbstractConnection,
@@ -2730,16 +2749,18 @@ class Rmax(LearningRule):
         :param Union[float, torch.Tensor] reward: Reward signal from reinforcement
             learning task.
         """
-        # Initialize eligibility trace.
+        batch_size = self.source.batch_size
+
+        # Initialize eligibility trace (one per sample).
         if not hasattr(self, "eligibility_trace"):
             self.eligibility_trace = torch.zeros(
-                *self.connection.w.shape, device=self.connection.w.device
+                batch_size, *self.connection.w.shape, device=self.connection.w.device
             )
 
         # Reshape variables.
-        target_s = self.target.s.view(-1).float()
-        target_s_prob = self.target.s_prob.view(-1)
-        source_x = self.source.x.view(-1)
+        target_s = self.target.s.view(batch_size, -1).float()
+        target_s_prob = self.target.s_prob.view(batch_size, -1)
+        source_x = self.source.x.view(batch_size, -1)
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
@@ -2749,10 +2770,10 @@ class Rmax(LearningRule):
         self.eligibility_trace += (
             target_s
             - (target_s_prob / (1.0 + self.tc_c / self.connection.dt * target_s_prob))
-        ) * source_x[:, None]
+        )[:, None, :] * source_x[:, :, None]
 
-        # Compute weight update.
-        update = self.nu[0] * reward * self.eligibility_trace
+        # Compute weight update, reduced over the batch.
+        update = self.reduction(self.nu[0] * reward * self.eligibility_trace, dim=0)
         if self.connection.w.is_sparse:
             update = update.to_sparse()
         self.connection.w += update

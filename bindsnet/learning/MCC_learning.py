@@ -872,20 +872,11 @@ class MSTDPET(MCC_LearningRule):
         self.tc_e_trace = torch.tensor(
             kwargs.get("tc_e_trace", 25.0)
         )  # How long trace effects weights
-        self.eligibility = torch.zeros(
-            *self.feature_value.shape, device=self.feature_value.device
-        )
-        self.eligibility_trace = torch.zeros(
-            *self.feature_value.shape, device=self.feature_value.device
-        )
-
-        # Initialize eligibility, eligibility trace, P^+, and P^-.
-        if not hasattr(self, "p_plus"):
-            self.p_plus = torch.zeros((self.source.n), device=self.feature_value.device)
-        if not hasattr(self, "p_minus"):
-            self.p_minus = torch.zeros(
-                (self.target.n), device=self.feature_value.device
-            )
+        # Per-sample state ([batch, ...]), created on the first update.
+        self.p_plus = None
+        self.p_minus = None
+        self.eligibility = None
+        self.eligibility_trace = None
 
         # Initialize variables for average update and continues update
         self.average_update = kwargs.get("average_update", 0)
@@ -913,15 +904,23 @@ class MSTDPET(MCC_LearningRule):
         :param float a_minus: Learning rate (pre-synaptic).
         """
         # Reshape pre- and post-synaptic spikes.
-        source_s = self.source.s.view(-1).float()
-        target_s = self.target.s.view(-1).float()
+        batch_size = self.source.batch_size
+        source_s = self.source.s.view(batch_size, -1).float()
+        target_s = self.target.s.view(batch_size, -1).float()
 
         # Parse keyword arguments.
         reward = kwargs["reward"]
 
+        dev = self.feature_value.device
+        if self.p_plus is None or self.p_plus.size(0) != batch_size:
+            n_pre, n_post = self.source.n, self.target.n
+            self.p_plus = torch.zeros(batch_size, n_pre, device=dev)
+            self.p_minus = torch.zeros(batch_size, n_post, device=dev)
+            self.eligibility = torch.zeros(batch_size, n_pre, n_post, device=dev)
+            self.eligibility_trace = torch.zeros(batch_size, n_pre, n_post, device=dev)
+
         # Build learning-rate and decay tensors, cached on (dt, device) so a
         # change to either (network.dt edits, .to(device) moves) recomputes them.
-        dev = self.feature_value.device
         dt = float(self.connection.dt)
         if getattr(self, "_decay_key", None) != (dt, dev):
             self._decay_key = (dt, dev)
@@ -953,10 +952,14 @@ class MSTDPET(MCC_LearningRule):
 
         # Compute weight update.
 
+        # Dense weights are shared across the batch: reduce the per-sample
+        # updates. Sparse weights keep one copy per sample ([batch, src, tgt]).
+        update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
+        if not self.feature_value.is_sparse:
+            update = self.reduction(update, dim=0)
+
         if self.average_update > 0:
-            self.average_buffer[self.average_buffer_index] = (
-                self.nu[0] * self.connection.dt * reward * self.eligibility_trace
-            )
+            self.average_buffer[self.average_buffer_index] = update
             self.average_buffer_index = (
                 self.average_buffer_index + 1
             ) % self.average_update
@@ -967,7 +970,6 @@ class MSTDPET(MCC_LearningRule):
                     update = update.to_sparse()
                 self.feature_value += update
         else:
-            update = self.nu[0] * self.connection.dt * reward * self.eligibility_trace
             if self.feature_value.is_sparse:
                 update = update.to_sparse()
             self.feature_value += update
@@ -985,10 +987,10 @@ class MSTDPET(MCC_LearningRule):
         # p_plus -> +a_plus every spike, with decay
         # p_minus -> +a_minus every spike, with decay
 
-        # Calculate point eligibility value.
-        self.eligibility = torch.outer(self.p_plus, target_s) + torch.outer(
-            source_s, self.p_minus
-        )
+        # Calculate point eligibility value (per sample).
+        self.eligibility = torch.bmm(
+            self.p_plus.unsqueeze(2), target_s.unsqueeze(1)
+        ) + torch.bmm(source_s.unsqueeze(2), self.p_minus.unsqueeze(1))
 
         super().update()
 
@@ -999,10 +1001,14 @@ class MSTDPET(MCC_LearningRule):
         starts from the same state as a freshly-built rule.
         """
 
-        self.eligibility.zero_()
-        self.eligibility_trace.zero_()
-        self.p_plus.zero_()
-        self.p_minus.zero_()
+        for state in (
+            self.eligibility,
+            self.eligibility_trace,
+            self.p_plus,
+            self.p_minus,
+        ):
+            if state is not None:
+                state.zero_()
         if self.average_update > 0:
             self.average_buffer.zero_()
             self.average_buffer_index = 0

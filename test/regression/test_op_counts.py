@@ -48,12 +48,7 @@ LIF_BATCHES = (1, 4)
 LIF_N = 100
 
 # Workloads that are not counted, with the reason (copied into op_counts.json).
-EXCLUDED = {
-    "rule.Rmax.b4": "Rmax crashes at batch > 1 on master (view(-1) over the batch, "
-    "learning.py); pinned in test/network/test_all_classes.py KNOWN_BUGS",
-    "mcc.MSTDPET.b4": "MCC_learning.MSTDPET crashes at batch > 1 on master "
-    "(MCC_learning.py); pinned in test/network/test_all_classes.py KNOWN_BUGS",
-}
+EXCLUDED = {}
 
 
 class OpCounter(TorchDispatchMode):

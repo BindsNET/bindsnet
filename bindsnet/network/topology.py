@@ -141,8 +141,12 @@ class AbstractConnection(ABC, Module):
     def reset_state_variables(self) -> None:
         # language=rst
         """
-        Contains resetting logic for the connection.
+        Contains resetting logic for the connection. Subclasses call this, which
+        resets the learning rule's state carried across time steps.
         """
+        reset = getattr(self.update_rule, "reset_state_variables", None)
+        if reset is not None:
+            reset()
 
     @staticmethod
     def cast_dtype_if_needed(w, w_dtype):

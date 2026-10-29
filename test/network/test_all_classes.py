@@ -939,6 +939,8 @@ FIXED = [
     "MulticompartmentConnection-tuple-shape",
     "DiehlAndCook2015-sparse-no-learning",
     "DiehlAndCook2015-sparse-batch2",
+    "Rmax-batch2",
+    "MCC_learning.MSTDPET-batch2",
 ]
 FIXED_BUGS = {bug_id: KNOWN_BUGS.pop(bug_id) for bug_id in FIXED}
 

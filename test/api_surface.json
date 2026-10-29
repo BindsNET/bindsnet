@@ -1,8 +1,8 @@
 {
  "meta": {
-  "reason": "Initial snapshot of the public API (test hardening Phase 6)",
-  "date": "2026-10-24",
-  "commit": "db7d193",
+  "reason": "LearningRule.reset_state_variables added (clears per-step rule state on reset)",
+  "date": "2026-10-28",
+  "commit": "926e60d",
   "python": "3.11.9",
   "torch": "2.14.1+cu130"
  },
@@ -11,6 +11,11 @@
    "date": "2026-10-24",
    "commit": "db7d193",
    "reason": "Initial snapshot of the public API (test hardening Phase 6)"
+  },
+  {
+   "date": "2026-10-28",
+   "commit": "926e60d",
+   "reason": "LearningRule.reset_state_variables added (clears per-step rule state on reset)"
   }
  ],
  "surface": {
@@ -190,6 +195,7 @@
   "bindsnet.learning.learning.DiehlAndCook": "(connection, nu=None, reduction=None, weight_decay=0.0, **kwargs)",
   "bindsnet.learning.learning.Hebbian": "(connection, nu=None, reduction=None, weight_decay=0.0, **kwargs)",
   "bindsnet.learning.learning.LearningRule": "(connection, nu=None, reduction=None, weight_decay=0.0, **kwargs)",
+  "bindsnet.learning.learning.LearningRule.reset_state_variables": "(self)",
   "bindsnet.learning.learning.LearningRule.update": "(self)",
   "bindsnet.learning.learning.MSTDP": "(connection, nu=None, reduction=None, weight_decay=0.0, **kwargs)",
   "bindsnet.learning.learning.MSTDPET": "(connection, nu=None, reduction=None, weight_decay=0.0, **kwargs)",
