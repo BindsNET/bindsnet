@@ -1,6 +1,6 @@
 [project]
 name = "bindsnet"
-version = "0.3.4"
+version = "0.3.5"
 description = "Spiking neural networks for ML in Python"
 authors = [
     { name = "Hananel Hazan", email = "hananel@hazan.org.il" },

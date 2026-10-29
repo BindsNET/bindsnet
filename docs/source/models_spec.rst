@@ -6,7 +6,7 @@ models BindsNET implements: the difference equations actually solved each timest
 the default parameters with units. Equations and defaults below were transcribed from
 the source (``bindsnet/network/nodes.py`` and ``bindsnet/learning/learning.py``); when
 in doubt, the source is authoritative. Parameter defaults are stated as of package
-version 0.3.4.
+version 0.3.5.
 
 Discretization
 --------------
