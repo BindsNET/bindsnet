@@ -53,9 +53,9 @@ Your change altered a result. Either that is the point of the change, or it is a
 python test/regression/regen.py --reason "why the results changed"
 ```
 
-The script refuses to run without a reason and stores it in every file. Results-changing
-fixes are released in version 0.4.0, not in a 0.3.x patch release, so the pull request
-will wait for that release. See `CONTRIBUTING.md`, "Tests that guard results".
+The script refuses to run without a reason and stores it in every file. A results-changing
+fix also needs an entry under "Results changes" in `CHANGELOG.md` that names the affected
+classes or models. See `CONTRIBUTING.md`, "Tests that guard results".
 
 ## When an operation-count test fails
 

@@ -6,6 +6,8 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-10-29
+
 ### Results changes (read this before upgrading)
 These fixes change numbers that code produced before. Everything else in this
 release either was a crash before or gives bit-identical results (checked by the
@@ -147,6 +149,9 @@ golden-output tests in `test/regression/`).
 - `test/environment/test_gym_environment.py`.
 
 ### Changed
+- Release rule (`CONTRIBUTING.md`): fixes that change results may ship in any
+  release and are always listed first, under "Results changes". Before, they waited
+  for 0.4.0. Changes that break user code still wait for the next minor release.
 - Convolutional and locally connected connections normalize all kernels in one
   operation instead of a Python loop (6 to 45 times faster on CPU). Results are
   identical on CPU; on CUDA, float32 kernels of 81 or more weights can differ by

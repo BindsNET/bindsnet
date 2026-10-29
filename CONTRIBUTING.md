@@ -110,10 +110,12 @@ harmless. Please do not edit them by hand to make them pass.
   head takes more than 1.25 times as long (median over the rounds) and the lower end of
   the 95% bootstrap interval of that ratio is above 1. It is not a required check; shared CI machines are noisy, and a maintainer decides.
 
-**Fixes that change results are released in 0.4.0, not in 0.3.x.** A correct fix that
-changes what a simulation produces still changes published numbers for people using
-0.3.x, so it waits for the next minor release. State in the pull request whether your
-change alters results, and add a `CHANGELOG.md` entry that says so.
+**Fixes that change results can ship in any release, and are always announced.** A
+correct fix that changes what a simulation produces still changes numbers people have
+published, so `CHANGELOG.md` lists it first, under "Results changes", naming the affected
+classes or models. State in the pull request whether your change alters results, and add
+that entry. Changes that break user code (a removed or renamed argument, a different
+return type) wait for the next minor release (0.4.0).
 
 ## Releasing to PyPI
 

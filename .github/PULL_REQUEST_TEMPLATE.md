@@ -15,8 +15,8 @@
 - [ ] Does this change simulated results (spikes, voltages, traces, weights)?
       - [ ] No.
       - [ ] Yes. I regenerated the golden files in `test/regression/` with
-            `--reason`, and explain below why the results changed. (Results-changing
-            fixes are released in 0.4.0, not 0.3.x; see `CONTRIBUTING.md`.)
+            `--reason`, and explain below why the results changed. Add a
+            "Results changes" entry to `CHANGELOG.md`; see `CONTRIBUTING.md`.)
 - [ ] Did any of these files change? If yes, say which and why:
       - golden files under `test/regression/`
       - operation-count file under `test/regression/` (if present)
