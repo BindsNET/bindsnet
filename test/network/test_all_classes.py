@@ -94,8 +94,6 @@ def _weights(conn):
 # --------------------------------------------------------------------------- #
 
 NODE_SHAPE = (3, 4)
-# Node classes that only work with a one-dimensional shape (see KNOWN_BUGS).
-NODE_1D_ONLY = {"CSRMNodes", "IzhikevichNodes"}
 
 
 def _run_nodes(name, shape, batch=BATCH):
@@ -122,8 +120,7 @@ def test_nodes_construct_and_run(name):
 
     Caught: ``self.v = self.v / 0`` inserted at the end of ``BoostedLIFNodes.forward``.
     """
-    shape = (12,) if name in NODE_1D_ONLY else NODE_SHAPE
-    net = _run_nodes(name, shape)
+    net = _run_nodes(name, NODE_SHAPE)
     _check_layers(net)
 
 
@@ -795,20 +792,6 @@ def _sparse_dc2015_batch2():
 
 # id -> (what is wrong and where, exception type, message fragment, reproducer).
 KNOWN_BUGS = {
-    "CSRMNodes-2d-shape": (
-        "CSRMNodes.forward uses einsum 'i,kij->kj', so only one-dimensional "
-        "shapes work",
-        RuntimeError,
-        "einsum",
-        _nodes_2d("CSRMNodes"),
-    ),
-    "IzhikevichNodes-2d-shape": (
-        "IzhikevichNodes sizes its parameters by n, not by shape, so a "
-        "multi-dimensional shape gives a size mismatch (nodes.py forward)",
-        RuntimeError,
-        "must match the size",
-        _nodes_2d("IzhikevichNodes"),
-    ),
     "LocalConnection-batch2": (
         "LocalConnection.compute reshapes to target.shape without the batch "
         "dimension (topology.py, `a_post.view(*self.target.shape)`)",
