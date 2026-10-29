@@ -384,7 +384,7 @@ class Connection(AbstractConnection):
         # language=rst
         """ """
 
-        if self.s_w == None:
+        if self.s_w is None or self.s_w.size(0) != s.size(0):
             # Construct a matrix of shape batch size * window size * dimension of layer
             self.s_w = torch.zeros(
                 self.target.batch_size, self.target.res_window_size, *self.source.shape
@@ -432,6 +432,8 @@ class Connection(AbstractConnection):
         Contains resetting logic for the connection.
         """
         super().reset_state_variables()
+        if isinstance(self.target, CSRMNodes):
+            self.s_w = None
 
 
 class MulticompartmentConnection(AbstractMulticompartmentConnection):

@@ -1,5 +1,6 @@
 import math
 
+import pytest
 import torch
 
 import bindsnet.learning.MCC_learning as mcc
@@ -14,7 +15,7 @@ from bindsnet.learning import (
     WeightDependentPostPre,
 )
 from bindsnet.network import Network
-from bindsnet.network.nodes import Input, LIFNodes, SRM0Nodes
+from bindsnet.network.nodes import CSRMNodes, Input, LIFNodes, SRM0Nodes
 from bindsnet.network.topology import *
 
 
@@ -24,6 +25,67 @@ class TestConnection:
     """
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    @staticmethod
+    def _make_csrm_network(window, bias=None):
+        network = Network(learning=False)
+        source = Input(n=2)
+        target = CSRMNodes(
+            n=2,
+            res_window_size=window,
+            ref_window_size=2,
+            rest=0.0,
+            thresh=100.0,
+        )
+        network.add_layer(source, "X")
+        network.add_layer(target, "Y")
+        connection = Connection(
+            source, target, w=torch.tensor([[1.0, 0.5], [0.25, 1.0]]), b=bias
+        )
+        network.add_connection(connection, "X", "Y")
+        return network, target, connection
+
+    @pytest.mark.parametrize("window", [3, 5])
+    @pytest.mark.parametrize("bias", [None, torch.tensor([0.2, 0.1])])
+    def test_csrm_reset_discards_previous_trial(self, window, bias):
+        reused, target, connection = self._make_csrm_network(window, bias)
+        fresh, reference, _ = self._make_csrm_network(window, bias)
+        # A short first trial leaves both occupied and empty slots in the window.
+        reused.run({"X": torch.ones(2, 2)}, time=2)
+        weights = connection.w
+        before = weights.clone()
+        reused.reset_state_variables()
+        # No input spikes in the next independent trial: old spikes must not drive it.
+        for _ in range(window):
+            reused.run({"X": torch.zeros(1, 2)}, time=1)
+            fresh.run({"X": torch.zeros(1, 2)}, time=1)
+            torch.testing.assert_close(target.v, reference.v)
+            torch.testing.assert_close(target.s, reference.s)
+        assert connection.w is weights
+        torch.testing.assert_close(connection.w, before)
+
+    def test_csrm_window_survives_run_boundary(self):
+        split, target, _ = self._make_csrm_network(3)
+        continuous, reference, _ = self._make_csrm_network(3)
+        spikes = torch.tensor([[1.0, 0.0], [0.0, 1.0], [0.0, 0.0], [0.0, 0.0]])
+        continuous.run({"X": spikes}, time=4)
+        split.run({"X": spikes[:2]}, time=2)
+        split.run({"X": spikes[2:]}, time=2)
+        assert target.v.abs().sum() > 0
+        torch.testing.assert_close(target.v, reference.v)
+        torch.testing.assert_close(target.s, reference.s)
+
+    @pytest.mark.parametrize("previous_batch,new_batch", [(1, 2), (2, 1)])
+    def test_csrm_window_resizes_with_batch(self, previous_batch, new_batch):
+        reused, target, _ = self._make_csrm_network(3)
+        fresh, reference, _ = self._make_csrm_network(3)
+        reused.run({"X": torch.ones(2, previous_batch, 2)}, time=2)
+        # Network.run resizes neuron state when a new input batch size arrives.
+        for _ in range(3):
+            reused.run({"X": torch.zeros(1, new_batch, 2)}, time=1)
+            fresh.run({"X": torch.zeros(1, new_batch, 2)}, time=1)
+            torch.testing.assert_close(target.v, reference.v)
+            torch.testing.assert_close(target.s, reference.s)
 
     def test_transfer(self):
         if not torch.cuda.is_available():
