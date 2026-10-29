@@ -8,10 +8,9 @@ Each case builds the object, runs 10 steps on seeded Bernoulli input and checks 
 outputs are finite and have the right shapes. Learning-rule cases also check that the
 weights moved, and the table of which rule supports which connection type is pinned.
 
-Classes or combinations that crash on master are listed in ``KNOWN_BUGS`` at the end
-with their exact error. When someone fixes one, its reproducer stops raising, the test
-fails with "DID NOT RAISE", and the entry must be removed (and the normal test
-widened) in the same change.
+``FIXED_BUGS`` at the end holds the reproducers of the crashes found on master in
+October 2026 and fixed for 0.3.5, each with what was wrong; each must keep running
+cleanly.
 """
 
 import inspect
@@ -168,7 +167,7 @@ CONNECTION_SPECS = {
 # A connection class not listed above is tried with this dense spec, and
 # test_every_connection_class_has_a_shape_spec fails until it is listed.
 DEFAULT_SPEC = ((20,), (10,), {})
-# Extra arguments that are not optional in practice (see KNOWN_BUGS).
+# Max-pooling connections (run with decay=0.5; without decay see FIXED_BUGS).
 MAXPOOL = {"MaxPool1dConnection", "MaxPool2dConnection", "MaxPoo3dConnection"}
 
 
@@ -322,8 +321,7 @@ MODEL_SPECS = {
     "TwoLayerNetwork": [({"n_inpt": 16, "n_neurons": 8}, BATCH)],
     "DiehlAndCook2015": [
         ({"n_inpt": 16, "n_neurons": 8}, BATCH),
-        # Batch 1 and no learning check: see KNOWN_BUGS (sparse-batch2, no-learning).
-        ({"n_inpt": 16, "n_neurons": 8, "sparse": True, "batch_size": 1}, 1),
+        ({"n_inpt": 16, "n_neurons": 8, "sparse": True, "batch_size": BATCH}, BATCH),
         (
             {
                 "n_inpt": 16,
@@ -336,7 +334,6 @@ MODEL_SPECS = {
     ],
     "DiehlAndCook2015v2": [({"n_inpt": 16, "n_neurons": 8}, BATCH)],
     "IncreasingInhibitionNetwork": [({"n_input": 16, "n_neurons": 9}, BATCH)],
-    # Batch 1: it is built on LocalConnection (see KNOWN_BUGS).
     "LocallyConnectedNetwork": [
         (
             {
@@ -346,11 +343,10 @@ MODEL_SPECS = {
                 "stride": 2,
                 "n_filters": 2,
             },
-            1,
+            BATCH,
         )
     ],
 }
-MODEL_NO_LEARNING_CHECK = {("DiehlAndCook2015", 1)}
 MODEL_CASES = [
     (name, i)
     for name in sorted(MODEL_CLASSES)
@@ -391,8 +387,7 @@ def test_model_construct_and_run(name, case):
         assert torch.isfinite(w).all(), f"{k} weights not finite"
         if not torch.equal(w, _weights(frozen.connections[k])):
             learned.append(k)
-    if (name, case) not in MODEL_NO_LEARNING_CHECK:
-        assert learned, "no connection learned in 10 steps"
+    assert learned, "no connection learned in 10 steps"
 
 
 # --------------------------------------------------------------------------- #
@@ -439,10 +434,6 @@ FEATURE_PIPELINES = {
 }
 
 
-FEATURE_BATCH1_ONLY = {"AdaptationBaseSynapsHistory", "AdaptationBaseOtherSynaps"}
-SUB_FEATURES = {"Normalization", "Updating"}
-
-
 @pytest.mark.parametrize("name", sorted(FEATURE_CLASSES))
 def test_feature_in_pipeline(name):
     """Every topology feature runs inside a MulticompartmentConnection for 10 steps.
@@ -458,28 +449,17 @@ def test_feature_in_pipeline(name):
     net = Network(dt=1.0, batch_size=BATCH)
     net.add_layer(src, name="in")
     net.add_layer(tgt, name="out")
-    # Sub-features cannot be primed (KNOWN_BUGS): build without them, then set
-    # the pipeline, as test_connections.py does.
-    primable = [f for f in pipeline if isinstance(f, tf.AbstractFeature)]
     conn = topology.MulticompartmentConnection(
-        source=src, target=tgt, device="cpu", pipeline=primable
+        source=src, target=tgt, device="cpu", pipeline=pipeline
     )
-    conn.pipeline = pipeline
     net.add_connection(conn, source="in", target="out")
-    batch = 1 if name in FEATURE_BATCH1_ONLY else BATCH
-    if name in SUB_FEATURES:  # Network.run calls update(), which they lack
-        s = _spikes((SRC_N,), batch)[0]
-        net.layers["in"].set_batch_size(batch)
-    else:
-        net.run(inputs={"in": _spikes((SRC_N,), batch)}, time=STEPS)
-        _check_layers(net, batch)
-        s = src.s
-    out = conn.compute(s)
-    assert tuple(out.shape) == (batch, TGT_N)
+    net.run(inputs={"in": _spikes((SRC_N,), BATCH)}, time=STEPS)
+    _check_layers(net, BATCH)
+    out = conn.compute(src.s)
+    assert tuple(out.shape) == (BATCH, TGT_N)
     assert torch.isfinite(out).all()
-    if name not in SUB_FEATURES:  # they also lack normalize() and reset
-        conn.normalize()
-        conn.reset_state_variables()
+    conn.normalize()
+    conn.reset_state_variables()
 
 
 # --------------------------------------------------------------------------- #
@@ -769,8 +749,8 @@ def _sparse_dc2015_batch2():
     _run_model("DiehlAndCook2015", kwargs, 2)
 
 
-# id -> (what is wrong and where, exception type, message fragment, reproducer).
-KNOWN_BUGS = {
+# id -> (what was wrong and where, exception type, message fragment, reproducer).
+FIXED_BUGS = {
     "LocalConnection-batch2": (
         "LocalConnection.compute reshapes to target.shape without the batch "
         "dimension (topology.py, `a_post.view(*self.target.shape)`)",
@@ -910,36 +890,9 @@ KNOWN_BUGS = {
 }
 
 
-# Fixed for 0.3.5. Each reproducer must now run without error, so the fix stays.
-FIXED = [
-    "LocalConnection-batch2",
-    *(f"{name}-{case}" for name in MAXPOOL for case in ("no-decay", "one-channel")),
-    "NetworkMonitor-reset-with-time",
-    "MulticompartmentConnection-tuple-shape",
-    "DiehlAndCook2015-sparse-no-learning",
-    "DiehlAndCook2015-sparse-batch2",
-    "Rmax-batch2",
-    "MCC_learning.MSTDPET-batch2",
-    "MeanFieldConnection-batch-mixing",
-    "MeanField-feature",
-    "WeightDependentPostPre-SparseConnection",
-    "DiehlAndCook-SparseConnection",
-    *(
-        f"{c}-{case}"
-        for c in ("Normalization", "Updating")
-        for case in ("in-constructor", "network-run")
-    ),
-    *(
-        f"{c}-batch2"
-        for c in ("AdaptationBaseSynapsHistory", "AdaptationBaseOtherSynaps")
-    ),
-]
-FIXED_BUGS = {bug_id: KNOWN_BUGS.pop(bug_id) for bug_id in FIXED}
-
-
 @pytest.mark.parametrize("bug_id", sorted(FIXED_BUGS))
 def test_fixed_bug_stays_fixed(bug_id):
-    """Each former KNOWN_BUGS reproducer runs cleanly.
+    """Each reproducer of a fixed crash runs cleanly.
 
     Caught: restoring ``s.float().squeeze()`` in MaxPool2dConnection.compute fails
     MaxPool2dConnection-one-channel.
@@ -1015,15 +968,3 @@ def test_sparse_connection_learns_like_dense(rule_name):
     assert not torch.equal(learned[0], w0)
     assert learned[0].min() >= 0.0 and learned[0].max() <= 1.0
     assert torch.equal(learned[0], learned[1])
-
-
-@pytest.mark.parametrize("bug_id", sorted(KNOWN_BUGS))
-def test_known_bug_still_fails(bug_id):
-    """Pins each known crash, with its error, so a fix is noticed.
-
-    Caught: a ``return`` added as the first line of ``_rmax_batch2`` fails with DID NOT RAISE.
-    """
-    reason, exc_type, match, reproduce = KNOWN_BUGS[bug_id]
-    with pytest.raises(exc_type, match=match):
-        reproduce()
-    pytest.xfail(reason)

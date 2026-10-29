@@ -82,9 +82,8 @@ harmless. Please do not edit them by hand to make them pass.
   connection, learning rule, feature, monitor and model class is found automatically
   and run for a few steps. A new connection class needs an entry in `CONNECTION_SPECS`
   (its source and target shapes), a new model needs one in `MODEL_SPECS`, and a new
-  learning rule needs one in `SUPPORTED`. Known bugs on `master` are listed in
-  `KNOWN_BUGS` with their exact error; if your change fixes one, its test fails with
-  "DID NOT RAISE", and you should remove the entry in the same pull request.
+  learning rule needs one in `SUPPORTED`. `FIXED_BUGS` holds the reproducers of
+  crashes fixed in 0.3.5; each must keep running without error.
 - **Operation counts (`test/regression/op_counts.json`).** `test/regression/test_op_counts.py`
   counts the tensor operations of one learning-rule update, one simulation step and one
   neuron update on small fixed networks. It fails when a count grows, because more

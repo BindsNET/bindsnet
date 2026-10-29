@@ -510,9 +510,49 @@ class MulticompartmentConnection(AbstractMulticompartmentConnection):
         # Window of recent outputs for CSRM targets (see compute_window).
         self.register_buffer("out_w", None)
 
-    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+    # Pipeline features are not submodules, so their values are saved and
+    # loaded here, under "<prefix>feature.<feature name>".
+    def _feature_values(self):
+        for f in self.pipeline:
+            value = getattr(f, "value", None)  # sub-features have no value
+            if isinstance(value, torch.Tensor):
+                yield f"feature.{f.name}", value
+
+    def _save_to_state_dict(self, destination, prefix, keep_vars):
+        super()._save_to_state_dict(destination, prefix, keep_vars)
+        for key, value in self._feature_values():
+            destination[prefix + key] = value if keep_vars else value.detach()
+
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ):
         _load_window(self, state_dict, prefix, "out_w")
-        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
+        loaded = set()
+        for key, value in self._feature_values():
+            if prefix + key in state_dict:
+                with torch.no_grad():  # in place: rules hold the same tensor
+                    value.copy_(state_dict[prefix + key])
+                loaded.add(prefix + key)
+            elif strict:
+                missing_keys.append(prefix + key)
+        self._fold_cache = None
+        super()._load_from_state_dict(
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
+        )
+        unexpected_keys[:] = [k for k in unexpected_keys if k not in loaded]
 
     def _apply(self, fn, recurse=True):
         self._fold_cache = None

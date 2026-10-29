@@ -21,7 +21,7 @@
       - golden files under `test/regression/`
       - operation-count file under `test/regression/` (if present)
       - `test/api_surface.json` (public API)
-      - `KNOWN_BUGS` in `test/network/test_all_classes.py`
+      - `FIXED_BUGS` in `test/network/test_all_classes.py`
 - [ ] I added an entry to the `Unreleased` section of `CHANGELOG.md`.
 - [ ] If I used an AI tool to write or find this change, I name it here:
 
