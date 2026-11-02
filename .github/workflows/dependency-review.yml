@@ -1,0 +1,25 @@
+# Lists the packages a pull request adds or changes (pyproject.toml, poetry.lock,
+# the Dockerfile's base image, GitHub Actions) and fails if any has a known
+# vulnerability of moderate severity or worse. It reads GitHub's dependency graph
+# only and runs no code from the pull request.
+name: Dependency review
+
+on:
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: never

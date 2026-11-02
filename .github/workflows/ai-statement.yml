@@ -1,0 +1,42 @@
+# Checks that a pull request fills in the "AI assistance" section of the template
+# (CONTRIBUTING.md, "AI-assisted contributions"). It reads the description only and
+# runs no code from the pull request.
+name: AI statement
+
+on:
+  pull_request:
+    branches: [ master ]
+    types: [ opened, edited, synchronize, reopened ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ai-statement:
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      # The description is passed as an environment variable, never pasted into the
+      # script, so text in it cannot run as code.
+      - name: Check the AI assistance section
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        shell: python
+        run: |
+          import os, re, sys
+
+          body = os.environ.get("PR_BODY") or ""
+          none = re.search(r"^- \[[xX]\] No AI tools were used", body, re.M)
+          used = re.search(r"^- \[[xX]\] AI tools were used, and I \(a human\) have read every changed line", body, re.M)
+          tools = re.search(r"^Tools used and for which parts:[ \t]*(\S.*)?$\n?((?:(?!^#).*\n?)*)", body, re.M)
+          described = bool(tools and ((tools.group(1) or "") + tools.group(2)).strip())
+          if bool(none) == bool(used):
+              sys.exit("Tick exactly one box in the 'AI assistance' section of the pull request description "
+                       "(see CONTRIBUTING.md, 'AI-assisted contributions').")
+          if used and not described:
+              sys.exit("Say which AI tools were used and for which parts, under 'Tools used and for which parts:'.")
+          print("AI assistance section filled in.")

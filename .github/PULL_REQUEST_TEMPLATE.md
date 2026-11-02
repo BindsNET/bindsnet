@@ -23,7 +23,15 @@
       - `test/api_surface.json` (public API)
       - `FIXED_BUGS` in `test/network/test_all_classes.py`
 - [ ] I added an entry to the `Unreleased` section of `CHANGELOG.md`.
-- [ ] If I used an AI tool to write or find this change, I name it here:
+
+## AI assistance
+
+<!-- Tick exactly one box (checked by the `AI statement` check). See "AI-assisted contributions" in CONTRIBUTING.md. -->
+
+- [ ] No AI tools were used.
+- [ ] AI tools were used, and I (a human) have read every changed line, run the tests myself, and can explain the change in my own words.
+
+Tools used and for which parts:
 
 ## Why the results or the API changed (if they did)
 
