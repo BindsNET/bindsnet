@@ -6,6 +6,30 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 
 ## [Unreleased]
 
+### Added
+- Contributor rules for AI-assisted work (`CONTRIBUTING.md`, "AI-assisted
+  contributions"): AI tools are welcome, a human must have read and run every change,
+  and autonomous agents may not submit. The pull request template has an "AI
+  assistance" section, and the `AI statement` workflow checks that it is filled in.
+- `Workflow lint` workflow: zizmor 1.30.1 and actionlint 1.7.12 audit changes to
+  `.github/workflows/`.
+- `Dependency review` workflow: fails a pull request that adds or updates a package
+  with a known vulnerability of moderate severity or worse.
+
+### Changed
+- CI actions are pinned to exact commits instead of version tags, and checkouts no
+  longer keep the GitHub token on disk.
+- `SECURITY.md` now describes the repository controls as they are.
+- `CODEOWNERS` also covers files that run automatically or define tested behaviour:
+  `.vscode/`, `.devcontainer/`, `.pre-commit-config.yaml`, `Dockerfile`,
+  `.dockerignore`, `.readthedocs.yaml`, `docs/source/conf.py`, every `conftest.py`,
+  `bindsnet/learning/`, `SECURITY.md` and `CONTRIBUTING.md`.
+
+### Fixed
+- The CUDA `test_transfer` tests in `test/network/test_nodes.py` and
+  `test/network/test_connections.py` are reported as skipped on machines without a
+  GPU; before, they returned early and were reported as passed.
+
 ## [0.3.5] - 2026-10-29
 
 ### Results changes (read this before upgrading)

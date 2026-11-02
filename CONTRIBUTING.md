@@ -1,5 +1,31 @@
 # Contributing Protocol
 
+## AI-assisted contributions
+
+You are welcome to use AI tools to find bugs in BindsNET and to improve it. A
+person must stay responsible for the work:
+
+- **You are the author.** The person who opens the pull request answers for every
+  line in it, whoever or whatever wrote it.
+- **Read it and run it yourself.** Before you open the pull request, read every
+  changed line, run the tests on your own machine, and make sure you can explain
+  the change in your own words.
+- **No autonomous agents.** An AI agent may not open pull requests, push commits or
+  post comments on its own. A pull request stating that no human has reviewed the
+  code is put on hold until its author has.
+- **Say what you used.** Fill in the "AI assistance" section of the pull request
+  template: which tools, and for which parts. A CI check makes sure the section is
+  filled in.
+- **Answer review questions yourself.** The maintainer may ask you about the design
+  of the change. Please answer in your own words, not with AI-generated text
+  (translation and grammar help are fine).
+
+This follows the policies of NumPy
+(https://numpy.org/devdocs/dev/ai_policy.html) and LLVM
+(https://llvm.org/docs/AIToolPolicy.html).
+
+## Getting started
+
 To clone this project locally, issue
 
 ```shell

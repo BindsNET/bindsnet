@@ -57,7 +57,14 @@ BindsNET is a research library, and its git history is part of what users rely
 on. The following controls are in place on this repository:
 
 - Force-pushes and branch deletions are blocked on every branch.
-- `master` requires a pull request with an approving review.
+- Changes reach `master` through pull requests with signed commits. Each needs
+  an approving review that covers its latest push, the code owners' review for
+  the paths in `.github/CODEOWNERS`, and passing test, formatting, test-guard
+  and speed checks. The maintainer reviews every pull request from an outside
+  contributor before it is merged.
+- Workflows get a read-only token by default, every outside contributor's
+  pull request waits for the maintainer's approval before CI runs, and the
+  actions CI uses are pinned to exact commits.
 
 A supply-chain incident affecting this repository was reported and remediated in
 September 2026; see issue #781 for the full account. No PyPI release was

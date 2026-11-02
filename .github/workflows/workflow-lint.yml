@@ -1,0 +1,36 @@
+# Audits the workflow files themselves: zizmor looks for unsafe patterns (untrusted
+# text reaching a shell, unpinned actions, leaked credentials), actionlint for mistakes.
+# Both run from version-pinned packages, not third-party actions.
+name: Workflow lint
+
+on:
+  push:
+    branches: [ master ]
+    paths: [ ".github/workflows/**" ]
+  pull_request:
+    branches: [ master ]
+    paths: [ ".github/workflows/**" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: zizmor
+        run: pipx run "zizmor==1.30.1" --offline .github/workflows
+      - name: actionlint
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          "$(go env GOPATH)/bin/actionlint"

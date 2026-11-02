@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from bindsnet.network import Network
@@ -59,10 +60,8 @@ class TestNodes:
                 assert (layer.s.float() == torch.zeros(n)).all()
                 assert (layer.v == layer.rest * torch.ones(n)).all()
 
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a CUDA device")
     def test_transfer(self):
-        if not torch.cuda.is_available():
-            return
-
         for nodes in Nodes.__subclasses__():
             layer = nodes(10)
 

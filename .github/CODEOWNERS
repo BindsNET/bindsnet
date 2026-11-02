@@ -1,14 +1,26 @@
 # Pull requests that touch these files need a maintainer's approval (branch
 # protection: "Require review from Code Owners"). They hold recorded results,
 # the tests and the settings that decide which tests run, and the CI that runs
-# them; a pull request must not edit them to make itself pass.
-/test/            @Hananel-Hazan
-/.github/         @Hananel-Hazan
-/pyproject.toml   @Hananel-Hazan
-/poetry.lock      @Hananel-Hazan
-/pytest.ini       @Hananel-Hazan
-/.pytest.ini      @Hananel-Hazan
-/tox.ini          @Hananel-Hazan
-/setup.cfg        @Hananel-Hazan
-/.coveragerc      @Hananel-Hazan
-/conftest.py      @Hananel-Hazan
+# them; a pull request must not edit them to make itself pass. The rest run
+# automatically (editor, container and build configuration), decide what gets
+# installed, or define the learning rules the tests pin to their papers.
+/test/                     @Hananel-Hazan
+/.github/                  @Hananel-Hazan
+/pyproject.toml            @Hananel-Hazan
+/poetry.lock               @Hananel-Hazan
+/pytest.ini                @Hananel-Hazan
+/.pytest.ini               @Hananel-Hazan
+/tox.ini                   @Hananel-Hazan
+/setup.cfg                 @Hananel-Hazan
+/.coveragerc               @Hananel-Hazan
+conftest.py                @Hananel-Hazan
+/.vscode/                  @Hananel-Hazan
+/.devcontainer/            @Hananel-Hazan
+/.pre-commit-config.yaml   @Hananel-Hazan
+/Dockerfile                @Hananel-Hazan
+/.dockerignore             @Hananel-Hazan
+/.readthedocs.yaml         @Hananel-Hazan
+/docs/source/conf.py       @Hananel-Hazan
+/bindsnet/learning/        @Hananel-Hazan
+/SECURITY.md               @Hananel-Hazan
+/CONTRIBUTING.md           @Hananel-Hazan

@@ -87,10 +87,8 @@ class TestConnection:
             torch.testing.assert_close(target.v, reference.v)
             torch.testing.assert_close(target.s, reference.s)
 
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a CUDA device")
     def test_transfer(self):
-        if not torch.cuda.is_available():
-            return
-
         connection_types = [
             Connection,
             Conv2dConnection,
