@@ -6,6 +6,15 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 
 ## [Unreleased]
 
+### Results changes (read this before upgrading)
+- `Conv1dConnection`, `Conv2dConnection`, `Conv3dConnection` and `MeanFieldConnection`
+  now clamp a `w` passed to the constructor into `[wmin, wmax]`, as `Connection` does.
+  Before, the check was reversed (`==` instead of `!=`): a given `w` was clamped only
+  when a bound was infinite, which does nothing, so with finite bounds it was never
+  clamped. Affects code that passes these classes weights outside finite bounds; their
+  starting weights are now clamped. No built-in model or example does this, and the
+  golden-output tests are unchanged.
+
 ### Added
 - Contributor rules for AI-assisted work (`CONTRIBUTING.md`, "AI-assisted
   contributions"): AI tools are welcome, a human must have read and run every change,

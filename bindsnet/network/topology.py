@@ -880,7 +880,7 @@ class Conv1dConnection(AbstractConnection):
                 w += self.wmin
             w = w.to(dtype=w_dtype)
         else:
-            if (self.wmin == -inf).any() or (self.wmax == inf).any():
+            if (self.wmin != -inf).any() or (self.wmax != inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
             w = self.cast_dtype_if_needed(w, w_dtype)
 
@@ -1041,7 +1041,7 @@ class Conv2dConnection(AbstractConnection):
                 w += self.wmin
             w = w.to(dtype=w_dtype)
         else:
-            if (self.wmin == -inf).any() or (self.wmax == inf).any():
+            if (self.wmin != -inf).any() or (self.wmax != inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
             w = self.cast_dtype_if_needed(w, w_dtype)
 
@@ -1223,7 +1223,7 @@ class Conv3dConnection(AbstractConnection):
                 w += self.wmin
             w = w.to(dtype=w_dtype)
         else:
-            if (self.wmin == -inf).any() or (self.wmax == inf).any():
+            if (self.wmin != -inf).any() or (self.wmax != inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
             w = self.cast_dtype_if_needed(w, w_dtype)
 
@@ -2262,7 +2262,7 @@ class MeanFieldConnection(AbstractConnection):
                 w = self.wmin + ((torch.randn(1)[0] + 1) / 10) * (self.wmax - self.wmin)
             w = w.to(dtype=w_dtype)
         else:
-            if (self.wmin == -np.inf).any() or (self.wmax == np.inf).any():
+            if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
                 w = torch.clamp(w, self.wmin, self.wmax)
             w = self.cast_dtype_if_needed(w, w_dtype)
         self.w = Parameter(w, requires_grad=False)
