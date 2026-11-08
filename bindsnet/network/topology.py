@@ -87,13 +87,23 @@ class AbstractConnection(ABC, Module):
 
         self.update_rule = kwargs.get("update_rule", None)
 
+        # The bounds live on the device of given weights: subclasses clamp w against
+        # them in their constructors, and a GPU w with CPU bounds raised a device
+        # mismatch. Without w the weights start on the CPU, and so do the bounds.
+        w_given = kwargs.get("w", None)
+        bound_device = w_given.device if isinstance(w_given, torch.Tensor) else None
+
         # Float32 necessary for comparisons with +/-inf
         self.wmin = Parameter(
-            torch.as_tensor(kwargs.get("wmin", -np.inf), dtype=torch.float32),
+            torch.as_tensor(
+                kwargs.get("wmin", -np.inf), dtype=torch.float32, device=bound_device
+            ),
             requires_grad=False,
         )
         self.wmax = Parameter(
-            torch.as_tensor(kwargs.get("wmax", np.inf), dtype=torch.float32),
+            torch.as_tensor(
+                kwargs.get("wmax", np.inf), dtype=torch.float32, device=bound_device
+            ),
             requires_grad=False,
         )
         self.norm = kwargs.get("norm", None)
