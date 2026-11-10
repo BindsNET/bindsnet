@@ -10,6 +10,11 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    # Touch pyproject.toml only when a new version falls outside the allowed
+    # range (a major bump). Routine bumps then change poetry.lock alone, so the
+    # test guard, which flags every pyproject.toml change, lets them through
+    # (#836), and the lowest version BindsNET accepts does not creep up.
+    versioning-strategy: increase-if-necessary
     # Minor and patch bumps arrive as a single grouped pull request so routine
     # maintenance is one review, not twenty. Major bumps stay separate, because
     # they need to be looked at individually.
