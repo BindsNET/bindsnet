@@ -1065,3 +1065,48 @@ def test_local_connection_nd_random_weights_within_per_weight_bounds(name):
         **kwargs,
     )
     assert ((conn.w >= 0) & (conn.w <= wmax)).all()
+
+
+def _given_w_out_of_bounds():
+    """Constructors of the connection types whose given w is checked against finite bounds."""
+    return {
+        "Conv1dConnection": lambda: Conv1dConnection(
+            Input(shape=(1, 6)),
+            LIFNodes(shape=(2, 4)),
+            kernel_size=3,
+            w=torch.linspace(-1.0, 2.0, 6).view(2, 1, 3),
+            wmin=0.0,
+            wmax=1.0,
+        ),
+        "Conv2dConnection": lambda: Conv2dConnection(
+            Input(shape=(1, 6, 6)),
+            LIFNodes(shape=(2, 4, 4)),
+            kernel_size=3,
+            w=torch.linspace(-1.0, 2.0, 18).view(2, 1, 3, 3),
+            wmin=0.0,
+            wmax=1.0,
+        ),
+        "Conv3dConnection": lambda: Conv3dConnection(
+            Input(shape=(1, 4, 4, 4)),
+            LIFNodes(shape=(2, 2, 2, 2)),
+            kernel_size=3,
+            w=torch.linspace(-1.0, 2.0, 54).view(2, 1, 3, 3, 3),
+            wmin=0.0,
+            wmax=1.0,
+        ),
+        "MeanFieldConnection": lambda: MeanFieldConnection(
+            Input(n=4), LIFNodes(n=3), w=torch.tensor(2.0), wmin=0.0, wmax=1.0
+        ),
+    }
+
+
+@pytest.mark.parametrize("name", list(_given_w_out_of_bounds()))
+def test_given_weights_are_clamped_to_finite_bounds(name):
+    """A w passed to the constructor is clamped into [wmin, wmax], as Connection does.
+
+    Caught: Conv1d/2d/3dConnection and MeanFieldConnection clamped a given w only when
+    a bound was infinite (== instead of !=), so with finite bounds it was never clamped.
+    """
+    conn = _given_w_out_of_bounds()[name]()
+    assert conn.w.min() >= 0.0
+    assert conn.w.max() <= 1.0
