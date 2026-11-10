@@ -43,6 +43,12 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
   `wmin` and `wmax` are now created on the device of the given `w`; before, they were
   always on the CPU. Single-value and per-weight bounds both work. Results do not
   change.
+- `LocalConnection1D`, `LocalConnection2D` and `LocalConnection3D` accept a given `w`
+  and per-weight `wmin`/`wmax`, as the other connections do; their docstrings now say so.
+  Before, a given `w` raised `AttributeError` (the shape check used `out_channels`,
+  which these classes do not have, instead of `n_filters`), and per-weight bounds
+  raised "Boolean value of Tensor with more than one value is ambiguous" (the bound
+  check had no `.any()`). Both used to crash, so no working code changes results.
 
 ## [0.3.5] - 2026-10-29
 

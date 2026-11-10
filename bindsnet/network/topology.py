@@ -1803,8 +1803,10 @@ class LocalConnection1D(AbstractConnection):
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
-        :param float wmin: Minimum allowed value on the connection weights.
-        :param float wmax: Maximum allowed value on the connection weights.
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
+        :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
 
@@ -1836,12 +1838,12 @@ class LocalConnection1D(AbstractConnection):
         else:
             assert w.shape == (
                 self.in_channels,
-                self.out_channels * self.conv_size,
+                self.n_filters * self.conv_size,
                 self.kernel_size,
             ), error
             w = self.cast_dtype_if_needed(w, w_dtype)
 
-        if self.wmin != -np.inf or self.wmax != np.inf:
+        if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
             w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
@@ -1945,8 +1947,10 @@ class LocalConnection2D(AbstractConnection):
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
-        :param float wmin: Minimum allowed value on the connection weights.
-        :param float wmax: Maximum allowed value on the connection weights.
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
+        :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
 
@@ -1988,12 +1992,12 @@ class LocalConnection2D(AbstractConnection):
         else:
             assert w.shape == (
                 self.in_channels,
-                self.out_channels * self.conv_prod,
+                self.n_filters * self.conv_prod,
                 self.kernel_prod,
             ), error
             w = self.cast_dtype_if_needed(w, w_dtype)
 
-        if self.wmin != -np.inf or self.wmax != np.inf:
+        if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
             w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)
@@ -2098,8 +2102,10 @@ class LocalConnection3D(AbstractConnection):
         :param LearningRule update_rule: Modifies connection parameters according to some rule.
         :param torch.Tensor w: Strengths of synapses.
         :param torch.Tensor b: Target population bias.
-        :param float wmin: Minimum allowed value on the connection weights.
-        :param float wmax: Maximum allowed value on the connection weights.
+        :param Union[float, torch.Tensor] wmin: Minimum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
+        :param Union[float, torch.Tensor] wmax: Maximum allowed value(s) on the connection weights. Single value, or
+            tensor of same size as w
         :param float norm: Total weight per target neuron normalization constant.
         """
 
@@ -2143,12 +2149,12 @@ class LocalConnection3D(AbstractConnection):
         else:
             assert w.shape == (
                 self.in_channels,
-                self.out_channels * self.conv_prod,
+                self.n_filters * self.conv_prod,
                 self.kernel_prod,
             ), error
             w = self.cast_dtype_if_needed(w, w_dtype)
 
-        if self.wmin != -np.inf or self.wmax != np.inf:
+        if (self.wmin != -np.inf).any() or (self.wmax != np.inf).any():
             w = torch.clamp(w, self.wmin, self.wmax)
 
         self.w = Parameter(w, requires_grad=False)

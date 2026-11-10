@@ -979,6 +979,94 @@ def test_connection_from_gpu_weights_clamps_and_learns_on_gpu(wmin, wmax):
     assert ((conn.w >= 0) & (conn.w <= 1)).all()
 
 
+_LOCAL_CONNECTIONS_ND = {
+    "LocalConnection1D": (
+        LocalConnection1D,
+        (2, 12),
+        (2, 4),
+        {"kernel_size": 3, "stride": 3, "n_filters": 2},
+    ),
+    "LocalConnection2D": (
+        LocalConnection2D,
+        (2, 8, 8),
+        (3, 3, 3),
+        {"kernel_size": 4, "stride": 2, "n_filters": 3},
+    ),
+    "LocalConnection3D": (
+        LocalConnection3D,
+        (1, 6, 6, 6),
+        (2, 3, 3, 3),
+        {"kernel_size": 2, "stride": 2, "n_filters": 2},
+    ),
+}
+
+
+@pytest.mark.parametrize("bounds", ["scalar-bounds", "per-weight-bounds"])
+@pytest.mark.parametrize("name", list(_LOCAL_CONNECTIONS_ND))
+def test_local_connection_nd_given_weights_and_per_weight_bounds(name, bounds):
+    """LocalConnection1D/2D/3D accept a given w and per-weight bounds, clamp w into
+    them at construction, and keep it there while learning.
+
+    Caught: a given w raised AttributeError (the shape check used self.out_channels,
+    which these classes never set), and per-weight bounds raised "Boolean value of
+    Tensor with more than one value is ambiguous" (the bound check had no .any()).
+    """
+    cls, src_shape, tgt_shape, kwargs = _LOCAL_CONNECTIONS_ND[name]
+    shape = cls(Input(shape=src_shape), LIFNodes(shape=tgt_shape), **kwargs).w.shape
+    n = int(torch.Size(shape).numel())
+    if bounds == "scalar-bounds":
+        wmin, wmax = 0.0, 1.0
+        lo, hi = torch.zeros(shape), torch.ones(shape)
+    else:
+        # a different upper bound for each weight
+        wmin, wmax = torch.zeros(shape), torch.linspace(0.2, 1.0, n).view(shape)
+        lo, hi = wmin, wmax
+    w = torch.linspace(-1.0, 2.0, n).view(shape)  # values outside the bounds
+
+    source = Input(shape=src_shape, traces=True)
+    target = LIFNodes(shape=tgt_shape, traces=True)
+    conn = cls(
+        source,
+        target,
+        w=w,
+        wmin=wmin,
+        wmax=wmax,
+        update_rule=PostPre,
+        nu=(1.0, 1.0),
+        **kwargs,
+    )
+    assert ((conn.w >= lo) & (conn.w <= hi)).all()
+
+    net = Network(dt=1.0)
+    net.add_layer(source, "in")
+    net.add_layer(target, "out")
+    net.add_connection(conn, "in", "out")
+    torch.manual_seed(0)
+    net.run(inputs={"in": torch.rand(20, 1, *src_shape) < 0.5}, time=20)
+    assert ((conn.w >= lo) & (conn.w <= hi)).all()
+
+
+@pytest.mark.parametrize("name", list(_LOCAL_CONNECTIONS_ND))
+def test_local_connection_nd_random_weights_within_per_weight_bounds(name):
+    """Without a given w, LocalConnection1D/2D/3D start inside per-weight bounds.
+
+    Caught: per-weight bounds raised "Boolean value of Tensor with more than one
+    value is ambiguous" (the bound check had no .any()).
+    """
+    cls, src_shape, tgt_shape, kwargs = _LOCAL_CONNECTIONS_ND[name]
+    shape = cls(Input(shape=src_shape), LIFNodes(shape=tgt_shape), **kwargs).w.shape
+    wmax = torch.linspace(0.1, 0.5, int(torch.Size(shape).numel())).view(shape)
+    torch.manual_seed(0)
+    conn = cls(
+        Input(shape=src_shape),
+        LIFNodes(shape=tgt_shape),
+        wmin=torch.zeros(shape),
+        wmax=wmax,
+        **kwargs,
+    )
+    assert ((conn.w >= 0) & (conn.w <= wmax)).all()
+
+
 def _given_w_out_of_bounds():
     """Constructors of the connection types whose given w is checked against finite bounds."""
     return {
