@@ -29,6 +29,11 @@ see the [GitHub releases / tags](https://github.com/BindsNET/bindsnet/releases).
 - The CUDA `test_transfer` tests in `test/network/test_nodes.py` and
   `test/network/test_connections.py` are reported as skipped on machines without a
   GPU; before, they returned early and were reported as passed.
+- A connection built from weights already on a GPU (`w=` on CUDA or XPU) no longer
+  fails in its constructor with "Expected all tensors to be on the same device".
+  `wmin` and `wmax` are now created on the device of the given `w`; before, they were
+  always on the CPU. Single-value and per-weight bounds both work. Results do not
+  change.
 
 ## [0.3.5] - 2026-10-29
 

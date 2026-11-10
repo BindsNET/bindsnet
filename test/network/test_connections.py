@@ -932,3 +932,48 @@ def test_windows_and_maxpool_state_stay_on_gpu():
         net.run(inputs=inputs, time=5)
         net.reset_state_variables()
     assert pool.firing_rates.is_cuda
+
+
+def test_weight_bounds_without_given_weights_stay_on_cpu():
+    """Without w the weights start on the CPU, and so do the bounds."""
+    conn = Connection(Input(n=4), LIFNodes(n=3), wmin=0.0, wmax=1.0)
+    assert conn.wmin.device.type == "cpu"
+    assert conn.wmax.device.type == "cpu"
+    assert conn.w.device.type == "cpu"
+    assert ((conn.w >= 0) & (conn.w <= 1)).all()
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+@pytest.mark.parametrize(
+    "wmin, wmax",
+    [(0.0, 1.0), (torch.zeros(4, 3), torch.ones(4, 3))],
+    ids=["scalar-bounds", "per-weight-bounds"],
+)
+def test_connection_from_gpu_weights_clamps_and_learns_on_gpu(wmin, wmax):
+    """A Connection built from CUDA weights clamps them at construction and keeps
+    clamping during learning, all on the GPU.
+
+    Caught: the constructor's torch.clamp(w, wmin, wmax) raised a device mismatch
+    because the bounds were on the CPU.
+    """
+    w = torch.rand(4, 3, device="cuda") * 3 - 1  # values outside [0, 1]
+    conn = Connection(
+        Input(n=4, traces=True),
+        LIFNodes(n=3, traces=True),
+        w=w,
+        wmin=wmin,
+        wmax=wmax,
+        update_rule=PostPre,
+        nu=(1.0, 1.0),
+    )
+    assert conn.w.is_cuda and conn.wmin.is_cuda and conn.wmax.is_cuda
+    assert ((conn.w >= 0) & (conn.w <= 1)).all()
+
+    net = Network(dt=1.0)
+    net.add_layer(conn.source, "in")
+    net.add_layer(conn.target, "out")
+    net.add_connection(conn, "in", "out")
+    net.to("cuda")
+    net.run(inputs={"in": (torch.rand(20, 1, 4) < 0.5).cuda()}, time=20)
+    assert conn.w.is_cuda
+    assert ((conn.w >= 0) & (conn.w <= 1)).all()
